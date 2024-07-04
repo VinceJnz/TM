@@ -105,7 +105,8 @@ type User struct {
 }
 
 func fetchUserData(this js.Value, p []js.Value) interface{} {
-	url := "https://jsonplaceholder.typicode.com/users/1" // Example API endpoint
+	//url := "https://jsonplaceholder.typicode.com/users/1" // Example API endpoint
+	url := "https://localhost:8085/api/v1/users/1" // Example API endpoint
 	resp, err := http.Get(url)
 	if err != nil {
 		js.Global().Get("console").Call("log", "Failed to fetch data")
