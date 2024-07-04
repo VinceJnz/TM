@@ -105,8 +105,43 @@ type User struct {
 }
 
 func fetchUserData(this js.Value, p []js.Value) interface{} {
-	//url := "https://jsonplaceholder.typicode.com/users/1" // Example API endpoint
-	url := "https://localhost:8085/api/v1/users/1" // Example API endpoint
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		url := "http://localhost:8085/users/1" // Updated API endpoint
+		resp, err := http.Get(url)
+		if err != nil {
+			js.Global().Call("onFetchUserDataError", err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			js.Global().Call("onFetchUserDataError", "Non-OK HTTP status: "+resp.Status)
+			return
+		}
+
+		var user User
+		err = json.NewDecoder(resp.Body).Decode(&user)
+		if err != nil {
+			js.Global().Call("onFetchUserDataError", "Failed to decode JSON: "+err.Error())
+			return
+		}
+
+		userJSON, err := json.Marshal(user)
+		if err != nil {
+			js.Global().Call("onFetchUserDataError", "Failed to marshal user data: "+err.Error())
+			return
+		}
+
+		js.Global().Call("onFetchUserDataSuccess", string(userJSON))
+	}()
+	return nil
+}
+
+/*
+func fetchUserData(this js.Value, p []js.Value) interface{} {
+	url := "https://localhost:8085/users/1" // Example API endpoint
 	resp, err := http.Get(url)
 	if err != nil {
 		js.Global().Get("console").Call("log", "Failed to fetch data")
@@ -132,6 +167,6 @@ func fetchUserData(this js.Value, p []js.Value) interface{} {
 		return nil
 	}
 
-	js.Global().Get("console").Call("log", string(userJSON)) // Log the fetched user data to the console
 	return js.ValueOf(string(userJSON))
 }
+*/
