@@ -1,0 +1,13 @@
+*.exe
+*.wasm
+certs
+logs
+*.crl
+*.crt
+*.key
+*.csr
+*.p12
+*.pem
+log*
+Server*
+log*.txt
