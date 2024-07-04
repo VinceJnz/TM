@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Go WASM Dropdown and Side Menu</title>
+    <script src="wasm_exec.js"></script>
+    <script>
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+            document.getElementById("menuIcon").addEventListener("click", toggleSideMenu);
+            document.getElementById("createDropdownBtn").addEventListener("click", createDropdown);
+            document.getElementById("createSideMenuBtn").addEventListener("click", createSideMenu);
+        });
+    </script>
+    <style>
+        body {
+            font-family: "Lato", sans-serif;
+            margin: 0;
+            transition: margin-left 0.3s ease; /* Smooth transition for margin change */
+        }
+
+        .navbar {
+            width: 100%;
+            background-color: #333;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 999;
+        }
+
+        .navbar #menuIcon {
+            font-size: 30px;
+            cursor: pointer;
+            color: white;
+            margin-right: 20px;
+        }
+
+        .navbar button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: #555;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .navbar button:hover {
+            background-color: #777;
+        }
+
+        .sidemenu {
+            position: fixed;
+            top: 60px; /* Height of the navbar */
+            left: 0;
+            width: 200px;
+            height: calc(100% - 60px); /* Full height minus navbar height */
+            background-color: #111;
+            padding-top: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+            z-index: 998; /* Ensure it is below the navbar */
+            display: none; /* Hide by default */
+        }
+
+        .sidemenu a {
+            padding: 8px 8px 8px 16px;
+            text-decoration: none;
+            color: white;
+            display: block;
+        }
+
+        .sidemenu a:hover {
+            background-color: #575757;
+        }
+
+        .show {
+            display: block;
+        }
+
+        /* Add padding to the body to avoid content being hidden under the navbar */
+        body {
+            padding-top: 60px;
+        }
+
+        /* Class to move main content to the right when the side menu is displayed */
+        .shifted {
+            margin-left: 200px; /* Width of the side menu */
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div id="menuIcon">&#9776;</div>
+        <button id="createDropdownBtn">Create Dropdown</button>
+        <button id="createSideMenuBtn">Create Side Menu</button>
+    </div>
+</body>
+</html>
