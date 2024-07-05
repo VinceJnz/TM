@@ -34,10 +34,10 @@ func main() {
 		return nil
 	}))
 
-	js.Global().Get("document").Call("getElementById", "createSideMenuBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		createSideMenu(js.Value{}, []js.Value{})
-		return nil
-	}))
+	//js.Global().Get("document").Call("getElementById", "createSideMenuBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	//	createSideMenu(js.Value{}, []js.Value{})
+	//	return nil
+	//}))
 
 	<-c
 }
@@ -67,10 +67,10 @@ func setupHTML() {
 	createDropdownBtn.Set("innerHTML", "Create Dropdown")
 	navbar.Call("appendChild", createDropdownBtn)
 
-	createSideMenuBtn := document.Call("createElement", "button")
-	createSideMenuBtn.Set("id", "createSideMenuBtn")
-	createSideMenuBtn.Set("innerHTML", "Create Side Menu")
-	navbar.Call("appendChild", createSideMenuBtn)
+	//createSideMenuBtn := document.Call("createElement", "button")
+	//createSideMenuBtn.Set("id", "createSideMenuBtn")
+	//createSideMenuBtn.Set("innerHTML", "Create Side Menu")
+	//navbar.Call("appendChild", createSideMenuBtn)
 
 	sidemenu := document.Call("createElement", "div")
 	sidemenu.Set("id", "sideMenu")
