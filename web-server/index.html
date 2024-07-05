@@ -6,26 +6,13 @@
     <script src="wasm_exec.js"></script>
     <script>
         const go = new Go();
-        WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
-            go.run(result.instance);
-            document.getElementById("menuIcon").addEventListener("click", toggleSideMenu);
-            document.getElementById("createDropdownBtn").addEventListener("click", createDropdown);
-            document.getElementById("createSideMenuBtn").addEventListener("click", createSideMenu);
 
-            document.getElementById("fetchDataBtn").addEventListener("click", () => {
-                const userData = fetchUserData();
-                userData.then(data => {
-                    const user = JSON.parse(data);
-                    document.getElementById("output").innerHTML = `
-                        <p>ID: ${user.id}</p>
-                        <p>Name: ${user.name}</p>
-                        <p>Username: ${user.username}</p>
-                        <p>Email: ${user.email}</p>
-                    `;
-                });
-            });
+        async function loadWasm() {
+            const wasmModule = await WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject);
+            go.run(wasmModule.instance);
+        }
 
-        });
+        window.addEventListener('load', loadWasm);
     </script>
     <style>
         body {

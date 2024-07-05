@@ -14,6 +14,28 @@ func main() {
 	js.Global().Set("showSideMenu", js.FuncOf(showSideMenu))
 	js.Global().Set("toggleSideMenu", js.FuncOf(toggleSideMenu))
 	js.Global().Set("fetchUserData", js.FuncOf(fetchUserData))
+
+	// Add event listeners for the buttons
+	js.Global().Get("document").Call("getElementById", "fetchDataBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		fetchUserData(js.Value{}, []js.Value{})
+		return nil
+	}))
+
+	js.Global().Get("document").Call("getElementById", "menuIcon").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		toggleSideMenu(js.Value{}, []js.Value{})
+		return nil
+	}))
+
+	js.Global().Get("document").Call("getElementById", "createDropdownBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		createDropdown(js.Value{}, []js.Value{})
+		return nil
+	}))
+
+	js.Global().Get("document").Call("getElementById", "createSideMenuBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		createSideMenu(js.Value{}, []js.Value{})
+		return nil
+	}))
+
 	<-c
 }
 
@@ -105,68 +127,42 @@ type User struct {
 }
 
 func fetchUserData(this js.Value, p []js.Value) interface{} {
-	done := make(chan struct{})
 	go func() {
-		defer close(done)
-		url := "http://localhost:8085/users/1" // Updated API endpoint
+		url := "http://localhost:8085/users/1"
 		resp, err := http.Get(url)
 		if err != nil {
-			js.Global().Call("onFetchUserDataError", err.Error())
+			onFetchUserDataError(err.Error())
 			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			js.Global().Call("onFetchUserDataError", "Non-OK HTTP status: "+resp.Status)
+			onFetchUserDataError("Non-OK HTTP status: " + resp.Status)
 			return
 		}
 
 		var user User
 		err = json.NewDecoder(resp.Body).Decode(&user)
 		if err != nil {
-			js.Global().Call("onFetchUserDataError", "Failed to decode JSON: "+err.Error())
+			onFetchUserDataError("Failed to decode JSON: " + err.Error())
 			return
 		}
 
 		userJSON, err := json.Marshal(user)
 		if err != nil {
-			js.Global().Call("onFetchUserDataError", "Failed to marshal user data: "+err.Error())
+			onFetchUserDataError("Failed to marshal user data: " + err.Error())
 			return
 		}
 
-		js.Global().Call("onFetchUserDataSuccess", string(userJSON))
+		onFetchUserDataSuccess(string(userJSON))
 	}()
 	return nil
 }
 
-/*
-func fetchUserData(this js.Value, p []js.Value) interface{} {
-	url := "https://localhost:8085/users/1" // Example API endpoint
-	resp, err := http.Get(url)
-	if err != nil {
-		js.Global().Get("console").Call("log", "Failed to fetch data")
-		return nil
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		js.Global().Get("console").Call("log", "Non-OK HTTP status:", resp.StatusCode)
-		return nil
-	}
-
-	var user User
-	err = json.NewDecoder(resp.Body).Decode(&user)
-	if err != nil {
-		js.Global().Get("console").Call("log", "Failed to decode JSON")
-		return nil
-	}
-
-	userJSON, err := json.Marshal(user)
-	if err != nil {
-		js.Global().Get("console").Call("log", "Failed to marshal user data")
-		return nil
-	}
-
-	return js.ValueOf(string(userJSON))
+func onFetchUserDataSuccess(data string) {
+	js.Global().Get("document").Call("getElementById", "output").Set("innerText", data)
 }
-*/
+
+func onFetchUserDataError(errorMsg string) {
+	js.Global().Get("document").Call("getElementById", "output").Set("innerText", "Error: "+errorMsg)
+}
