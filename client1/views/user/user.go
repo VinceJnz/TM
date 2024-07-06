@@ -2,6 +2,7 @@ package user
 
 import (
 	"bytes"
+	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"net/http"
 	"syscall/js"
@@ -14,8 +15,15 @@ type User struct {
 	Email    string `json:"email"`
 }
 
+type UI struct {
+	Name     js.Value
+	Username js.Value
+	Email    js.Value
+}
+
 type UserEditor struct {
 	CurrentUser User
+	ui          UI
 }
 
 func NewUserEditor() *UserEditor {
@@ -68,21 +76,32 @@ func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
 
 func (editor *UserEditor) populateEditForm(user User) {
 	document := js.Global().Get("document")
-	document.Call("getElementById", "userName").Set("value", user.Name)
-	document.Call("getElementById", "userUsername").Set("value", user.Username)
-	document.Call("getElementById", "userEmail").Set("value", user.Email)
-	document.Call("getElementById", "editForm").Get("style").Set("display", "block")
+	//document.Call("getElementById", "userName").Set("value", user.Name)
+	//document.Call("getElementById", "userUsername").Set("value", user.Username)
+	//document.Call("getElementById", "userEmail").Set("value", user.Email)
+	//document.Call("getElementById", "editForm").Get("style").Set("display", "block")
+
+	editForm := document.Call("getElementById", "editForm")
+	editForm.Get("style").Set("display", "block")
+	editor.ui.Name = viewHelpers.StringEdit(user.Name, document, editForm, "Name", "text", "userName")
+	editor.ui.Username = viewHelpers.StringEdit(user.Username, document, editForm, "Username", "text", "userUsername")
+	editor.ui.Email = viewHelpers.StringEdit(user.Email, document, editForm, "Email", "email", "userEmail")
+
 }
 
 func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{} {
-	document := js.Global().Get("document")
-	name := document.Call("getElementById", "userName").Get("value").String()
-	username := document.Call("getElementById", "userUsername").Get("value").String()
-	email := document.Call("getElementById", "userEmail").Get("value").String()
+	//document := js.Global().Get("document")
+	//name := document.Call("getElementById", "userName").Get("value").String()
+	//username := document.Call("getElementById", "userUsername").Get("value").String()
+	//email := document.Call("getElementById", "userEmail").Get("value").String()
 
-	editor.CurrentUser.Name = name
-	editor.CurrentUser.Username = username
-	editor.CurrentUser.Email = email
+	//editor.CurrentUser.Name = name
+	//editor.CurrentUser.Username = username
+	//editor.CurrentUser.Email = email
+
+	editor.CurrentUser.Name = editor.ui.Name.Get("value").String()
+	editor.CurrentUser.Username = editor.ui.Username.Get("value").String()
+	editor.CurrentUser.Email = editor.ui.Email.Get("value").String()
 
 	userJSON, err := json.Marshal(editor.CurrentUser)
 	if err != nil {

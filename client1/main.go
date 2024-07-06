@@ -88,14 +88,14 @@ func setupHTML() {
 	editForm.Set("id", "editForm")
 	editForm.Get("style").Set("display", "none")
 	editForm.Set("innerHTML", `
-		<label for="userName">Name:</label>
-		<input type="text" id="userName" name="userName"><br>
-		<label for="userUsername">Username:</label>
-		<input type="text" id="userUsername" name="userUsername"><br>
-		<label for="userEmail">Email:</label>
-		<input type="email" id="userEmail" name="userEmail"><br>
-		<button type="button" id="submitEditBtn">Submit</button>
+		<button type="button" id="submitEditBtn">Submit</button><br>
 	`)
+	//	<label for="userName">Name:</label>
+	//	<input type="text" id="userName" name="userName"><br>
+	//	<label for="userUsername">Username:</label>
+	//	<input type="text" id="userUsername" name="userUsername"><br>
+	//	<label for="userEmail">Email:</label>
+	//	<input type="email" id="userEmail" name="userEmail"><br>
 	mainContent.Call("appendChild", editForm)
 
 	// Replace the existing body with the new body
