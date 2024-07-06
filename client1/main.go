@@ -2,6 +2,7 @@ package main
 
 import (
 	"client1/v2/views/user"
+	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
 )
 
@@ -84,18 +85,7 @@ func setupHTML() {
 	output.Set("className", "output")
 	mainContent.Call("appendChild", output)
 
-	editForm := document.Call("createElement", "form")
-	editForm.Set("id", "editForm")
-	editForm.Get("style").Set("display", "none")
-	editForm.Set("innerHTML", `
-		<button type="button" id="submitEditBtn">Submit</button><br>
-	`)
-	//	<label for="userName">Name:</label>
-	//	<input type="text" id="userName" name="userName"><br>
-	//	<label for="userUsername">Username:</label>
-	//	<input type="text" id="userUsername" name="userUsername"><br>
-	//	<label for="userEmail">Email:</label>
-	//	<input type="email" id="userEmail" name="userEmail"><br>
+	editForm := viewHelpers.EditForm(document, "editForm")
 	mainContent.Call("appendChild", editForm)
 
 	// Replace the existing body with the new body

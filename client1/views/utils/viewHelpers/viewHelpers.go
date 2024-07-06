@@ -26,3 +26,22 @@ func StringEdit(value string, doc js.Value, parent js.Value, labelText string, i
 
 	return input
 }
+
+func EditForm(doc js.Value, FormID string) js.Value {
+	editForm := doc.Call("createElement", "form")
+	editForm.Set("id", FormID)
+	editForm.Get("style").Set("display", "none")
+	editForm.Set("innerHTML", `
+		<button type="button" id="submitEditBtn">Submit</button><br>
+	`)
+	//parent.Call("appendChild", editForm)
+	return editForm
+}
+
+func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, parent js.Value, labelText string, inputType string, inputID string) js.Value {
+	button := doc.Call("createElement", "button")
+	button.Set("id", inputID)
+	button.Set("type", inputType)
+	button.Call("addEventListener", "click", js.FuncOf(listner))
+	return button
+}

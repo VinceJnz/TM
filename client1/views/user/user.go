@@ -76,17 +76,13 @@ func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
 
 func (editor *UserEditor) populateEditForm(user User) {
 	document := js.Global().Get("document")
-	//document.Call("getElementById", "userName").Set("value", user.Name)
-	//document.Call("getElementById", "userUsername").Set("value", user.Username)
-	//document.Call("getElementById", "userEmail").Set("value", user.Email)
-	//document.Call("getElementById", "editForm").Get("style").Set("display", "block")
-
+	//editForm := viewHelpers.EditForm(document, mainContent, "editForm")
 	editForm := document.Call("getElementById", "editForm")
 	editForm.Get("style").Set("display", "block")
 	editor.ui.Name = viewHelpers.StringEdit(user.Name, document, editForm, "Name", "text", "userName")
 	editor.ui.Username = viewHelpers.StringEdit(user.Username, document, editForm, "Username", "text", "userUsername")
 	editor.ui.Email = viewHelpers.StringEdit(user.Email, document, editForm, "Email", "email", "userEmail")
-
+	viewHelpers.SubmitButton(editor.SubmitUserEdit, document, editForm, "submit", "submit", "submitEditBtn")
 }
 
 func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{} {
