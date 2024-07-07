@@ -2,22 +2,13 @@ package viewHelpers
 
 import "syscall/js"
 
-func StringEdit(value string, doc js.Value, parent js.Value, labelText string, inputType string, inputID string) js.Value {
+func StringEdit(value string, doc js.Value, parent js.Value, labelText string, inputType string, htmlID string) js.Value {
 	// Create a label element
-	label := doc.Call("createElement", "label")
-	label.Set("textContent", labelText)
-	label.Set("htmlFor", inputID)
-	//label.Get("style").Set("display", "none")
-	label.Set("value", labelText)
+	label := Label(doc, labelText, htmlID) //doc.Call("createElement", "label")
 	parent.Call("appendChild", label)
 
 	// Create an input element
-	input := doc.Call("createElement", "input")
-	input.Set("id", inputID)
-	input.Set("name", labelText)
-	input.Set("type", inputType)
-	//input.Get("style").Set("display", "none")
-	input.Set("value", value)
+	input := Input(value, doc, labelText, inputType, htmlID)
 	parent.Call("appendChild", input)
 
 	// Create a line break element
@@ -27,21 +18,44 @@ func StringEdit(value string, doc js.Value, parent js.Value, labelText string, i
 	return input
 }
 
-func EditForm(doc js.Value, FormID string) js.Value {
-	editForm := doc.Call("createElement", "form")
-	editForm.Set("id", FormID)
-	editForm.Get("style").Set("display", "none")
-	editForm.Set("innerHTML", `
-		<button type="button" id="submitEditBtn">Submit</button><br>
-	`)
-	//parent.Call("appendChild", editForm)
-	return editForm
+func Label(doc js.Value, labelText string, htmlID string) js.Value {
+	// Create a label element
+	label := doc.Call("createElement", "label")
+	label.Set("textContent", labelText)
+	label.Set("htmlFor", htmlID)
+	label.Set("value", labelText)
+	return label
 }
 
-func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, parent js.Value, labelText string, inputType string, inputID string) js.Value {
+func Input(value string, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
+	// Create an input element
+	input := doc.Call("createElement", "input")
+	input.Set("id", htmlID)
+	input.Set("name", labelText)
+	input.Set("type", inputType)
+	input.Set("value", value)
+	return input
+}
+
+func Form(doc js.Value, htmlID string) js.Value {
+	Form := doc.Call("createElement", "form")
+	Form.Set("id", htmlID)
+	Form.Get("style").Set("display", "none")
+	return Form
+}
+
+func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, inputType, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
-	button.Set("id", inputID)
+	button.Set("id", htmlID)
 	button.Set("type", inputType)
+	button.Set("innerHTML", displayText)
 	button.Call("addEventListener", "click", js.FuncOf(listner))
 	return button
+}
+
+func Div(doc js.Value, className string, htmlID string) js.Value {
+	div := doc.Call("createElement", "div")
+	div.Set("id", htmlID)
+	div.Set("className", className)
+	return div
 }

@@ -22,12 +22,22 @@ type UI struct {
 }
 
 type UserEditor struct {
-	CurrentUser User
-	ui          UI
+	CurrentUser  User
+	UiComponents UI
+	Form         js.Value
+	Parent       js.Value
 }
 
 func NewUserEditor() *UserEditor {
-	return &UserEditor{}
+	editor := new(UserEditor)
+	document := js.Global().Get("document")
+	editor.Form = viewHelpers.Form(js.Global().Get("document"), "editForm")
+	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, editor.Form, "Name", "text", "userName")
+	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, editor.Form, "Username", "text", "userUsername")
+	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, editor.Form, "Email", "email", "userEmail")
+	editor.Form.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "button", "submitEditBtn"))
+
+	return editor
 }
 
 func (editor *UserEditor) FetchUserData(this js.Value, p []js.Value) interface{} {
@@ -61,7 +71,7 @@ func (editor *UserEditor) FetchUserData(this js.Value, p []js.Value) interface{}
 		}
 
 		editor.onFetchUserDataSuccess(string(userJSON))
-		editor.populateEditForm(user)
+		editor.populateEditForm()
 	}()
 	return nil
 }
@@ -74,30 +84,17 @@ func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
 	js.Global().Get("document").Call("getElementById", "output").Set("innerText", "Error: "+errorMsg)
 }
 
-func (editor *UserEditor) populateEditForm(user User) {
-	document := js.Global().Get("document")
-	//editForm := viewHelpers.EditForm(document, mainContent, "editForm")
-	editForm := document.Call("getElementById", "editForm")
-	editForm.Get("style").Set("display", "block")
-	editor.ui.Name = viewHelpers.StringEdit(user.Name, document, editForm, "Name", "text", "userName")
-	editor.ui.Username = viewHelpers.StringEdit(user.Username, document, editForm, "Username", "text", "userUsername")
-	editor.ui.Email = viewHelpers.StringEdit(user.Email, document, editForm, "Email", "email", "userEmail")
-	viewHelpers.SubmitButton(editor.SubmitUserEdit, document, editForm, "submit", "submit", "submitEditBtn")
+func (editor *UserEditor) populateEditForm() {
+	editor.Form.Get("style").Set("display", "block")
+	editor.UiComponents.Name.Set("value", editor.CurrentUser.Name)
+	editor.UiComponents.Username.Set("value", editor.CurrentUser.Username)
+	editor.UiComponents.Email.Set("value", editor.CurrentUser.Email)
 }
 
 func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{} {
-	//document := js.Global().Get("document")
-	//name := document.Call("getElementById", "userName").Get("value").String()
-	//username := document.Call("getElementById", "userUsername").Get("value").String()
-	//email := document.Call("getElementById", "userEmail").Get("value").String()
-
-	//editor.CurrentUser.Name = name
-	//editor.CurrentUser.Username = username
-	//editor.CurrentUser.Email = email
-
-	editor.CurrentUser.Name = editor.ui.Name.Get("value").String()
-	editor.CurrentUser.Username = editor.ui.Username.Get("value").String()
-	editor.CurrentUser.Email = editor.ui.Email.Get("value").String()
+	editor.CurrentUser.Name = editor.UiComponents.Name.Get("value").String()
+	editor.CurrentUser.Username = editor.UiComponents.Username.Get("value").String()
+	editor.CurrentUser.Email = editor.UiComponents.Email.Get("value").String()
 
 	userJSON, err := json.Marshal(editor.CurrentUser)
 	if err != nil {
