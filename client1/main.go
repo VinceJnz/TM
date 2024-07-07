@@ -2,6 +2,7 @@ package main
 
 import (
 	"client1/v2/views/user"
+	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
 )
@@ -33,20 +34,14 @@ func setupHTML() {
 	menuIcon.Set("innerHTML", "&#9776;")
 	navbar.Call("appendChild", menuIcon)
 
-	fetchDataBtn := document.Call("createElement", "button")
-	fetchDataBtn.Set("id", "fetchDataBtn")
-	fetchDataBtn.Set("innerHTML", "Fetch User Data")
+	fetchDataBtn := viewHelpers.Button(editor.FetchUserData, document, "Edit User Data", "fetchDataBtn")
 	navbar.Call("appendChild", fetchDataBtn)
 
-	createDropdownBtn := document.Call("createElement", "button")
-	createDropdownBtn.Set("id", "createDropdownBtn")
-	createDropdownBtn.Set("innerHTML", "Create Dropdown")
+	createDropdownBtn := viewHelpers.Button(nil, document, "Create Dropdown", "createDropdownBtn")
 	navbar.Call("appendChild", createDropdownBtn)
 
-	createSideMenuBtn := document.Call("createElement", "button")
-	createSideMenuBtn.Set("id", "createSideMenuBtn")
-	createSideMenuBtn.Set("innerHTML", "Create Side Menu")
-	navbar.Call("appendChild", createSideMenuBtn)
+	addUserBtn := viewHelpers.Button(editor.NewUserData, document, "Add User Data", "addUserBtn")
+	navbar.Call("appendChild", addUserBtn)
 
 	sidemenu := document.Call("createElement", "div")
 	sidemenu.Set("id", "sideMenu")
@@ -76,10 +71,10 @@ func setupHTML() {
 	js.Global().Set("toggleSideMenu", js.FuncOf(toggleSideMenu))
 
 	// Add event listeners for the buttons
-	js.Global().Get("document").Call("getElementById", "fetchDataBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		editor.FetchUserData(js.Value{}, []js.Value{})
-		return nil
-	}))
+	//js.Global().Get("document").Call("getElementById", "fetchDataBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	//	editor.FetchUserData(js.Value{}, []js.Value{})
+	//	return nil
+	//}))
 
 	//js.Global().Get("document").Call("getElementById", "submitEditBtn").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 	//	editor.SubmitUserEdit(js.Value{}, []js.Value{})

@@ -36,6 +36,7 @@ func NewUserEditor() *UserEditor {
 	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, editor.Form, "Username", "text", "userUsername")
 	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, editor.Form, "Email", "email", "userEmail")
 	editor.Form.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn"))
+	editor.Form.Call("appendChild", viewHelpers.Button(editor.AddNewUser, document, "Add", "submitAddBtn"))
 
 	return editor
 }
@@ -73,6 +74,12 @@ func (editor *UserEditor) FetchUserData(this js.Value, p []js.Value) interface{}
 		editor.onFetchUserDataSuccess(string(userJSON))
 		editor.populateEditForm()
 	}()
+	return nil
+}
+
+func (editor *UserEditor) NewUserData(this js.Value, p []js.Value) interface{} {
+	editor.CurrentUser = User{}
+	editor.populateEditForm()
 	return nil
 }
 
@@ -125,6 +132,45 @@ func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{
 		}
 
 		editor.onFetchUserDataSuccess("User updated successfully")
+	}()
+
+	return nil
+}
+
+func (editor *UserEditor) AddNewUser(this js.Value, p []js.Value) interface{} {
+	editor.CurrentUser.Name = editor.UiComponents.Name.Get("value").String()
+	editor.CurrentUser.Username = editor.UiComponents.Username.Get("value").String()
+	editor.CurrentUser.Email = editor.UiComponents.Email.Get("value").String()
+
+	userJSON, err := json.Marshal(editor.CurrentUser)
+	if err != nil {
+		editor.onFetchUserDataError("Failed to marshal user data: " + err.Error())
+		return nil
+	}
+
+	go func() {
+		url := "http://localhost:8085/users"
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(userJSON))
+		if err != nil {
+			editor.onFetchUserDataError("Failed to create request: " + err.Error())
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			editor.onFetchUserDataError("Failed to send request: " + err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusCreated {
+			editor.onFetchUserDataError("Not-OK HTTP status: " + resp.Status)
+			return
+		}
+
+		editor.onFetchUserDataSuccess("User created successfully")
 	}()
 
 	return nil

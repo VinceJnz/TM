@@ -44,12 +44,13 @@ func Form(doc js.Value, htmlID string) js.Value {
 	return Form
 }
 
-func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+//func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "button")
 	button.Set("innerHTML", displayText)
-	button.Call("addEventListener", "click", js.FuncOf(listner))
+	button.Call("addEventListener", "click", js.FuncOf(onClick))
 	return button
 }
 
