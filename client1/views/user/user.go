@@ -35,7 +35,7 @@ func NewUserEditor() *UserEditor {
 	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, editor.Form, "Name", "text", "userName")
 	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, editor.Form, "Username", "text", "userUsername")
 	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, editor.Form, "Email", "email", "userEmail")
-	editor.Form.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "button", "submitEditBtn"))
+	editor.Form.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn"))
 
 	return editor
 }
