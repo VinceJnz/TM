@@ -62,7 +62,7 @@ func setupHTML() {
 	output.Set("className", "output")
 	mainContent.Call("appendChild", output)
 
-	mainContent.Call("appendChild", editor.Form)
+	mainContent.Call("appendChild", editor.Div)
 
 	// Replace the existing body with the new body
 	document.Get("documentElement").Call("replaceChild", newBody, document.Get("body"))

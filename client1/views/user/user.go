@@ -23,20 +23,25 @@ type UI struct {
 
 type UserEditor struct {
 	CurrentUser  User
+	UserList     []User
 	UiComponents UI
-	Form         js.Value
+	Div          js.Value
 	Parent       js.Value
 }
 
 func NewUserEditor() *UserEditor {
 	editor := new(UserEditor)
 	document := js.Global().Get("document")
-	editor.Form = viewHelpers.Form(js.Global().Get("document"), "editForm")
-	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, editor.Form, "Name", "text", "userName")
-	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, editor.Form, "Username", "text", "userUsername")
-	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, editor.Form, "Email", "email", "userEmail")
-	editor.Form.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn"))
-	editor.Form.Call("appendChild", viewHelpers.Button(editor.AddNewUser, document, "Add", "submitAddBtn"))
+	editor.Div = document.Call("createElement", "div")
+
+	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
+	editor.Div.Call("appendChild", form)
+
+	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, form, "Name", "text", "userName")
+	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, form, "Username", "text", "userUsername")
+	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, form, "Email", "email", "userEmail")
+	editor.Div.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn"))
+	editor.Div.Call("appendChild", viewHelpers.Button(editor.AddNewUser, document, "Add", "submitAddBtn"))
 
 	return editor
 }
@@ -92,7 +97,7 @@ func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
 }
 
 func (editor *UserEditor) populateEditForm() {
-	editor.Form.Get("style").Set("display", "block")
+	editor.Div.Get("style").Set("display", "block")
 	editor.UiComponents.Name.Set("value", editor.CurrentUser.Name)
 	editor.UiComponents.Username.Set("value", editor.CurrentUser.Username)
 	editor.UiComponents.Email.Set("value", editor.CurrentUser.Email)
@@ -174,4 +179,31 @@ func (editor *UserEditor) AddNewUser(this js.Value, p []js.Value) interface{} {
 	}()
 
 	return nil
+}
+
+func (editor *UserEditor) FetchUsers(this js.Value, p []js.Value) interface{} {
+	go func() {
+		resp, err := http.Get("http://localhost:8085/users")
+		if err != nil {
+			editor.onFetchUserDataError("Error fetching users: " + err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		var users []User
+		if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+			editor.onFetchUserDataError("Failed to decode JSON: " + err.Error())
+			return
+		}
+
+		editor.UserList = users
+		editor.populateUserList()
+	}()
+	return nil
+
+}
+
+func (editor *UserEditor) populateUserList() {
+	editor.Div.Get("style").Set("display", "block")
+
 }
