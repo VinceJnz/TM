@@ -20,22 +20,29 @@ func New(db *sqlx.DB) *Handler {
 	return &Handler{db: db}
 }
 
+// GetAll retrieves all bookings
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.db.Query("SELECT id, name, username, email FROM users")
+	rows, err := h.db.Query(`
+		SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified
+		FROM bookings
+	`)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	var users []models.User
+	var bookings []models.Booking
 	for rows.Next() {
-		var user models.User
-		if err := rows.Scan(&user.ID, &user.Name, &user.Username, &user.Email); err != nil {
+		var booking models.Booking
+		if err := rows.Scan(
+			&booking.ID, &booking.OwnerID, &booking.Notes, &booking.FromDate, &booking.ToDate,
+			&booking.BookingStatusID, &booking.Created, &booking.Modified,
+		); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		users = append(users, user)
+		bookings = append(bookings, booking)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -43,78 +50,105 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(bookings)
 }
 
+// Get retrieves a single booking by ID
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
 		return
 	}
 
-	var user models.User
-	err = h.db.QueryRow("SELECT id, name, username, email FROM users WHERE id = $1", id).Scan(&user.ID, &user.Name, &user.Username, &user.Email)
+	var booking models.Booking
+	err = h.db.QueryRow(`
+		SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified 
+		FROM bookings WHERE id = $1`, id,
+	).Scan(
+		&booking.ID, &booking.OwnerID, &booking.Notes, &booking.FromDate, &booking.ToDate,
+		&booking.BookingStatusID, &booking.Created, &booking.Modified,
+	)
 	if err == sql.ErrNoRows {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Booking not found", http.StatusNotFound)
 		return
 	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(booking)
 }
 
+// Create adds a new booking
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var user models.User
-	json.NewDecoder(r.Body).Decode(&user)
+	var booking models.Booking
+	if err := json.NewDecoder(r.Body).Decode(&booking); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
 
-	err := h.db.QueryRow(
-		"INSERT INTO users (name, username, email) VALUES ($1, $2, $3) RETURNING id",
-		user.Name, user.Username, user.Email).Scan(&user.ID)
+	//now := time.Now().UTC()
+	//booking.Created = now
+	//booking.Modified = now
+
+	err := h.db.QueryRow(`
+		INSERT INTO bookings (owner_id, notes, from_date, to_date, booking_status_id) 
+		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		booking.OwnerID, booking.Notes, booking.FromDate, booking.ToDate, booking.BookingStatusID,
+	).Scan(&booking.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(booking)
 }
 
+// Update modifies an existing booking
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
 		return
 	}
 
-	var user models.User
-	json.NewDecoder(r.Body).Decode(&user)
-	user.ID = id
+	var booking models.Booking
+	if err := json.NewDecoder(r.Body).Decode(&booking); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	booking.ID = id
+	//booking.Modified = time.Now().UTC()
 
-	_, err = h.db.Exec("UPDATE users SET name = $1, username = $2, email = $3 WHERE id = $4",
-		user.Name, user.Username, user.Email, user.ID)
+	_, err = h.db.Exec(`
+		UPDATE bookings 
+		SET owner_id = $1, notes = $2, from_date = $3, to_date = $4, booking_status_id = $5 
+		WHERE id = $6`,
+		booking.OwnerID, booking.Notes, booking.FromDate, booking.ToDate, booking.BookingStatusID,
+		booking.ID,
+	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	//w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(booking)
 }
 
+// Delete removes a booking
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM users WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM bookings WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

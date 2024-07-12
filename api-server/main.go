@@ -2,6 +2,7 @@ package main
 
 import (
 	"api-server/v2/app"
+	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerUser"
 	"log"
 	"net/http"
@@ -19,12 +20,21 @@ func main() {
 
 	r := mux.NewRouter()
 
-	handler := handlerUser.New(db)
-	r.HandleFunc("/users", handler.GetAll).Methods("GET")
-	r.HandleFunc("/users/{id}", handler.Get).Methods("GET")
-	r.HandleFunc("/users", handler.Create).Methods("POST")
-	r.HandleFunc("/users/{id}", handler.Update).Methods("PUT")
-	r.HandleFunc("/users/{id}", handler.Delete).Methods("DELETE")
+	// User routes
+	user := handlerUser.New(db)
+	r.HandleFunc("/users", user.GetAll).Methods("GET")
+	r.HandleFunc("/users/{id}", user.Get).Methods("GET")
+	r.HandleFunc("/users", user.Create).Methods("POST")
+	r.HandleFunc("/users/{id}", user.Update).Methods("PUT")
+	r.HandleFunc("/users/{id}", user.Delete).Methods("DELETE")
+
+	// Booking routes
+	booking := handlerBooking.New(db)
+	r.HandleFunc("/bookings", booking.GetAll).Methods("GET")
+	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Get).Methods("GET")
+	r.HandleFunc("/bookings", booking.Create).Methods("POST")
+	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Update).Methods("PUT")
+	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Delete).Methods("DELETE")
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
