@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS `at_booking` (
   `ID` int(11) NOT NULL AUTO_INCREMENT,
-  `User_ID` int(11) NOT NULL,
+  `Owner_ID` int(11) NOT NULL,
   `Notes` text,
   `From_date` datetime DEFAULT NULL,
   `To_date` datetime DEFAULT NULL,
