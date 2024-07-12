@@ -1,10 +1,9 @@
-CREATE TABLE IF NOT EXISTS `at_booking` (
+CREATE TABLE IF NOT EXISTS `st_users` (
   `ID` int(11) NOT NULL AUTO_INCREMENT,
-  `Owner_ID` int(11) NOT NULL,
-  `Notes` text,
-  `From_date` datetime DEFAULT NULL,
-  `To_date` datetime DEFAULT NULL,
-  `Booking_status_ID` int(11) NOT NULL,
+  `Name` VARCHAR(255) NOT NULL,
+  `Username` VARCHAR(255) NOT NULL UNIQUE,
+  `Email` VARCHAR(255) NOT NULL UNIQUE,
+  `User_status_ID` int(11) NOT NULL,
   `Created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `Modified` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`)
