@@ -23,9 +23,10 @@ func New(db *sqlx.DB) *Handler {
 	return &Handler{db: db}
 }
 
+// GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	var users []models.User
-	err := h.db.Select(users, `SELECT id, name, username, email FROM users`)
+	var records []models.User
+	err := h.db.Select(records, `SELECT id, name, username, email FROM users`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
@@ -35,9 +36,10 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(records)
 }
 
+// Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
@@ -47,8 +49,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := models.User{}
-	err = h.db.Get(&user, "SELECT id, name, username, email FROM users WHERE id = $1", id)
+	record := models.User{}
+	err = h.db.Get(&record, "SELECT id, name, username, email FROM users WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
@@ -58,16 +60,17 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(record)
 }
 
+// Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var user models.User
-	json.NewDecoder(r.Body).Decode(&user)
+	var record models.User
+	json.NewDecoder(r.Body).Decode(&record)
 
 	err := h.db.QueryRow(
 		"INSERT INTO users (name, username, email) VALUES ($1, $2, $3) RETURNING id",
-		user.Name, user.Username, user.Email).Scan(&user.ID)
+		record.Name, record.Username, record.Email).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v.Create()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -75,9 +78,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(record)
 }
 
+// Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
@@ -87,12 +91,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
-	json.NewDecoder(r.Body).Decode(&user)
-	user.ID = id
+	var record models.User
+	json.NewDecoder(r.Body).Decode(&record)
+	record.ID = id
 
 	_, err = h.db.Exec("UPDATE users SET name = $1, username = $2, email = $3 WHERE id = $4",
-		user.Name, user.Username, user.Email, user.ID)
+		record.Name, record.Username, record.Email, record.ID)
 	if err != nil {
 		log.Printf("%v.Update()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -100,9 +104,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(record)
 }
 
+// Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
