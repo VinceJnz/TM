@@ -22,34 +22,8 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll retrieves all bookings
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.db.Query(`
-		SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified
-		FROM bookings
-	`)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var bookings []models.Booking
-	for rows.Next() {
-		var booking models.Booking
-		if err := rows.Scan(
-			&booking.ID, &booking.OwnerID, &booking.Notes, &booking.FromDate, &booking.ToDate,
-			&booking.BookingStatusID, &booking.Created, &booking.Modified,
-		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		bookings = append(bookings, booking)
-	}
-
-	if err := rows.Err(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	bookings := []models.Booking{}
+	h.db.Select(bookings, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified	FROM bookings`)
 	json.NewEncoder(w).Encode(bookings)
 }
 

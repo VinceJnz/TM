@@ -3,7 +3,7 @@ package models
 import "time"
 
 type Booking struct {
-	ID              int       `json:"id" db:"ID"`
+	ID              int       `json:"id" db:"id"`
 	OwnerID         int       `json:"owner_id" db:"Owner_ID"`
 	Notes           string    `json:"notes" db:"Notes"`
 	FromDate        time.Time `json:"from_date" db:"From_date"`
@@ -14,12 +14,12 @@ type Booking struct {
 }
 
 type BookingStatus struct {
-	ID     int    `json:"id" db:"ID"`
+	ID     int    `json:"id" db:"id"`
 	Status string `json:"status" db:"status"`
 }
 
 type BookingUser struct {
-	ID        int       `json:"id" db:"ID"`
+	ID        int       `json:"id" db:"id"`
 	OwnerID   int       `json:"owner_id" db:"Owner_ID"`
 	BookingID int       `json:"booking_id" db:"Booking_ID"`
 	UserID    int       `json:"user_id" db:"User_ID"`

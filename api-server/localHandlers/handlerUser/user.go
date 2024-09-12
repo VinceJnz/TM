@@ -3,6 +3,7 @@ package handlerUser
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 )
+
+const debug = "handlerUser"
 
 type Handler struct {
 	db *sqlx.DB
@@ -21,24 +24,13 @@ func New(db *sqlx.DB) *Handler {
 }
 
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.db.Query("SELECT id, name, username, email FROM users")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
 	var users []models.User
-	for rows.Next() {
-		var user models.User
-		if err := rows.Scan(&user.ID, &user.Name, &user.Username, &user.Email); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		users = append(users, user)
-	}
-
-	if err := rows.Err(); err != nil {
+	err := h.db.Select(users, `SELECT id, name, username, email FROM users`)
+	if err == sql.ErrNoRows {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("%v.GetAll()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -50,16 +42,18 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
+		log.Printf("%v.Get()1 %v\n", debug, err)
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
-	var user models.User
-	err = h.db.QueryRow("SELECT id, name, username, email FROM users WHERE id = $1", id).Scan(&user.ID, &user.Name, &user.Username, &user.Email)
+	user := models.User{}
+	err = h.db.Get(&user, "SELECT id, name, username, email FROM users WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	} else if err != nil {
+		log.Printf("%v.Get()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
