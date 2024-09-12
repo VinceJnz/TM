@@ -69,6 +69,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		"INSERT INTO users (name, username, email) VALUES ($1, $2, $3) RETURNING id",
 		user.Name, user.Username, user.Email).Scan(&user.ID)
 	if err != nil {
+		log.Printf("%v.Create()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -81,6 +82,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
+		log.Printf("%v.Update()1 %v\n", debug, err)
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
@@ -92,6 +94,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	_, err = h.db.Exec("UPDATE users SET name = $1, username = $2, email = $3 WHERE id = $4",
 		user.Name, user.Username, user.Email, user.ID)
 	if err != nil {
+		log.Printf("%v.Update()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -104,12 +107,14 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
+		log.Printf("%v.Delete()1 %v\n", debug, err)
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
 	_, err = h.db.Exec("DELETE FROM users WHERE id = $1", id)
 	if err != nil {
+		log.Printf("%v.Delete()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

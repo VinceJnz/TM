@@ -3,6 +3,7 @@ package handlerBooking
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 )
+
+const debug = "handlerBooking"
 
 type Handler struct {
 	db *sqlx.DB
@@ -23,7 +26,16 @@ func New(db *sqlx.DB) *Handler {
 // GetAll retrieves all bookings
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	bookings := []models.Booking{}
-	h.db.Select(bookings, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified	FROM bookings`)
+	err := h.db.Select(bookings, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified	FROM bookings`)
+	if err == sql.ErrNoRows {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("%v.GetAll()2 %v\n", debug, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	json.NewEncoder(w).Encode(bookings)
 }
 
@@ -32,22 +44,19 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
+		log.Printf("%v.Get()1 %v\n", debug, err)
 		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
 		return
 	}
 
-	var booking models.Booking
-	err = h.db.QueryRow(`
-		SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified 
-		FROM bookings WHERE id = $1`, id,
-	).Scan(
-		&booking.ID, &booking.OwnerID, &booking.Notes, &booking.FromDate, &booking.ToDate,
-		&booking.BookingStatusID, &booking.Created, &booking.Modified,
-	)
+	booking := models.Booking{}
+	err = h.db.Get(&booking, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified 
+		FROM bookings WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
-		http.Error(w, "Booking not found", http.StatusNotFound)
+		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	} else if err != nil {
+		log.Printf("%v.Get()2 %v\n", debug, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
