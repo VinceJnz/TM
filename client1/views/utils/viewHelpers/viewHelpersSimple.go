@@ -2,29 +2,10 @@ package viewHelpers
 
 import "syscall/js"
 
-func StringEdit(value string, doc js.Value, parent js.Value, labelText string, inputType string, htmlID string) js.Value {
-	// Create a fieldset element for grouping
-	fieldset := doc.Call("createElement", "fieldset")
-	fieldset.Set("className", "input-group")
+// These are simple view helpers that are used to create UI components. They don't add themselves to the DOM.
+// They are used to create more complex UI components, or to create a single UI component.
 
-	// Create a label element
-	label := Label(doc, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
-	// Create an input element
-	input := Input(value, doc, labelText, inputType, htmlID)
-	fieldset.Call("appendChild", input)
-
-	// Create a line break element
-	//br := doc.Call("createElement", "br")
-	//parent.Call("appendChild", br) // Append the line break element
-
-	// Append the fieldset to the parent
-	parent.Call("appendChild", fieldset)
-
-	return input
-}
-
+// Label creates a label element with the given text and ID.
 func Label(doc js.Value, labelText string, htmlID string) js.Value {
 	// Create a label element
 	label := doc.Call("createElement", "label")
@@ -34,6 +15,7 @@ func Label(doc js.Value, labelText string, htmlID string) js.Value {
 	return label
 }
 
+// Input creates an input element with the given value, type, and ID.
 func Input(value string, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
 	// Create an input element
 	input := doc.Call("createElement", "input")
@@ -44,6 +26,7 @@ func Input(value string, doc js.Value, labelText string, inputType string, htmlI
 	return input
 }
 
+// Form creates a form element with the given ID.
 func Form(doc js.Value, htmlID string) js.Value {
 	Form := doc.Call("createElement", "form")
 	Form.Set("id", htmlID)
@@ -61,6 +44,7 @@ func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Val
 	return button
 }
 
+// Div creates a div element with the given class name and ID.
 func Div(doc js.Value, className string, htmlID string) js.Value {
 	div := doc.Call("createElement", "div")
 	div.Set("id", htmlID)
