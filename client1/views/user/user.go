@@ -5,6 +5,7 @@ import (
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"syscall/js"
 )
 
@@ -27,6 +28,7 @@ type UserEditor struct {
 	UiComponents UI
 	Div          js.Value
 	Parent       js.Value
+	UserListDiv  js.Value // New field to hold the user list div
 }
 
 func NewUserEditor() *UserEditor {
@@ -34,14 +36,19 @@ func NewUserEditor() *UserEditor {
 	document := js.Global().Get("document")
 	editor.Div = document.Call("createElement", "div")
 
+	// Create a div for the user list
+	editor.UserListDiv = document.Call("createElement", "div")
+	editor.UserListDiv.Set("id", "userList")
+	editor.Div.Call("appendChild", editor.UserListDiv)
+
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
-	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, form, "Name", "text", "userName")
-	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, form, "Username", "text", "userUsername")
-	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, form, "Email", "email", "userEmail")
-	editor.Div.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn"))
-	editor.Div.Call("appendChild", viewHelpers.Button(editor.AddNewUser, document, "Add", "submitAddBtn"))
+	//editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, form, "Name", "text", "userName")
+	//editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, form, "Username", "text", "userUsername")
+	//editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, form, "Email", "email", "userEmail")
+	//editor.Div.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn"))
+	//editor.Div.Call("appendChild", viewHelpers.Button(editor.AddNewUser, document, "Add", "submitAddBtn"))
 
 	return editor
 }
@@ -97,10 +104,28 @@ func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
 }
 
 func (editor *UserEditor) populateEditForm() {
+	document := js.Global().Get("document")
+	editor.Div.Set("innerHTML", "") // Clear existing content
+
+	form := document.Call("createElement", "form")
+	form.Set("id", "editForm")
+
+	// Create input fields
+	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, form, "Name", "text", "userName")
+	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, form, "Username", "text", "userUsername")
+	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, form, "Email", "email", "userEmail")
+
+	// Create submit button
+	submitBtn := viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn")
+
+	// Append elements to form
+	form.Call("appendChild", submitBtn)
+
+	// Append form to editor div
+	editor.Div.Call("appendChild", form)
+
+	// Make sure the form is visible
 	editor.Div.Get("style").Set("display", "block")
-	editor.UiComponents.Name.Set("value", editor.CurrentUser.Name)
-	editor.UiComponents.Username.Set("value", editor.CurrentUser.Username)
-	editor.UiComponents.Email.Set("value", editor.CurrentUser.Email)
 }
 
 func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{} {
@@ -115,7 +140,7 @@ func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{
 	}
 
 	go func() {
-		url := "http://localhost:8085/users/1"
+		url := "http://localhost:8085/users/" + strconv.Itoa(editor.CurrentUser.ID)
 		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(userJSON))
 		if err != nil {
 			editor.onFetchUserDataError("Failed to create request: " + err.Error())
@@ -137,15 +162,16 @@ func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{
 		}
 
 		editor.onFetchUserDataSuccess("User updated successfully")
+		editor.FetchUsers(js.Undefined(), nil) // Refresh the user list
 	}()
 
 	return nil
 }
 
 func (editor *UserEditor) AddNewUser(this js.Value, p []js.Value) interface{} {
-	editor.CurrentUser.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentUser.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentUser.Email = editor.UiComponents.Email.Get("value").String()
+	//editor.CurrentUser.Name = editor.UiComponents.Name.Get("value").String()
+	//editor.CurrentUser.Username = editor.UiComponents.Username.Get("value").String()
+	//editor.CurrentUser.Email = editor.UiComponents.Email.Get("value").String()
 
 	userJSON, err := json.Marshal(editor.CurrentUser)
 	if err != nil {
@@ -200,10 +226,24 @@ func (editor *UserEditor) FetchUsers(this js.Value, p []js.Value) interface{} {
 		editor.populateUserList()
 	}()
 	return nil
-
 }
 
 func (editor *UserEditor) populateUserList() {
-	editor.Div.Get("style").Set("display", "block")
+	document := js.Global().Get("document")
+	editor.UserListDiv.Set("innerHTML", "") // Clear existing content
 
+	for _, user := range editor.UserList {
+		userDiv := document.Call("createElement", "div")
+		userDiv.Set("innerHTML", user.Name+" ("+user.Email+")")
+		userDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+
+		// Use a closure to capture the correct user for each click event
+		userDiv.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			editor.CurrentUser = user
+			editor.populateEditForm()
+			return nil
+		}))
+
+		editor.UserListDiv.Call("appendChild", userDiv)
+	}
 }

@@ -34,8 +34,12 @@ func setupHTML() {
 	menuIcon.Set("innerHTML", "&#9776;")
 	navbar.Call("appendChild", menuIcon)
 
-	fetchDataBtn := viewHelpers.Button(editor.FetchUserData, document, "Edit User Data", "fetchDataBtn")
-	navbar.Call("appendChild", fetchDataBtn)
+	fetchUserBtn := viewHelpers.Button(editor.FetchUserData, document, "Edit User Data", "fetchUserBtn")
+	navbar.Call("appendChild", fetchUserBtn)
+
+	// Add the Fetch Users button to the navbar
+	fetchUsersBtn := viewHelpers.Button(editor.FetchUsers, document, "Fetch Users", "fetchUsersBtn")
+	navbar.Call("appendChild", fetchUsersBtn)
 
 	createDropdownBtn := viewHelpers.Button(nil, document, "Create Dropdown", "createDropdownBtn")
 	navbar.Call("appendChild", createDropdownBtn)
