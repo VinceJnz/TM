@@ -9,6 +9,16 @@ import (
 	"syscall/js"
 )
 
+type userState int
+
+const (
+	UserStateNone     userState = 0
+	UserStateFetching userState = 1
+	UserStateEditing  userState = 2
+	UserStateAdding   userState = 3
+	UserStateSaving   userState = 4
+)
+
 type User struct {
 	ID       int    `json:"id"`
 	Name     string `json:"name"`
@@ -24,37 +34,50 @@ type UI struct {
 
 type UserEditor struct {
 	CurrentUser  User
+	UserState    userState
 	UserList     []User
 	UiComponents UI
 	Div          js.Value
-	Parent       js.Value
-	UserListDiv  js.Value // New field to hold the user list div
+	EditDiv      js.Value
+	ListDiv      js.Value
+	StateDiv     js.Value
+	//Parent       js.Value
 }
 
+// NewUserEditor creates a new UserEditor instance
 func NewUserEditor() *UserEditor {
 	editor := new(UserEditor)
+	editor.UserState = UserStateNone
 	document := js.Global().Get("document")
+
+	// Create a div for the user editor
 	editor.Div = document.Call("createElement", "div")
 
-	// Create a div for the user list
-	editor.UserListDiv = document.Call("createElement", "div")
-	editor.UserListDiv.Set("id", "userList")
-	editor.Div.Call("appendChild", editor.UserListDiv)
+	// Create a div for displayingthe editor
+	editor.EditDiv = document.Call("createElement", "div")
+	editor.EditDiv.Set("id", "userEditDiv")
+	editor.Div.Call("appendChild", editor.EditDiv)
+
+	// Create a div for displaying the list
+	editor.ListDiv = document.Call("createElement", "div")
+	editor.ListDiv.Set("id", "userList")
+	editor.Div.Call("appendChild", editor.ListDiv)
+
+	// Create a div for displaying UserState
+	editor.StateDiv = document.Call("createElement", "div")
+	editor.StateDiv.Set("id", "userStateDiv")
+	editor.Div.Call("appendChild", editor.StateDiv)
 
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
-	//editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentUser.Name, document, form, "Name", "text", "userName")
-	//editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentUser.Username, document, form, "Username", "text", "userUsername")
-	//editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentUser.Email, document, form, "Email", "email", "userEmail")
-	//editor.Div.Call("appendChild", viewHelpers.Button(editor.SubmitUserEdit, document, "Submit", "submitEditBtn"))
-	//editor.Div.Call("appendChild", viewHelpers.Button(editor.AddNewUser, document, "Add", "submitAddBtn"))
-
 	return editor
 }
 
+// FetchUserData fetches user data from the server
 func (editor *UserEditor) FetchUserData(this js.Value, p []js.Value) interface{} {
 	go func() {
+		editor.updateStateDisplay(UserStateFetching)
 		url := "http://localhost:8085/users/1"
 		resp, err := http.Get(url)
 		if err != nil {
@@ -85,27 +108,33 @@ func (editor *UserEditor) FetchUserData(this js.Value, p []js.Value) interface{}
 
 		editor.onFetchUserDataSuccess(string(userJSON))
 		editor.populateEditForm()
+		editor.updateStateDisplay(UserStateNone)
 	}()
 	return nil
 }
 
+// NewUserData initializes a new user for adding
 func (editor *UserEditor) NewUserData(this js.Value, p []js.Value) interface{} {
+	editor.updateStateDisplay(UserStateAdding)
 	editor.CurrentUser = User{}
 	editor.populateEditForm()
 	return nil
 }
 
+// onFetchUserDataSuccess handles successful data fetching
 func (editor *UserEditor) onFetchUserDataSuccess(data string) {
 	js.Global().Get("document").Call("getElementById", "output").Set("innerText", data)
 }
 
+// onFetchUserDataError handles errors that occur during data fetching
 func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
 	js.Global().Get("document").Call("getElementById", "output").Set("innerText", "Error: "+errorMsg)
 }
 
+// populateEditForm populates the user edit form with the current user's data
 func (editor *UserEditor) populateEditForm() {
 	document := js.Global().Get("document")
-	editor.Div.Set("innerHTML", "") // Clear existing content
+	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 
 	form := document.Call("createElement", "form")
 	form.Set("id", "editForm")
@@ -122,93 +151,122 @@ func (editor *UserEditor) populateEditForm() {
 	form.Call("appendChild", submitBtn)
 
 	// Append form to editor div
-	editor.Div.Call("appendChild", form)
+	editor.EditDiv.Call("appendChild", form)
 
 	// Make sure the form is visible
-	editor.Div.Get("style").Set("display", "block")
+	editor.EditDiv.Get("style").Set("display", "block")
 }
 
+func (editor *UserEditor) resetEditForm() {
+	// Clear existing content
+	editor.EditDiv.Set("innerHTML", "")
+
+	// Reset CurrentUser
+	editor.CurrentUser = User{}
+
+	// Reset UI components
+	editor.UiComponents.Name = js.Undefined()
+	editor.UiComponents.Username = js.Undefined()
+	editor.UiComponents.Email = js.Undefined()
+
+	// Update state
+	editor.updateStateDisplay(UserStateNone)
+}
+
+// SubmitUserEdit handles the submission of the user edit form
 func (editor *UserEditor) SubmitUserEdit(this js.Value, p []js.Value) interface{} {
 	editor.CurrentUser.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentUser.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentUser.Email = editor.UiComponents.Email.Get("value").String()
 
-	userJSON, err := json.Marshal(editor.CurrentUser)
-	if err != nil {
-		editor.onFetchUserDataError("Failed to marshal user data: " + err.Error())
-		return nil
+	// Need to investigate the technique for passing values into a go routine ?????????
+	// I think I need to pass a copy of the current user to the go routine or use some other technique
+	// to avoid the data being overwritten etc.
+	switch editor.UserState {
+	case UserStateEditing:
+		go editor.UpdateUser(editor.CurrentUser)
+	case UserStateAdding:
+		go editor.AddUser(editor.CurrentUser)
+	default:
+		editor.onFetchUserDataError("Invalid user state for submission")
 	}
 
-	go func() {
-		url := "http://localhost:8085/users/" + strconv.Itoa(editor.CurrentUser.ID)
-		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(userJSON))
-		if err != nil {
-			editor.onFetchUserDataError("Failed to create request: " + err.Error())
-			return
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			editor.onFetchUserDataError("Failed to send request: " + err.Error())
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			editor.onFetchUserDataError("Non-OK HTTP status: " + resp.Status)
-			return
-		}
-
-		editor.onFetchUserDataSuccess("User updated successfully")
-		editor.FetchUsers(js.Undefined(), nil) // Refresh the user list
-	}()
-
+	editor.resetEditForm()
 	return nil
 }
 
-func (editor *UserEditor) AddNewUser(this js.Value, p []js.Value) interface{} {
-	//editor.CurrentUser.Name = editor.UiComponents.Name.Get("value").String()
-	//editor.CurrentUser.Username = editor.UiComponents.Username.Get("value").String()
-	//editor.CurrentUser.Email = editor.UiComponents.Email.Get("value").String()
-
-	userJSON, err := json.Marshal(editor.CurrentUser)
+// UpdateUser updates an existing user in the user list
+func (editor *UserEditor) UpdateUser(user User) {
+	editor.updateStateDisplay(UserStateSaving)
+	userJSON, err := json.Marshal(user)
 	if err != nil {
 		editor.onFetchUserDataError("Failed to marshal user data: " + err.Error())
-		return nil
+		return
+	}
+	url := "http://localhost:8085/users/" + strconv.Itoa(user.ID)
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(userJSON))
+	if err != nil {
+		editor.onFetchUserDataError("Failed to create request: " + err.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		editor.onFetchUserDataError("Failed to send request: " + err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		editor.onFetchUserDataError("Non-OK HTTP status: " + resp.Status)
+		return
 	}
 
-	go func() {
-		url := "http://localhost:8085/users"
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(userJSON))
-		if err != nil {
-			editor.onFetchUserDataError("Failed to create request: " + err.Error())
-			return
-		}
-		req.Header.Set("Content-Type", "application/json")
+	editor.onFetchUserDataSuccess("User updated successfully")
+	editor.FetchUsers(js.Undefined(), nil) // Refresh the user list
+	editor.updateStateDisplay(UserStateNone)
+}
 
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			editor.onFetchUserDataError("Failed to send request: " + err.Error())
-			return
-		}
-		defer resp.Body.Close()
+// AddUser adds a new user to the user list
+func (editor *UserEditor) AddUser(user User) {
+	editor.updateStateDisplay(UserStateSaving)
+	userJSON, err := json.Marshal(user)
+	if err != nil {
+		editor.onFetchUserDataError("Failed to marshal user data: " + err.Error())
+		return
+	}
 
-		if resp.StatusCode != http.StatusCreated {
-			editor.onFetchUserDataError("Not-OK HTTP status: " + resp.Status)
-			return
-		}
+	url := "http://localhost:8085/users"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(userJSON))
+	if err != nil {
+		editor.onFetchUserDataError("Failed to create request: " + err.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
 
-		editor.onFetchUserDataSuccess("User created successfully")
-	}()
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		editor.onFetchUserDataError("Failed to send request: " + err.Error())
+		return
+	}
+	defer resp.Body.Close()
 
-	return nil
+	if resp.StatusCode != http.StatusCreated {
+		editor.onFetchUserDataError("Not-OK HTTP status: " + resp.Status)
+		return
+	}
+
+	editor.onFetchUserDataSuccess("User created successfully")
+	editor.FetchUsers(js.Undefined(), nil) // Refresh the user list
+	editor.updateStateDisplay(UserStateNone)
 }
 
 func (editor *UserEditor) FetchUsers(this js.Value, p []js.Value) interface{} {
 	go func() {
+		editor.UserState = UserStateFetching
 		resp, err := http.Get("http://localhost:8085/users")
 		if err != nil {
 			editor.onFetchUserDataError("Error fetching users: " + err.Error())
@@ -224,26 +282,53 @@ func (editor *UserEditor) FetchUsers(this js.Value, p []js.Value) interface{} {
 
 		editor.UserList = users
 		editor.populateUserList()
+		editor.updateStateDisplay(UserStateNone)
 	}()
 	return nil
 }
 
 func (editor *UserEditor) populateUserList() {
 	document := js.Global().Get("document")
-	editor.UserListDiv.Set("innerHTML", "") // Clear existing content
+	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	for _, user := range editor.UserList {
 		userDiv := document.Call("createElement", "div")
 		userDiv.Set("innerHTML", user.Name+" ("+user.Email+")")
 		userDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		// Use a closure to capture the correct user for each click event
-		userDiv.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentUser = user
-			editor.populateEditForm()
-			return nil
-		}))
+		// Create a function that returns the event listener
+		createClickHandler := func(clickedUser User) js.Func {
+			return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				editor.CurrentUser = clickedUser
+				editor.updateStateDisplay(UserStateEditing)
+				editor.populateEditForm()
+				return nil
+			})
+		}
 
-		editor.UserListDiv.Call("appendChild", userDiv)
+		// Add the event listener using the created function
+		userDiv.Call("addEventListener", "click", createClickHandler(user))
+
+		editor.ListDiv.Call("appendChild", userDiv)
 	}
+}
+
+func (editor *UserEditor) updateStateDisplay(newState userState) {
+	editor.UserState = newState
+	var stateText string
+	switch editor.UserState {
+	case UserStateNone:
+		stateText = "Idle"
+	case UserStateFetching:
+		stateText = "Fetching Data"
+	case UserStateEditing:
+		stateText = "Editing User"
+	case UserStateAdding:
+		stateText = "Adding New User"
+	case UserStateSaving:
+		stateText = "Saving User"
+	default:
+		stateText = "Unknown State"
+	}
+	editor.StateDiv.Set("textContent", "Current State: "+stateText)
 }
