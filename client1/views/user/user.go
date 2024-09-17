@@ -32,6 +32,13 @@ type UI struct {
 	Email    js.Value
 }
 
+//type viewElements struct {
+//	sidemenu     js.Value
+//	navbar       js.Value
+//	mainContent  js.Value
+//	statusOutput js.Value
+//}
+
 type UserEditor struct {
 	CurrentUser  User
 	UserState    userState
@@ -41,14 +48,28 @@ type UserEditor struct {
 	EditDiv      js.Value
 	ListDiv      js.Value
 	StateDiv     js.Value
+	statusOutput js.Value
 	//Parent       js.Value
 }
 
+//type View struct {
+//	//Document   js.Value
+//	userEditor UserEditor
+//	elements   viewElements
+//}
+
+//func New() *View {
+//	return &View{
+//		Document: js.Global().Get("document"),
+//	}
+//}
+
 // NewUserEditor creates a new UserEditor instance
-func NewUserEditor() *UserEditor {
+func New(document, statusOutput js.Value) *UserEditor {
+	//document := js.Global().Get("document")
 	editor := new(UserEditor)
 	editor.UserState = UserStateNone
-	document := js.Global().Get("document")
+	editor.statusOutput = statusOutput
 
 	// Create a div for the user editor
 	editor.Div = document.Call("createElement", "div")
@@ -123,12 +144,14 @@ func (editor *UserEditor) NewUserData(this js.Value, p []js.Value) interface{} {
 
 // onFetchUserDataSuccess handles successful data fetching
 func (editor *UserEditor) onFetchUserDataSuccess(data string) {
-	js.Global().Get("document").Call("getElementById", "output").Set("innerText", data)
+	//js.Global().Get("document").Call("getElementById", "statusOutput").Set("innerText", data)
+	editor.statusOutput.Set("innerText", data)
 }
 
 // onFetchUserDataError handles errors that occur during data fetching
 func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
-	js.Global().Get("document").Call("getElementById", "output").Set("innerText", "Error: "+errorMsg)
+	//js.Global().Get("document").Call("getElementById", "statusOutput").Set("innerText", "Error: "+errorMsg)
+	editor.statusOutput.Set("innerText", "Error: "+errorMsg)
 }
 
 // populateEditForm populates the user edit form with the current user's data

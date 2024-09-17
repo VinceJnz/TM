@@ -6,8 +6,17 @@ import (
 	"syscall/js"
 )
 
+type viewElements struct {
+	sidemenu     js.Value
+	navbar       js.Value
+	mainContent  js.Value
+	statusOutput js.Value
+	editor       *user.UserEditor
+}
+
 type View struct {
 	Document js.Value
+	elements viewElements
 }
 
 func New() *View {
@@ -17,70 +26,91 @@ func New() *View {
 }
 
 func (v *View) Setup() {
-	editor := user.NewUserEditor()
-
-	// Create new body element
+	// Create new body element and other page elements
 	newBody := v.Document.Call("createElement", "body")
+	v.elements.sidemenu = v.Document.Call("createElement", "div")
+	v.elements.navbar = v.Document.Call("createElement", "div")
+	v.elements.mainContent = v.Document.Call("createElement", "div")
+	v.elements.statusOutput = v.Document.Call("createElement", "div")
+	v.elements.editor = user.New(v.Document, v.elements.statusOutput)
 
-	navbar := v.Document.Call("createElement", "div")
-	navbar.Set("className", "navbar")
-	newBody.Call("appendChild", navbar)
+	// Add the navbar to the body
+	v.elements.navbar.Set("className", "navbar")
+	newBody.Call("appendChild", v.elements.navbar)
 
+	// Add the menu icon to the navbar
 	menuIcon := v.Document.Call("createElement", "div")
 	menuIcon.Set("id", "menuIcon")
 	menuIcon.Set("innerHTML", "&#9776;")
-	navbar.Call("appendChild", menuIcon)
+	menuIcon.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		v.toggleSideMenu()
 
-	// Add the Fetch Users button to the navbar
-	fetchUsersBtn := viewHelpers.Button(editor.FetchUsers, v.Document, "Fetch Users", "fetchUsersBtn")
-	navbar.Call("appendChild", fetchUsersBtn)
+		return nil
+	}))
+	v.elements.navbar.Call("appendChild", menuIcon)
 
-	addUserBtn := viewHelpers.Button(editor.NewUserData, v.Document, "Add User Data", "addUserBtn")
-	navbar.Call("appendChild", addUserBtn)
+	// Add the Add User Data button to the navbar??? has to change so that this goes on the editor page????
+	//addUserBtn := viewHelpers.Button(v.menuUser, v.Document, "Add User Data", "addUserBtn")
+	//navbar.Call("appendChild", addUserBtn)
 
-	sidemenu := v.Document.Call("createElement", "div")
-	sidemenu.Set("id", "sideMenu")
-	sidemenu.Set("className", "sidemenu")
-	sidemenu.Set("innerHTML", `<a href="javascript:void(0)" class="closebtn" onclick="toggleSideMenu()">&times;</a>
+	// Add the side menu to the body
+	v.elements.sidemenu.Set("id", "sideMenu")
+	v.elements.sidemenu.Set("className", "sidemenu")
+	v.elements.sidemenu.Set("innerHTML", `<a href="javascript:void(0)" class="closebtn" onclick="toggleSideMenu()">&times;</a>
 							   <a href="#">Home</a>
 							   <a href="#">About</a>
 							   <a href="#">Contact</a>`)
-	newBody.Call("appendChild", sidemenu)
+	newBody.Call("appendChild", v.elements.sidemenu)
 
-	mainContent := v.Document.Call("createElement", "div")
-	mainContent.Set("id", "mainContent")
-	mainContent.Set("className", "main")
-	newBody.Call("appendChild", mainContent)
+	// Add the Fetch Users button to the side menu
+	//fetchUsersBtn := viewHelpers.HRef(editor.FetchUsers, v.Document, "Users", "fetchUsersBtn")
+	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
+	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
 
-	output := v.Document.Call("createElement", "div")
-	output.Set("id", "output")
-	output.Set("className", "output")
-	mainContent.Call("appendChild", output)
+	// append statusOutput to the mainContent
+	v.elements.statusOutput.Set("id", "statusOutput")
+	v.elements.statusOutput.Set("className", "statusOutput")
+	v.elements.mainContent.Call("appendChild", v.elements.statusOutput)
 
-	mainContent.Call("appendChild", editor.Div)
+	// append editor.Div to the mainContent
+	v.elements.mainContent.Call("appendChild", v.elements.editor.Div)
+
+	// append mainContent to the body
+	v.elements.mainContent.Set("id", "mainContent")
+	v.elements.mainContent.Set("className", "main")
+	newBody.Call("appendChild", v.elements.mainContent)
 
 	// Replace the existing body with the new body
 	v.Document.Get("documentElement").Call("replaceChild", newBody, v.Document.Get("body"))
-
-	// Bind methods
-	js.Global().Set("toggleSideMenu", js.FuncOf(v.toggleSideMenu))
-
-	js.Global().Get("document").Call("getElementById", "menuIcon").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		v.toggleSideMenu(js.Value{}, []js.Value{})
-		return nil
-	}))
 }
 
-func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
-	sideMenu := v.Document.Call("getElementById", "sideMenu")
-	mainContent := v.Document.Call("getElementById", "mainContent")
+// func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
+func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
+	v.closeSideMenu()
+	v.elements.editor.FetchUsers(this, args)
+	return nil
+}
 
-	if sideMenu.Get("style").Get("width").String() == "250px" {
-		sideMenu.Get("style").Set("width", "0")
-		mainContent.Get("style").Set("marginLeft", "0")
+// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
+func (v *View) toggleSideMenu() interface{} {
+	if v.elements.sidemenu.Get("style").Get("width").String() == "250px" {
+		v.closeSideMenu()
 	} else {
-		sideMenu.Get("style").Set("width", "250px")
-		mainContent.Get("style").Set("marginLeft", "250px")
+		v.openSideMenu()
 	}
+	return nil
+}
+
+// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
+func (v *View) closeSideMenu() interface{} {
+	v.elements.sidemenu.Get("style").Set("width", "0")
+	v.elements.mainContent.Get("style").Set("marginLeft", "0")
+	return nil
+}
+
+// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
+func (v *View) openSideMenu() interface{} {
+	v.elements.sidemenu.Get("style").Set("width", "250px")
+	v.elements.mainContent.Get("style").Set("marginLeft", "250px")
 	return nil
 }
