@@ -2,6 +2,7 @@ package user
 
 import (
 	"bytes"
+	"client1/v2/app/eventprocessor"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"net/http"
@@ -40,6 +41,7 @@ type UI struct {
 //}
 
 type UserEditor struct {
+	events       *eventprocessor.EventProcessor
 	CurrentUser  User
 	UserState    userState
 	UserList     []User
@@ -65,11 +67,11 @@ type UserEditor struct {
 //}
 
 // NewUserEditor creates a new UserEditor instance
-func New(document, statusOutput js.Value) *UserEditor {
+func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *UserEditor {
 	//document := js.Global().Get("document")
 	editor := new(UserEditor)
+	editor.events = eventprocessor
 	editor.UserState = UserStateNone
-	editor.statusOutput = statusOutput
 
 	// Create a div for the user editor
 	editor.Div = document.Call("createElement", "div")
@@ -88,6 +90,11 @@ func New(document, statusOutput js.Value) *UserEditor {
 	editor.StateDiv = document.Call("createElement", "div")
 	editor.StateDiv.Set("id", "userStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
+
+	// Create a div for displaying statusOutput
+	editor.statusOutput = document.Call("createElement", "div")
+	editor.statusOutput.Set("id", "statusOutput")
+	editor.Div.Call("appendChild", editor.statusOutput)
 
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
@@ -144,13 +151,12 @@ func (editor *UserEditor) NewUserData(this js.Value, p []js.Value) interface{} {
 
 // onFetchUserDataSuccess handles successful data fetching
 func (editor *UserEditor) onFetchUserDataSuccess(data string) {
-	//js.Global().Get("document").Call("getElementById", "statusOutput").Set("innerText", data)
 	editor.statusOutput.Set("innerText", data)
+	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: data})
 }
 
 // onFetchUserDataError handles errors that occur during data fetching
 func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
-	//js.Global().Get("document").Call("getElementById", "statusOutput").Set("innerText", "Error: "+errorMsg)
 	editor.statusOutput.Set("innerText", "Error: "+errorMsg)
 }
 
