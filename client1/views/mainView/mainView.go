@@ -127,7 +127,7 @@ func (v *View) openSideMenu() {
 func (v *View) updateStatus(event eventprocessor.Event) {
 	message, ok := event.Data.(string)
 	if !ok {
-		log.Println("Invalid message data")
+		log.Println("Invalid event data")
 		return
 	}
 	v.elements.statusOutput.Set("innerHTML", "test: "+message)

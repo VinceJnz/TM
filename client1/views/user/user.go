@@ -150,14 +150,15 @@ func (editor *UserEditor) NewUserData(this js.Value, p []js.Value) interface{} {
 }
 
 // onFetchUserDataSuccess handles successful data fetching
-func (editor *UserEditor) onFetchUserDataSuccess(data string) {
-	editor.statusOutput.Set("innerText", data)
-	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: data})
+func (editor *UserEditor) onFetchUserDataSuccess(successMsg string) {
+	editor.statusOutput.Set("innerText", successMsg)
+	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: successMsg})
 }
 
 // onFetchUserDataError handles errors that occur during data fetching
 func (editor *UserEditor) onFetchUserDataError(errorMsg string) {
 	editor.statusOutput.Set("innerText", "Error: "+errorMsg)
+	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: errorMsg})
 }
 
 // populateEditForm populates the user edit form with the current user's data

@@ -31,7 +31,7 @@ func (ep *EventProcessor) AddEventHandler(eventType string, handler EventHandler
 	ep.eventHandlers[eventType] = append(ep.eventHandlers[eventType], handler)
 }
 
-// ProcessEvent handles incoming events
+// ProcessEvent call the appropriate event handler
 func (ep *EventProcessor) ProcessEvent(event Event) {
 	handlers, exists := ep.eventHandlers[event.Type]
 	if !exists {
