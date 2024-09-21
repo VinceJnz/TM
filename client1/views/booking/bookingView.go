@@ -1,4 +1,4 @@
-package mainView
+package booking
 
 import (
 	"client1/v2/app/eventprocessor"
