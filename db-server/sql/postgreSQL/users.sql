@@ -1,10 +1,9 @@
-CREATE TABLE IF NOT EXISTS at_bookings (
+CREATE TABLE IF NOT EXISTS st_users (
   ID SERIAL PRIMARY KEY,
-  Owner_ID INT NOT NULL,
-  Notes TEXT,
-  From_date TIMESTAMP DEFAULT NULL,
-  To_date TIMESTAMP DEFAULT NULL,
-  Booking_status_ID INT NOT NULL,
+  Name VARCHAR(255) NOT NULL,
+  Username VARCHAR(255) NOT NULL UNIQUE,
+  Email VARCHAR(255) NOT NULL UNIQUE,
+  User_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
   Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -17,7 +16,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_at_bookings_modified
-BEFORE UPDATE ON at_bookings
+CREATE TRIGGER update_st_users_modified
+BEFORE UPDATE ON st_users
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
