@@ -1,10 +1,10 @@
 CREATE TABLE IF NOT EXISTS at_bookings (
   ID SERIAL PRIMARY KEY,
-  Owner_ID INT NOT NULL,
+  Owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
   Notes TEXT,
   From_date TIMESTAMP DEFAULT NULL,
   To_date TIMESTAMP DEFAULT NULL,
-  Booking_status_ID INT NOT NULL,
+  Booking_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
   Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
