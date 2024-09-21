@@ -1,151 +1,350 @@
 package booking
 
 import (
+	"bytes"
 	"client1/v2/app/eventprocessor"
-	"client1/v2/views/user"
 	"client1/v2/views/utils/viewHelpers"
+	"encoding/json"
 	"log"
+	"net/http"
+	"strconv"
 	"syscall/js"
-	"time"
 )
 
-type viewElements struct {
-	sidemenu     js.Value
-	navbar       js.Value
-	mainContent  js.Value
-	statusOutput js.Value
-	pageTitle    js.Value
-	editor       *user.ItemEditor
+type ItemState int
+
+const apiURL = "http://localhost:8085/bookings"
+
+const (
+	ItemStateNone     ItemState = iota
+	ItemStateFetching           //ItemState = 1
+	ItemStateEditing            //ItemState = 2
+	ItemStateAdding             //ItemState = 3
+	ItemStateSaving             //ItemState = 4
+	ItemStateDeleting           //ItemState = 5
+)
+
+type TableData struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
-type View struct {
-	Document js.Value
-	elements viewElements
-	events   *eventprocessor.EventProcessor
+type UI struct {
+	Name     js.Value
+	Username js.Value
+	Email    js.Value
 }
 
-func New() *View {
-	return &View{
-		Document: js.Global().Get("document"),
-	}
+type ItemEditor struct {
+	events       *eventprocessor.EventProcessor
+	CurrentItem  TableData
+	ItemState    ItemState
+	ItemList     []TableData
+	UiComponents UI
+	Div          js.Value
+	EditDiv      js.Value
+	ListDiv      js.Value
+	StateDiv     js.Value
+	//Parent       js.Value
 }
 
-func (v *View) Setup() {
-	v.events = eventprocessor.New()
-	v.events.AddEventHandler("displayStatus", v.updateStatus)
+// NewItemEditor creates a new ItemEditor instance
+func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *ItemEditor {
+	//document := js.Global().Get("document")
+	editor := new(ItemEditor)
+	editor.events = eventprocessor
+	editor.ItemState = ItemStateNone
 
-	// Create new body element and other page elements
-	newBody := v.Document.Call("createElement", "body")
-	v.elements.sidemenu = v.Document.Call("createElement", "div")
-	v.elements.navbar = v.Document.Call("createElement", "div")
-	v.elements.mainContent = v.Document.Call("createElement", "div")
-	v.elements.statusOutput = v.Document.Call("createElement", "div")
-	v.elements.pageTitle = v.Document.Call("createElement", "div")
-	v.elements.editor = user.New(v.Document, v.events)
+	// Create a div for the item editor
+	editor.Div = document.Call("createElement", "div")
 
-	// Add the navbar to the body
-	v.elements.navbar.Set("className", "navbar")
-	newBody.Call("appendChild", v.elements.navbar)
+	// Create a div for displayingthe editor
+	editor.EditDiv = document.Call("createElement", "div")
+	editor.EditDiv.Set("id", "itemEditDiv")
+	editor.Div.Call("appendChild", editor.EditDiv)
 
-	// Add the menu icon to the navbar
-	menuIcon := v.Document.Call("createElement", "div")
-	menuIcon.Set("id", "menuIcon")
-	menuIcon.Set("innerHTML", "&#9776;")
-	menuIcon.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		v.toggleSideMenu()
+	// Create a div for displaying the list
+	editor.ListDiv = document.Call("createElement", "div")
+	editor.ListDiv.Set("id", "itemList")
+	editor.Div.Call("appendChild", editor.ListDiv)
 
-		return nil
-	}))
-	v.elements.navbar.Call("appendChild", menuIcon)
+	// Create a div for displaying ItemState
+	editor.StateDiv = document.Call("createElement", "div")
+	editor.StateDiv.Set("id", "ItemStateDiv")
+	editor.Div.Call("appendChild", editor.StateDiv)
 
-	// Add the pageTitle to the navbar
-	v.elements.navbar.Call("appendChild", v.elements.pageTitle)
+	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
+	editor.Div.Call("appendChild", form)
 
-	// Add the side menu to the body
-	v.elements.sidemenu.Set("id", "sideMenu")
-	v.elements.sidemenu.Set("className", "sidemenu")
-	v.elements.sidemenu.Set("innerHTML", `<a href="javascript:void(0)" class="closebtn" onclick="toggleSideMenu()">&times;</a>
-							   <a href="#">Home</a>
-							   <a href="#">About</a>
-							   <a href="#">Contact</a>`)
-	newBody.Call("appendChild", v.elements.sidemenu)
-
-	// Add the Fetch Users button to the side menu
-	//fetchUsersBtn := viewHelpers.HRef(editor.FetchUsers, v.Document, "Users", "fetchUsersBtn")
-	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
-	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
-
-	// append editor.Div to the mainContent
-	v.elements.mainContent.Call("appendChild", v.elements.editor.Div)
-
-	// append statusOutput to the mainContent
-	v.elements.statusOutput.Set("id", "statusOutput")
-	v.elements.statusOutput.Set("className", "statusOutput")
-	v.elements.mainContent.Call("appendChild", v.elements.statusOutput)
-
-	// append mainContent to the body
-	v.elements.mainContent.Set("id", "mainContent")
-	v.elements.mainContent.Set("className", "main")
-	newBody.Call("appendChild", v.elements.mainContent)
-
-	// Replace the existing body with the new body
-	v.Document.Get("documentElement").Call("replaceChild", newBody, v.Document.Get("body"))
+	return editor
 }
 
-// func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
-func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
-	v.closeSideMenu()
-	v.elements.pageTitle.Set("innerHTML", "Users")
-	//v.elements.editor.FetchUsers(this, args)
-	v.elements.editor.FetchItems()
+// NewItemData initializes a new item for adding
+func (editor *ItemEditor) NewItemData() interface{} {
+	editor.updateStateDisplay(ItemStateAdding)
+	editor.CurrentItem = TableData{}
+	editor.populateEditForm()
 	return nil
 }
 
-// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
-func (v *View) toggleSideMenu() {
-	if v.elements.sidemenu.Get("style").Get("width").String() == "250px" {
-		v.closeSideMenu()
-	} else {
-		v.openSideMenu()
+// onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
+func (editor *ItemEditor) onCompletionMsg(Msg string) {
+	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: Msg})
+}
+
+// populateEditForm populates the item edit form with the current item's data
+func (editor *ItemEditor) populateEditForm() {
+	document := js.Global().Get("document")
+	editor.EditDiv.Set("innerHTML", "") // Clear existing content
+
+	form := document.Call("createElement", "form")
+	form.Set("id", "editForm")
+
+	// Create input fields
+	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentItem.Name, document, form, "Name", "text", "itemName")
+	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentItem.Username, document, form, "Username", "text", "itemUsername")
+	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentItem.Email, document, form, "Email", "email", "itemEmail")
+
+	// Create submit button
+	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, document, "Submit", "submitEditBtn")
+
+	// Append elements to form
+	form.Call("appendChild", submitBtn)
+
+	// Append form to editor div
+	editor.EditDiv.Call("appendChild", form)
+
+	// Make sure the form is visible
+	editor.EditDiv.Get("style").Set("display", "block")
+}
+
+func (editor *ItemEditor) resetEditForm() {
+	// Clear existing content
+	editor.EditDiv.Set("innerHTML", "")
+
+	// Reset CurrentItem
+	editor.CurrentItem = TableData{}
+
+	// Reset UI components
+	editor.UiComponents.Name = js.Undefined()
+	editor.UiComponents.Username = js.Undefined()
+	editor.UiComponents.Email = js.Undefined()
+
+	// Update state
+	editor.updateStateDisplay(ItemStateNone)
+}
+
+// SubmitItemEdit handles the submission of the item edit form
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+	editor.CurrentItem.Name = editor.UiComponents.Name.Get("value").String()
+	editor.CurrentItem.Username = editor.UiComponents.Username.Get("value").String()
+	editor.CurrentItem.Email = editor.UiComponents.Email.Get("value").String()
+
+	// Need to investigate the technique for passing values into a go routine ?????????
+	// I think I need to pass a copy of the current item to the go routine or use some other technique
+	// to avoid the data being overwritten etc.
+	switch editor.ItemState {
+	case ItemStateEditing:
+		go editor.UpdateItem(editor.CurrentItem)
+	case ItemStateAdding:
+		go editor.AddItem(editor.CurrentItem)
+	default:
+		editor.onCompletionMsg("Invalid item state for submission")
 	}
-	//return nil
+
+	editor.resetEditForm()
+	return nil
 }
 
-// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
-func (v *View) closeSideMenu() {
-	v.elements.sidemenu.Get("style").Set("width", "0")
-	v.elements.mainContent.Get("style").Set("marginLeft", "0")
-	//return nil
-}
-
-// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
-func (v *View) openSideMenu() {
-	v.elements.sidemenu.Get("style").Set("width", "250px")
-	v.elements.mainContent.Get("style").Set("marginLeft", "250px")
-	//return nil
-}
-
-// Event handlers and event data types
-
-// func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
-func (v *View) updateStatus(event eventprocessor.Event) {
-	message, ok := event.Data.(string)
-	if !ok {
-		log.Println("Invalid event data")
+// UpdateItem updates an existing item record in the item list
+func (editor *ItemEditor) UpdateItem(item TableData) {
+	editor.updateStateDisplay(ItemStateSaving)
+	itemJSON, err := json.Marshal(item)
+	if err != nil {
+		editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
 		return
 	}
-	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
-	msgDiv := v.Document.Call("createElement", "div")
-	msgDiv.Set("innerHTML", message)
-	v.elements.statusOutput.Call("appendChild", msgDiv)
+	url := apiURL + "/" + strconv.Itoa(item.ID)
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
+	if err != nil {
+		editor.onCompletionMsg("Failed to create request: " + err.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		editor.onCompletionMsg("Failed to send request: " + err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		editor.onCompletionMsg("Non-OK HTTP status: " + resp.Status)
+		return
+	}
+
+	editor.FetchItems() // Refresh the item list
+	editor.updateStateDisplay(ItemStateNone)
+	editor.onCompletionMsg("Item record updated successfully")
+}
+
+// AddItem adds a new item to the item list
+func (editor *ItemEditor) AddItem(item TableData) {
+	editor.updateStateDisplay(ItemStateSaving)
+	itemJSON, err := json.Marshal(item)
+	if err != nil {
+		editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
+		return
+	}
+
+	url := apiURL
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(itemJSON))
+	if err != nil {
+		editor.onCompletionMsg("Failed to create request: " + err.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		editor.onCompletionMsg("Failed to send request: " + err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		editor.onCompletionMsg("Not-OK HTTP status: " + resp.Status)
+		return
+	}
+
+	editor.FetchItems() // Refresh the item list
+	editor.updateStateDisplay(ItemStateNone)
+	editor.onCompletionMsg("Item record added successfully")
+}
+
+func (editor *ItemEditor) FetchItems() interface{} {
 	go func() {
-		time.Sleep(5 * time.Second) // Wait for the specified duration
-		msgDiv.Call("remove")
+		editor.updateStateDisplay(ItemStateFetching)
+		resp, err := http.Get(apiURL)
+		if err != nil {
+			editor.onCompletionMsg("Error fetching items: " + err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		var items []TableData
+		if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+			editor.onCompletionMsg("Failed to decode JSON: " + err.Error())
+			return
+		}
+
+		editor.ItemList = items
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+	}()
+	return nil
+}
+
+func (editor *ItemEditor) deleteItem(itemID int) {
+	go func() {
+		editor.updateStateDisplay(ItemStateDeleting)
+		log.Printf("itemID: %+v", itemID)
+		req, err := http.NewRequest("DELETE", apiURL+"/"+strconv.Itoa(itemID), nil)
+		if err != nil {
+			editor.onCompletionMsg("Failed to create delete request: " + err.Error())
+			return
+		}
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			editor.onCompletionMsg("Error deleting item: " + err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			editor.onCompletionMsg("Failed to delete item, status: " + resp.Status)
+			return
+		}
+
+		// After successful deletion, fetch updated item list
+		editor.FetchItems()
+		editor.updateStateDisplay(ItemStateNone)
+		editor.onCompletionMsg("Item record deleted successfully")
 	}()
 }
 
-// Example
-// DisplayStatus provides an object to send data to the even handler. This is an examle, it is not used.
-type DisplayStatus struct {
-	Message string
+func (editor *ItemEditor) populateItemList() {
+	document := js.Global().Get("document")
+	editor.ListDiv.Set("innerHTML", "") // Clear existing content
+
+	// Add New Item button
+	addNewItemButton := document.Call("createElement", "button")
+	addNewItemButton.Set("innerHTML", "Add New Item")
+	addNewItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		editor.NewItemData()
+		return nil
+	}))
+	editor.ListDiv.Call("appendChild", addNewItemButton)
+
+	for _, item := range editor.ItemList {
+		itemDiv := document.Call("createElement", "div")
+		itemDiv.Set("innerHTML", item.Name+" ("+item.Email+")")
+		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+
+		// Create an edit button
+		editButton := document.Call("createElement", "button")
+		editButton.Set("innerHTML", "Edit")
+		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			editor.CurrentItem = item
+			editor.updateStateDisplay(ItemStateEditing)
+			editor.populateEditForm()
+			return nil
+		}))
+
+		// Create a delete button
+		deleteButton := document.Call("createElement", "button")
+		deleteButton.Set("innerHTML", "Delete")
+		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			log.Printf("item: %+v", item)
+			editor.deleteItem(item.ID)
+			return nil
+		}))
+
+		itemDiv.Call("appendChild", editButton)
+		itemDiv.Call("appendChild", deleteButton)
+
+		editor.ListDiv.Call("appendChild", itemDiv)
+	}
 }
+
+func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+	editor.ItemState = newState
+	var stateText string
+	switch editor.ItemState {
+	case ItemStateNone:
+		stateText = "Idle"
+	case ItemStateFetching:
+		stateText = "Fetching Data"
+	case ItemStateEditing:
+		stateText = "Editing Item"
+	case ItemStateAdding:
+		stateText = "Adding New Item"
+	case ItemStateSaving:
+		stateText = "Saving Item"
+	case ItemStateDeleting:
+		stateText = "Deleting Item"
+	default:
+		stateText = "Unknown State"
+	}
+
+	editor.StateDiv.Set("textContent", "Current State: "+stateText)
+}
+
+// Event handlers and event data types

@@ -13,6 +13,8 @@ import (
 
 type ItemState int
 
+const apiURL = "http://localhost:8085/users"
+
 const (
 	ItemStateNone     ItemState = iota
 	ItemStateFetching           //ItemState = 1
@@ -35,13 +37,6 @@ type UI struct {
 	Email    js.Value
 }
 
-//type viewElements struct {
-//	sidemenu     js.Value
-//	navbar       js.Value
-//	mainContent  js.Value
-//	statusOutput js.Value
-//}
-
 type ItemEditor struct {
 	events       *eventprocessor.EventProcessor
 	CurrentItem  TableData
@@ -54,18 +49,6 @@ type ItemEditor struct {
 	StateDiv     js.Value
 	//Parent       js.Value
 }
-
-//type View struct {
-//	//Document   js.Value
-//	ItemEditor ItemEditor
-//	elements   viewElements
-//}
-
-//func New() *View {
-//	return &View{
-//		Document: js.Global().Get("document"),
-//	}
-//}
 
 // NewItemEditor creates a new ItemEditor instance
 func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *ItemEditor {
@@ -98,47 +81,7 @@ func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *Item
 	return editor
 }
 
-// FetchItemData fetches item data from the server
-func (editor *ItemEditor) FetchItemDataXXX(this js.Value, p []js.Value) interface{} {
-	go func() {
-		editor.updateStateDisplay(ItemStateFetching)
-		url := "http://localhost:8085/users/1"
-		resp, err := http.Get(url)
-		if err != nil {
-			editor.onCompletionMsg(err.Error())
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			editor.onCompletionMsg("Non-OK HTTP status: " + resp.Status)
-			return
-		}
-
-		var item TableData
-		err = json.NewDecoder(resp.Body).Decode(&item)
-		if err != nil {
-			editor.onCompletionMsg("Failed to decode JSON: " + err.Error())
-			return
-		}
-
-		editor.CurrentItem = item
-
-		itemJSON, err := json.Marshal(item)
-		if err != nil {
-			editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
-			return
-		}
-
-		editor.populateEditForm()
-		editor.updateStateDisplay(ItemStateNone)
-		editor.onCompletionMsg(string(itemJSON))
-	}()
-	return nil
-}
-
 // NewItemData initializes a new item for adding
-// func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentItem = TableData{}
@@ -223,7 +166,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 		editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
 		return
 	}
-	url := "http://localhost:8085/users/" + strconv.Itoa(item.ID)
+	url := apiURL + "/" + strconv.Itoa(item.ID)
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
 	if err != nil {
 		editor.onCompletionMsg("Failed to create request: " + err.Error())
@@ -258,7 +201,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 		return
 	}
 
-	url := "http://localhost:8085/users"
+	url := apiURL
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(itemJSON))
 	if err != nil {
 		editor.onCompletionMsg("Failed to create request: " + err.Error())
@@ -284,11 +227,10 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.onCompletionMsg("Item record added successfully")
 }
 
-// func (editor *ItemEditor) FetchItems(this js.Value, p []js.Value) interface{} {
 func (editor *ItemEditor) FetchItems() interface{} {
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		resp, err := http.Get("http://localhost:8085/users")
+		resp, err := http.Get(apiURL)
 		if err != nil {
 			editor.onCompletionMsg("Error fetching items: " + err.Error())
 			return
@@ -312,7 +254,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
 		log.Printf("itemID: %+v", itemID)
-		req, err := http.NewRequest("DELETE", "http://localhost:8085/users/"+strconv.Itoa(itemID), nil)
+		req, err := http.NewRequest("DELETE", apiURL+"/"+strconv.Itoa(itemID), nil)
 		if err != nil {
 			editor.onCompletionMsg("Failed to create delete request: " + err.Error())
 			return
@@ -355,21 +297,6 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := document.Call("createElement", "div")
 		itemDiv.Set("innerHTML", item.Name+" ("+item.Email+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
-
-		/*
-			// Create a function that returns the event listener
-			createClickHandler := func(clickedItem Item) js.Func {
-				return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-					editor.CurrentItem = clickedItem
-					editor.updateStateDisplay(ItemStateEditing)
-					editor.populateEditForm()
-					return nil
-				})
-			}
-
-			// Add the event listener using the created function
-			itemDiv.Call("addEventListener", "click", createClickHandler(item))
-		*/
 
 		// Create an edit button
 		editButton := document.Call("createElement", "button")
