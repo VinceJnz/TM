@@ -6,6 +6,7 @@ import (
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
+	"time"
 )
 
 type viewElements struct {
@@ -95,7 +96,8 @@ func (v *View) Setup() {
 func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
 	v.closeSideMenu()
 	v.elements.pageTitle.Set("innerHTML", "Users")
-	v.elements.editor.FetchUsers(this, args)
+	//v.elements.editor.FetchUsers(this, args)
+	v.elements.editor.FetchUsers()
 	return nil
 }
 
@@ -132,7 +134,14 @@ func (v *View) updateStatus(event eventprocessor.Event) {
 		log.Println("Invalid event data")
 		return
 	}
-	v.elements.statusOutput.Set("innerHTML", "test: "+message)
+	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
+	msgDiv := v.Document.Call("createElement", "div")
+	msgDiv.Set("innerHTML", message)
+	v.elements.statusOutput.Call("appendChild", msgDiv)
+	go func() {
+		time.Sleep(5 * time.Second) // Wait for the specified duration
+		msgDiv.Call("remove")
+	}()
 }
 
 // Example
