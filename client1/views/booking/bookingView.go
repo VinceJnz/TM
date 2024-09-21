@@ -24,6 +24,7 @@ const (
 	ItemStateDeleting           //ItemState = 5
 )
 
+// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID       int    `json:"id"`
 	Name     string `json:"name"`
@@ -31,6 +32,7 @@ type TableData struct {
 	Email    string `json:"email"`
 }
 
+// ********************* This needs to be changed for each api **********************
 type UI struct {
 	Name     js.Value
 	Username js.Value
@@ -102,7 +104,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form := document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	// Create input fields
+	// Create input fields // ********************* This needs to be changed for each api **********************
 	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentItem.Name, document, form, "Name", "text", "itemName")
 	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentItem.Username, document, form, "Username", "text", "itemUsername")
 	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentItem.Email, document, form, "Email", "email", "itemEmail")
@@ -128,9 +130,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.CurrentItem = TableData{}
 
 	// Reset UI components
-	editor.UiComponents.Name = js.Undefined()
-	editor.UiComponents.Username = js.Undefined()
-	editor.UiComponents.Email = js.Undefined()
+	editor.UiComponents = UI{}
 
 	// Update state
 	editor.updateStateDisplay(ItemStateNone)
@@ -138,6 +138,8 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+
+	// ********************* This needs to be changed for each api **********************
 	editor.CurrentItem.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentItem.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentItem.Email = editor.UiComponents.Email.Get("value").String()
