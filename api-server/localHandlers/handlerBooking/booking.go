@@ -26,7 +26,7 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
-	err := h.db.Select(records, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified	FROM bookings`)
+	err := h.db.Select(records, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_bookings`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
@@ -51,7 +51,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	record := models.Booking{}
 	err = h.db.Get(&record, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified 
-		FROM bookings WHERE id = $1`, id)
+		FROM at_bookings WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
@@ -77,7 +77,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	//booking.Modified = now
 
 	err := h.db.QueryRow(`
-		INSERT INTO bookings (owner_id, notes, from_date, to_date, booking_status_id) 
+		INSERT INTO at_bookings (owner_id, notes, from_date, to_date, booking_status_id) 
 		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
 		record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
 	).Scan(&record.ID)
@@ -108,7 +108,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	//record.Modified = time.Now().UTC()
 
 	_, err = h.db.Exec(`
-		UPDATE bookings 
+		UPDATE at_bookings 
 		SET owner_id = $1, notes = $2, from_date = $3, to_date = $4, booking_status_id = $5 
 		WHERE id = $6`,
 		record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
@@ -131,7 +131,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM bookings WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM at_bookings WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
