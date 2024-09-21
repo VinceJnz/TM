@@ -123,6 +123,8 @@ func (v *View) openSideMenu() {
 	//return nil
 }
 
+// Event actions and event data types
+
 // func (v *View) updatePageTitle Navbar page title text to display a page title on the navbar
 func (v *View) updateStatus(event eventprocessor.Event) {
 	message, ok := event.Data.(string)
@@ -131,4 +133,10 @@ func (v *View) updateStatus(event eventprocessor.Event) {
 		return
 	}
 	v.elements.statusOutput.Set("innerHTML", "test: "+message)
+}
+
+// Example
+// DisplayStatus provide the object to return the data in, and provide a callback to use when the data is returned
+type DisplayStatus struct {
+	Message string
 }
