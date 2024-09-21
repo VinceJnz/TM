@@ -363,4 +363,4 @@ func (editor *UserEditor) updateStateDisplay(newState userState) {
 	editor.StateDiv.Set("textContent", "Current State: "+stateText)
 }
 
-// Event actions and event data types
+// Event handlers and event data types

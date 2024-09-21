@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+// Each event is registered in the EventProcessor map.
+// Each event has a unique name.
+// And event handler can call one or more events.
+
 // Event represents a message with a type and data
 type Event struct {
 	Type string
@@ -14,7 +18,7 @@ type Event struct {
 // EventHandler is a function that processes events
 type EventHandler func(Event)
 
-// EventProcessor manages event handlers and processing
+// EventProcessor manages event handlers and processing.
 type EventProcessor struct {
 	eventHandlers map[string][]EventHandler
 }

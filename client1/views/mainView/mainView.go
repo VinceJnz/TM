@@ -123,9 +123,9 @@ func (v *View) openSideMenu() {
 	//return nil
 }
 
-// Event actions and event data types
+// Event handlers and event data types
 
-// func (v *View) updatePageTitle Navbar page title text to display a page title on the navbar
+// func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
 func (v *View) updateStatus(event eventprocessor.Event) {
 	message, ok := event.Data.(string)
 	if !ok {
@@ -136,7 +136,7 @@ func (v *View) updateStatus(event eventprocessor.Event) {
 }
 
 // Example
-// DisplayStatus provide the object to return the data in, and provide a callback to use when the data is returned
+// DisplayStatus provides an object to send data to the even handler. This is an examle, it is not used.
 type DisplayStatus struct {
 	Message string
 }
