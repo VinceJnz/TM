@@ -26,7 +26,7 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
-	err := h.db.Select(records, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_bookings`)
+	err := h.db.Select(&records, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_bookings`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
