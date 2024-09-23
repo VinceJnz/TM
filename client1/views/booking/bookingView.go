@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"syscall/js"
+	"time"
 )
 
 type ItemState int
@@ -26,17 +27,22 @@ const (
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	ID              int       `json:"id"`
+	OwnerID         int       `json:"owner_id"`
+	Notes           string    `json:"notes"`
+	FromDate        time.Time `json:"from_date"`
+	ToDate          time.Time `json:"to_date"`
+	BookingStatusID int       `json:"booking_status_id"`
+	Created         time.Time `json:"created"`
+	Modified        time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Name     js.Value
-	Username js.Value
-	Email    js.Value
+	Notes           js.Value
+	FromDate        js.Value
+	ToDate          js.Value
+	BookingStatusID js.Value
 }
 
 type ItemEditor struct {
@@ -105,9 +111,13 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Set("id", "editForm")
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentItem.Name, document, form, "Name", "text", "itemName")
-	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentItem.Username, document, form, "Username", "text", "itemUsername")
-	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentItem.Email, document, form, "Email", "email", "itemEmail")
+	// Define the date layout (format) and the string you want to parse
+	layout := "2006-01-02" // The reference layout for Go's date parsing
+
+	editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, document, form, "Notes", "text", "itemNotes")
+	editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(layout), document, form, "From", "date", "itemFromDate")
+	editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(layout), document, form, "To", "date", "itemToDate")
+	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentItem.BookingStatusID, document, form, "Status", "text", "itemStatus")
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, document, "Submit", "submitEditBtn")
@@ -140,9 +150,20 @@ func (editor *ItemEditor) resetEditForm() {
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 
 	// ********************* This needs to be changed for each api **********************
-	editor.CurrentItem.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentItem.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentItem.Email = editor.UiComponents.Email.Get("value").String()
+	var err error
+	// Define the date layout (format) and the string you want to parse
+	layout := "2006-01-02" // The reference layout for Go's date parsing
+
+	editor.CurrentItem.Notes = editor.UiComponents.Notes.Get("value").String()
+	editor.CurrentItem.FromDate, err = time.Parse(layout, editor.UiComponents.FromDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing date:", err)
+	}
+	editor.CurrentItem.ToDate, err = time.Parse(layout, editor.UiComponents.ToDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing date:", err)
+	}
+	//editor.CurrentItem.BookingStatusID = editor.UiComponents.BookingStatusID.Get("value").String() // This needs to be set up to done using a dropdown list
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -286,6 +307,9 @@ func (editor *ItemEditor) populateItemList() {
 	document := js.Global().Get("document")
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
+	// Define the date layout (format) and the string you want to parse
+	layout := "2006-01-02" // The reference layout for Go's date parsing
+
 	// Add New Item button
 	addNewItemButton := document.Call("createElement", "button")
 	addNewItemButton.Set("innerHTML", "Add New Item")
@@ -297,7 +321,8 @@ func (editor *ItemEditor) populateItemList() {
 
 	for _, item := range editor.ItemList {
 		itemDiv := document.Call("createElement", "div")
-		itemDiv.Set("innerHTML", item.Name+" ("+item.Email+")")
+		// ********************* This needs to be changed for each api **********************
+		itemDiv.Set("innerHTML", item.Notes+" (From:"+item.FromDate.Format(layout)+" - To:"+item.ToDate.Format(layout)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
