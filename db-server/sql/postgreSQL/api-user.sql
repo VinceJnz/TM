@@ -1,6 +1,6 @@
 -- Connect to the PostgreSQL database as a superuser
 -- Replace `postgres` with your superuser if different
-\c postgres;
+-- \c postgres;
 
 -- Step 1: Create a new user
 CREATE USER api_user WITH PASSWORD 'api_password';
