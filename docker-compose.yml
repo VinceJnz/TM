@@ -1,0 +1,88 @@
+##version: '3.8'
+
+services:
+  dbserver:
+    image: postgres:13
+    container_name: postgres_container
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db-server/init:/docker-entrypoint-initdb.d  # Mounting init scripts
+    networks:
+      - mynetwork
+
+  adminer:
+    image: adminer
+    container_name: adminer_container
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "8082:8080"
+    networks:
+      - mynetwork
+
+##  postgres:
+##    image: postgres:15
+##    container_name: postgres
+##    environment:
+##      POSTGRES_USER: user
+##      POSTGRES_PASSWORD: password
+##      POSTGRES_DB: mydb
+##    volumes:
+##      - pgdata:/var/lib/postgresql/data
+##    networks:
+##      - mynetwork
+
+  wasmclient:
+    build:
+      context: ./client1
+    container_name: wasmclient
+    networks:
+      - mynetwork
+    volumes:
+      - ./webserver/static:/static
+##    depends_on:
+##      - webserver
+
+  webserver:
+    build:
+      context: ./web-server        # Updated context to web-server subfolder
+##      dockerfile: Dockerfile-web   # Dockerfile for the web server
+    container_name: webserver
+    ports:
+      - "8081:8081"
+    networks:
+      - mynetwork
+    volumes:
+      - ./web-server/static:/app/static
+    depends_on:
+##      - apiserver
+      - wasmclient
+
+  apiserver:
+    build:
+      context: ./api-server        # Updated context for API server
+##      dockerfile: Dockerfile-api   # Dockerfile for the API server
+    container_name: apiserver
+    ports:
+      - "8085:8085"
+    networks:
+      - mynetwork
+    environment:
+##      - DATABASE_URL=postgres://user:password@postgres:5432/mydb
+      - DATABASE_URL=dbserver://api_user:api_password@postgres:5432/mydatabase
+    depends_on:
+##      - postgres
+      - dbserver
+
+networks:
+  mynetwork:
+    driver: bridge
+
+volumes:
+  db_data:
