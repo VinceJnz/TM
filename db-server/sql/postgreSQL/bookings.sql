@@ -21,3 +21,10 @@ CREATE TRIGGER update_at_bookings_modified
 BEFORE UPDATE ON at_bookings
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
+
+CREATE TABLE IF NOT EXISTS et_booking_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(50) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
