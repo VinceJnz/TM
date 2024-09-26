@@ -45,6 +45,8 @@ func (v *View) Setup() {
 	v.elements.mainContent = v.Document.Call("createElement", "div")
 	v.elements.statusOutput = v.Document.Call("createElement", "div")
 	v.elements.pageTitle = v.Document.Call("createElement", "div")
+
+	// Create editor div objects
 	v.elements.userEditor = userView.New(v.Document, v.events)
 	v.elements.bookingEditor = bookingView.New(v.Document, v.events)
 	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events)
@@ -76,23 +78,20 @@ func (v *View) Setup() {
 							   <a href="#">Contact</a>`)
 	newBody.Call("appendChild", v.elements.sidemenu)
 
-	// Add the Users button to the side menu
+	// Create the menu buttons
 	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
-	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
-
-	// Add the Booking button to the side menu
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
-	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
-
-	// Add the BookingStatus button to the side menu
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "Booking Status", "fetchBookingsStatusBtn")
+
+	// Add menu buttons to the side menu
+	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
+	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
 
-	// append userEditor.Div to the mainContent
+	// append Editor Div's to the mainContent
 	v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
-
-	// append bookingEditor.Div to the mainContent
 	v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput.Set("id", "statusOutput")
