@@ -2,8 +2,8 @@ package mainView
 
 import (
 	"client1/v2/app/eventprocessor"
-	"client1/v2/views/booking"
-	"client1/v2/views/user"
+	"client1/v2/views/bookingView"
+	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
@@ -16,8 +16,8 @@ type viewElements struct {
 	mainContent   js.Value
 	statusOutput  js.Value
 	pageTitle     js.Value
-	userEditor    *user.ItemEditor
-	bookingEditor *booking.ItemEditor
+	userEditor    *userView.ItemEditor
+	bookingEditor *bookingView.ItemEditor
 }
 
 type View struct {
@@ -43,8 +43,8 @@ func (v *View) Setup() {
 	v.elements.mainContent = v.Document.Call("createElement", "div")
 	v.elements.statusOutput = v.Document.Call("createElement", "div")
 	v.elements.pageTitle = v.Document.Call("createElement", "div")
-	v.elements.userEditor = user.New(v.Document, v.events)
-	v.elements.bookingEditor = booking.New(v.Document, v.events)
+	v.elements.userEditor = userView.New(v.Document, v.events)
+	v.elements.bookingEditor = bookingView.New(v.Document, v.events)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
