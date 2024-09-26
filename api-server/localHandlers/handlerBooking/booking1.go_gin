@@ -1,0 +1,143 @@
+//package handlerBooking
+
+import (
+	"database/sql"
+	"log"
+	"net/http"
+	"strconv"
+
+	"api-server/v2/models"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
+)
+
+const debug = "handlerBooking"
+
+type Handler struct {
+	db *sqlx.DB
+}
+
+func New(db *sqlx.DB) *Handler {
+	return &Handler{db: db}
+}
+
+// GetAll: retrieves and returns all records
+func (h *Handler) GetAll(c *gin.Context) {
+	records := []models.Booking{}
+	err := h.db.Select(&records, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_bookings`)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bookings not found"})
+		return
+	} else if err != nil {
+		log.Printf("%v.GetAll()2 %v\n", debug, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, records)
+}
+
+// Get: retrieves and returns a single record identified by id
+func (h *Handler) Get(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("%v.Get()1 %v\n", debug, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+		return
+	}
+
+	var record models.Booking
+	err = h.db.Get(&record, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified 
+                FROM at_bookings WHERE id = $1`, id)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bookings not found"})
+		return
+	} else if err != nil {
+		log.Printf("%v.Get()2 %v\n", debug, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, record)
+}
+
+// Create: adds a new record and returns the new record
+func (h *Handler) Create(c *gin.Context) {
+	var record models.Booking
+	if err := c.ShouldBindJSON(&record); err != nil {
+		log.Printf("%v.Create()1 %v\n", debug, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
+		return
+	}
+
+	result, err := h.db.Exec(`
+                INSERT INTO at_bookings (owner_id, notes, from_date, to_date, booking_status_id) 
+                VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
+	)
+	if err != nil {
+		log.Printf("%v.Create()2 %v\n", debug, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	newID, _ := result.LastInsertId()
+	record.ID = int(newID)
+	c.JSON(http.StatusCreated, record)
+}
+
+// Update: modifies the existing record identified by id and returns the updated record
+func (h *Handler) Update(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("%v.Update()1 %v\n", debug, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+		return
+	}
+
+	var record models.Booking
+	if err := c.ShouldBindJSON(&record); err != nil {
+		log.Printf("%v.Update()1 %v\n", debug, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
+		return
+	}
+	record.ID = id
+
+	_, err = h.db.Exec(`
+                UPDATE at_bookings 
+                SET owner_id = $1, notes = $2, from_date = $3, to_date = $4, booking_status_id = $5 
+                WHERE id = $6`,
+		record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
+		record.ID,
+	)
+	if err != nil {
+		log.Printf("%v.Update()2 %v\n", debug, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, record)
+}
+
+// Delete: removes a record identified by id
+func (h *Handler) Delete(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("%v.Delete()1 %v\n", debug, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+		return
+	}
+
+	_, err = h.db.Exec("DELETE FROM at_bookings WHERE id = $1", id)
+	if err != nil {
+		log.Printf("%v.Delete()2 %v\n", debug, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, gin.H{"message": "Booking deleted successfully"})
+}
