@@ -14,8 +14,10 @@ type Booking struct {
 }
 
 type BookingStatus struct {
-	ID     int    `json:"id" db:"id"`
-	Status string `json:"status" db:"status"`
+	ID       int       `json:"id" db:"id"`
+	Status   string    `json:"status" db:"status"`
+	Created  time.Time `json:"created" db:"created"`
+	Modified time.Time `json:"modified" db:"modified"`
 }
 
 type BookingUser struct {

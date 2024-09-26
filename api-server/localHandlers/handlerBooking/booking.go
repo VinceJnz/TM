@@ -28,7 +28,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
 	err := h.db.Select(&records, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_bookings`)
 	if err == sql.ErrNoRows {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
 		log.Printf("%v.GetAll()2 %v\n", debug, err)
@@ -45,7 +45,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
 		log.Printf("%v.Get()1 %v\n", debug, err)
-		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	err = h.db.Get(&record, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified 
 		FROM at_bookings WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
 		log.Printf("%v.Get()2 %v\n", debug, err)
@@ -71,10 +71,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-
-	//now := time.Now().UTC()
-	//booking.Created = now
-	//booking.Modified = now
 
 	err := h.db.QueryRow(`
 		INSERT INTO at_bookings (owner_id, notes, from_date, to_date, booking_status_id) 
@@ -95,7 +91,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
 
@@ -105,7 +101,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	record.ID = id
-	//record.Modified = time.Now().UTC()
 
 	_, err = h.db.Exec(`
 		UPDATE at_bookings 
@@ -127,7 +122,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
 
