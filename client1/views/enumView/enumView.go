@@ -1,4 +1,4 @@
-package userView
+package enumView
 
 import (
 	"bytes"
@@ -9,11 +9,12 @@ import (
 	"net/http"
 	"strconv"
 	"syscall/js"
+	"time"
 )
 
 type ItemState int
 
-const apiURL = "http://localhost:8085/users"
+const apiURL = "http://localhost:8085/bookings"
 
 const (
 	ItemStateNone     ItemState = iota
@@ -25,21 +26,19 @@ const (
 )
 
 // Define the date layout (format) and the string you want to parse
-const layout = "2006-01-02" // The reference layout for Go's date parsing
+//const layout = "2006-01-02" // The reference layout for Go's date parsing
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	ID       int       `json:"id"`
+	Status   string    `json:"status"`
+	Created  time.Time `json:"created"`
+	Modified time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Name     js.Value
-	Username js.Value
-	Email    js.Value
+	Status js.Value
 }
 
 type ItemEditor struct {
@@ -108,9 +107,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Set("id", "editForm")
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentItem.Name, document, form, "Name", "text", "itemName")
-	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentItem.Username, document, form, "Username", "text", "itemUsername")
-	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentItem.Email, document, form, "Email", "email", "itemEmail")
+	editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentItem.Status, document, form, "Notes", "text", "itemNotes")
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, document, "Submit", "submitEditBtn")
@@ -141,10 +138,10 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+
 	// ********************* This needs to be changed for each api **********************
-	editor.CurrentItem.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentItem.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentItem.Email = editor.UiComponents.Email.Get("value").String()
+	//var err error
+	editor.CurrentItem.Status = editor.UiComponents.Status.Get("value").String()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -299,7 +296,8 @@ func (editor *ItemEditor) populateItemList() {
 
 	for _, item := range editor.ItemList {
 		itemDiv := document.Call("createElement", "div")
-		itemDiv.Set("innerHTML", item.Name+" ("+item.Email+")")
+		// ********************* This needs to be changed for each api **********************
+		itemDiv.Set("innerHTML", item.Status)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

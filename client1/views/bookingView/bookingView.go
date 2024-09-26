@@ -25,6 +25,9 @@ const (
 	ItemStateDeleting           //ItemState = 5
 )
 
+// Define the date layout (format) and the string you want to parse
+const layout = "2006-01-02" // The reference layout for Go's date parsing
+
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID              int       `json:"id"`
@@ -111,9 +114,6 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Set("id", "editForm")
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	// Define the date layout (format) and the string you want to parse
-	layout := "2006-01-02" // The reference layout for Go's date parsing
-
 	editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, document, form, "Notes", "text", "itemNotes")
 	editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(layout), document, form, "From", "date", "itemFromDate")
 	editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(layout), document, form, "To", "date", "itemToDate")
@@ -151,8 +151,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	var err error
-	// Define the date layout (format) and the string you want to parse
-	layout := "2006-01-02" // The reference layout for Go's date parsing
 
 	editor.CurrentItem.Notes = editor.UiComponents.Notes.Get("value").String()
 	editor.CurrentItem.FromDate, err = time.Parse(layout, editor.UiComponents.FromDate.Get("value").String())
@@ -306,9 +304,6 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 func (editor *ItemEditor) populateItemList() {
 	document := js.Global().Get("document")
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
-
-	// Define the date layout (format) and the string you want to parse
-	layout := "2006-01-02" // The reference layout for Go's date parsing
 
 	// Add New Item button
 	addNewItemButton := document.Call("createElement", "button")
