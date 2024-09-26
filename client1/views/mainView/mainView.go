@@ -2,6 +2,7 @@ package mainView
 
 import (
 	"client1/v2/app/eventprocessor"
+	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
@@ -11,13 +12,14 @@ import (
 )
 
 type viewElements struct {
-	sidemenu      js.Value
-	navbar        js.Value
-	mainContent   js.Value
-	statusOutput  js.Value
-	pageTitle     js.Value
-	userEditor    *userView.ItemEditor
-	bookingEditor *bookingView.ItemEditor
+	sidemenu            js.Value
+	navbar              js.Value
+	mainContent         js.Value
+	statusOutput        js.Value
+	pageTitle           js.Value
+	userEditor          *userView.ItemEditor
+	bookingEditor       *bookingView.ItemEditor
+	bookingStatusEditor *bookingStatusView.ItemEditor
 }
 
 type View struct {
@@ -45,6 +47,7 @@ func (v *View) Setup() {
 	v.elements.pageTitle = v.Document.Call("createElement", "div")
 	v.elements.userEditor = userView.New(v.Document, v.events)
 	v.elements.bookingEditor = bookingView.New(v.Document, v.events)
+	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
@@ -77,9 +80,13 @@ func (v *View) Setup() {
 	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
 	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
 
-	// Add the Users button to the side menu
+	// Add the Booking button to the side menu
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
+
+	// Add the BookingStatus button to the side menu
+	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "Booking Status", "fetchBookingsStatusBtn")
+	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
 
 	// append userEditor.Div to the mainContent
 	v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
@@ -114,6 +121,14 @@ func (v *View) menuBooking(this js.Value, args []js.Value) interface{} {
 	v.elements.pageTitle.Set("innerHTML", "Bookings")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingEditor.FetchItems()
+	return nil
+}
+
+func (v *View) menuBookingStatus(this js.Value, args []js.Value) interface{} {
+	v.closeSideMenu()
+	v.elements.pageTitle.Set("innerHTML", "Booking Status")
+	//v.elements.editor.FetchUsers(this, args)
+	v.elements.bookingStatusEditor.FetchItems()
 	return nil
 }
 

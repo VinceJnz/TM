@@ -1,4 +1,4 @@
-package enumView
+package bookingStatusView
 
 import (
 	"bytes"
