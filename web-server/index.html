@@ -8,7 +8,7 @@
         const go = new Go();
 
         async function loadWasm() {
-            const wasmModule = await WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject);
+            const wasmModule = await WebAssembly.instantiateStreaming(fetch("/static/main.wasm"), go.importObject);
             go.run(wasmModule.instance);
         }
 

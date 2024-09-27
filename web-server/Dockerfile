@@ -9,7 +9,8 @@ WORKDIR /app
 COPY . .
 
 # Copy the built WASM files to the static directory
-COPY ./static ./static
+#COPY ./static ./static
+COPY ./static .
 
 # Build the Go web server
 RUN go mod download
