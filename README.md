@@ -1,70 +1,14 @@
-* Notes
+# Notes
 
+## Docker build
 
+Docker files can only refer to local files that are in the same folder or sub-folders of the docker file.
+To do a multi-stage build for the webserver and the wasm client the dockerfile needed to be able to access
+both the client1 and the web-server folders
 
-
-
-
-```yml
-version: '3.8'
-
-services:
-  wasm-builder:
-    build:
-      context: .
-      dockerfile: Dockerfile.wasm
-    volumes:
-      - .:/app
-    depends_on:
-      - webserver-builder
-
-  webserver-builder:
-    build:
-      context: .
-      dockerfile: Dockerfile.webserver
-    volumes:
-      - .:/app
-    depends_on:
-      - wasm-builder
-
-  webserver:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:80"
-    depends_on:
-      - wasm-builder
-      - webserver-builder
-```
-
-
-
-```yml
-  wasmclient:
-    build:
-      context: ./client1
-    container_name: wasmclient
-    networks:
-      - mynetwork
-    volumes:
-      - ./webserver/static:/static
-##    depends_on:
-##      - webserver
-
-  webserver:
-    build:
-      context: ./web-server        # Updated context to web-server subfolder
-##      dockerfile: Dockerfile-web   # Dockerfile for the web server
-    container_name: webserver
-    ports:
-      - "8081:8081"
-    networks:
-      - mynetwork
-    volumes:
-      - ./web-server/static:/app/static
-    depends_on:
-##      - apiserver
-      - wasmclient
-```
+To do this the docker file needed to be located in the project folder so that the client1 and web-server folders were accssible sub-folders.
+This was necessary in the multi-stage build to transfer files:
+* wasm.main from wasmbuilder to finalbuilder
+* webserver from webbuilder to finalbuilder
+* htmel.index from webbuilder to finalbuilder
 
