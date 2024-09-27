@@ -1,0 +1,22 @@
+# Use a lightweight Go image to build the WASM binary
+FROM golang:1.21.10-alpine AS builder
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the Go source code into the container
+COPY . .
+
+# Build the Go WASM binary
+RUN GOOS=js GOARCH=wasm go build -o /out/main.wasm
+
+#ENV GOROOT=/usr/local/go
+#COPY $GOROOT/misc/wasm/wasm_exec.js .
+#COPY /usr/local/go/misc/wasm/wasm_exec.js .
+
+# Volume to share the WASM client with the webserver
+VOLUME /shared
+
+# Copy the WASM client to the shared volume
+RUN cp /out/main.wasm /shared/
+#RUN cp wasm_exec.js /shared/

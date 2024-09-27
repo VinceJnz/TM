@@ -75,12 +75,12 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Set("innerHTML", `<a href="javascript:void(0)" class="closebtn" onclick="toggleSideMenu()">&times;</a>
 							   <a href="#">Home</a>
 							   <a href="#">About</a>
-							   <a href="#">ContactXX</a>`)
+							   <a href="#">Contact</a>`)
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Create the menu buttons
 	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
-	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "BookingsXX", "fetchBookingsBtn")
+	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
 
 	// Add menu buttons to the side menu
