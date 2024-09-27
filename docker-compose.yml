@@ -38,31 +38,38 @@ services:
 ##    networks:
 ##      - mynetwork
 
-  wasmclient:
+  wasm-builder:
     build:
       context: ./client1
-    container_name: wasmclient
-    networks:
-      - mynetwork
+      dockerfile: Dockerfile.wasm
     volumes:
-      - ./webserver/static:/static
-##    depends_on:
-##      - webserver
+      - ./shared:/shared
+#      - .:/app
+#    depends_on:
+#      - webserver-builder
+
+#  webserver-builder:
+#    build:
+#      context: ./web-server
+#      dockerfile: Dockerfile.webserver
+#    volumes:
+#      - .:/app
+#    depends_on:
+#      - wasm-builder
 
   webserver:
     build:
-      context: ./web-server        # Updated context to web-server subfolder
-##      dockerfile: Dockerfile-web   # Dockerfile for the web server
-    container_name: webserver
+      context: ./web-server
+      dockerfile: Dockerfile.webserver
     ports:
       - "8081:8081"
     networks:
       - mynetwork
-    volumes:
-      - ./web-server/static:/app/static
     depends_on:
-##      - apiserver
-      - wasmclient
+      - wasm-builder
+#      - webserver-builder
+    volumes:
+      - ./shared:/shared
 
   apiserver:
     build:
