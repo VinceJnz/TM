@@ -72,7 +72,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.db.QueryRow(`
-		INSERT INTO et_booking_status
+		INSERT INTO et_booking_status (status)
 		VALUES ($1) RETURNING id`,
 		record.Status,
 	).Scan(&record.ID)

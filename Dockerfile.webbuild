@@ -40,6 +40,7 @@ COPY --from=wasmbuilder /app/main.wasm .
 COPY --from=wasmbuilder /app/wasm_exec.js .
 COPY --from=webserverbuilder /app/webserver .
 COPY --from=webserverbuilder /app/index.html .
+COPY --from=webserverbuilder /app/favicon.ico .
 
 # Expose the port the web server listens on
 EXPOSE 8081

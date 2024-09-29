@@ -5,6 +5,9 @@ import "syscall/js"
 // These are simple view helpers that are used to create UI components. They don't add themselves to the DOM.
 // They are used to create more complex UI components, or to create a single UI component.
 
+// Define the date layout (format) and the string you want to parse
+const Layout = "2006-01-02" // The reference layout for Go's date parsing
+
 // Label creates a label element with the given text and ID.
 func Label(doc js.Value, labelText string, htmlID string) js.Value {
 	// Create a label element

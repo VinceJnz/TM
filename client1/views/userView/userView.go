@@ -13,8 +13,6 @@ import (
 
 type ItemState int
 
-const apiURL = "http://localhost:8085/users"
-
 const (
 	ItemStateNone     ItemState = iota
 	ItemStateFetching           //ItemState = 1
@@ -24,8 +22,8 @@ const (
 	ItemStateDeleting           //ItemState = 5
 )
 
-// Define the date layout (format) and the string you want to parse
-const layout = "2006-01-02" // The reference layout for Go's date parsing
+// ********************* This needs to be changed for each api **********************
+const apiURL = "http://localhost:8085/users"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -141,6 +139,7 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentItem.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentItem.Username = editor.UiComponents.Username.Get("value").String()
@@ -299,6 +298,7 @@ func (editor *ItemEditor) populateItemList() {
 
 	for _, item := range editor.ItemList {
 		itemDiv := document.Call("createElement", "div")
+		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", item.Name+" ("+item.Email+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 

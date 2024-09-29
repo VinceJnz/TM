@@ -14,8 +14,6 @@ import (
 
 type ItemState int
 
-const apiURL = "http://localhost:8085/bookings"
-
 const (
 	ItemStateNone     ItemState = iota
 	ItemStateFetching           //ItemState = 1
@@ -25,8 +23,8 @@ const (
 	ItemStateDeleting           //ItemState = 5
 )
 
-// Define the date layout (format) and the string you want to parse
-//const layout = "2006-01-02" // The reference layout for Go's date parsing
+// ********************* This needs to be changed for each api **********************
+const apiURL = "http://localhost:8085/bookingStatus"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -295,6 +293,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, item := range editor.ItemList {
+		log.Printf("%v %+v", "item = ", item)
 		itemDiv := document.Call("createElement", "div")
 		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", item.Status)

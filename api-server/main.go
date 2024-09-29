@@ -3,6 +3,7 @@ package main
 import (
 	"api-server/v2/app"
 	"api-server/v2/localHandlers/handlerBooking"
+	"api-server/v2/localHandlers/handlerBookingStatus"
 	"api-server/v2/localHandlers/handlerUser"
 	"log"
 	"net/http"
@@ -35,6 +36,14 @@ func main() {
 	r.HandleFunc("/bookings", booking.Create).Methods("POST")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Update).Methods("PUT")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Delete).Methods("DELETE")
+
+	// BookingStatus routes
+	bookingStatus := handlerBookingStatus.New(db)
+	r.HandleFunc("/bookingStatus", bookingStatus.GetAll).Methods("GET")
+	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Get).Methods("GET")
+	r.HandleFunc("/bookingStatus", bookingStatus.Create).Methods("POST")
+	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Update).Methods("PUT")
+	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Delete).Methods("DELETE")
 
 	// Define CORS options
 	corsOpts := handlers.CORS(

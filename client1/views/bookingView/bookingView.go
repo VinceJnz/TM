@@ -14,8 +14,6 @@ import (
 
 type ItemState int
 
-const apiURL = "http://localhost:8085/bookings"
-
 const (
 	ItemStateNone     ItemState = iota
 	ItemStateFetching           //ItemState = 1
@@ -25,8 +23,8 @@ const (
 	ItemStateDeleting           //ItemState = 5
 )
 
-// Define the date layout (format) and the string you want to parse
-const layout = "2006-01-02" // The reference layout for Go's date parsing
+// ********************* This needs to be changed for each api **********************
+const apiURL = "http://localhost:8085/bookings"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -115,8 +113,8 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
 	editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, document, form, "Notes", "text", "itemNotes")
-	editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(layout), document, form, "From", "date", "itemFromDate")
-	editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(layout), document, form, "To", "date", "itemToDate")
+	editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(viewHelpers.Layout), document, form, "From", "date", "itemFromDate")
+	editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(viewHelpers.Layout), document, form, "To", "date", "itemToDate")
 	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentItem.BookingStatusID, document, form, "Status", "text", "itemStatus")
 
 	// Create submit button
@@ -153,11 +151,11 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	var err error
 
 	editor.CurrentItem.Notes = editor.UiComponents.Notes.Get("value").String()
-	editor.CurrentItem.FromDate, err = time.Parse(layout, editor.UiComponents.FromDate.Get("value").String())
+	editor.CurrentItem.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing date:", err)
 	}
-	editor.CurrentItem.ToDate, err = time.Parse(layout, editor.UiComponents.ToDate.Get("value").String())
+	editor.CurrentItem.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing date:", err)
 	}
@@ -317,7 +315,7 @@ func (editor *ItemEditor) populateItemList() {
 	for _, item := range editor.ItemList {
 		itemDiv := document.Call("createElement", "div")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", item.Notes+" (From:"+item.FromDate.Format(layout)+" - To:"+item.ToDate.Format(layout)+")")
+		itemDiv.Set("innerHTML", item.Notes+" (From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
