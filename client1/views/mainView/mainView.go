@@ -107,8 +107,16 @@ func (v *View) Setup() {
 	v.Document.Get("documentElement").Call("replaceChild", newBody, v.Document.Get("body"))
 }
 
+func (v *View) hideEditors() {
+	// Hids editor div objects
+	//v.elements.userEditor.Hide()
+	//v.elements.bookingEditor.Hide()
+	//v.elements.bookingStatusEditor.Hide()
+}
+
 func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
 	v.closeSideMenu()
+	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Users")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.userEditor.FetchItems()
@@ -117,6 +125,7 @@ func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
 
 func (v *View) menuBooking(this js.Value, args []js.Value) interface{} {
 	v.closeSideMenu()
+	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Bookings")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingEditor.FetchItems()
@@ -125,6 +134,7 @@ func (v *View) menuBooking(this js.Value, args []js.Value) interface{} {
 
 func (v *View) menuBookingStatus(this js.Value, args []js.Value) interface{} {
 	v.closeSideMenu()
+	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Booking Status")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingStatusEditor.FetchItems()

@@ -123,6 +123,10 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Get("style").Set("display", "block")
 }
 
+func (editor *ItemEditor) Hide() {
+	editor.Div.Get("style").Set("display", "none")
+}
+
 func (editor *ItemEditor) resetEditForm() {
 	// Clear existing content
 	editor.EditDiv.Set("innerHTML", "")
