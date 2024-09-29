@@ -12,3 +12,6 @@ This was necessary in the multi-stage build to transfer files:
 * webserver from webbuilder to finalbuilder
 * htmel.index from webbuilder to finalbuilder
 
+## VSCode settings
+
+To open a vscode new-window as maximised, change the setting window.newWindowDimensions in Visual Studio Code to "inherit"

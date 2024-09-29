@@ -37,8 +37,8 @@ services:
 
   apiserver:
     build:
-      context: ./api-server        # Updated context for API server
-##      dockerfile: Dockerfile-api   # Dockerfile for the API server
+      context: .                        # Updated context for API server
+      dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
     container_name: apiserver
     ports:
       - "8085:8085"
