@@ -293,7 +293,6 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, item := range editor.ItemList {
-		log.Printf("%v %+v", "item = ", item)
 		itemDiv := document.Call("createElement", "div")
 		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", item.Status)
