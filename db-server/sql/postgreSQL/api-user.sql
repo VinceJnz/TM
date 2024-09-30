@@ -23,3 +23,18 @@ GRANT USAGE ON SCHEMA public TO api_user;
 
 -- Grant execute privilege on all functions in the public schema
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO api_user;
+
+
+
+
+-- Role: api_user
+-- DROP ROLE IF EXISTS api_user;
+
+--CREATE ROLE api_user WITH
+--  LOGIN
+--  SUPERUSER
+--  INHERIT
+--  CREATEDB
+--  CREATEROLE
+--  NOREPLICATION
+--  ENCRYPTED PASSWORD 'md55b0e6f9a043946643c4cdb816129befd';

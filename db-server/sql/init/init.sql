@@ -92,6 +92,3 @@ BEFORE UPDATE ON st_users
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
 
-
-
-
