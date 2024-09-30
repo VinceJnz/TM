@@ -3,6 +3,7 @@ package bookingView
 import (
 	"bytes"
 	"client1/v2/app/eventprocessor"
+	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"log"
@@ -34,6 +35,7 @@ type TableData struct {
 	FromDate        time.Time `json:"from_date"`
 	ToDate          time.Time `json:"to_date"`
 	BookingStatusID int       `json:"booking_status_id"`
+	BookingStatus   string    `json:"booking_status"`
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`
 }
@@ -47,15 +49,17 @@ type UI struct {
 }
 
 type ItemEditor struct {
-	events       *eventprocessor.EventProcessor
-	CurrentItem  TableData
-	ItemState    ItemState
-	ItemList     []TableData
-	UiComponents UI
-	Div          js.Value
-	EditDiv      js.Value
-	ListDiv      js.Value
-	StateDiv     js.Value
+	document      js.Value
+	events        *eventprocessor.EventProcessor
+	CurrentItem   TableData
+	ItemState     ItemState
+	ItemList      []TableData
+	UiComponents  UI
+	Div           js.Value
+	EditDiv       js.Value
+	ListDiv       js.Value
+	StateDiv      js.Value
+	BookingStatus *bookingStatusView.ItemEditor
 	//Parent       js.Value
 }
 
@@ -63,6 +67,7 @@ type ItemEditor struct {
 func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *ItemEditor {
 	//document := js.Global().Get("document")
 	editor := new(ItemEditor)
+	editor.document = document
 	editor.events = eventprocessor
 	editor.ItemState = ItemStateNone
 
@@ -87,6 +92,9 @@ func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *Item
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
+	editor.BookingStatus = bookingStatusView.New(document, eventprocessor)
+	editor.BookingStatus.FetchItems()
+
 	return editor
 }
 
@@ -105,20 +113,27 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
-	document := js.Global().Get("document")
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 
-	form := document.Call("createElement", "form")
+	form := editor.document.Call("createElement", "form")
 	form.Set("id", "editForm")
+	var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, document, form, "Notes", "text", "itemNotes")
-	editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(viewHelpers.Layout), document, form, "From", "date", "itemFromDate")
-	editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(viewHelpers.Layout), document, form, "To", "date", "itemToDate")
-	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentItem.BookingStatusID, document, form, "Status", "text", "itemStatus")
+	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, editor.document, "Notes", "text", "itemNotes")
+	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentItem.BookingStatusID, document, "Status", "text", "itemStatus")
+	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.BookingStatusID, editor.document, "Status", "itemBookingStatusID")
+
+	// Append fields to form // ********************* This needs to be changed for each api **********************
+	form.Call("appendChild", NotesObj)
+	form.Call("appendChild", FromDateObj)
+	form.Call("appendChild", ToDateObj)
+	form.Call("appendChild", BookingStatusObj)
 
 	// Create submit button
-	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
 
 	// Append elements to form
 	form.Call("appendChild", submitBtn)
@@ -157,13 +172,19 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	editor.CurrentItem.Notes = editor.UiComponents.Notes.Get("value").String()
 	editor.CurrentItem.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing date:", err)
+		log.Println("Error parsing from date:", err)
 	}
 	editor.CurrentItem.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing date:", err)
+		log.Println("Error parsing to date:", err)
 	}
-	//editor.CurrentItem.BookingStatusID = editor.UiComponents.BookingStatusID.Get("value").String() // This needs to be set up to done using a dropdown list
+	//editor.CurrentItem.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
+	editor.CurrentItem.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing booking id:", err)
+	}
+
+	log.Printf("ItemEditor.SubmitItemEdit()1 booking: %+v", editor.CurrentItem)
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -319,7 +340,7 @@ func (editor *ItemEditor) populateItemList() {
 	for _, item := range editor.ItemList {
 		itemDiv := document.Call("createElement", "div")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", item.Notes+" (From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
+		itemDiv.Set("innerHTML", item.Notes+" (Status:"+item.BookingStatus+", From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

@@ -49,12 +49,12 @@ type ItemEditor struct {
 	EditDiv      js.Value
 	ListDiv      js.Value
 	StateDiv     js.Value
+	//StateDropDown js.Value
 	//Parent       js.Value
 }
 
 // NewItemEditor creates a new ItemEditor instance
 func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *ItemEditor {
-	//document := js.Global().Get("document")
 	editor := new(ItemEditor)
 	editor.events = eventprocessor
 	editor.ItemState = ItemStateNone
@@ -62,7 +62,7 @@ func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *Item
 	// Create a div for the item editor
 	editor.Div = document.Call("createElement", "div")
 
-	// Create a div for displayingthe editor
+	// Create a div for displaying the editor
 	editor.EditDiv = document.Call("createElement", "div")
 	editor.EditDiv.Set("id", "itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
@@ -91,6 +91,33 @@ func (editor *ItemEditor) NewItemData() interface{} {
 	return nil
 }
 
+func (editor *ItemEditor) NewStatusDropdown(value int, document js.Value, labelText, htmlID string) (object, inputObj js.Value) {
+	// Create a div for displaying State Dropdown
+	fieldset := document.Call("createElement", "fieldset")
+	fieldset.Set("className", "input-group")
+
+	StateDropDown := document.Call("createElement", "select")
+	StateDropDown.Set("id", htmlID)
+
+	for _, item := range editor.ItemList {
+		optionElement := document.Call("createElement", "option")
+		optionElement.Set("value", item.ID)
+		optionElement.Set("text", item.Status)
+		if value == item.ID {
+			optionElement.Set("selected", true)
+		}
+		StateDropDown.Call("appendChild", optionElement)
+	}
+
+	// Create a label element
+	label := viewHelpers.Label(document, labelText, htmlID)
+	fieldset.Call("appendChild", label)
+
+	fieldset.Call("appendChild", StateDropDown)
+
+	return fieldset, StateDropDown
+}
+
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
 	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: Msg})
@@ -104,8 +131,13 @@ func (editor *ItemEditor) populateEditForm() {
 	form := document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
+	var StatusObj js.Value
+
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentItem.Status, document, form, "Notes", "text", "itemNotes")
+	StatusObj, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentItem.Status, document, "Notes", "text", "itemNotes")
+
+	// Append fields to form // ********************* This needs to be changed for each api **********************
+	form.Call("appendChild", StatusObj)
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, document, "Submit", "submitEditBtn")

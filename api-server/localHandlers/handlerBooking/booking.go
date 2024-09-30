@@ -26,7 +26,9 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
-	err := h.db.Select(&records, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_bookings`)
+	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
+	FROM public.at_bookings ab
+	JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return

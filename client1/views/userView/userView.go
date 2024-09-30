@@ -105,10 +105,17 @@ func (editor *ItemEditor) populateEditForm() {
 	form := document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
+	var NameObj, UsernameObj, EmailObj js.Value
+
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentItem.Name, document, form, "Name", "text", "itemName")
-	editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentItem.Username, document, form, "Username", "text", "itemUsername")
-	editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentItem.Email, document, form, "Email", "email", "itemEmail")
+	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentItem.Name, document, "Name", "text", "itemName")
+	UsernameObj, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentItem.Username, document, "Username", "text", "itemUsername")
+	EmailObj, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentItem.Email, document, "Email", "email", "itemEmail")
+
+	// Append fields to form // ********************* This needs to be changed for each api **********************
+	form.Call("appendChild", NameObj)
+	form.Call("appendChild", UsernameObj)
+	form.Call("appendChild", EmailObj)
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, document, "Submit", "submitEditBtn")
