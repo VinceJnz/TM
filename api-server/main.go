@@ -3,6 +3,7 @@ package main
 import (
 	"api-server/v2/app"
 	"api-server/v2/localHandlers/handlerBooking"
+	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
 	"api-server/v2/localHandlers/handlerUser"
 	"log"
@@ -36,6 +37,15 @@ func main() {
 	r.HandleFunc("/bookings", booking.Create).Methods("POST")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Update).Methods("PUT")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Delete).Methods("DELETE")
+	r.HandleFunc("/bookings/{id:[0-9]+}/people", booking.Get).Methods("GET")
+
+	// BookingUsers routes
+	bookingPeople := handlerBookingPeople.New(db)
+	r.HandleFunc("/bookingUsers", bookingPeople.GetAll).Methods("GET")
+	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Get).Methods("GET")
+	r.HandleFunc("/bookingUsers", bookingPeople.Create).Methods("POST")
+	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Update).Methods("PUT")
+	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Delete).Methods("DELETE")
 
 	// BookingStatus routes
 	bookingStatus := handlerBookingStatus.New(db)

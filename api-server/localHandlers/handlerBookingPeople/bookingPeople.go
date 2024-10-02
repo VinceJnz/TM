@@ -1,4 +1,4 @@
-package handlerBookingUser
+package handlerBookingPeople
 
 import (
 	"database/sql"
@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debug = "handlerBooking"
+const debug = "handlerBookingPeople"
 
 type Handler struct {
 	db *sqlx.DB
@@ -26,8 +26,8 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.BookingUser{}
-	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.notes, ab.created, ab.modified
-	FROM public.at_bookings ab`)
+	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.booking_id, ab.user_id, ab.notes, ab.created, ab.modified
+	FROM at_booking_users ab`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -51,8 +51,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.BookingUser{}
-	err = h.db.Get(&record, `SELECT id, owner_id, notes, created, modified 
-		FROM at_bookings WHERE id = $1`, id)
+	err = h.db.Get(&record, `SELECT ab.id, ab.owner_id, ab.booking_id, ab.user_id, ab.notes, ab.created, ab.modified 
+		FROM at_booking_users ab WHERE ab.id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -74,8 +74,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.db.QueryRow(`
-		INSERT INTO at_bookings (owner_id, notes) 
-		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		INSERT INTO at_booking_users (ab.owner_id, ab.booking_id, ab.user_id, ab.notes) 
+		VALUES ($1, $2, $3, $4) RETURNING id`,
 		record.OwnerID, record.BookingID, record.UserID, record.Notes,
 	).Scan(&record.ID)
 	if err != nil {
@@ -104,9 +104,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 
 	_, err = h.db.Exec(`
-		UPDATE at_bookings 
+		UPDATE at_booking_users
 		SET owner_id = $1, booking_id = $2, user_id = $3, notes = $4
-		WHERE id = $6`,
+		WHERE id = $5`,
 		record.OwnerID, record.BookingID, record.UserID, record.Notes,
 		record.ID,
 	)
@@ -127,7 +127,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_bookings_user WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM at_booking_users WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

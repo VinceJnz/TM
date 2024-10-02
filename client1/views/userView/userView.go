@@ -105,9 +105,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form := document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	var NameObj, UsernameObj, EmailObj js.Value
-
 	// Create input fields // ********************* This needs to be changed for each api **********************
+	var NameObj, UsernameObj, EmailObj js.Value
 	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentItem.Name, document, "Name", "text", "itemName")
 	UsernameObj, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentItem.Username, document, "Username", "text", "itemUsername")
 	EmailObj, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentItem.Email, document, "Email", "email", "itemEmail")

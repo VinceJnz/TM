@@ -1,4 +1,4 @@
-package bookingView
+package bookingPeopleView
 
 import (
 	"bytes"
@@ -25,27 +25,24 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/bookings"
+const apiURL = "http://localhost:8085/bookingPeople"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID              int       `json:"id"`
-	OwnerID         int       `json:"owner_id"`
-	Notes           string    `json:"notes"`
-	FromDate        time.Time `json:"from_date"`
-	ToDate          time.Time `json:"to_date"`
-	BookingStatusID int       `json:"booking_status_id"`
-	BookingStatus   string    `json:"booking_status"`
-	Created         time.Time `json:"created"`
-	Modified        time.Time `json:"modified"`
+	ID        int       `json:"id"`
+	OwnerID   int       `json:"owner_id"`
+	BookingID int       `json:"booking_id"`
+	PersonID  int       `json:"person_id"`
+	Person    string    `json:"person"`
+	Notes     string    `json:"notes"`
+	Created   time.Time `json:"created"`
+	Modified  time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Notes           js.Value
-	FromDate        js.Value
-	ToDate          js.Value
-	BookingStatusID js.Value
+	PersonID js.Value
+	Notes    js.Value
 }
 
 type ItemEditor struct {
@@ -119,18 +116,13 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Set("id", "editForm")
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
+	var PersonObj, NotesObj js.Value
+	PersonObj, editor.UiComponents.PersonID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.PersonID, editor.document, "Person", "itemPerson")
 	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, editor.document, "Notes", "text", "itemNotes")
-	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
-	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
-	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentItem.BookingStatusID, document, "Status", "text", "itemStatus")
-	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.BookingStatusID, editor.document, "Status", "itemBookingStatusID")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
+	form.Call("appendChild", PersonObj)
 	form.Call("appendChild", NotesObj)
-	form.Call("appendChild", FromDateObj)
-	form.Call("appendChild", ToDateObj)
-	form.Call("appendChild", BookingStatusObj)
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
@@ -169,20 +161,11 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// ********************* This needs to be changed for each api **********************
 	var err error
 
-	editor.CurrentItem.Notes = editor.UiComponents.Notes.Get("value").String()
-	editor.CurrentItem.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing from date:", err)
-	}
-	editor.CurrentItem.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing to date:", err)
-	}
-	//editor.CurrentItem.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
-	editor.CurrentItem.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
+	editor.CurrentItem.PersonID, err = strconv.Atoi(editor.UiComponents.PersonID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing booking id:", err)
 	}
+	editor.CurrentItem.Notes = editor.UiComponents.Notes.Get("value").String()
 
 	log.Printf("ItemEditor.SubmitItemEdit()1 booking: %+v", editor.CurrentItem)
 
@@ -271,10 +254,15 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.onCompletionMsg("Item record added successfully")
 }
 
-func (editor *ItemEditor) FetchItems() interface{} {
+func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
+	localApiURL := apiURL
+	if len(ParentID) == 1 {
+		idStr := strconv.Itoa(ParentID[0])
+		localApiURL = "http://localhost:8085/bookings" + idStr + "People"
+	}
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		resp, err := http.Get(apiURL)
+		resp, err := http.Get(localApiURL)
 		if err != nil {
 			editor.onCompletionMsg("Error fetching items: " + err.Error())
 			return
@@ -324,11 +312,6 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 	}()
 }
 
-func (editor *ItemEditor) peopleItems(itemID int) {
-	log.Printf("peopleItems(), booking itemID: %+v", itemID)
-	// Add some code to edit the people list
-}
-
 func (editor *ItemEditor) populateItemList() {
 	document := js.Global().Get("document")
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
@@ -345,7 +328,7 @@ func (editor *ItemEditor) populateItemList() {
 	for _, item := range editor.ItemList {
 		itemDiv := document.Call("createElement", "div")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", item.Notes+" (Status:"+item.BookingStatus+", From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
+		itemDiv.Set("innerHTML", item.Person+" (Notes: "+item.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
@@ -362,16 +345,8 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.deleteItem(item.ID)
-			return nil
-		}))
-
-		// Create a modify people list button
-		peopleButton := document.Call("createElement", "button")
-		peopleButton.Set("innerHTML", "People")
-		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			log.Printf("item: %+v", item)
-			editor.peopleItems(item.ID)
+			editor.deleteItem(item.ID)
 			return nil
 		}))
 

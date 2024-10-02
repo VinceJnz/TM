@@ -131,9 +131,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form := document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	var StatusObj js.Value
-
 	// Create input fields // ********************* This needs to be changed for each api **********************
+	var StatusObj js.Value
 	StatusObj, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentItem.Status, document, "Notes", "text", "itemNotes")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
