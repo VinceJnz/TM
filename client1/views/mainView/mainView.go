@@ -1,7 +1,7 @@
 package mainView
 
 import (
-	"client1/v2/app/eventprocessor"
+	"client1/v2/app/eventProcessor"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/userView"
@@ -25,7 +25,7 @@ type viewElements struct {
 type View struct {
 	Document js.Value
 	elements viewElements
-	events   *eventprocessor.EventProcessor
+	events   *eventProcessor.EventProcessor
 }
 
 func New() *View {
@@ -35,7 +35,7 @@ func New() *View {
 }
 
 func (v *View) Setup() {
-	v.events = eventprocessor.New()
+	v.events = eventProcessor.New()
 	v.events.AddEventHandler("displayStatus", v.updateStatus)
 
 	// Create new body element and other page elements
@@ -168,7 +168,7 @@ func (v *View) openSideMenu() {
 // Event handlers and event data types
 
 // func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
-func (v *View) updateStatus(event eventprocessor.Event) {
+func (v *View) updateStatus(event eventProcessor.Event) {
 	message, ok := event.Data.(string)
 	if !ok {
 		log.Println("Invalid event data")

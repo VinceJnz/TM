@@ -2,7 +2,8 @@ package bookingPeopleView
 
 import (
 	"bytes"
-	"client1/v2/app/eventprocessor"
+	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
@@ -33,7 +34,7 @@ type TableData struct {
 	OwnerID   int       `json:"owner_id"`
 	BookingID int       `json:"booking_id"`
 	PersonID  int       `json:"person_id"`
-	Person    string    `json:"person"`
+	Person    string    `json:"person_name"`
 	Notes     string    `json:"notes"`
 	Created   time.Time `json:"created"`
 	Modified  time.Time `json:"modified"`
@@ -47,7 +48,7 @@ type UI struct {
 
 type ItemEditor struct {
 	document      js.Value
-	events        *eventprocessor.EventProcessor
+	events        *eventProcessor.EventProcessor
 	CurrentItem   TableData
 	ItemState     ItemState
 	ItemList      []TableData
@@ -61,11 +62,10 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *ItemEditor {
-	//document := js.Global().Get("document")
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
-	editor.events = eventprocessor
+	editor.events = eventProcessor
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
@@ -89,7 +89,7 @@ func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *Item
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
-	editor.BookingStatus = bookingStatusView.New(document, eventprocessor)
+	editor.BookingStatus = bookingStatusView.New(document, eventProcessor)
 	editor.BookingStatus.FetchItems()
 
 	return editor
@@ -105,7 +105,7 @@ func (editor *ItemEditor) NewItemData() interface{} {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -117,7 +117,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
 	var PersonObj, NotesObj js.Value
-	PersonObj, editor.UiComponents.PersonID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.PersonID, editor.document, "Person", "itemPerson")
+	PersonObj, editor.UiComponents.PersonID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.PersonID, "Person", "itemPerson")
 	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, editor.document, "Notes", "text", "itemNotes")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
@@ -256,22 +256,19 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
 	localApiURL := apiURL
+	log.Printf("FetchITems()1, ParendID: %+v", ParentID)
 	if len(ParentID) == 1 {
 		idStr := strconv.Itoa(ParentID[0])
-		localApiURL = "http://localhost:8085/bookings" + idStr + "People"
+		localApiURL = "http://localhost:8085/bookings/" + idStr + "/people"
 	}
+	log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
 	go func() {
+		var err error
+		var items []TableData
 		editor.updateStateDisplay(ItemStateFetching)
-		resp, err := http.Get(localApiURL)
+		_, err = httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
 		if err != nil {
 			editor.onCompletionMsg("Error fetching items: " + err.Error())
-			return
-		}
-		defer resp.Body.Close()
-
-		var items []TableData
-		if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
-			editor.onCompletionMsg("Failed to decode JSON: " + err.Error())
 			return
 		}
 

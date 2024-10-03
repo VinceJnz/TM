@@ -25,7 +25,7 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.BookingUser{}
+	records := []models.BookingPeople{}
 	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.booking_id, ab.user_id, ab.notes, ab.created, ab.modified
 	FROM at_booking_users ab`)
 	if err == sql.ErrNoRows {
@@ -50,9 +50,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := models.BookingUser{}
-	err = h.db.Get(&record, `SELECT ab.id, ab.owner_id, ab.booking_id, ab.user_id, ab.notes, ab.created, ab.modified 
-		FROM at_booking_users ab WHERE ab.id = $1`, id)
+	record := models.BookingPeople{}
+	err = h.db.Get(&record, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	FROM at_booking_people bp
+		JOIN st_users p ON p.id=bp.person_id
+	WHERE bp.booking_id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -67,7 +69,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.BookingUser
+	var record models.BookingPeople
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -76,7 +78,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	err := h.db.QueryRow(`
 		INSERT INTO at_booking_users (ab.owner_id, ab.booking_id, ab.user_id, ab.notes) 
 		VALUES ($1, $2, $3, $4) RETURNING id`,
-		record.OwnerID, record.BookingID, record.UserID, record.Notes,
+		record.OwnerID, record.BookingID, record.PersonID, record.Notes,
 	).Scan(&record.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,7 +98,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var record models.BookingUser
+	var record models.BookingPeople
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -107,7 +109,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		UPDATE at_booking_users
 		SET owner_id = $1, booking_id = $2, user_id = $3, notes = $4
 		WHERE id = $5`,
-		record.OwnerID, record.BookingID, record.UserID, record.Notes,
+		record.OwnerID, record.BookingID, record.PersonID, record.Notes,
 		record.ID,
 	)
 	if err != nil {

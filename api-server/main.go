@@ -37,7 +37,6 @@ func main() {
 	r.HandleFunc("/bookings", booking.Create).Methods("POST")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Update).Methods("PUT")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Delete).Methods("DELETE")
-	r.HandleFunc("/bookings/{id:[0-9]+}/people", booking.Get).Methods("GET")
 
 	// BookingUsers routes
 	bookingPeople := handlerBookingPeople.New(db)
@@ -46,6 +45,7 @@ func main() {
 	r.HandleFunc("/bookingUsers", bookingPeople.Create).Methods("POST")
 	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Update).Methods("PUT")
 	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Delete).Methods("DELETE")
+	r.HandleFunc("/bookings/{id:[0-9]+}/people", bookingPeople.Get).Methods("GET")
 
 	// BookingStatus routes
 	bookingStatus := handlerBookingStatus.New(db)

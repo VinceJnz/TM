@@ -21,11 +21,12 @@ type BookingStatus struct {
 	Modified time.Time `json:"modified" db:"modified"`
 }
 
-type BookingUser struct {
+type BookingPeople struct {
 	ID        int       `json:"id" db:"id"`
 	OwnerID   int       `json:"owner_id" db:"owner_id"`
 	BookingID int       `json:"booking_id" db:"booking_id"`
-	UserID    int       `json:"user_id" db:"user_id"`
+	PersonID  int       `json:"person_id" db:"person_id"`
+	Person    string    `json:"person_name" db:"person_name"`
 	Notes     string    `json:"notes" db:"notes"`
 	Created   time.Time `json:"created" db:"created"`
 	Modified  time.Time `json:"modified" db:"modified"`

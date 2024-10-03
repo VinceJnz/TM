@@ -74,20 +74,20 @@ ALTER TABLE IF EXISTS public.et_booking_status
     OWNER to myuser;
 
 
--- Table: public.at_booking_users
+-- Table: public.at_booking_people
 
--- DROP TABLE IF EXISTS public.at_booking_users;
+-- DROP TABLE IF EXISTS public.at_booking_people;
 
-CREATE TABLE IF NOT EXISTS public.at_booking_users
+CREATE TABLE IF NOT EXISTS public.at_booking_people
 (
-    id integer NOT NULL DEFAULT nextval('at_booking_users_id_seq'::regclass),
+    id integer NOT NULL DEFAULT nextval('at_booking_people_id_seq'::regclass),
     owner_id integer NOT NULL DEFAULT 0,
     booking_id integer NOT NULL DEFAULT 0,
     user_id integer NOT NULL DEFAULT 0,
     notes text COLLATE pg_catalog."default",
     created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT at_booking_users_pkey PRIMARY KEY (id),
+    CONSTRAINT at_booking_people_pkey PRIMARY KEY (id),
     CONSTRAINT booking_id_fkey FOREIGN KEY (booking_id)
         REFERENCES public.at_bookings (id) MATCH SIMPLE
         ON UPDATE NO ACTION
@@ -107,5 +107,5 @@ CREATE TABLE IF NOT EXISTS public.at_booking_users
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS public.at_booking_users
+ALTER TABLE IF EXISTS public.at_booking_people
     OWNER to myuser;

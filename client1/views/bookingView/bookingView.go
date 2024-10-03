@@ -2,7 +2,8 @@ package bookingView
 
 import (
 	"bytes"
-	"client1/v2/app/eventprocessor"
+	"client1/v2/app/eventProcessor"
+	"client1/v2/views/bookingPeopleView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
@@ -50,7 +51,7 @@ type UI struct {
 
 type ItemEditor struct {
 	document      js.Value
-	events        *eventprocessor.EventProcessor
+	events        *eventProcessor.EventProcessor
 	CurrentItem   TableData
 	ItemState     ItemState
 	ItemList      []TableData
@@ -60,40 +61,42 @@ type ItemEditor struct {
 	ListDiv       js.Value
 	StateDiv      js.Value
 	BookingStatus *bookingStatusView.ItemEditor
+	PeopleEditor  *bookingPeopleView.ItemEditor
 	//Parent       js.Value
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventprocessor *eventprocessor.EventProcessor) *ItemEditor {
-	//document := js.Global().Get("document")
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
-	editor.events = eventprocessor
+	editor.events = eventProcessor
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
-	editor.Div = document.Call("createElement", "div")
+	editor.Div = editor.document.Call("createElement", "div")
 
 	// Create a div for displayingthe editor
-	editor.EditDiv = document.Call("createElement", "div")
+	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", "itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
 
 	// Create a div for displaying the list
-	editor.ListDiv = document.Call("createElement", "div")
+	editor.ListDiv = editor.document.Call("createElement", "div")
 	editor.ListDiv.Set("id", "itemList")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Create a div for displaying ItemState
-	editor.StateDiv = document.Call("createElement", "div")
+	editor.StateDiv = editor.document.Call("createElement", "div")
 	editor.StateDiv.Set("id", "ItemStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
 
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
-	editor.BookingStatus = bookingStatusView.New(document, eventprocessor)
+	editor.BookingStatus = bookingStatusView.New(editor.document, eventProcessor)
 	editor.BookingStatus.FetchItems()
+
+	editor.PeopleEditor = bookingPeopleView.New(editor.document, editor.events)
 
 	return editor
 }
@@ -108,7 +111,7 @@ func (editor *ItemEditor) NewItemData() interface{} {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventprocessor.Event{Type: "displayStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -124,7 +127,7 @@ func (editor *ItemEditor) populateEditForm() {
 	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentItem.BookingStatusID, document, "Status", "text", "itemStatus")
-	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.BookingStatusID, editor.document, "Status", "itemBookingStatusID")
+	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.BookingStatusID, "Status", "itemBookingStatusID")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", NotesObj)
@@ -324,17 +327,20 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 	}()
 }
 
-func (editor *ItemEditor) peopleItems(itemID int) {
-	log.Printf("peopleItems(), booking itemID: %+v", itemID)
+func (editor *ItemEditor) peopleItems(itemID int, parentDiv js.Value) {
+	log.Printf("peopleItems()1, booking itemID: %+v", itemID)
 	// Add some code to edit the people list
+
+	editor.PeopleEditor.FetchItems(itemID)
+	parentDiv.Call("appendChild", editor.PeopleEditor.ListDiv)
+	log.Printf("peopleItems()2, booking itemID: %+v", itemID)
 }
 
 func (editor *ItemEditor) populateItemList() {
-	document := js.Global().Get("document")
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
-	addNewItemButton := document.Call("createElement", "button")
+	addNewItemButton := editor.document.Call("createElement", "button")
 	addNewItemButton.Set("innerHTML", "Add New Item")
 	addNewItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		editor.NewItemData()
@@ -343,13 +349,13 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, item := range editor.ItemList {
-		itemDiv := document.Call("createElement", "div")
+		itemDiv := editor.document.Call("createElement", "div")
 		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", item.Notes+" (Status:"+item.BookingStatus+", From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
-		editButton := document.Call("createElement", "button")
+		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			editor.CurrentItem = item
@@ -359,7 +365,7 @@ func (editor *ItemEditor) populateItemList() {
 		}))
 
 		// Create a delete button
-		deleteButton := document.Call("createElement", "button")
+		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			editor.deleteItem(item.ID)
@@ -367,16 +373,17 @@ func (editor *ItemEditor) populateItemList() {
 		}))
 
 		// Create a modify people list button
-		peopleButton := document.Call("createElement", "button")
+		peopleButton := editor.document.Call("createElement", "button")
 		peopleButton.Set("innerHTML", "People")
 		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			log.Printf("item: %+v", item)
-			editor.peopleItems(item.ID)
+			editor.peopleItems(item.ID, itemDiv)
 			return nil
 		}))
 
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
+		itemDiv.Call("appendChild", peopleButton)
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
