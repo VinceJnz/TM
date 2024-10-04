@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debug = "handlerUser"
+const debugTag = "handlerUser"
 
 type Handler struct {
 	db *sqlx.DB
@@ -31,7 +31,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll()2 %v\n", debug, err)
+		log.Printf("%v.GetAll()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -44,7 +44,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debug, err)
+		log.Printf("%v.Get()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
@@ -55,7 +55,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debug, err)
+		log.Printf("%v.Get()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -72,7 +72,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		"INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id",
 		record.Name, record.Username, record.Email).Scan(&record.ID)
 	if err != nil {
-		log.Printf("%v.Create()2 %v\n", debug, err)
+		log.Printf("%v.Create()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -86,7 +86,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.Update()1 %v\n", debug, err)
+		log.Printf("%v.Update()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
@@ -98,7 +98,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	_, err = h.db.Exec("UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4",
 		record.Name, record.Username, record.Email, record.ID)
 	if err != nil {
-		log.Printf("%v.Update()2 %v\n", debug, err)
+		log.Printf("%v.Update()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -111,14 +111,14 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.Delete()1 %v\n", debug, err)
+		log.Printf("%v.Delete()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
 
 	_, err = h.db.Exec("DELETE FROM st_users WHERE id = $1", id)
 	if err != nil {
-		log.Printf("%v.Delete()2 %v\n", debug, err)
+		log.Printf("%v.Delete()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
