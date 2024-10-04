@@ -94,7 +94,7 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	}
 
 	callBackSuccess := func(error) {
-		err = fmt.Errorf(debugTag+"newRequest()2 WARNING: No success-callback has been provided (e.g. render function): %w", err)
+		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: Using default success-callback: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderOk is called
 	} //The function to be called to render the request results
 	if len(callBacks) > 0 {
@@ -102,12 +102,12 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 			callBackSuccess = callBacks[0]
 		}
 	} else {
-		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: No success-callback has been provided (e.g. render function): %w", err)
+		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: No success-callback has been provided, will use the default function: %w", err)
 		log.Println(err, "req.URL =", req.URL)
 	}
 
 	callBackFail := func(error) {
-		err = fmt.Errorf(debugTag+"newRequest()3 No error function has been provided: %w", err)
+		err = fmt.Errorf(debugTag+"newRequest()3 INFORMATION: No error-callback function has been provided: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderErr is called
 	} //The function to be called to render an error
 	if len(callBacks) > 1 {

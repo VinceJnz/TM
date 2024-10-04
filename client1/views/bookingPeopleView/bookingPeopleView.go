@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const debugTag = "bookingPeopleView."
+
 type ItemState int
 
 const (
@@ -58,6 +60,7 @@ type ItemEditor struct {
 	ListDiv        js.Value
 	StateDiv       js.Value
 	PeopleSelector *userView.ItemEditor
+	ParentID       int
 	//Parent       js.Value
 }
 
@@ -98,7 +101,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
-	editor.CurrentItem = TableData{}
+	editor.CurrentItem = TableData{} // Clears current item
+	editor.CurrentItem.BookingID = editor.ParentID
 	editor.populateEditForm()
 	return nil
 }
@@ -167,7 +171,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 	editor.CurrentItem.Notes = editor.UiComponents.Notes.Get("value").String()
 
-	log.Printf("ItemEditor.SubmitItemEdit()1 booking: %+v", editor.CurrentItem)
+	log.Printf(debugTag+"ItemEditor.SubmitItemEdit()1 booking: %+v", editor.CurrentItem)
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -256,16 +260,17 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
 	localApiURL := apiURL
-	log.Printf("FetchITems()1, ParendID: %+v", ParentID)
+	log.Printf(debugTag+"FetchITems()1, ParendID: %+v", ParentID)
 	if len(ParentID) == 1 {
-		idStr := strconv.Itoa(ParentID[0])
-		localApiURL = "http://localhost:8085/bookings/" + idStr + "/people"
+		editor.ParentID = ParentID[0]
+		localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
 	}
 	log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
 	go func() {
 		var items []TableData
 		editor.updateStateDisplay(ItemStateFetching)
 		httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
+		log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
 
 		editor.ItemList = items
 		editor.populateItemList()
@@ -277,7 +282,7 @@ func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		log.Printf("itemID: %+v", itemID)
+		log.Printf(debugTag+"itemID: %+v", itemID)
 		req, err := http.NewRequest("DELETE", apiURL+"/"+strconv.Itoa(itemID), nil)
 		if err != nil {
 			editor.onCompletionMsg("Failed to create delete request: " + err.Error())

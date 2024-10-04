@@ -42,6 +42,35 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(records)
 }
 
+// Get: retrieves and returns a list of records identified by parent id
+func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	parentID, err := strconv.Atoi(params["id"])
+	if err != nil {
+		log.Printf("%v.GetList()1 %v\n", debugTag, err)
+		http.Error(w, "Invalid record ID", http.StatusBadRequest)
+		return
+	}
+
+	records := []models.BookingPeople{}
+	err = h.db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	FROM at_booking_people bp
+		JOIN st_users p ON p.id=bp.person_id
+	WHERE bp.booking_id = $1`, parentID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Record not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("%v.GetList()2 %v\n", debugTag, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("%v.GetList()3 %v\n", debugTag, records)
+
+	json.NewEncoder(w).Encode(records)
+}
+
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -56,7 +85,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	err = h.db.Get(&record, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
 	FROM at_booking_people bp
 		JOIN st_users p ON p.id=bp.person_id
-	WHERE bp.booking_id = $1`, id)
+	WHERE bp.id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
