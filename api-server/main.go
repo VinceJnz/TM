@@ -40,11 +40,11 @@ func main() {
 
 	// BookingUsers routes
 	bookingPeople := handlerBookingPeople.New(db)
-	r.HandleFunc("/bookingUsers", bookingPeople.GetAll).Methods("GET")
-	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Get).Methods("GET")
-	r.HandleFunc("/bookingUsers", bookingPeople.Create).Methods("POST")
-	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Update).Methods("PUT")
-	r.HandleFunc("/bookingUsers/{id:[0-9]+}", bookingPeople.Delete).Methods("DELETE")
+	r.HandleFunc("/bookingPeople", bookingPeople.GetAll).Methods("GET")
+	r.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Get).Methods("GET")
+	r.HandleFunc("/bookingPeople", bookingPeople.Create).Methods("POST")
+	r.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Update).Methods("PUT")
+	r.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Delete).Methods("DELETE")
 	r.HandleFunc("/bookings/{id:[0-9]+}/people", bookingPeople.Get).Methods("GET")
 
 	// BookingStatus routes

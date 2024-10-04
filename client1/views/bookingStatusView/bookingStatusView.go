@@ -94,8 +94,8 @@ func (editor *ItemEditor) NewItemData() interface{} {
 }
 
 // ?????????????????????? document ref????????????
-func (editor *ItemEditor) NewStatusDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
-	// Create a div for displaying State Dropdown
+func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
+	// Create a div for displaying Dropdown
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
 

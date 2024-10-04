@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debug = "handlerBookingPeople"
+const debugTag = "handlerBookingPeople"
 
 type Handler struct {
 	db *sqlx.DB
@@ -26,13 +26,15 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.BookingPeople{}
-	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.booking_id, ab.user_id, ab.notes, ab.created, ab.modified
-	FROM at_booking_users ab`)
+	err := h.db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	FROM at_booking_people bp
+		JOIN st_users p ON p.id=bp.person_id`)
 	if err == sql.ErrNoRows {
+		log.Printf("%v.GetAll()1 %v\n", debugTag, err)
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll()2 %v\n", debug, err)
+		log.Printf("%v.GetAll()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -45,7 +47,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debug, err)
+		log.Printf("%v.Get()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
@@ -59,7 +61,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debug, err)
+		log.Printf("%v.Get()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -71,16 +73,18 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf("%v.Create()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
 	err := h.db.QueryRow(`
-		INSERT INTO at_booking_users (ab.owner_id, ab.booking_id, ab.user_id, ab.notes) 
+		INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) 
 		VALUES ($1, $2, $3, $4) RETURNING id`,
 		record.OwnerID, record.BookingID, record.PersonID, record.Notes,
 	).Scan(&record.ID)
 	if err != nil {
+		log.Printf("%v.Create()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -100,19 +104,21 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var record models.BookingPeople
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf("%v.Update()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 	record.ID = id
 
 	_, err = h.db.Exec(`
-		UPDATE at_booking_users
-		SET owner_id = $1, booking_id = $2, user_id = $3, notes = $4
+		UPDATE at_booking_people
+		SET owner_id = $1, booking_id = $2, person_id = $3, notes = $4
 		WHERE id = $5`,
 		record.OwnerID, record.BookingID, record.PersonID, record.Notes,
 		record.ID,
 	)
 	if err != nil {
+		log.Printf("%v.Update()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -129,7 +135,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_booking_users WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM at_booking_people WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

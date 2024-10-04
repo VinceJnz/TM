@@ -3,6 +3,7 @@ package bookingView
 import (
 	"bytes"
 	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingPeopleView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/utils/viewHelpers"
@@ -127,7 +128,7 @@ func (editor *ItemEditor) populateEditForm() {
 	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentItem.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentItem.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentItem.BookingStatusID, document, "Status", "text", "itemStatus")
-	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.BookingStatusID, "Status", "itemBookingStatusID")
+	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewDropdown(editor.CurrentItem.BookingStatusID, "Status", "itemBookingStatusID")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", NotesObj)
@@ -276,19 +277,10 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems() interface{} {
 	go func() {
-		editor.updateStateDisplay(ItemStateFetching)
-		resp, err := http.Get(apiURL)
-		if err != nil {
-			editor.onCompletionMsg("Error fetching items: " + err.Error())
-			return
-		}
-		defer resp.Body.Close()
-
 		var items []TableData
-		if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
-			editor.onCompletionMsg("Failed to decode JSON: " + err.Error())
-			return
-		}
+		editor.updateStateDisplay(ItemStateFetching)
+
+		httpProcessor.NewRequest(http.MethodGet, apiURL, &items, nil)
 
 		editor.ItemList = items
 		editor.populateItemList()
@@ -332,7 +324,7 @@ func (editor *ItemEditor) peopleItems(itemID int, parentDiv js.Value) {
 	// Add some code to edit the people list
 
 	editor.PeopleEditor.FetchItems(itemID)
-	parentDiv.Call("appendChild", editor.PeopleEditor.ListDiv)
+	parentDiv.Call("appendChild", editor.PeopleEditor.Div)
 	log.Printf("peopleItems()2, booking itemID: %+v", itemID)
 }
 

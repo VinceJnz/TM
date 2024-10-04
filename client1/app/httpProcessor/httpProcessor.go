@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const debugTag = "restProcessor."
+const debugTag = "httpProcessor."
 
 // Client provides the connection to the rest interface (is used by a store to read/write/update data????)
 type Client struct {
@@ -24,32 +24,11 @@ type Client struct {
 	HTTPSClient *http.Client
 }
 
-// New uses basic authentication instead of an apiKey.
-// baseURL is the URL for the Rest API, e.g. https://localhost:8080/api/v1
-func New(ctx context.Context, baseURL string) *Client {
-	return &Client{
-		Ctx: ctx,
-		//Ctx:     context.TODO(),
-		BaseURL: baseURL,
-		//apiKey:  apiKey,
-		//User: mdlUser.User{Username: username, Password: password},
-		HTTPSClient: &http.Client{
-			//Jar: jar,
-			//Timeout: time.Minute,
-			Timeout: 5 * time.Second,
-			//Transport: &http.Transport{
-			//	TLSClientConfig: &tls.Config{
-			//		//Certificates: []tls.Certificate{cert},
-			//		//RootCAs:      caCertPool,
-			//	},
-			//},
-		},
-	}
-	//*/
-	//return nil
+func NewRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) {
+	newRequest(method, url, rxDataStru, txDataStru, callBacks...)
 }
 
-func NewRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) (*http.Request, error) {
+func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) (*http.Request, error) {
 	var err error
 	var req *http.Request
 

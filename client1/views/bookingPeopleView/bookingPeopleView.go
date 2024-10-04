@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
-	"client1/v2/views/bookingStatusView"
+	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"log"
@@ -47,17 +47,17 @@ type UI struct {
 }
 
 type ItemEditor struct {
-	document      js.Value
-	events        *eventProcessor.EventProcessor
-	CurrentItem   TableData
-	ItemState     ItemState
-	ItemList      []TableData
-	UiComponents  UI
-	Div           js.Value
-	EditDiv       js.Value
-	ListDiv       js.Value
-	StateDiv      js.Value
-	BookingStatus *bookingStatusView.ItemEditor
+	document       js.Value
+	events         *eventProcessor.EventProcessor
+	CurrentItem    TableData
+	ItemState      ItemState
+	ItemList       []TableData
+	UiComponents   UI
+	Div            js.Value
+	EditDiv        js.Value
+	ListDiv        js.Value
+	StateDiv       js.Value
+	PeopleSelector *userView.ItemEditor
 	//Parent       js.Value
 }
 
@@ -89,8 +89,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
-	editor.BookingStatus = bookingStatusView.New(document, eventProcessor)
-	editor.BookingStatus.FetchItems()
+	editor.PeopleSelector = userView.New(document, eventProcessor)
+	editor.PeopleSelector.FetchItems()
 
 	return editor
 }
@@ -117,7 +117,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
 	var PersonObj, NotesObj js.Value
-	PersonObj, editor.UiComponents.PersonID = editor.BookingStatus.NewStatusDropdown(editor.CurrentItem.PersonID, "Person", "itemPerson")
+	PersonObj, editor.UiComponents.PersonID = editor.PeopleSelector.NewDropdown(editor.CurrentItem.PersonID, "Person", "itemPerson")
 	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentItem.Notes, editor.document, "Notes", "text", "itemNotes")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
@@ -263,14 +263,9 @@ func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
 	}
 	log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
 	go func() {
-		var err error
 		var items []TableData
 		editor.updateStateDisplay(ItemStateFetching)
-		_, err = httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
-		if err != nil {
-			editor.onCompletionMsg("Error fetching items: " + err.Error())
-			return
-		}
+		httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
 
 		editor.ItemList = items
 		editor.populateItemList()
