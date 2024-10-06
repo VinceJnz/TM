@@ -31,7 +31,6 @@ func NewRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) (*http.Request, error) {
 	var err error
 	var req *http.Request
-
 	httpClient := &http.Client{
 		//Jar: jar,
 		//Timeout: time.Minute,

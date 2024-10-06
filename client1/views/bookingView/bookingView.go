@@ -77,20 +77,21 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
+	editor.Div.Set("id", debugTag+"Div")
 
 	// Create a div for displayingthe editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
-	editor.EditDiv.Set("id", "itemEditDiv")
+	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
-	editor.ListDiv.Set("id", "itemList")
+	editor.ListDiv.Set("id", debugTag+"itemListDiv")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Create a div for displaying ItemState
 	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", "ItemStateDiv")
+	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
 
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
@@ -344,6 +345,7 @@ func (editor *ItemEditor) populateItemList() {
 	for _, i := range editor.ItemList {
 		item := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 		itemDiv := editor.document.Call("createElement", "div")
+		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", item.Notes+" (Status:"+item.BookingStatus+", From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
@@ -366,9 +368,9 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		}))
 
-		// Create a modify people list button
+		// Create a toggle modify-people-list button
 		peopleButton := editor.document.Call("createElement", "button")
-		peopleButton.Set("innerHTML", "People:"+strconv.Itoa(item.ID))
+		peopleButton.Set("innerHTML", "People")
 		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			editor.peopleItems(item.ID, itemDiv)
 			return nil

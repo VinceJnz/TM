@@ -73,20 +73,21 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 
 	// Create a div for the item editor
 	editor.Div = document.Call("createElement", "div")
+	editor.Div.Set("id", debugTag+"Div")
 
 	// Create a div for displayingthe editor
 	editor.EditDiv = document.Call("createElement", "div")
-	editor.EditDiv.Set("id", "itemEditDiv")
+	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = document.Call("createElement", "div")
-	editor.ListDiv.Set("id", "itemList")
+	editor.ListDiv.Set("id", debugTag+"itemListDiv")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Create a div for displaying ItemState
 	editor.StateDiv = document.Call("createElement", "div")
-	editor.StateDiv.Set("id", "ItemStateDiv")
+	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
 
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
@@ -96,6 +97,15 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	editor.PeopleSelector.FetchItems()
 
 	return editor
+}
+
+// NewItemData initializes a new item for adding
+func (editor *ItemEditor) Reset() {
+	editor.EditDiv.Set("innerHTML", "")
+	editor.ListDiv.Set("innerHTML", "")
+	editor.StateDiv.Set("innerHTML", "")
+	editor.ParentID = 0
+	editor.ItemList = []TableData{}
 }
 
 // NewItemData initializes a new item for adding
@@ -267,23 +277,29 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
+	var parentID int
+	var items []TableData
 	localApiURL := apiURL
-	log.Printf(debugTag+"FetchITems()1, ParendID: %+v", ParentID)
 	if len(ParentID) == 1 {
-		editor.ParentID = ParentID[0]
-		localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
+		parentID = ParentID[0]
 	}
-	log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
-	go func() {
-		var items []TableData
-		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
-		log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
+	log.Printf(debugTag+"FetchITems()1, ParendID: %+v, editor.ParentID: %+v, parentID: %+v", ParentID, editor.ParentID, parentID)
+	if parentID == editor.ParentID {
+		editor.Reset()
+	} else {
+		editor.ParentID = parentID
+		localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
+		log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
+		go func() {
+			editor.updateStateDisplay(ItemStateFetching)
+			httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
+			log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
 
-		editor.ItemList = items
-		editor.populateItemList()
-		editor.updateStateDisplay(ItemStateNone)
-	}()
+			editor.ItemList = items
+			editor.populateItemList()
+			editor.updateStateDisplay(ItemStateNone)
+		}()
+	}
 	return nil
 }
 
@@ -322,11 +338,10 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
-	document := js.Global().Get("document")
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
-	addNewItemButton := document.Call("createElement", "button")
+	addNewItemButton := editor.document.Call("createElement", "button")
 	addNewItemButton.Set("innerHTML", "Add New Item")
 	addNewItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		editor.NewItemData()
@@ -335,13 +350,14 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, item := range editor.ItemList {
-		itemDiv := document.Call("createElement", "div")
+		itemDiv := editor.document.Call("createElement", "div")
+		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", item.Person+" (Notes: "+item.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
-		editButton := document.Call("createElement", "button")
+		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			editor.CurrentItem = item
@@ -351,7 +367,7 @@ func (editor *ItemEditor) populateItemList() {
 		}))
 
 		// Create a delete button
-		deleteButton := document.Call("createElement", "button")
+		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			log.Printf("item: %+v", item)

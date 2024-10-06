@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const debugTag = "mainView."
+
 type viewElements struct {
 	sidemenu            js.Value
 	navbar              js.Value
@@ -40,6 +42,8 @@ func (v *View) Setup() {
 
 	// Create new body element and other page elements
 	newBody := v.Document.Call("createElement", "body")
+	newBody.Set("id", debugTag+"body")
+
 	v.elements.sidemenu = v.Document.Call("createElement", "div")
 	v.elements.navbar = v.Document.Call("createElement", "div")
 	v.elements.mainContent = v.Document.Call("createElement", "div")
