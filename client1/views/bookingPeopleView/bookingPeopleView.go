@@ -218,7 +218,11 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 		return
 	}
 
-	editor.FetchItems() // Refresh the item list
+	if editor.ParentID == 0 {
+		editor.FetchItems() // Refresh the item list
+	} else {
+		editor.FetchItems(editor.ParentID) // Refresh the item list
+	}
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
@@ -253,7 +257,11 @@ func (editor *ItemEditor) AddItem(item TableData) {
 		return
 	}
 
-	editor.FetchItems() // Refresh the item list
+	if editor.ParentID == 0 {
+		editor.FetchItems() // Refresh the item list
+	} else {
+		editor.FetchItems(editor.ParentID) // Refresh the item list
+	}
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record added successfully")
 }
@@ -303,7 +311,11 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 		}
 
 		// After successful deletion, fetch updated item list
-		editor.FetchItems()
+		if editor.ParentID == 0 {
+			editor.FetchItems() // Refresh the item list
+		} else {
+			editor.FetchItems(editor.ParentID) // Refresh the item list
+		}
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()

@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+const debugTag = "bookingView."
+
 type ItemState int
 
 const (
@@ -320,12 +322,11 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) peopleItems(itemID int, parentDiv js.Value) {
-	log.Printf("peopleItems()1, booking itemID: %+v", itemID)
+	log.Printf(debugTag+"peopleItems()1, itemID: %+v", itemID)
 	// Add some code to edit the people list
 
 	editor.PeopleEditor.FetchItems(itemID)
 	parentDiv.Call("appendChild", editor.PeopleEditor.Div)
-	log.Printf("peopleItems()2, booking itemID: %+v", itemID)
 }
 
 func (editor *ItemEditor) populateItemList() {
@@ -340,7 +341,8 @@ func (editor *ItemEditor) populateItemList() {
 	}))
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
-	for _, item := range editor.ItemList {
+	for _, i := range editor.ItemList {
+		item := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 		itemDiv := editor.document.Call("createElement", "div")
 		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", item.Notes+" (Status:"+item.BookingStatus+", From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
@@ -366,9 +368,8 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Create a modify people list button
 		peopleButton := editor.document.Call("createElement", "button")
-		peopleButton.Set("innerHTML", "People")
+		peopleButton.Set("innerHTML", "People:"+strconv.Itoa(item.ID))
 		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			log.Printf("item: %+v", item)
 			editor.peopleItems(item.ID, itemDiv)
 			return nil
 		}))
