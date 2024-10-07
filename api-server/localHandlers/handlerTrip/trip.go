@@ -1,4 +1,4 @@
-package handlerUser
+package handlerTrip
 
 import (
 	"database/sql"
@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debugTag = "handlerUser."
+const debugTag = "handlerTrip."
 
 type Handler struct {
 	db *sqlx.DB
@@ -26,7 +26,7 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	var records []models.User
-	err := h.db.Select(&records, `SELECT id, name, username, email FROM st_users`)
+	err := h.db.Select(&records, `SELECT id, name, username, email FROM at_trip`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,7 +50,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.User{}
-	err = h.db.Get(&record, "SELECT id, name, username, email FROM st_users WHERE id = $1", id)
+	err = h.db.Get(&record, "SELECT id, name, username, email FROM at_trip WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -69,7 +69,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&record)
 
 	err := h.db.QueryRow(
-		"INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id",
+		"INSERT INTO at_trip (name, username, email) VALUES ($1, $2, $3) RETURNING id",
 		record.Name, record.Username, record.Email).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v.Create()2 %v\n", debugTag, err)
@@ -95,7 +95,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&record)
 	record.ID = id
 
-	_, err = h.db.Exec("UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4",
+	_, err = h.db.Exec("UPDATE at_trip SET name = $1, username = $2, email = $3 WHERE id = $4",
 		record.Name, record.Username, record.Email, record.ID)
 	if err != nil {
 		log.Printf("%v.Update()2 %v\n", debugTag, err)
@@ -116,7 +116,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM st_users WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM at_trip WHERE id = $1", id)
 	if err != nil {
 		log.Printf("%v.Delete()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

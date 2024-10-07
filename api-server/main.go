@@ -5,6 +5,8 @@ import (
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
+	"api-server/v2/localHandlers/handlerTrip"
+	"api-server/v2/localHandlers/handlerTripBooking"
 	"api-server/v2/localHandlers/handlerUser"
 	"log"
 	"net/http"
@@ -54,6 +56,23 @@ func main() {
 	r.HandleFunc("/bookingStatus", bookingStatus.Create).Methods("POST")
 	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Update).Methods("PUT")
 	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Delete).Methods("DELETE")
+
+	// Trip routes
+	trip := handlerTrip.New(db)
+	r.HandleFunc("/trips", trip.GetAll).Methods("GET")
+	r.HandleFunc("/trips/{id:[0-9]+}", trip.Get).Methods("GET")
+	r.HandleFunc("/trips", trip.Create).Methods("POST")
+	r.HandleFunc("/trips/{id:[0-9]+}", trip.Update).Methods("PUT")
+	r.HandleFunc("/trips/{id:[0-9]+}", trip.Delete).Methods("DELETE")
+
+	// TripBooking routes
+	tripBooking := handlerTripBooking.New(db)
+	r.HandleFunc("/tripBooking", tripBooking.GetAll).Methods("GET")
+	r.HandleFunc("/tripBooking/{id:[0-9]+}", tripBooking.Get).Methods("GET")
+	r.HandleFunc("/tripBooking", tripBooking.Create).Methods("POST")
+	r.HandleFunc("/tripBooking/{id:[0-9]+}", tripBooking.Update).Methods("PUT")
+	r.HandleFunc("/tripBooking/{id:[0-9]+}", tripBooking.Delete).Methods("DELETE")
+	r.HandleFunc("/trips/{id:[0-9]+}/bookings", tripBooking.GetList).Methods("GET")
 
 	// Define CORS options
 	corsOpts := handlers.CORS(

@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debug = "handlerBooking"
+const debug = "handlerBooking."
 
 type Handler struct {
 	db *sqlx.DB
