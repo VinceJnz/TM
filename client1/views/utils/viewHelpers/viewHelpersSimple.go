@@ -2,6 +2,8 @@ package viewHelpers
 
 import "syscall/js"
 
+//const debugTag = "viewHelpers"
+
 // These are simple view helpers that are used to create UI components. They don't add themselves to the DOM.
 // They are used to create more complex UI components, or to create a single UI component.
 

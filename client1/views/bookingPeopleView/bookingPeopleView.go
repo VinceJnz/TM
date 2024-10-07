@@ -19,12 +19,20 @@ const debugTag = "bookingPeopleView."
 type ItemState int
 
 const (
-	ItemStateNone     ItemState = iota
-	ItemStateFetching           //ItemState = 1
-	ItemStateEditing            //ItemState = 2
-	ItemStateAdding             //ItemState = 3
-	ItemStateSaving             //ItemState = 4
-	ItemStateDeleting           //ItemState = 5
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateHidden
+)
+
+type ViewState int
+
+const (
+	ViewStateNone ViewState = iota
+	ViewStateBlock
 )
 
 // ********************* This needs to be changed for each api **********************
@@ -61,6 +69,7 @@ type ItemEditor struct {
 	StateDiv       js.Value
 	PeopleSelector *userView.ItemEditor
 	ParentID       int
+	ViewState      ViewState
 	//Parent       js.Value
 }
 
@@ -99,13 +108,14 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	return editor
 }
 
-// NewItemData initializes a new item for adding
-func (editor *ItemEditor) Reset() {
-	editor.EditDiv.Set("innerHTML", "")
-	editor.ListDiv.Set("innerHTML", "")
-	editor.StateDiv.Set("innerHTML", "")
-	editor.ParentID = 0
-	editor.ItemList = []TableData{}
+func (editor *ItemEditor) Hide() {
+	editor.Div.Get("style").Call("setProperty", "display", "none")
+	editor.ViewState = ViewStateNone
+}
+
+func (editor *ItemEditor) Display() {
+	editor.Div.Get("style").Call("setProperty", "display", "block")
+	editor.ViewState = ViewStateBlock
 }
 
 // NewItemData initializes a new item for adding
@@ -149,10 +159,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Make sure the form is visible
 	editor.EditDiv.Get("style").Set("display", "block")
-}
-
-func (editor *ItemEditor) Hide() {
-	editor.Div.Get("style").Set("display", "none")
 }
 
 func (editor *ItemEditor) resetEditForm() {
@@ -228,11 +234,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 		return
 	}
 
-	if editor.ParentID == 0 {
-		editor.FetchItems() // Refresh the item list
-	} else {
-		editor.FetchItems(editor.ParentID) // Refresh the item list
-	}
+	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
@@ -267,27 +269,17 @@ func (editor *ItemEditor) AddItem(item TableData) {
 		return
 	}
 
-	if editor.ParentID == 0 {
-		editor.FetchItems() // Refresh the item list
-	} else {
-		editor.FetchItems(editor.ParentID) // Refresh the item list
-	}
+	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record added successfully")
 }
 
-func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
-	var parentID int
+func (editor *ItemEditor) FetchItems() interface{} {
 	var items []TableData
 	localApiURL := apiURL
-	if len(ParentID) == 1 {
-		parentID = ParentID[0]
-	}
-	log.Printf(debugTag+"FetchITems()1, ParendID: %+v, editor.ParentID: %+v, parentID: %+v", ParentID, editor.ParentID, parentID)
-	if parentID == editor.ParentID {
-		editor.Reset()
-	} else {
-		editor.ParentID = parentID
+	if editor.ViewState == ViewStateNone {
+		editor.Display()
+		//log.Printf(debugTag+"FetchITems()1, ParendID: %+v, editor.ParentID: %+v, parentID: %+v", ParentID, editor.ParentID, parentID)
 		localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
 		log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
 		go func() {
@@ -299,6 +291,8 @@ func (editor *ItemEditor) FetchItems(ParentID ...int) interface{} {
 			editor.populateItemList()
 			editor.updateStateDisplay(ItemStateNone)
 		}()
+	} else {
+		editor.Hide()
 	}
 	return nil
 }
@@ -326,12 +320,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 			return
 		}
 
-		// After successful deletion, fetch updated item list
-		if editor.ParentID == 0 {
-			editor.FetchItems() // Refresh the item list
-		} else {
-			editor.FetchItems(editor.ParentID) // Refresh the item list
-		}
+		editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()
@@ -349,18 +338,19 @@ func (editor *ItemEditor) populateItemList() {
 	}))
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
-	for _, item := range editor.ItemList {
+	for _, i := range editor.ItemList {
+		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", item.Person+" (Notes: "+item.Notes+")")
+		itemDiv.Set("innerHTML", record.Person+" (Notes: "+record.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentItem = item
+			editor.CurrentItem = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()
 			return nil
@@ -370,8 +360,8 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			log.Printf("item: %+v", item)
-			editor.deleteItem(item.ID)
+			//log.Printf("item: %+v", record)
+			editor.deleteItem(record.ID)
 			return nil
 		}))
 
