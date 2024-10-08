@@ -26,7 +26,7 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
-	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
+	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
 	FROM public.at_bookings ab
 	JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id`)
 	if err == sql.ErrNoRows {
@@ -52,7 +52,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.Booking{}
-	err = h.db.Get(&record, `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified 
+	err = h.db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
 		FROM at_bookings WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -75,9 +75,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.db.QueryRow(`
-		INSERT INTO at_bookings (owner_id, notes, from_date, to_date, booking_status_id) 
+		INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
 		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
+		record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
 	).Scan(&record.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -106,9 +106,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.Exec(`
 		UPDATE at_bookings 
-		SET owner_id = $1, notes = $2, from_date = $3, to_date = $4, booking_status_id = $5 
-		WHERE id = $6`,
-		record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
+		SET owner_id = $1, trip_id = $2, notes = $3, from_date = $4, to_date = $5, booking_status_id = $6 
+		WHERE id = $7`,
+		record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
 		record.ID,
 	)
 	if err != nil {

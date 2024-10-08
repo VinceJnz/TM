@@ -34,18 +34,55 @@ CREATE USER api_user WITH PASSWORD 'api_password' SUPERUSER;
 -- Grant execute privilege on all functions in the public schema
 --GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO api_user;
 
+CREATE TABLE IF NOT EXISTS at_trips (
+    ID SERIAL PRIMARY KEY,
+    Owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    Trip_name TEXT NOT NULL,
+    Location TEXT,
+    Difficulty_level TEXT,  -- Can be changed to ENUM: Easy, Moderate, Difficult
+    From_date DATE,
+    To_date DATE,
+    Max_participants INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
 
+CREATE TABLE IF NOT EXISTS et_trip_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(50) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS et_trip_difficulty (
+    id SERIAL PRIMARY KEY,
+    level VARCHAR(50) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS at_bookings (
-  ID SERIAL PRIMARY KEY,
-  Owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-  Notes TEXT,
-  From_date TIMESTAMP DEFAULT NULL,
-  To_date TIMESTAMP DEFAULT NULL,
-  Booking_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-  Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ID SERIAL PRIMARY KEY,
+    Owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    Notes TEXT,
+    From_date TIMESTAMP DEFAULT NULL,
+    To_date TIMESTAMP DEFAULT NULL,
+    Booking_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+CREATE TABLE IF NOT EXISTS public.at_booking_people
+(
+    ID SERIAL PRIMARY KEY,
+    owner_id integer NOT NULL DEFAULT 0,
+    booking_id integer NOT NULL DEFAULT 0,
+    user_id integer NOT NULL DEFAULT 0,
+    notes text COLLATE pg_catalog."default",
+    created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+)
 
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
@@ -67,16 +104,14 @@ CREATE TABLE IF NOT EXISTS et_booking_status (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
-
 CREATE TABLE IF NOT EXISTS st_users (
-  ID SERIAL PRIMARY KEY,
-  Name VARCHAR(255) NOT NULL,
-  Username VARCHAR(255) NOT NULL UNIQUE,
-  Email VARCHAR(255) NOT NULL UNIQUE,
-  User_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-  Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ID SERIAL PRIMARY KEY,
+    Name VARCHAR(255) NOT NULL,
+    Username VARCHAR(255) NOT NULL UNIQUE,
+    Email VARCHAR(255) NOT NULL UNIQUE,
+    User_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE OR REPLACE FUNCTION update_modified_column()

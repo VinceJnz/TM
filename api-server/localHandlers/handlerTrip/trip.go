@@ -25,8 +25,8 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	var records []models.User
-	err := h.db.Select(&records, `SELECT id, name, username, email FROM at_trip`)
+	records := []models.Trip{}
+	err := h.db.Select(&records, `SELECT * FROM at_trip`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -49,8 +49,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := models.User{}
-	err = h.db.Get(&record, "SELECT id, name, username, email FROM at_trip WHERE id = $1", id)
+	record := models.Trip{}
+	err = h.db.Get(&record, "SELECT * FROM at_trip WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -65,12 +65,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.User
+	var record models.Trip
 	json.NewDecoder(r.Body).Decode(&record)
 
 	err := h.db.QueryRow(
-		"INSERT INTO at_trip (name, username, email) VALUES ($1, $2, $3) RETURNING id",
-		record.Name, record.Username, record.Email).Scan(&record.ID)
+		"INSERT INTO at_trip (trip_name, location, from_date, to_date, max_participants) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v.Create()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -91,12 +91,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var record models.User
+	var record models.Trip
 	json.NewDecoder(r.Body).Decode(&record)
 	record.ID = id
 
-	_, err = h.db.Exec("UPDATE at_trip SET name = $1, username = $2, email = $3 WHERE id = $4",
-		record.Name, record.Username, record.Email, record.ID)
+	_, err = h.db.Exec("UPDATE at_trip SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5 WHERE id = $6",
+		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.ID)
 	if err != nil {
 		log.Printf("%v.Update()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

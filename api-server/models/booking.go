@@ -5,6 +5,7 @@ import "time"
 type Booking struct {
 	ID              int       `json:"id" db:"id"`
 	OwnerID         int       `json:"owner_id" db:"owner_id"`
+	TripID          int       `json:"trip_id" db:"trip_id"`
 	Notes           string    `json:"notes" db:"notes"`
 	FromDate        time.Time `json:"from_date" db:"from_date"`
 	ToDate          time.Time `json:"to_date" db:"to_date"`
