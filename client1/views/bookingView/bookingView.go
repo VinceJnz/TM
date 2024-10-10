@@ -28,6 +28,13 @@ const (
 	ItemStateDeleting           //ItemState = 5
 )
 
+type ViewState int
+
+const (
+	ViewStateNone ViewState = iota
+	ViewStateBlock
+)
+
 // ********************* This needs to be changed for each api **********************
 const apiURL = "http://localhost:8085/bookings"
 
@@ -71,6 +78,8 @@ type ItemEditor struct {
 	StateDiv      js.Value
 	BookingStatus *bookingStatusView.ItemEditor
 	PeopleEditor  *bookingPeopleView.ItemEditor
+	ParentID      int
+	ViewState     ViewState
 	//Parent       js.Value
 }
 
@@ -109,6 +118,16 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	editor.PeopleEditor = bookingPeopleView.New(editor.document, editor.events)
 
 	return editor
+}
+
+func (editor *ItemEditor) Hide() {
+	editor.Div.Get("style").Call("setProperty", "display", "none")
+	editor.ViewState = ViewStateNone
+}
+
+func (editor *ItemEditor) Display() {
+	editor.Div.Get("style").Call("setProperty", "display", "block")
+	editor.ViewState = ViewStateBlock
 }
 
 // NewItemData initializes a new item for adding
@@ -156,10 +175,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Make sure the form is visible
 	editor.EditDiv.Get("style").Set("display", "block")
-}
-
-func (editor *ItemEditor) Hide() {
-	editor.Div.Get("style").Set("display", "none")
 }
 
 func (editor *ItemEditor) resetEditForm() {
@@ -285,6 +300,29 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() interface{} {
+	var items []TableData
+	localApiURL := apiURL
+	if editor.ViewState == ViewStateNone {
+		editor.Display()
+		localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentID) + "/bookings"
+		log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
+		go func() {
+			var records []TableData
+			editor.updateStateDisplay(ItemStateFetching)
+			httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
+			log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
+
+			editor.Records = records
+			editor.populateItemList()
+			editor.updateStateDisplay(ItemStateNone)
+		}()
+	} else {
+		editor.Hide()
+	}
+	return nil
+}
+
+func (editor *ItemEditor) FetchItems1() interface{} {
 	go func() {
 		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)

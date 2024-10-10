@@ -4,6 +4,8 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
+	"client1/v2/views/tripStatusView"
+	"client1/v2/views/tripView"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
@@ -22,6 +24,8 @@ type viewElements struct {
 	userEditor          *userView.ItemEditor
 	bookingEditor       *bookingView.ItemEditor
 	bookingStatusEditor *bookingStatusView.ItemEditor
+	tripEditor          *tripView.ItemEditor
+	tripStatusEditor    *tripStatusView.ItemEditor
 }
 
 type View struct {
@@ -54,6 +58,8 @@ func (v *View) Setup() {
 	v.elements.userEditor = userView.New(v.Document, v.events)
 	v.elements.bookingEditor = bookingView.New(v.Document, v.events)
 	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events)
+	v.elements.tripEditor = tripView.New(v.Document, v.events)
+	v.elements.tripStatusEditor = tripStatusView.New(v.Document, v.events)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
@@ -86,16 +92,22 @@ func (v *View) Setup() {
 	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
+	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.Document, "Trips", "fetchTripsBtn")
+	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.Document, "TripStatus", "fetchTripStatusBtn")
 
 	// Add menu buttons to the side menu
 	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
+	v.elements.sidemenu.Call("appendChild", fetchTripsBtn)
+	v.elements.sidemenu.Call("appendChild", fetchTripStatusBtn)
 
 	// append Editor Div's to the mainContent
 	v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.tripEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.tripStatusEditor.Div)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput.Set("id", "statusOutput")
@@ -142,6 +154,24 @@ func (v *View) menuBookingStatus(this js.Value, args []js.Value) interface{} {
 	v.elements.pageTitle.Set("innerHTML", "Booking Status")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingStatusEditor.FetchItems()
+	return nil
+}
+
+func (v *View) menuTrip(this js.Value, args []js.Value) interface{} {
+	v.closeSideMenu()
+	v.hideEditors()
+	v.elements.pageTitle.Set("innerHTML", "Trips")
+	//v.elements.editor.FetchUsers(this, args)
+	v.elements.tripEditor.FetchItems()
+	return nil
+}
+
+func (v *View) menuTripStatus(this js.Value, args []js.Value) interface{} {
+	v.closeSideMenu()
+	v.hideEditors()
+	v.elements.pageTitle.Set("innerHTML", "Trip Status")
+	//v.elements.editor.FetchUsers(this, args)
+	v.elements.tripStatusEditor.FetchItems()
 	return nil
 }
 

@@ -279,7 +279,6 @@ func (editor *ItemEditor) FetchItems() interface{} {
 	localApiURL := apiURL
 	if editor.ViewState == ViewStateNone {
 		editor.Display()
-		//log.Printf(debugTag+"FetchITems()1, ParendID: %+v, editor.ParentID: %+v, parentID: %+v", ParentID, editor.ParentID, parentID)
 		localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
 		log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
 		go func() {

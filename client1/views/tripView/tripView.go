@@ -1,8 +1,11 @@
-package bookingStatusView
+package tripView
 
 import (
 	"bytes"
 	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
+	"client1/v2/views/bookingView"
+	"client1/v2/views/tripStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"log"
@@ -12,7 +15,7 @@ import (
 	"time"
 )
 
-const debugTag = "bookingStatusView."
+const debugTag = "tripView."
 
 type ItemState int
 
@@ -26,33 +29,52 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/bookingStatus"
+const apiURL = "http://localhost:8085/trips"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID       int       `json:"id"`
-	Status   string    `json:"status"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
+	ID              int       `json:"id"`
+	OwnerID         int       `json:"owner_id"`
+	Name            string    `json:"trip_name"`
+	Location        string    `json:"location"`
+	Difficulty      string    `json:"trip_difficulty"`
+	FromDate        time.Time `json:"from_date"`
+	ToDate          time.Time `json:"to_date"`
+	MaxParticipants int       `json:"max_participants"`
+	TripStatusID    int       `json:"trip_status_id"`
+	TripStatus      string    `json:"trip_status"`
+	Created         time.Time `json:"created"`
+	Modified        time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Status js.Value
+	Name         js.Value
+	FromDate     js.Value
+	ToDate       js.Value
+	TripStatusID js.Value
+}
+
+type Item struct {
+	Record  TableData
+	Booking *bookingView.ItemEditor
 }
 
 type ItemEditor struct {
-	document     js.Value
-	events       *eventProcessor.EventProcessor
-	CurrentItem  TableData
-	ItemState    ItemState
-	ItemList     []TableData
-	UiComponents UI
-	Div          js.Value
-	EditDiv      js.Value
-	ListDiv      js.Value
-	StateDiv     js.Value
-	//StateDropDown js.Value
+	document      js.Value
+	events        *eventProcessor.EventProcessor
+	CurrentRecord TableData
+	ItemState     ItemState
+	Records       []TableData
+	ItemList      []Item //[]TableData
+	UiComponents  UI
+	Div           js.Value
+	EditDiv       js.Value
+	ListDiv       js.Value
+	StateDiv      js.Value
+	TripStatus    *tripStatusView.ItemEditor
+	BookingEditor *bookingView.ItemEditor
+	ParentID      int
 	//Parent       js.Value
 }
 
@@ -67,14 +89,14 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displaying the editor
+	// Create a div for displayingthe editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
-	editor.ListDiv.Set("id", debugTag+"itemList")
+	editor.ListDiv.Set("id", debugTag+"itemListDiv")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Create a div for displaying ItemState
@@ -85,43 +107,20 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
+	editor.TripStatus = tripStatusView.New(editor.document, eventProcessor)
+	editor.TripStatus.FetchItems()
+
+	editor.BookingEditor = bookingView.New(editor.document, editor.events)
+
 	return editor
 }
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
-	editor.CurrentItem = TableData{}
+	editor.CurrentRecord = TableData{}
 	editor.populateEditForm()
 	return nil
-}
-
-// ?????????????????????? document ref????????????
-func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
-	// Create a div for displaying Dropdown
-	fieldset := editor.document.Call("createElement", "fieldset")
-	fieldset.Set("className", "input-group")
-
-	StateDropDown := editor.document.Call("createElement", "select")
-	StateDropDown.Set("id", htmlID)
-
-	for _, item := range editor.ItemList {
-		optionElement := editor.document.Call("createElement", "option")
-		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Status)
-		if value == item.ID {
-			optionElement.Set("selected", true)
-		}
-		StateDropDown.Call("appendChild", optionElement)
-	}
-
-	// Create a label element
-	label := viewHelpers.Label(editor.document, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
-	fieldset.Call("appendChild", StateDropDown)
-
-	return fieldset, StateDropDown
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
@@ -137,11 +136,18 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Set("id", "editForm")
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	var StatusObj js.Value
-	StatusObj, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentItem.Status, editor.document, "Status", "text", "itemStatus")
+	var NameObj, FromDateObj, ToDateObj, TripStatusObj js.Value
+	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemNotes")
+	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentRecord.BookingStatusID, document, "Status", "text", "itemStatus")
+	TripStatusObj, editor.UiComponents.TripStatusID = editor.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", StatusObj)
+	form.Call("appendChild", NameObj)
+	form.Call("appendChild", FromDateObj)
+	form.Call("appendChild", ToDateObj)
+	form.Call("appendChild", TripStatusObj)
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
@@ -165,7 +171,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.EditDiv.Set("innerHTML", "")
 
 	// Reset CurrentItem
-	editor.CurrentItem = TableData{}
+	editor.CurrentRecord = TableData{}
 
 	// Reset UI components
 	editor.UiComponents = UI{}
@@ -178,17 +184,33 @@ func (editor *ItemEditor) resetEditForm() {
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 
 	// ********************* This needs to be changed for each api **********************
-	//var err error
-	editor.CurrentItem.Status = editor.UiComponents.Status.Get("value").String()
+	var err error
+
+	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
+	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing from date:", err)
+	}
+	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing to date:", err)
+	}
+	//editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
+	editor.CurrentRecord.TripStatusID, err = strconv.Atoi(editor.UiComponents.TripStatusID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing booking id:", err)
+	}
+
+	log.Printf("ItemEditor.SubmitItemEdit()1 booking: %+v", editor.CurrentRecord)
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
 	switch editor.ItemState {
 	case ItemStateEditing:
-		go editor.UpdateItem(editor.CurrentItem)
+		go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
-		go editor.AddItem(editor.CurrentItem)
+		go editor.AddItem(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
@@ -268,21 +290,12 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems() interface{} {
 	go func() {
+		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)
-		resp, err := http.Get(apiURL)
-		if err != nil {
-			editor.onCompletionMsg("Error fetching items: " + err.Error())
-			return
-		}
-		defer resp.Body.Close()
 
-		var items []TableData
-		if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
-			editor.onCompletionMsg("Failed to decode JSON: " + err.Error())
-			return
-		}
+		httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
 
-		editor.ItemList = items
+		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)
 	}()
@@ -331,18 +344,25 @@ func (editor *ItemEditor) populateItemList() {
 	}))
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
-	for _, item := range editor.ItemList {
+	for _, i := range editor.Records {
+		//log.Printf(debugTag+"populateItemList()1 Item: %+v", i)
+		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
+
+		booking := bookingView.New(editor.document, editor.events)
+		booking.ParentID = record.ID
+		editor.ItemList = append(editor.ItemList, Item{Record: record, Booking: booking})
+
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", item.Status)
+		itemDiv.Set("innerHTML", record.Name+" (Status:"+record.TripStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentItem = item
+			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()
 			return nil
@@ -352,13 +372,22 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			log.Printf("item: %+v", item)
-			editor.deleteItem(item.ID)
+			editor.deleteItem(record.ID)
+			return nil
+		}))
+
+		// Create a toggle modify-booking-list button
+		peopleButton := editor.document.Call("createElement", "button")
+		peopleButton.Set("innerHTML", "Bookings")
+		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			booking.FetchItems()
 			return nil
 		}))
 
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
+		itemDiv.Call("appendChild", peopleButton)
+		itemDiv.Call("appendChild", booking.Div)
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}

@@ -1,19 +1,23 @@
 package models
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type Trip struct {
-	ID              int       `json:"id" db:"id"`
-	OwnerID         int       `json:"owner_id" db:"owner_id"`
-	Name            string    `json:"trip_name" db:"trip_name"`
-	Location        string    `json:"location" db:"location"`
-	Difficulty      string    `json:"trip_difficulty" db:"trip_difficulty"`
-	FromDate        time.Time `json:"from_date" db:"from_date"`
-	ToDate          time.Time `json:"to_date" db:"to_date"`
-	MaxParticipants int       `json:"max_participants" db:"max_participants"`
-	TripStatus      string    `json:"trip_status" db:"trip_status"`
-	Created         time.Time `json:"created" db:"created"`
-	Modified        time.Time `json:"modified" db:"modified"`
+	ID              int            `json:"id" db:"id"`
+	OwnerID         int            `json:"owner_id" db:"owner_id"`
+	Name            string         `json:"trip_name" db:"trip_name"`
+	Location        string         `json:"location" db:"location"`
+	Difficulty      sql.NullString `json:"difficulty_level" db:"difficulty_level"`
+	FromDate        time.Time      `json:"from_date" db:"from_date"`
+	ToDate          time.Time      `json:"to_date" db:"to_date"`
+	MaxParticipants int            `json:"max_participants" db:"max_participants"`
+	TripStatusID    int            `json:"trip_status_id" db:"trip_status_id"`
+	TripStatus      string         `json:"trip_status" db:"trip_status"`
+	Created         time.Time      `json:"created" db:"created"`
+	Modified        time.Time      `json:"modified" db:"modified"`
 }
 
 type TripStatus struct {

@@ -26,7 +26,7 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Trip{}
-	err := h.db.Select(&records, `SELECT * FROM at_trip`)
+	err := h.db.Select(&records, `SELECT * FROM at_trips`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,7 +50,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.Trip{}
-	err = h.db.Get(&record, "SELECT * FROM at_trip WHERE id = $1", id)
+	err = h.db.Get(&record, "SELECT * FROM at_trips WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -69,7 +69,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&record)
 
 	err := h.db.QueryRow(
-		"INSERT INTO at_trip (trip_name, location, from_date, to_date, max_participants) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		"INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants) VALUES ($1, $2, $3, $4, $5) RETURNING id",
 		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v.Create()2 %v\n", debugTag, err)
@@ -95,7 +95,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&record)
 	record.ID = id
 
-	_, err = h.db.Exec("UPDATE at_trip SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5 WHERE id = $6",
+	_, err = h.db.Exec("UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5 WHERE id = $6",
 		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.ID)
 	if err != nil {
 		log.Printf("%v.Update()2 %v\n", debugTag, err)
@@ -116,7 +116,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_trip WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM at_trips WHERE id = $1", id)
 	if err != nil {
 		log.Printf("%v.Delete()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

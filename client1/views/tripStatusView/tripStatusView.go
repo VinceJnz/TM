@@ -1,4 +1,4 @@
-package bookingStatusView
+package tripStatusView
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const debugTag = "bookingStatusView."
+const debugTag = "tripStatusView."
 
 type ItemState int
 
@@ -26,7 +26,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/bookingStatus"
+const apiURL = "http://localhost:8085/tripStatus"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {

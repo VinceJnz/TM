@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS at_trips (
     From_date DATE,
     To_date DATE,
     Max_participants INTEGER NOT NULL DEFAULT 0,
+    Trip_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS et_trip_difficulty (
 CREATE TABLE IF NOT EXISTS at_bookings (
     ID SERIAL PRIMARY KEY,
     Owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    Trip_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
     Notes TEXT,
     From_date TIMESTAMP DEFAULT NULL,
     To_date TIMESTAMP DEFAULT NULL,
