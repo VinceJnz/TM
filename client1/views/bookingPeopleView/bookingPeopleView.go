@@ -108,6 +108,16 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	return editor
 }
 
+func (editor *ItemEditor) Toggle() {
+	if editor.ViewState == ViewStateNone {
+		editor.ViewState = ViewStateBlock
+		editor.Display()
+	} else {
+		editor.ViewState = ViewStateNone
+		editor.Hide()
+	}
+}
+
 func (editor *ItemEditor) Hide() {
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -274,26 +284,20 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.onCompletionMsg("Item record added successfully")
 }
 
-func (editor *ItemEditor) FetchItems() interface{} {
+func (editor *ItemEditor) FetchItems() {
 	var items []TableData
 	localApiURL := apiURL
-	if editor.ViewState == ViewStateNone {
-		editor.Display()
-		localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
-		log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
-		go func() {
-			editor.updateStateDisplay(ItemStateFetching)
-			httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
-			log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
+	localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
+	log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
+	go func() {
+		editor.updateStateDisplay(ItemStateFetching)
+		httpProcessor.NewRequest(http.MethodGet, localApiURL, &items, nil)
+		log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
 
-			editor.ItemList = items
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-		}()
-	} else {
-		editor.Hide()
-	}
-	return nil
+		editor.ItemList = items
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+	}()
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {

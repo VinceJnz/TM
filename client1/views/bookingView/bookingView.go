@@ -120,6 +120,16 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	return editor
 }
 
+func (editor *ItemEditor) Toggle() {
+	if editor.ViewState == ViewStateNone {
+		editor.ViewState = ViewStateBlock
+		editor.Display()
+	} else {
+		editor.ViewState = ViewStateNone
+		editor.Hide()
+	}
+}
+
 func (editor *ItemEditor) Hide() {
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -299,30 +309,24 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.onCompletionMsg("Item record added successfully")
 }
 
-func (editor *ItemEditor) FetchItems() interface{} {
+func (editor *ItemEditor) FetchItems() {
 	var items []TableData
 	localApiURL := apiURL
-	if editor.ViewState == ViewStateNone {
-		editor.Display()
-		localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentID) + "/bookings"
-		log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
-		go func() {
-			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
-			httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
-			log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
+	localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentID) + "/bookings"
+	log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
+	go func() {
+		var records []TableData
+		editor.updateStateDisplay(ItemStateFetching)
+		httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
+		log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
 
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-		}()
-	} else {
-		editor.Hide()
-	}
-	return nil
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+	}()
 }
 
-func (editor *ItemEditor) FetchItems1() interface{} {
+func (editor *ItemEditor) FetchItems1() {
 	go func() {
 		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)
@@ -333,7 +337,6 @@ func (editor *ItemEditor) FetchItems1() interface{} {
 		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)
 	}()
-	return nil
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {
@@ -415,6 +418,7 @@ func (editor *ItemEditor) populateItemList() {
 		peopleButton.Set("innerHTML", "People")
 		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			bookingPeople.FetchItems()
+			bookingPeople.Toggle()
 			return nil
 		}))
 
