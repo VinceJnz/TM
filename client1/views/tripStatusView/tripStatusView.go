@@ -3,6 +3,7 @@ package tripStatusView
 import (
 	"bytes"
 	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"log"
@@ -48,23 +49,29 @@ type UI struct {
 	Status js.Value
 }
 
+type Item struct {
+	Record TableData
+	//Add child structures as necessary
+}
+
 type ItemEditor struct {
-	document     js.Value
-	events       *eventProcessor.EventProcessor
-	CurrentItem  TableData
-	ItemState    ItemState
-	ItemList     []TableData
-	UiComponents UI
-	Div          js.Value
-	EditDiv      js.Value
-	ListDiv      js.Value
-	StateDiv     js.Value
-	ParentID     int
-	ViewState    ViewState
+	document      js.Value
+	events        *eventProcessor.EventProcessor
+	CurrentRecord TableData
+	ItemState     ItemState
+	Records       []TableData
+	ItemList      []Item
+	UiComponents  UI
+	Div           js.Value
+	EditDiv       js.Value
+	ListDiv       js.Value
+	StateDiv      js.Value
+	ParentID      int
+	ViewState     ViewState
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
@@ -92,6 +99,11 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
+	// Store supplied parent value
+	if len(idList) == 1 {
+		editor.ParentID = idList[0]
+	}
+
 	return editor
 }
 
@@ -118,7 +130,7 @@ func (editor *ItemEditor) Display() {
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
-	editor.CurrentItem = TableData{}
+	editor.CurrentRecord = TableData{}
 	editor.populateEditForm()
 	return nil
 }
@@ -132,7 +144,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
-	for _, item := range editor.ItemList {
+	for _, item := range editor.Records {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
 		optionElement.Set("text", item.Status)
@@ -165,7 +177,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
 	var StatusObj js.Value
-	StatusObj, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentItem.Status, editor.document, "Status", "text", "itemStatus")
+	StatusObj, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentRecord.Status, editor.document, "Status", "text", "itemStatus")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", StatusObj)
@@ -188,7 +200,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.EditDiv.Set("innerHTML", "")
 
 	// Reset CurrentItem
-	editor.CurrentItem = TableData{}
+	editor.CurrentRecord = TableData{}
 
 	// Reset UI components
 	editor.UiComponents = UI{}
@@ -202,16 +214,16 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	//var err error
-	editor.CurrentItem.Status = editor.UiComponents.Status.Get("value").String()
+	editor.CurrentRecord.Status = editor.UiComponents.Status.Get("value").String()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
 	switch editor.ItemState {
 	case ItemStateEditing:
-		go editor.UpdateItem(editor.CurrentItem)
+		go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
-		go editor.AddItem(editor.CurrentItem)
+		go editor.AddItem(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
@@ -291,21 +303,12 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems() {
 	go func() {
+		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)
-		resp, err := http.Get(apiURL)
-		if err != nil {
-			editor.onCompletionMsg("Error fetching items: " + err.Error())
-			return
-		}
-		defer resp.Body.Close()
 
-		var items []TableData
-		if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
-			editor.onCompletionMsg("Failed to decode JSON: " + err.Error())
-			return
-		}
+		httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
 
-		editor.ItemList = items
+		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)
 	}()
@@ -353,18 +356,24 @@ func (editor *ItemEditor) populateItemList() {
 	}))
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
-	for _, item := range editor.ItemList {
+	for _, i := range editor.Records {
+		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
+
+		// Create and add child views to Item
+		//
+		//
+
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", item.Status)
+		itemDiv.Set("innerHTML", record.Status)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentItem = item
+			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()
 			return nil
@@ -374,8 +383,8 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			log.Printf("item: %+v", item)
-			editor.deleteItem(item.ID)
+			log.Printf("item: %+v", record)
+			editor.deleteItem(record.ID)
 			return nil
 		}))
 

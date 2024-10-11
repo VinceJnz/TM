@@ -66,8 +66,6 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%v.GetList()3 %v\n", debugTag, records)
-
 	json.NewEncoder(w).Encode(records)
 }
 

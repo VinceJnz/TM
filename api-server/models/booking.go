@@ -1,21 +1,22 @@
 package models
 
 import (
-	"database/sql"
 	"time"
+
+	"github.com/guregu/null/v5/zero"
 )
 
 type Booking struct {
-	ID              int           `json:"id" db:"id"`
-	OwnerID         int           `json:"owner_id" db:"owner_id"`
-	TripID          sql.NullInt32 `json:"trip_id" db:"trip_id"`
-	Notes           string        `json:"notes" db:"notes"`
-	FromDate        time.Time     `json:"from_date" db:"from_date"`
-	ToDate          time.Time     `json:"to_date" db:"to_date"`
-	BookingStatusID int           `json:"booking_status_id" db:"booking_status_id"`
-	BookingStatus   string        `json:"booking_status" db:"status"`
-	Created         time.Time     `json:"created" db:"created"`
-	Modified        time.Time     `json:"modified" db:"modified"`
+	ID              int       `json:"id" db:"id"`
+	OwnerID         int       `json:"owner_id" db:"owner_id"`
+	TripID          zero.Int  `json:"trip_id" db:"trip_id"`
+	Notes           string    `json:"notes" db:"notes"`
+	FromDate        time.Time `json:"from_date" db:"from_date"`
+	ToDate          time.Time `json:"to_date" db:"to_date"`
+	BookingStatusID int       `json:"booking_status_id" db:"booking_status_id"`
+	BookingStatus   string    `json:"booking_status" db:"status"`
+	Created         time.Time `json:"created" db:"created"`
+	Modified        time.Time `json:"modified" db:"modified"`
 }
 
 type BookingStatus struct {

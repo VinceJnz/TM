@@ -47,6 +47,7 @@ type TableData struct {
 	ToDate          time.Time `json:"to_date"`
 	BookingStatusID int       `json:"booking_status_id"`
 	BookingStatus   string    `json:"booking_status"`
+	TripID          int       `json:"trip_id"`
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`
 }
@@ -60,7 +61,8 @@ type UI struct {
 }
 
 type Item struct {
-	Record        TableData
+	Record TableData
+	//Add child structures as necessary
 	BookingPeople *bookingPeopleView.ItemEditor
 }
 
@@ -70,7 +72,7 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
-	ItemList      []Item //[]TableData
+	ItemList      []Item
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
@@ -84,7 +86,7 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
@@ -111,6 +113,11 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
+
+	// Store supplied parent value
+	if len(idList) == 1 {
+		editor.ParentID = idList[0]
+	}
 
 	editor.BookingStatus = bookingStatusView.New(editor.document, eventProcessor)
 	editor.BookingStatus.FetchItems()
@@ -144,6 +151,8 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
+	// ********************* This needs to be changed for each api **********************
+	editor.CurrentRecord.TripID = editor.ParentID
 	editor.populateEditForm()
 	return nil
 }
@@ -310,28 +319,13 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	var items []TableData
 	localApiURL := apiURL
 	localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentID) + "/bookings"
-	log.Printf("FetchITems()2, localApiURL: %+v", localApiURL)
 	go func() {
 		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)
 		httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
-		log.Printf(debugTag+"FetchITems()2, Items: %+v", items)
-
-		editor.Records = records
-		editor.populateItemList()
-		editor.updateStateDisplay(ItemStateNone)
-	}()
-}
-
-func (editor *ItemEditor) FetchItems1() {
-	go func() {
-		var records []TableData
-		editor.updateStateDisplay(ItemStateFetching)
-
-		httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
+		log.Printf(debugTag+"FetchITems()2, Items: %+v", records)
 
 		editor.Records = records
 		editor.populateItemList()
@@ -382,12 +376,11 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
-		//log.Printf(debugTag+"populateItemList()1 Item: %+v", i)
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
-		bookingPeople := bookingPeopleView.New(editor.document, editor.events)
-		bookingPeople.ParentID = record.ID
-		editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
+		// Create and add child views to Item
+		bookingPeople := bookingPeopleView.New(editor.document, editor.events, record.ID)
+		//editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")

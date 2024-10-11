@@ -26,7 +26,9 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Trip{}
-	err := h.db.Select(&records, `SELECT * FROM at_trips`)
+	err := h.db.Select(&records, `SELECT att.*, etts.status as trip_status
+	FROM public.at_trips att
+	LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,7 +52,10 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.Trip{}
-	err = h.db.Get(&record, "SELECT * FROM at_trips WHERE id = $1", id)
+	err = h.db.Get(&record, `SELECT att.*, etts.status as trip_status
+	FROM public.at_trips att
+	LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
+	WHERE att.id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -69,8 +74,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&record)
 
 	err := h.db.QueryRow(
-		"INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants).Scan(&record.ID)
+		"INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v.Create()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -95,8 +100,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&record)
 	record.ID = id
 
-	_, err = h.db.Exec("UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5 WHERE id = $6",
-		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.ID)
+	_, err = h.db.Exec("UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5, trip_status_id = $6 WHERE id = $7",
+		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.ID)
 	if err != nil {
 		log.Printf("%v.Update()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

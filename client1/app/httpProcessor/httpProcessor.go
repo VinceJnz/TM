@@ -148,7 +148,7 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	if rxDataStru != nil {
 		if err = json.NewDecoder(res.Body).Decode(&rxDataStru); err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
 			resBody, _ := io.ReadAll(res.Body)
-			log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8 ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
+			log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8b ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
 			err = fmt.Errorf(debugTag+"newRequest()8 failed to decode JSON data: %w", err)
 			callBackFail(err)
 			return nil, err

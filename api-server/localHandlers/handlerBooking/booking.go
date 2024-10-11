@@ -65,8 +65,6 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%v.GetList()3 %v\n", debugTag, records)
-
 	json.NewEncoder(w).Encode(records)
 }
 
@@ -105,7 +103,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	err := h.db.QueryRow(`
 		INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
-		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
 		record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
 	).Scan(&record.ID)
 	if err != nil {

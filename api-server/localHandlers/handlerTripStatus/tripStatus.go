@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debug = "handlerTripStatus."
+const debugTag = "handlerTripStatus."
 
 type Handler struct {
 	db *sqlx.DB
@@ -31,7 +31,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll()2 %v\n", debug, err)
+		log.Printf("%v.GetAll()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -44,7 +44,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debug, err)
+		log.Printf("%v.Get()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
@@ -55,7 +55,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debug, err)
+		log.Printf("%v.Get()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

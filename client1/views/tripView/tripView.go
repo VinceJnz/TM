@@ -63,7 +63,8 @@ type UI struct {
 }
 
 type Item struct {
-	Record  TableData
+	Record TableData
+	//Add child structures as necessary
 	Booking *bookingView.ItemEditor
 }
 
@@ -73,7 +74,7 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
-	ItemList      []Item //[]TableData
+	ItemList      []Item
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
@@ -86,7 +87,7 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
@@ -113,6 +114,11 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor) *Item
 
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
+
+	// Store supplied parent value
+	if len(idList) == 1 {
+		editor.ParentID = idList[0]
+	}
 
 	editor.TripStatus = tripStatusView.New(editor.document, eventProcessor)
 	editor.TripStatus.FetchItems()
@@ -367,12 +373,11 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
-		//log.Printf(debugTag+"populateItemList()1 Item: %+v", i)
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
-		booking := bookingView.New(editor.document, editor.events)
-		booking.ParentID = record.ID
-		editor.ItemList = append(editor.ItemList, Item{Record: record, Booking: booking})
+		// Create and add child views to Item
+		booking := bookingView.New(editor.document, editor.events, record.ID)
+		//editor.ItemList = append(editor.ItemList, Item{Record: record, Booking: booking})
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
