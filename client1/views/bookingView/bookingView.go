@@ -328,8 +328,6 @@ func (editor *ItemEditor) FetchItems() {
 		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)
 		httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
-		log.Printf(debugTag+"FetchITems()2, Items: %+v", records)
-
 		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)

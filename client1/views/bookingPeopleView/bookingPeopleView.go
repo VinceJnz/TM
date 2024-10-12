@@ -304,9 +304,7 @@ func (editor *ItemEditor) FetchItems() {
 	go func() {
 		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)
-
 		httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
-
 		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)
