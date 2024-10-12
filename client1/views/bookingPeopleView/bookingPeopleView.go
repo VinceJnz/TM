@@ -209,8 +209,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
 
-	log.Printf(debugTag+"ItemEditor.SubmitItemEdit()1 booking: %+v", editor.CurrentRecord)
-
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
@@ -314,7 +312,6 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		log.Printf(debugTag+"itemID: %+v", itemID)
 		req, err := http.NewRequest("DELETE", apiURL+"/"+strconv.Itoa(itemID), nil)
 		if err != nil {
 			editor.onCompletionMsg("Failed to create delete request: " + err.Error())
@@ -356,9 +353,6 @@ func (editor *ItemEditor) populateItemList() {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
 		// Create and add child views to Item
-		//editor.ItemList = append(editor.ItemList, Item{Record: record})
-		//
-
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************

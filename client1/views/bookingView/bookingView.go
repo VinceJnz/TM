@@ -232,8 +232,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing booking id:", err)
 	}
 
-	log.Printf("ItemEditor.SubmitItemEdit()1 booking: %+v", editor.CurrentRecord)
-
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
@@ -337,7 +335,6 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		log.Printf("itemID: %+v", itemID)
 		req, err := http.NewRequest("DELETE", apiURL+"/"+strconv.Itoa(itemID), nil)
 		if err != nil {
 			editor.onCompletionMsg("Failed to create delete request: " + err.Error())

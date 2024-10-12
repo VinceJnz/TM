@@ -6,7 +6,6 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"syscall/js"
@@ -322,7 +321,6 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		log.Printf("itemID: %+v", itemID)
 		req, err := http.NewRequest("DELETE", apiURL+"/"+strconv.Itoa(itemID), nil)
 		if err != nil {
 			editor.onCompletionMsg("Failed to create delete request: " + err.Error())
