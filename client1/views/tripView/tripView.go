@@ -112,6 +112,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
 
+	editor.Hide()
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 

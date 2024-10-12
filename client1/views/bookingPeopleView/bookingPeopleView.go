@@ -105,6 +105,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
 
+	editor.Hide()
 	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
 	editor.Div.Call("appendChild", form)
 
@@ -297,7 +298,9 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems() {
 	localApiURL := apiURL
-	localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
+	if editor.ParentID != 0 {
+		localApiURL = "http://localhost:8085/bookings/" + strconv.Itoa(editor.ParentID) + "/people"
+	}
 	go func() {
 		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)

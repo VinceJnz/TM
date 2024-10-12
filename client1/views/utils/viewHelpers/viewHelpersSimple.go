@@ -1,7 +1,6 @@
 package viewHelpers
 
 import (
-	"client1/v2/views/mainView"
 	"syscall/js"
 )
 
@@ -61,15 +60,15 @@ func Div(doc js.Value, className string, htmlID string) js.Value {
 }
 
 // func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-func HRef(onClick func(mainView.MenuChoice), m mainView.MenuChoice, doc js.Value, displayText, htmlID string) js.Value {
+func HRef(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 	link := doc.Call("createElement", "a")
 	link.Set("href", "#")
-	link.Set("textContent", displayText)
+	link.Set("innerHTML", displayText)
 	link.Set("id", htmlID)
 	//link.Set("type", "button")
 	//link.Set("innerHTML", displayText)
 	f := func(this js.Value, args []js.Value) interface{} {
-		onClick(m)
+		onClick()
 		return nil
 	}
 	link.Call("addEventListener", "click", js.FuncOf(f))

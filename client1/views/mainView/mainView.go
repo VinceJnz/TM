@@ -20,11 +20,13 @@ type MenuChoice int
 const (
 	menuNone MenuChoice = iota
 	menuHome
+	menuAbout
+	menuContact
 	menuUserEditor
-	bookingEditor
-	bookingStatusEditor
-	tripEditor
-	tripStatusEditor
+	menuBookingEditor
+	menuBookingStatusEditor
+	menuTripEditor
+	menuTripStatusEditor
 )
 
 type viewElements struct {
@@ -41,9 +43,10 @@ type viewElements struct {
 }
 
 type View struct {
-	Document js.Value
-	elements viewElements
-	events   *eventProcessor.EventProcessor
+	Document   js.Value
+	elements   viewElements
+	events     *eventProcessor.EventProcessor
+	menuChoice MenuChoice
 }
 
 func New() *View {
@@ -94,20 +97,28 @@ func (v *View) Setup() {
 	// Add the side menu to the body
 	v.elements.sidemenu.Set("id", "sideMenu")
 	v.elements.sidemenu.Set("className", "sidemenu")
-	v.elements.sidemenu.Set("innerHTML", `<a href="javascript:void(0)" class="closebtn" onclick="toggleSideMenu()">&times;</a>
-							   <a href="#">Home</a>
-							   <a href="#">About</a>
-							   <a href="#">Contact</a>`)
+	//v.elements.sidemenu.Set("innerHTML", `<a href="javascript:void(0)" class="closebtn" onclick="toggleSideMenu()">&times;</a>
+	//						   <a href="#">Home</a>
+	//						   <a href="#">About</a>
+	//						   <a href="#">Contact</a>`)
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Create the menu buttons
-	fetchUsersBtn := viewHelpers.HRef(v.menuClick(menuUserEditor), nil, v.Document, "Users", "fetchUsersBtn")
+	xBtn := viewHelpers.HRef(v.menuX, v.Document, "&times;", "xBtn")
+	homeBtn := viewHelpers.HRef(v.menuHome, v.Document, "Home", "homeBtn")
+	aboutBtn := viewHelpers.HRef(v.menuAbout, v.Document, "About", "aboutBtn")
+	contactBtn := viewHelpers.HRef(v.menuContact, v.Document, "Contact", "contactBtn")
+	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
 	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.Document, "Trips", "fetchTripsBtn")
 	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.Document, "TripStatus", "fetchTripStatusBtn")
 
 	// Add menu buttons to the side menu
+	v.elements.sidemenu.Call("appendChild", xBtn)
+	v.elements.sidemenu.Call("appendChild", homeBtn)
+	v.elements.sidemenu.Call("appendChild", aboutBtn)
+	v.elements.sidemenu.Call("appendChild", contactBtn)
 	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
@@ -135,93 +146,113 @@ func (v *View) Setup() {
 	v.Document.Get("documentElement").Call("replaceChild", newBody, v.Document.Get("body"))
 }
 
-func (v *View) menuClick(menuItem MenuChoice) {
-	switch menuItem {
+func (v *View) hideCurrentEditor() {
+	switch v.menuChoice {
 	case menuNone:
 	case menuHome:
 	case menuUserEditor:
-		v.menuUser()
-	case bookingEditor:
-		v.menuBooking()
-	case bookingStatusEditor:
-		v.menuBookingStatus()
-	case tripEditor:
-		v.menuTrip()
-	case tripStatusEditor:
-		v.menuTripStatus()
+		v.elements.userEditor.Hide()
+	case menuBookingEditor:
+		v.elements.bookingEditor.Hide()
+	case menuBookingStatusEditor:
+		v.elements.bookingStatusEditor.Hide()
+	case menuTripEditor:
+		v.elements.tripEditor.Hide()
+	case menuTripStatusEditor:
+		v.elements.tripStatusEditor.Hide()
 	default:
 	}
 }
 
-func (v *View) hideEditors() {
-	// Hids editor div objects
-	//v.elements.userEditor.Hide()
-	//v.elements.bookingEditor.Hide()
-	//v.elements.bookingStatusEditor.Hide()
+func (v *View) menuX() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuNone
+	v.elements.pageTitle.Set("innerHTML", "")
+}
+
+func (v *View) menuHome() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuHome
+	v.elements.pageTitle.Set("innerHTML", "Home")
+}
+
+func (v *View) menuAbout() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuAbout
+	v.elements.pageTitle.Set("innerHTML", "About")
+}
+
+func (v *View) menuContact() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuContact
+	v.elements.pageTitle.Set("innerHTML", "Contact")
 }
 
 func (v *View) menuUser() {
 	v.closeSideMenu()
-	v.hideEditors()
+	v.hideCurrentEditor()
+	v.menuChoice = menuUserEditor
+	v.elements.userEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Users")
-	//v.elements.editor.FetchUsers(this, args)
 	v.elements.userEditor.FetchItems()
 }
 
 func (v *View) menuBooking() {
 	v.closeSideMenu()
-	v.hideEditors()
+	v.hideCurrentEditor()
+	v.menuChoice = menuBookingEditor
+	v.elements.bookingEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Bookings")
-	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingEditor.FetchItems()
 }
 
 func (v *View) menuBookingStatus() {
 	v.closeSideMenu()
-	v.hideEditors()
+	v.hideCurrentEditor()
+	v.menuChoice = menuBookingStatusEditor
+	v.elements.bookingStatusEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Booking Status")
-	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingStatusEditor.FetchItems()
 }
 
 func (v *View) menuTrip() {
 	v.closeSideMenu()
-	v.hideEditors()
+	v.hideCurrentEditor()
+	v.menuChoice = menuTripEditor
+	v.elements.tripEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Trips")
-	//v.elements.editor.FetchUsers(this, args)
 	v.elements.tripEditor.FetchItems()
 }
 
 func (v *View) menuTripStatus() {
 	v.closeSideMenu()
-	v.hideEditors()
+	v.hideCurrentEditor()
+	v.menuChoice = menuTripStatusEditor
+	v.elements.tripStatusEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Trip Status")
-	//v.elements.editor.FetchUsers(this, args)
 	v.elements.tripStatusEditor.FetchItems()
 }
 
-// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
 func (v *View) toggleSideMenu() {
 	if v.elements.sidemenu.Get("style").Get("width").String() == "250px" {
 		v.closeSideMenu()
 	} else {
 		v.openSideMenu()
 	}
-	//return nil
 }
 
-// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
 func (v *View) closeSideMenu() {
 	v.elements.sidemenu.Get("style").Set("width", "0")
 	v.elements.mainContent.Get("style").Set("marginLeft", "0")
-	//return nil
 }
 
-// func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
 func (v *View) openSideMenu() {
 	v.elements.sidemenu.Get("style").Set("width", "250px")
 	v.elements.mainContent.Get("style").Set("marginLeft", "250px")
-	//return nil
 }
 
 // Event handlers and event data types
