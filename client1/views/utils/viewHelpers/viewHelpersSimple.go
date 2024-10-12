@@ -1,6 +1,9 @@
 package viewHelpers
 
-import "syscall/js"
+import (
+	"client1/v2/views/mainView"
+	"syscall/js"
+)
 
 //const debugTag = "viewHelpers"
 
@@ -39,7 +42,7 @@ func Form(doc js.Value, htmlID string) js.Value {
 	return Form
 }
 
-//func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+// func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
@@ -57,8 +60,24 @@ func Div(doc js.Value, className string, htmlID string) js.Value {
 	return div
 }
 
-//func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-func HRef(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+// func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+func HRef(onClick func(mainView.MenuChoice), m mainView.MenuChoice, doc js.Value, displayText, htmlID string) js.Value {
+	link := doc.Call("createElement", "a")
+	link.Set("href", "#")
+	link.Set("textContent", displayText)
+	link.Set("id", htmlID)
+	//link.Set("type", "button")
+	//link.Set("innerHTML", displayText)
+	f := func(this js.Value, args []js.Value) interface{} {
+		onClick(m)
+		return nil
+	}
+	link.Call("addEventListener", "click", js.FuncOf(f))
+	return link
+}
+
+// func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+func HRef1(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 	link := doc.Call("createElement", "a")
 	link.Set("href", "#")
 	link.Set("textContent", displayText)
@@ -69,7 +88,7 @@ func HRef(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value
 	return link
 }
 
-//func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+// func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 func HRef2(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 	link := doc.Call("createElement", "a")
 	link.Set("href", "#")

@@ -15,6 +15,18 @@ import (
 
 const debugTag = "mainView."
 
+type MenuChoice int
+
+const (
+	menuNone MenuChoice = iota
+	menuHome
+	menuUserEditor
+	bookingEditor
+	bookingStatusEditor
+	tripEditor
+	tripStatusEditor
+)
+
 type viewElements struct {
 	sidemenu            js.Value
 	navbar              js.Value
@@ -89,7 +101,7 @@ func (v *View) Setup() {
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Create the menu buttons
-	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
+	fetchUsersBtn := viewHelpers.HRef(v.menuClick(menuUserEditor), nil, v.Document, "Users", "fetchUsersBtn")
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
 	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.Document, "Trips", "fetchTripsBtn")
@@ -123,6 +135,24 @@ func (v *View) Setup() {
 	v.Document.Get("documentElement").Call("replaceChild", newBody, v.Document.Get("body"))
 }
 
+func (v *View) menuClick(menuItem MenuChoice) {
+	switch menuItem {
+	case menuNone:
+	case menuHome:
+	case menuUserEditor:
+		v.menuUser()
+	case bookingEditor:
+		v.menuBooking()
+	case bookingStatusEditor:
+		v.menuBookingStatus()
+	case tripEditor:
+		v.menuTrip()
+	case tripStatusEditor:
+		v.menuTripStatus()
+	default:
+	}
+}
+
 func (v *View) hideEditors() {
 	// Hids editor div objects
 	//v.elements.userEditor.Hide()
@@ -130,49 +160,44 @@ func (v *View) hideEditors() {
 	//v.elements.bookingStatusEditor.Hide()
 }
 
-func (v *View) menuUser(this js.Value, args []js.Value) interface{} {
+func (v *View) menuUser() {
 	v.closeSideMenu()
 	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Users")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.userEditor.FetchItems()
-	return nil
 }
 
-func (v *View) menuBooking(this js.Value, args []js.Value) interface{} {
+func (v *View) menuBooking() {
 	v.closeSideMenu()
 	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Bookings")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingEditor.FetchItems()
-	return nil
 }
 
-func (v *View) menuBookingStatus(this js.Value, args []js.Value) interface{} {
+func (v *View) menuBookingStatus() {
 	v.closeSideMenu()
 	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Booking Status")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.bookingStatusEditor.FetchItems()
-	return nil
 }
 
-func (v *View) menuTrip(this js.Value, args []js.Value) interface{} {
+func (v *View) menuTrip() {
 	v.closeSideMenu()
 	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Trips")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.tripEditor.FetchItems()
-	return nil
 }
 
-func (v *View) menuTripStatus(this js.Value, args []js.Value) interface{} {
+func (v *View) menuTripStatus() {
 	v.closeSideMenu()
 	v.hideEditors()
 	v.elements.pageTitle.Set("innerHTML", "Trip Status")
 	//v.elements.editor.FetchUsers(this, args)
 	v.elements.tripStatusEditor.FetchItems()
-	return nil
 }
 
 // func (v *View) toggleSideMenu(this js.Value, p []js.Value) interface{} {
