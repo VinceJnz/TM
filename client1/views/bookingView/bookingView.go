@@ -45,6 +45,7 @@ type TableData struct {
 	Notes           string    `json:"notes"`
 	FromDate        time.Time `json:"from_date"`
 	ToDate          time.Time `json:"to_date"`
+	Participants    int       `json:"participants"`
 	BookingStatusID int       `json:"booking_status_id"`
 	BookingStatus   string    `json:"booking_status"`
 	TripID          int       `json:"trip_id"`
@@ -383,7 +384,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Notes+" (Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+")")
+		itemDiv.Set("innerHTML", record.Notes+" (Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

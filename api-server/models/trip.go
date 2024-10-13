@@ -15,6 +15,7 @@ type Trip struct {
 	FromDate        time.Time   `json:"from_date" db:"from_date"`
 	ToDate          time.Time   `json:"to_date" db:"to_date"`
 	MaxParticipants int         `json:"max_participants" db:"max_participants"`
+	Participants    zero.Int    `json:"participants" db:"participants"`
 	TripStatusID    zero.Int    `json:"trip_status_id" db:"trip_status_id"`
 	TripStatus      zero.String `json:"trip_status" db:"trip_status"`
 	Created         time.Time   `json:"created" db:"created"`

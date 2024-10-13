@@ -52,10 +52,13 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	records := []models.Booking{}
-	err = h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
-	FROM public.at_bookings ab
-	JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id
-	WHERE ab.trip_id = $1`, parentID)
+	err = h.db.Select(&records, `SELECT atb.*, ebs.status, atbpcount.participants
+	FROM public.at_bookings atb
+	JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
+	LEFT JOIN (SELECT atbp.booking_id, COUNT(atbp.id) as participants
+		FROM public.at_booking_people atbp
+		GROUP BY atbp.booking_id) atbpcount ON atbpcount.booking_id=atb.id
+	WHERE atb.trip_id = $1`, parentID)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return

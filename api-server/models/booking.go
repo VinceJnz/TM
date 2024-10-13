@@ -13,6 +13,7 @@ type Booking struct {
 	Notes           string    `json:"notes" db:"notes"`
 	FromDate        time.Time `json:"from_date" db:"from_date"`
 	ToDate          time.Time `json:"to_date" db:"to_date"`
+	Participants    zero.Int  `json:"participants" db:"participants"`
 	BookingStatusID int       `json:"booking_status_id" db:"booking_status_id"`
 	BookingStatus   string    `json:"booking_status" db:"status"`
 	Created         time.Time `json:"created" db:"created"`
