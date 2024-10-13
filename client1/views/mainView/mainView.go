@@ -166,9 +166,9 @@ func (v *View) hideCurrentEditor() {
 
 func (v *View) menuX() {
 	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuNone
-	v.elements.pageTitle.Set("innerHTML", "")
+	//v.hideCurrentEditor()
+	//v.menuChoice = menuNone
+	//v.elements.pageTitle.Set("innerHTML", "")
 }
 
 func (v *View) menuHome() {

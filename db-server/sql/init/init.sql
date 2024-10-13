@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS at_trips (
     To_date DATE,
     Max_participants INTEGER NOT NULL DEFAULT 0,
     Trip_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    created TIMESTAMP DEFAULT NOW(),
+    modified TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS et_trip_status (
@@ -80,11 +80,11 @@ CREATE TABLE IF NOT EXISTS public.at_booking_people
     ID SERIAL PRIMARY KEY,
     owner_id integer NOT NULL DEFAULT 0,
     booking_id integer NOT NULL DEFAULT 0,
-    user_id integer NOT NULL DEFAULT 0,
+    person_id integer NOT NULL DEFAULT 0,
     notes text COLLATE pg_catalog."default",
     created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-)
+    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
