@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-// GetBookingStatus: retrieves and returns all records with the status of each users booking
+// GetBookingStatus: retrieves and returns all records with the status of each users booking (trip participant booking status list)
 func (h *Handler) GetBookingStatus(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripBookingStatus{}
 

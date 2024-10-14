@@ -36,6 +36,7 @@ type TripDificulty struct {
 	Modified time.Time `json:"modified" db:"modified"`
 }
 
+// trip participant booking status list
 type TripBookingStatus struct {
 	TripID        int         `json:"trip_id" db:"trip_id"`
 	BookingID     int         `json:"booking_id" db:"booking_id"`
