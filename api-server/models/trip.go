@@ -35,3 +35,12 @@ type TripDificulty struct {
 	Created  time.Time `json:"created" db:"created"`
 	Modified time.Time `json:"modified" db:"modified"`
 }
+
+type TripBookingStatus struct {
+	TripID        int         `json:"trip_id" db:"trip_id"`
+	BookingID     int         `json:"booking_id" db:"booking_id"`
+	ParticipantID int         `json:"participant_id" db:"participant_id"`
+	PersonID      int         `json:"person_id" db:"person_id"`
+	Name          string      `json:"person_name" db:"person_name"`
+	BookingStatus zero.String `json:"booking_status" db:"booking_status"`
+}

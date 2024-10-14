@@ -74,27 +74,3 @@ func HRef(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 	link.Call("addEventListener", "click", js.FuncOf(f))
 	return link
 }
-
-// func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-func HRef1(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-	link := doc.Call("createElement", "a")
-	link.Set("href", "#")
-	link.Set("textContent", displayText)
-	link.Set("id", htmlID)
-	//link.Set("type", "button")
-	//link.Set("innerHTML", displayText)
-	link.Call("addEventListener", "click", js.FuncOf(onClick))
-	return link
-}
-
-// func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-func HRef2(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-	link := doc.Call("createElement", "a")
-	link.Set("href", "#")
-	link.Set("textContent", displayText)
-	link.Set("id", htmlID)
-	//link.Set("type", "button")
-	//link.Set("innerHTML", displayText)
-	link.Call("addEventListener", "click", js.FuncOf(onClick))
-	return link
-}

@@ -57,10 +57,11 @@ type TableData struct {
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Name         js.Value
-	FromDate     js.Value
-	ToDate       js.Value
-	TripStatusID js.Value
+	Name            js.Value
+	FromDate        js.Value
+	ToDate          js.Value
+	MaxParticipants js.Value
+	TripStatusID    js.Value
 }
 
 type Item struct {
@@ -171,17 +172,18 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Set("id", "editForm")
 
 	// Create input fields // ********************* This needs to be changed for each api **********************
-	var NameObj, FromDateObj, ToDateObj, TripStatusObj js.Value
+	var NameObj, FromDateObj, ToDateObj, MaxParticipantsObj, TripStatusObj js.Value
 	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemNotes")
 	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
-	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentRecord.BookingStatusID, document, "Status", "text", "itemStatus")
+	MaxParticipantsObj, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "Max Participants", "number", "itemMaxParticipants")
 	TripStatusObj, editor.UiComponents.TripStatusID = editor.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", NameObj)
 	form.Call("appendChild", FromDateObj)
 	form.Call("appendChild", ToDateObj)
+	form.Call("appendChild", MaxParticipantsObj)
 	form.Call("appendChild", TripStatusObj)
 
 	// Create submit button
@@ -220,16 +222,19 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing from date:", err)
+		log.Println("Error parsing from_date:", err)
 	}
 	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing to date:", err)
+		log.Println("Error parsing to_date:", err)
 	}
-	//editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
+	editor.CurrentRecord.MaxParticipants, err = strconv.Atoi(editor.UiComponents.MaxParticipants.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing max_participants:", err)
+	}
 	editor.CurrentRecord.TripStatusID, err = strconv.Atoi(editor.UiComponents.TripStatusID.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing booking id:", err)
+		log.Println("Error parsing booking_id:", err)
 	}
 
 	// Need to investigate the technique for passing values into a go routine ?????????
