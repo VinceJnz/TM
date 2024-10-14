@@ -48,12 +48,12 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 		itemJSON, err := json.Marshal(txDataStru)
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()1 ", "err =", err, "url =", url, "txDataStru =", txDataStru, "itemJSON =", itemJSON)
-			err = fmt.Errorf(debugTag+"NewRequest()1 failed to marshal item data: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest()1a failed to marshal item data: %w", err)
 			return nil, err
 		}
 		req, err = http.NewRequest(http.MethodDelete, url, bytes.NewReader(itemJSON))
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1 failed to create request: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest()1b failed to create request: %w", err)
 			return nil, err
 		}
 	case http.MethodGet:
@@ -65,25 +65,25 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	case http.MethodPut:
 		itemJSON, err := json.Marshal(txDataStru)
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1 failed to marshal item data: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest()1a failed to marshal item data: %w", err)
 			return nil, err
 		}
 		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1 failed to create request: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest()1b failed to create request: %w", err)
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
 	case http.MethodPost:
 		itemJSON, err := json.Marshal(txDataStru)
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1 failed to marshal item data: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest()1a failed to marshal item data: %w", err)
 			return nil, err
 		}
 		req, err = http.NewRequest(http.MethodPost, url, bytes.NewBuffer(itemJSON))
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()2 ", "err =", err, "url =", url, "txDataStru =", txDataStru, "itemJSON =", itemJSON)
-			err = fmt.Errorf(debugTag+"NewRequest()1 failed to create request: %w", err)
+			log.Printf("%v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()2b ", "err =", err, "url =", url, "txDataStru =", txDataStru, "itemJSON =", itemJSON)
+			err = fmt.Errorf(debugTag+"NewRequest()1b failed to create request: %w", err)
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
@@ -93,7 +93,7 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	}
 
 	callBackSuccess := func(error) {
-		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: Using default success-callback: %w", err)
+		err = fmt.Errorf(debugTag+"newRequest()2a INFORMATION: Using default success-callback: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderOk is called
 	} //The function to be called to render the request results
 	if len(callBacks) > 0 {
@@ -101,7 +101,7 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 			callBackSuccess = callBacks[0]
 		}
 	} else {
-		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: No success-callback has been provided, will use the default function: %w", err)
+		err = fmt.Errorf(debugTag+"newRequest()2b INFORMATION: No success-callback has been provided, will use the default function: %w", err)
 		log.Println(err, "req.URL =", req.URL)
 	}
 

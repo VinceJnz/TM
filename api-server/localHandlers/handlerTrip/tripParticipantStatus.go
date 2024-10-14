@@ -9,8 +9,8 @@ import (
 )
 
 // GetBookingStatus: retrieves and returns all records with the status of each users booking (trip participant booking status list)
-func (h *Handler) GetBookingStatus(w http.ResponseWriter, r *http.Request) {
-	records := []models.TripBookingStatus{}
+func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
+	records := []models.TripParticipantStatus{}
 
 	err := h.db.Select(&records, `WITH booking_order AS (
     SELECT 
@@ -24,10 +24,13 @@ func (h *Handler) GetBookingStatus(w http.ResponseWriter, r *http.Request) {
 	)
 	SELECT 
 		trip_id,
+		att.trip_name,
+		att.from_date,
+		att.to_date,
 		booking_order.booking_id,
 		participant_id,
 		booking_order.person_id,
-		stu.name,
+		stu.name as person_name,
 		CASE 
 			WHEN booking_position <= att.max_participants THEN 'before_threshold' 
 			ELSE 'after_threshold' 
@@ -35,14 +38,13 @@ func (h *Handler) GetBookingStatus(w http.ResponseWriter, r *http.Request) {
 	FROM booking_order
 	JOIN public.at_trips att ON att.id=booking_order.trip_id
 	JOIN public.st_users stu ON stu.id=booking_order.person_id
-	ORDER BY trip_id, booking_position;
-	`)
+	ORDER BY trip_id, booking_position;`)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll()2 %v\n", debugTag, err)
+		log.Printf("%v.GetBookingStatus()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

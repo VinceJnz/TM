@@ -65,6 +65,7 @@ func main() {
 	r.HandleFunc("/trips/{id:[0-9]+}", trip.Update).Methods("PUT")
 	r.HandleFunc("/trips/{id:[0-9]+}", trip.Delete).Methods("DELETE")
 	r.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET")
+	r.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET")
 
 	// TripStatus routes
 	tripStatus := handlerTripStatus.New(db)

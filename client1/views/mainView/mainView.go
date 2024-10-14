@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
+	tripParticipantStatusView "client1/v2/views/tripParticipantStatus"
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/tripView"
 	"client1/v2/views/userView"
@@ -27,19 +28,21 @@ const (
 	menuBookingStatusEditor
 	menuTripEditor
 	menuTripStatusEditor
+	menuParticipantStatusView
 )
 
 type viewElements struct {
-	sidemenu            js.Value
-	navbar              js.Value
-	mainContent         js.Value
-	statusOutput        js.Value
-	pageTitle           js.Value
-	userEditor          *userView.ItemEditor
-	bookingEditor       *bookingView.ItemEditor
-	bookingStatusEditor *bookingStatusView.ItemEditor
-	tripEditor          *tripView.ItemEditor
-	tripStatusEditor    *tripStatusView.ItemEditor
+	sidemenu              js.Value
+	navbar                js.Value
+	mainContent           js.Value
+	statusOutput          js.Value
+	pageTitle             js.Value
+	userEditor            *userView.ItemEditor
+	bookingEditor         *bookingView.ItemEditor
+	bookingStatusEditor   *bookingStatusView.ItemEditor
+	tripEditor            *tripView.ItemEditor
+	tripStatusEditor      *tripStatusView.ItemEditor
+	participantStatusView *tripParticipantStatusView.ItemEditor
 }
 
 type View struct {
@@ -75,6 +78,7 @@ func (v *View) Setup() {
 	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events)
 	v.elements.tripEditor = tripView.New(v.Document, v.events)
 	v.elements.tripStatusEditor = tripStatusView.New(v.Document, v.events)
+	v.elements.participantStatusView = tripParticipantStatusView.New(v.Document, v.events)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
@@ -112,7 +116,8 @@ func (v *View) Setup() {
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
 	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.Document, "Trips", "fetchTripsBtn")
-	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.Document, "TripStatus", "fetchTripStatusBtn")
+	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.Document, "Trip Status", "fetchTripStatusBtn")
+	fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.Document, "Participant Status", "fetchTripParticipantStatusBtn")
 
 	// Add menu buttons to the side menu
 	v.elements.sidemenu.Call("appendChild", xBtn)
@@ -124,6 +129,7 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripsBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripStatusBtn)
+	v.elements.sidemenu.Call("appendChild", fetchTripParticipantStatusBtn)
 
 	// append Editor Div's to the mainContent
 	v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
@@ -131,6 +137,7 @@ func (v *View) Setup() {
 	v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripStatusEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.participantStatusView.Div)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput.Set("id", "statusOutput")
@@ -160,6 +167,8 @@ func (v *View) hideCurrentEditor() {
 		v.elements.tripEditor.Hide()
 	case menuTripStatusEditor:
 		v.elements.tripStatusEditor.Hide()
+	case menuParticipantStatusView:
+		v.elements.participantStatusView.Hide()
 	default:
 	}
 }
@@ -235,6 +244,15 @@ func (v *View) menuTripStatus() {
 	v.elements.tripStatusEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Trip Status")
 	v.elements.tripStatusEditor.FetchItems()
+}
+
+func (v *View) menuParticipantStatus() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuParticipantStatusView
+	v.elements.participantStatusView.Display()
+	v.elements.pageTitle.Set("innerHTML", "Trip Participant Status")
+	v.elements.participantStatusView.FetchItems()
 }
 
 func (v *View) toggleSideMenu() {

@@ -176,7 +176,7 @@ func (editor *ItemEditor) populateEditForm() {
 	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemNotes")
 	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
-	MaxParticipantsObj, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "Max Participants", "number", "itemMaxParticipants")
+	MaxParticipantsObj, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
 	TripStatusObj, editor.UiComponents.TripStatusID = editor.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
