@@ -39,6 +39,7 @@ const (
 const apiURL = "http://localhost:8085/trips"
 
 // ********************* This needs to be changed for each api **********************
+
 type TableData struct {
 	ID              int       `json:"id"`
 	OwnerID         int       `json:"owner_id"`
@@ -188,9 +189,11 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
 	form.Call("appendChild", submitBtn)
+	form.Call("appendChild", cancelBtn)
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
@@ -249,6 +252,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
+	editor.resetEditForm()
+	return nil
+}
+
+// cancelItemEdit handles the cancelling of the item edit form
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
 	editor.resetEditForm()
 	return nil
 }
@@ -378,7 +387,7 @@ func (editor *ItemEditor) populateItemList() {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
 		// Create and add child views to Item
-		booking := bookingView.New(editor.document, editor.events, record.ID)
+		booking := bookingView.New(editor.document, editor.events, bookingView.ParentData{ID: record.ID, FromDate: record.FromDate, ToDate: record.ToDate})
 		//editor.ItemList = append(editor.ItemList, Item{Record: record, Booking: booking})
 
 		itemDiv := editor.document.Call("createElement", "div")

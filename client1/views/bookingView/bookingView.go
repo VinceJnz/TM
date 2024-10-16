@@ -61,6 +61,12 @@ type UI struct {
 	BookingStatusID js.Value
 }
 
+type ParentData struct {
+	ID       int       `json:"id"`
+	FromDate time.Time `json:"from_date"`
+	ToDate   time.Time `json:"to_date"`
+}
+
 type Item struct {
 	Record TableData
 	//Add child structures as necessary
@@ -81,13 +87,13 @@ type ItemEditor struct {
 	StateDiv      js.Value
 	BookingStatus *bookingStatusView.ItemEditor
 	PeopleEditor  *bookingPeopleView.ItemEditor
-	ParentID      int
+	ParentData    ParentData
 	ViewState     ViewState
 	//Parent       js.Value
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
@@ -117,8 +123,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	editor.Div.Call("appendChild", form)
 
 	// Store supplied parent value
-	if len(idList) == 1 {
-		editor.ParentID = idList[0]
+	if len(parentData) != 0 {
+		editor.ParentData = parentData[0]
 	}
 
 	editor.BookingStatus = bookingStatusView.New(editor.document, eventProcessor)
@@ -154,7 +160,7 @@ func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 	// ********************* This needs to be changed for each api **********************
-	editor.CurrentRecord.TripID = editor.ParentID
+	editor.CurrentRecord.TripID = editor.ParentData.ID
 	editor.populateEditForm()
 	return nil
 }
@@ -174,8 +180,10 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields // ********************* This needs to be changed for each api **********************
 	var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
 	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
-	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
-	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	//FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+	FromDateObj, editor.UiComponents.FromDate = viewHelpers.DateEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", editor.ParentData.FromDate.Format(viewHelpers.Layout), editor.ParentData.ToDate.Format(viewHelpers.Layout), "itemFromDate")
+	//ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	ToDateObj, editor.UiComponents.ToDate = viewHelpers.DateEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", editor.ParentData.FromDate.Format(viewHelpers.Layout), editor.ParentData.ToDate.Format(viewHelpers.Layout), "itemToDate")
 	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentRecord.BookingStatusID, document, "Status", "text", "itemStatus")
 	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 
@@ -187,9 +195,11 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create submit button
 	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
 	form.Call("appendChild", submitBtn)
+	form.Call("appendChild", cancelBtn)
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
@@ -245,6 +255,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
+	editor.resetEditForm()
+	return nil
+}
+
+// cancelItemEdit handles the cancelling of the item edit form
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
 	editor.resetEditForm()
 	return nil
 }
@@ -320,8 +336,8 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems() {
 	localApiURL := apiURL
-	if editor.ParentID != 0 {
-		localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentID) + "/bookings"
+	if editor.ParentData.ID != 0 {
+		localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentData.ID) + "/bookings"
 	}
 	go func() {
 		var records []TableData
