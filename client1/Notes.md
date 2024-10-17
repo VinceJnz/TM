@@ -61,3 +61,8 @@ COPY --from=builder $GOROOT/misc/wasm/wasm_exec.js .
 # You can now serve the main.wasm and wasm_exec.js as static files
 ```
 
+
+
+## Form validation
+
+<https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#the-constraint-validation-api>

@@ -22,6 +22,14 @@ func Label(doc js.Value, labelText string, htmlID string) js.Value {
 	return label
 }
 
+// Span creates a span element with the ID.
+func Span(doc js.Value, htmlID string) js.Value {
+	// Create a span element
+	label := doc.Call("createElement", "span")
+	label.Set("id", htmlID)
+	return label
+}
+
 // Input creates an input element with the given value, type, and ID.
 func Input(value string, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
 	// Create an input element
@@ -46,8 +54,19 @@ func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Val
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "button")
+	//button.Set("type", buttonType)
 	button.Set("innerHTML", displayText)
 	button.Call("addEventListener", "click", js.FuncOf(onClick))
+	return button
+}
+
+// func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+func SubmitButton(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+	button := doc.Call("createElement", "button")
+	button.Set("id", htmlID)
+	button.Set("type", "submit")
+	button.Set("innerHTML", displayText)
+	button.Call("addEventListener", "submit", js.FuncOf(onClick))
 	return button
 }
 

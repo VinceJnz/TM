@@ -188,7 +188,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", TripStatusObj)
 
 	// Create submit button
-	submitBtn := viewHelpers.Button(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
