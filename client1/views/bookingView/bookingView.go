@@ -26,6 +26,7 @@ const (
 	ItemStateAdding             //ItemState = 3
 	ItemStateSaving             //ItemState = 4
 	ItemStateDeleting           //ItemState = 5
+	ItemStateSubmitted
 )
 
 type ViewState int
@@ -159,8 +160,12 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
-	// ********************* This needs to be changed for each api **********************
+
+	// Set default values for the new record // ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.TripID = editor.ParentData.ID
+	editor.CurrentRecord.FromDate = editor.ParentData.FromDate
+	editor.CurrentRecord.ToDate = editor.ParentData.ToDate
+
 	editor.populateEditForm()
 	return nil
 }
@@ -177,21 +182,24 @@ func (editor *ItemEditor) populateEditForm() {
 	form := editor.document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	// Create input fields // ********************* This needs to be changed for each api **********************
+	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
 	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
+	editor.UiComponents.Notes.Set("minlength", 10)
+	editor.UiComponents.Notes.Call("setAttribute", "required", "true")
 
-	FromDateObj, editor.UiComponents.FromDate = viewHelpers.ValueEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	editor.UiComponents.FromDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
-	ToDateObj, editor.UiComponents.ToDate = viewHelpers.ValueEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	editor.UiComponents.ToDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
-	//editor.UiComponents.BookingStatusID = viewHelpers.StringEdit(editor.CurrentRecord.BookingStatusID, document, "Status", "text", "itemStatus")
+
 	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
+	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", NotesObj)
@@ -230,12 +238,14 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
-	log.Println(debugTag + "SubmitItemEdit()1")
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
+	log.Println(debugTag + "SubmitItemEdit()1 started")
+	editor.updateStateDisplay(ItemStateSubmitted)
+
 	// ********************* This needs to be changed for each api **********************
 	var err error
 
@@ -466,6 +476,8 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 		stateText = "Saving Item"
 	case ItemStateDeleting:
 		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
 	default:
 		stateText = "Unknown State"
 	}

@@ -4,7 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
-	tripParticipantStatusView "client1/v2/views/tripParticipantStatus"
+	"client1/v2/views/tripParticipantStatusReport"
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/tripView"
 	"client1/v2/views/userView"
@@ -42,7 +42,7 @@ type viewElements struct {
 	bookingStatusEditor   *bookingStatusView.ItemEditor
 	tripEditor            *tripView.ItemEditor
 	tripStatusEditor      *tripStatusView.ItemEditor
-	participantStatusView *tripParticipantStatusView.ItemEditor
+	participantStatusView *tripParticipantStatusReport.ItemEditor
 }
 
 type View struct {
@@ -78,7 +78,7 @@ func (v *View) Setup() {
 	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events)
 	v.elements.tripEditor = tripView.New(v.Document, v.events)
 	v.elements.tripStatusEditor = tripStatusView.New(v.Document, v.events)
-	v.elements.participantStatusView = tripParticipantStatusView.New(v.Document, v.events)
+	v.elements.participantStatusView = tripParticipantStatusReport.New(v.Document, v.events)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")

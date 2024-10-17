@@ -25,7 +25,7 @@ const (
 	ItemStateAdding
 	ItemStateSaving
 	ItemStateDeleting
-	ItemStateHidden
+	ItemStateSubmitted
 )
 
 type ViewState int
@@ -144,7 +144,10 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{} // Clears current item
+
+	// Set default values for the new record // ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.BookingID = editor.ParentID
+
 	editor.populateEditForm()
 	return nil
 }
@@ -161,10 +164,13 @@ func (editor *ItemEditor) populateEditForm() {
 	form := editor.document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	// Create input fields // ********************* This needs to be changed for each api **********************
+	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var PersonObj, NotesObj js.Value
 	PersonObj, editor.UiComponents.PersonID = editor.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson")
+	editor.UiComponents.PersonID.Call("setAttribute", "required", "true")
+
 	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
+	editor.UiComponents.Notes.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", PersonObj)
@@ -201,6 +207,7 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+	editor.updateStateDisplay(ItemStateSubmitted)
 
 	// ********************* This needs to be changed for each api **********************
 	var err error
@@ -408,6 +415,8 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 		stateText = "Saving Item"
 	case ItemStateDeleting:
 		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
 	default:
 		stateText = "Unknown State"
 	}

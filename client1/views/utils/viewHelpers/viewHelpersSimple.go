@@ -54,13 +54,12 @@ func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Val
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "button")
-	//button.Set("type", buttonType)
 	button.Set("innerHTML", displayText)
 	button.Call("addEventListener", "click", js.FuncOf(onClick))
 	return button
 }
 
-// func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+// func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 func SubmitButton(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)

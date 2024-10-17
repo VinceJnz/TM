@@ -1,4 +1,4 @@
-package tripParticipantStatusView
+package tripParticipantStatusReport
 
 import (
 	"client1/v2/app/eventProcessor"
@@ -10,17 +10,18 @@ import (
 	"time"
 )
 
-const debugTag = "tripParticipantStatusView."
+const debugTag = "tripParticipantStatusReport."
 
 type ItemState int
 
 const (
-	ItemStateNone     ItemState = iota
-	ItemStateFetching           //ItemState = 1
-	ItemStateEditing            //ItemState = 2
-	ItemStateAdding             //ItemState = 3
-	ItemStateSaving             //ItemState = 4
-	ItemStateDeleting           //ItemState = 5
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateSubmitted
 )
 
 type ViewState int
@@ -196,6 +197,8 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 		stateText = "Saving Item"
 	case ItemStateDeleting:
 		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
 	default:
 		stateText = "Unknown State"
 	}

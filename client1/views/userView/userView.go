@@ -16,12 +16,13 @@ const debugTag = "userView."
 type ItemState int
 
 const (
-	ItemStateNone     ItemState = iota
-	ItemStateFetching           //ItemState = 1
-	ItemStateEditing            //ItemState = 2
-	ItemStateAdding             //ItemState = 3
-	ItemStateSaving             //ItemState = 4
-	ItemStateDeleting           //ItemState = 5
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateSubmitted
 )
 
 type ViewState int
@@ -132,6 +133,9 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
+
+	// Set default values for the new record // ********************* This needs to be changed for each api **********************
+
 	editor.populateEditForm()
 	return nil
 }
@@ -176,11 +180,16 @@ func (editor *ItemEditor) populateEditForm() {
 	form := editor.document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	// Create input fields // ********************* This needs to be changed for each api **********************
+	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var NameObj, UsernameObj, EmailObj js.Value
 	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
+	editor.UiComponents.Name.Call("setAttribute", "required", "true")
+
 	UsernameObj, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	editor.UiComponents.Username.Call("setAttribute", "required", "true")
+
 	EmailObj, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
+	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", NameObj)
@@ -216,6 +225,7 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+	editor.updateStateDisplay(ItemStateSubmitted)
 
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
@@ -413,6 +423,8 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 		stateText = "Saving Item"
 	case ItemStateDeleting:
 		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
 	default:
 		stateText = "Unknown State"
 	}

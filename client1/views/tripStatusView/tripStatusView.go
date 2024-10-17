@@ -17,12 +17,13 @@ const debugTag = "tripStatusView."
 type ItemState int
 
 const (
-	ItemStateNone     ItemState = iota
-	ItemStateFetching           //ItemState = 1
-	ItemStateEditing            //ItemState = 2
-	ItemStateAdding             //ItemState = 3
-	ItemStateSaving             //ItemState = 4
-	ItemStateDeleting           //ItemState = 5
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateSubmitted
 )
 
 type ViewState int
@@ -131,6 +132,9 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
+
+	// Set default values for the new record // ********************* This needs to be changed for each api **********************
+
 	editor.populateEditForm()
 	return nil
 }
@@ -140,6 +144,10 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	// Create a div for displaying Dropdown
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
+
+	// Create a label element
+	label := viewHelpers.Label(editor.document, labelText, htmlID)
+	fieldset.Call("appendChild", label)
 
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
@@ -153,12 +161,11 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 		}
 		StateDropDown.Call("appendChild", optionElement)
 	}
-
-	// Create a label element
-	label := viewHelpers.Label(editor.document, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
 	fieldset.Call("appendChild", StateDropDown)
+
+	// Create an span element of error messages
+	span := viewHelpers.Span(editor.document, htmlID+"-error")
+	fieldset.Call("appendChild", span)
 
 	return fieldset, StateDropDown
 }
@@ -175,9 +182,10 @@ func (editor *ItemEditor) populateEditForm() {
 	form := editor.document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	// Create input fields // ********************* This needs to be changed for each api **********************
+	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var StatusObj js.Value
 	StatusObj, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentRecord.Status, editor.document, "Status", "text", "itemStatus")
+	editor.UiComponents.Status.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", StatusObj)
@@ -211,6 +219,7 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+	editor.updateStateDisplay(ItemStateSubmitted)
 
 	// ********************* This needs to be changed for each api **********************
 	//var err error
@@ -407,6 +416,8 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 		stateText = "Saving Item"
 	case ItemStateDeleting:
 		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
 	default:
 		stateText = "Unknown State"
 	}

@@ -20,12 +20,13 @@ const debugTag = "tripView."
 type ItemState int
 
 const (
-	ItemStateNone     ItemState = iota
-	ItemStateFetching           //ItemState = 1
-	ItemStateEditing            //ItemState = 2
-	ItemStateAdding             //ItemState = 3
-	ItemStateSaving             //ItemState = 4
-	ItemStateDeleting           //ItemState = 5
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateSubmitted
 )
 
 type ViewState int
@@ -156,6 +157,11 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData() interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
+
+	// Set default values for the new record // ********************* This needs to be changed for each api **********************
+	editor.CurrentRecord.FromDate = time.Now().Truncate(24 * time.Hour)
+	editor.CurrentRecord.ToDate = time.Now().Truncate(24 * time.Hour)
+
 	editor.populateEditForm()
 	return nil
 }
@@ -172,13 +178,25 @@ func (editor *ItemEditor) populateEditForm() {
 	form := editor.document.Call("createElement", "form")
 	form.Set("id", "editForm")
 
-	// Create input fields // ********************* This needs to be changed for each api **********************
+	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var NameObj, FromDateObj, ToDateObj, MaxParticipantsObj, TripStatusObj js.Value
 	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemNotes")
+	editor.UiComponents.Name.Call("setAttribute", "required", "true")
+
 	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
+	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
+
 	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
+	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
 	MaxParticipantsObj, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
+	editor.UiComponents.MaxParticipants.Set("min", 1)
+	editor.UiComponents.MaxParticipants.Call("setAttribute", "required", "true")
+
 	TripStatusObj, editor.UiComponents.TripStatusID = editor.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
+	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", NameObj)
@@ -218,6 +236,13 @@ func (editor *ItemEditor) resetEditForm() {
 
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+	if len(p) > 0 {
+		event := p[0]
+		event.Call("preventDefault")
+		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
+	}
+	log.Println(debugTag + "SubmitItemEdit()1 started")
+	editor.updateStateDisplay(ItemStateSubmitted)
 
 	// ********************* This needs to be changed for each api **********************
 	var err error
@@ -448,6 +473,8 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 		stateText = "Saving Item"
 	case ItemStateDeleting:
 		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
 	default:
 		stateText = "Unknown State"
 	}

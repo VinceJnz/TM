@@ -44,35 +44,31 @@ func main() {
 
 */
 
-func showErrors(form js.Value) {
-	doc := js.Global().Get("document")
-
-	username := doc.Call("getElementById", "username")
-	email := doc.Call("getElementById", "email")
-	password := doc.Call("getElementById", "password")
+func ShowErrors(document js.Value) {
+	username := document.Call("getElementById", "username")
+	email := document.Call("getElementById", "email")
+	password := document.Call("getElementById", "password")
 
 	if !username.Get("validity").Get("valid").Bool() {
-		doc.Call("getElementById", "username-error").Set("innerHTML", getValidationMessage(username))
+		document.Call("getElementById", "username-error").Set("innerHTML", GetValidationMessage(username))
 	}
 
 	if !email.Get("validity").Get("valid").Bool() {
-		doc.Call("getElementById", "email-error").Set("innerHTML", getValidationMessage(email))
+		document.Call("getElementById", "email-error").Set("innerHTML", GetValidationMessage(email))
 	}
 
 	if !password.Get("validity").Get("valid").Bool() {
-		doc.Call("getElementById", "password-error").Set("innerHTML", getValidationMessage(password))
+		document.Call("getElementById", "password-error").Set("innerHTML", GetValidationMessage(password))
 	}
 }
 
-func clearErrors(form js.Value) {
-	doc := js.Global().Get("document")
-
-	doc.Call("getElementById", "username-error").Set("innerHTML", "")
-	doc.Call("getElementById", "email-error").Set("innerHTML", "")
-	doc.Call("getElementById", "password-error").Set("innerHTML", "")
+func ClearErrors(document js.Value) {
+	document.Call("getElementById", "username-error").Set("innerHTML", "")
+	document.Call("getElementById", "email-error").Set("innerHTML", "")
+	document.Call("getElementById", "password-error").Set("innerHTML", "")
 }
 
-func getValidationMessage(input js.Value) string {
+func GetValidationMessage(input js.Value) string {
 	validity := input.Get("validity")
 	if validity.Get("valueMissing").Bool() {
 		return "This field is required."
