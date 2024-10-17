@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>JavaScript Validation</h2>
+
+<form id="myform">
+    <fieldset class="input-group">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required minlength="3" maxlength="20" />
+        <span id="username-error"></span>
+    </fieldset>
+
+    <fieldset class="input-group">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required />
+        <span id="email-error"></span>
+    </fieldset>
+
+    <fieldset class="input-group">
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required minlength="8" />
+        <span id="password-error"></span>
+    </fieldset>
+
+    <fieldset class="input-group">
+        <label for="FromDate">From Date:</label>
+        <input type="date" id="FromDate" name="From" min="2024-12-01" max="2023-12-11">
+        <span id="FromDate-error"></span>
+    </fieldset>
+
+    <button type="submit" id="submit-btn">Submit</button>
+</form>
+
+
+
+<form id="editForm">
+    <fieldset class="input-group">
+        <label for="itemNotes">Notes</label>
+        <input id="itemNotes" name="Notes" type="text">
+    </fieldset>
+    
+    <fieldset class="input-group">
+        <label for="itemFromDate">From</label>
+        <input id="itemFromDate" name="From" type="date" min="2024-12-01" max="2023-12-11" required="true">
+        <span id="itemFromDate-error"></span>
+    </fieldset>
+    
+    <fieldset class="input-group">
+        <label for="itemToDate">To</label>
+        <input id="itemToDate" name="To" type="date" min="2024-12-01" max="2023-12-11">
+    </fieldset>
+    
+    <fieldset class="input-group">
+        <label for="itemBookingStatusID">Status</label>
+        <select id="itemBookingStatusID">
+            <option value="1">New</option><option value="2">Cancelled</option><option value="3">Success</option>
+        </select>
+    </fieldset>
+    
+    <button id="submitEditBtn" type="submit">Submit</button><button id="cancelEditBtn" type="button">Cancel</button>
+</form>
+
+
+
+<p id="demo1"></p>
+
+<p id="demo2"></p>
+
+<script>
+const formObj = document.getElementById("myform");
+const inputObj = document.getElementById("username");
+const demo1 = document.getElementById("demo1");
+const demo2 = document.getElementById("demo2");
+
+formObj.addEventListener("submit", myFunction);
+
+function myFunction(event) {
+  event.preventDefault()
+  if (!formObj.checkValidity()) {
+    document.getElementById("demo1").innerHTML = inpObj.validationMessage;
+  } else {
+    document.getElementById("demo1").innerHTML = "Input OK";
+  } 
+
+
+  if (!inputObj.checkValidity()) {
+    document.getElementById("demo2").innerHTML = inpObj.validationMessage;
+  } else {
+    document.getElementById("demo2").innerHTML = "Input OK";
+  } 
+} 
+</script>
+
+</body>
+</html>
