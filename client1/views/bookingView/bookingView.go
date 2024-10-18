@@ -104,7 +104,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, paren
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displayingthe editor
+	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
@@ -118,10 +118,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, paren
 	editor.StateDiv = editor.document.Call("createElement", "div")
 	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
-
-	editor.Hide()
-	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
-	editor.Div.Call("appendChild", form)
 
 	// Store supplied parent value
 	if len(parentData) != 0 {
@@ -157,7 +153,7 @@ func (editor *ItemEditor) Display() {
 }
 
 // NewItemData initializes a new item for adding
-func (editor *ItemEditor) NewItemData() interface{} {
+func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -178,9 +174,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
-
-	form := editor.document.Call("createElement", "form")
-	form.Set("id", "editForm")
+	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
@@ -208,7 +202,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", BookingStatusObj)
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitButton(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
@@ -243,8 +237,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		event.Call("preventDefault")
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
-	log.Println(debugTag + "SubmitItemEdit()1 started")
-	editor.updateStateDisplay(ItemStateSubmitted)
 
 	// ********************* This needs to be changed for each api **********************
 	var err error
@@ -403,12 +395,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
-	addNewItemButton := editor.document.Call("createElement", "button")
-	addNewItemButton.Set("innerHTML", "Add New Item")
-	addNewItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		editor.NewItemData()
-		return nil
-	}))
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {

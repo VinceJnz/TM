@@ -101,7 +101,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displayingthe editor
+	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
@@ -116,9 +116,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
 	editor.Div.Call("appendChild", editor.StateDiv)
 
-	editor.Hide()
-	form := viewHelpers.Form(js.Global().Get("document"), "editForm")
-	editor.Div.Call("appendChild", form)
+	//editor.Hide()
+	//form := viewHelpers.Form(js.Global().Get("document"), "editForm")
+	//editor.Div.Call("appendChild", form)
 
 	// Store supplied parent value
 	if len(idList) == 1 {
@@ -154,7 +154,7 @@ func (editor *ItemEditor) Display() {
 }
 
 // NewItemData initializes a new item for adding
-func (editor *ItemEditor) NewItemData() interface{} {
+func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -174,9 +174,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
-
-	form := editor.document.Call("createElement", "form")
-	form.Set("id", "editForm")
+	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var NameObj, FromDateObj, ToDateObj, MaxParticipantsObj, TripStatusObj js.Value
@@ -186,10 +184,12 @@ func (editor *ItemEditor) populateEditForm() {
 	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
+	editor.UiComponents.FromDate.Call("addEventListener", "input", js.FuncOf(editor.ValidateFromDate))
 
 	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+	editor.UiComponents.ToDate.Call("addEventListener", "input", js.FuncOf(editor.ValidateToDate))
 
 	MaxParticipantsObj, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
 	editor.UiComponents.MaxParticipants.Set("min", 1)
@@ -206,7 +206,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", TripStatusObj)
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitButton(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
@@ -234,6 +234,54 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.updateStateDisplay(ItemStateNone)
 }
 
+func (editor *ItemEditor) NoAction(this js.Value, p []js.Value) interface{} {
+	log.Println(debugTag + "NoAction()1")
+	return nil
+}
+
+func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
+	editor.ValidateDates("from")
+	return nil
+}
+
+func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
+	editor.ValidateDates("to")
+	return nil
+}
+
+func (editor *ItemEditor) ValidateDates(dateStr string) interface{} {
+	FromDate, err := time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing from_date:", err)
+		return nil
+	}
+	ToDate, err := time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing to_date:", err)
+		return nil
+	}
+
+	var dateObj js.Value
+	switch dateStr {
+	case "from":
+		dateObj = editor.UiComponents.FromDate
+	case "to":
+		dateObj = editor.UiComponents.ToDate
+
+	}
+
+	if !FromDate.Before(ToDate) {
+		log.Println("To-date must be after From-date " + dateStr)
+		dateObj.Call("setCustomValidity", "To-date must be after From-date")
+		dateObj.Call("reportValidity")
+	} else {
+		log.Println("To/From dates okay " + dateStr)
+		dateObj.Call("setCustomValidity", "")
+		dateObj.Call("reportValidity")
+	}
+	return nil
+}
+
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 	if len(p) > 0 {
@@ -241,8 +289,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		event.Call("preventDefault")
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
-	log.Println(debugTag + "SubmitItemEdit()1 started")
-	editor.updateStateDisplay(ItemStateSubmitted)
 
 	// ********************* This needs to be changed for each api **********************
 	var err error
@@ -251,19 +297,36 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing from_date:", err)
+		return nil
 	}
 	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing to_date:", err)
+		return nil
 	}
 	editor.CurrentRecord.MaxParticipants, err = strconv.Atoi(editor.UiComponents.MaxParticipants.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing max_participants:", err)
+		return nil
 	}
 	editor.CurrentRecord.TripStatusID, err = strconv.Atoi(editor.UiComponents.TripStatusID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing booking_id:", err)
+		return nil
 	}
+
+	/*
+		if !editor.CurrentRecord.FromDate.Before(editor.CurrentRecord.ToDate) {
+			log.Println("To-date must be after From-date")
+			editor.UiComponents.FromDate.Call("setCustomValidity", "To-date must be after From-date")
+			editor.UiComponents.FromDate.Call("reportValidity")
+			return nil
+		} else {
+			log.Println("To/Fomr dates okay")
+			editor.UiComponents.FromDate.Call("setCustomValidity", "")
+			editor.UiComponents.FromDate.Call("reportValidity")
+		}
+	*/
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -400,12 +463,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
-	addNewItemButton := editor.document.Call("createElement", "button")
-	addNewItemButton.Set("innerHTML", "Add New Item")
-	addNewItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		editor.NewItemData()
-		return nil
-	}))
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {

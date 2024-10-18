@@ -42,10 +42,10 @@ func Input(value string, doc js.Value, labelText string, inputType string, htmlI
 }
 
 // Form creates a form element with the given ID.
-func Form(doc js.Value, htmlID string) js.Value {
+func Form(onSubmit func(this js.Value, args []js.Value) interface{}, doc js.Value, htmlID string) js.Value {
 	Form := doc.Call("createElement", "form")
 	Form.Set("id", htmlID)
-	Form.Get("style").Set("display", "none")
+	Form.Call("addEventListener", "submit", js.FuncOf(onSubmit))
 	return Form
 }
 
@@ -60,12 +60,11 @@ func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Val
 }
 
 // func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-func SubmitButton(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+func SubmitButton(doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "submit")
 	button.Set("innerHTML", displayText)
-	button.Call("addEventListener", "submit", js.FuncOf(onClick))
 	return button
 }
 
