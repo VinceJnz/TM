@@ -233,42 +233,13 @@ func (editor *ItemEditor) resetEditForm() {
 }
 
 func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
-	editor.ValidateDates("from")
+	viewHelpers.ValidateDatesFromLtTo(viewHelpers.DateNameFrom, editor.UiComponents.FromDate, editor.UiComponents.ToDate)
 	return nil
 }
 
 func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
-	editor.ValidateDates("to")
+	viewHelpers.ValidateDatesFromLtTo(viewHelpers.DateNameTo, editor.UiComponents.FromDate, editor.UiComponents.ToDate)
 	return nil
-}
-
-func (editor *ItemEditor) ValidateDates(dateName string) {
-	from := editor.UiComponents.FromDate.Get("value").String()
-	FromDate, err := time.Parse(viewHelpers.Layout, from)
-	if err != nil {
-		log.Println("Error parsing from_date:", err)
-		return
-	}
-
-	to := editor.UiComponents.ToDate.Get("value").String()
-	ToDate, err := time.Parse(viewHelpers.Layout, to)
-	if err != nil {
-		log.Println("Error parsing to_date:", err)
-		return
-	}
-
-	editor.UiComponents.FromDate.Call("setCustomValidity", "")
-	editor.UiComponents.ToDate.Call("setCustomValidity", "")
-	switch dateName {
-	case "from":
-		if !FromDate.Before(ToDate) {
-			editor.UiComponents.FromDate.Call("setCustomValidity", "From-date must be before To-date")
-		}
-	case "to":
-		if !FromDate.Before(ToDate) {
-			editor.UiComponents.ToDate.Call("setCustomValidity", "To-date must be after From-date")
-		}
-	}
 }
 
 // SubmitItemEdit handles the submission of the item edit form
