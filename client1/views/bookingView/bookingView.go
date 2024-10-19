@@ -185,11 +185,13 @@ func (editor *ItemEditor) populateEditForm() {
 	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	editor.UiComponents.FromDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
+	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
 	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	editor.UiComponents.ToDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
+	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
 	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
@@ -228,6 +230,45 @@ func (editor *ItemEditor) resetEditForm() {
 
 	// Update state
 	editor.updateStateDisplay(ItemStateNone)
+}
+
+func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
+	editor.ValidateDates("from")
+	return nil
+}
+
+func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
+	editor.ValidateDates("to")
+	return nil
+}
+
+func (editor *ItemEditor) ValidateDates(dateName string) {
+	from := editor.UiComponents.FromDate.Get("value").String()
+	FromDate, err := time.Parse(viewHelpers.Layout, from)
+	if err != nil {
+		log.Println("Error parsing from_date:", err)
+		return
+	}
+
+	to := editor.UiComponents.ToDate.Get("value").String()
+	ToDate, err := time.Parse(viewHelpers.Layout, to)
+	if err != nil {
+		log.Println("Error parsing to_date:", err)
+		return
+	}
+
+	editor.UiComponents.FromDate.Call("setCustomValidity", "")
+	editor.UiComponents.ToDate.Call("setCustomValidity", "")
+	switch dateName {
+	case "from":
+		if !FromDate.Before(ToDate) {
+			editor.UiComponents.FromDate.Call("setCustomValidity", "From-date must be before To-date")
+		}
+	case "to":
+		if !FromDate.Before(ToDate) {
+			editor.UiComponents.ToDate.Call("setCustomValidity", "To-date must be after From-date")
+		}
+	}
 }
 
 // SubmitItemEdit handles the submission of the item edit form
