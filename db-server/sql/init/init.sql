@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS at_trips (
     To_date DATE,
     Max_participants INTEGER NOT NULL DEFAULT 0,
     Trip_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    --trip_type_id INTEGER NOT NULL,
+    trip_type_id INTEGER NOT NULL DEFAULT 0,
     created TIMESTAMP DEFAULT NOW(),
     modified TIMESTAMP DEFAULT NOW()
     --FOREIGN KEY (trip_type_id) REFERENCES trip_types(trip_type_id)
@@ -51,8 +51,10 @@ CREATE TABLE IF NOT EXISTS at_trips (
 
 -- Table for trip types
 CREATE TABLE et_trip_types (
-    trip_type_id SERIAL PRIMARY KEY,
-    trip_type_name VARCHAR(255) NOT NULL -- Example: 'hiking', 'camping', 'rafting'
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(255) NOT NULL, -- Example: 'hiking', 'camping', 'rafting'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS et_trip_status (
@@ -73,13 +75,13 @@ CREATE TABLE IF NOT EXISTS at_bookings (
     ID SERIAL PRIMARY KEY,
     Owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
     Trip_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    person_id INTEGER NOT NULL,
+    person_id INTEGER NOT NULL DEFAULT 0,
     Notes TEXT,
     From_date TIMESTAMP DEFAULT NULL,
     To_date TIMESTAMP DEFAULT NULL,
     group_booking_id INTEGER, -- Is this booking for a group??
     Booking_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    --booking_date DATE NOT NULL,
+    booking_date DATE NOT NULL,
     Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (trip_id) REFERENCES at_trips(id),
@@ -134,7 +136,8 @@ CREATE TABLE IF NOT EXISTS st_users (
     Username VARCHAR(255) NOT NULL UNIQUE,
     Email VARCHAR(255) NOT NULL UNIQUE,
     User_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    --user_type_id INTEGER NOT NULL,
+    user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
+    user_age_group_id INTEGER NOT NULL,
     Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_type_id) REFERENCES et_user_types(id)
@@ -153,40 +156,47 @@ CREATE TABLE IF NOT EXISTS st_users (
 --FOR EACH ROW
 --EXECUTE FUNCTION update_modified_column();
 
--- Table for user types
-CREATE TABLE et_user_types (
-    user_type_id SERIAL PRIMARY KEY,
-    user_type_name VARCHAR(255) NOT NULL -- Example: 'infant', 'child', 'youth', 'adult'
+-- Table for user age group
+CREATE TABLE et_user_age_group (
+    id SERIAL PRIMARY KEY,
+    age_group VARCHAR(255) NOT NULL, -- Example: 'infant', 'child', 'youth', 'adult'
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
--- Table for storing trip costs with user types, seasons, and trip types
+-- Table for storing trip costs against user_types, seasons, and trip_types
 CREATE TABLE at_trip_costs (
-    cost_id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     trip_id INTEGER NOT NULL,
     user_type_id INTEGER NOT NULL,
     season_id INTEGER NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
-    FOREIGN KEY (trip_id) REFERENCES at_trips(id),
-    FOREIGN KEY (user_type_id) REFERENCES et_user_types(id),
-    FOREIGN KEY (season_id) REFERENCES et_seasons(id)
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (trip_id) REFERENCES at_trips(id),
+    --FOREIGN KEY (user_type_id) REFERENCES et_user_types(id),
+    --FOREIGN KEY (season_id) REFERENCES et_seasons(id)
 );
 
 -- Table for seasons
 CREATE TABLE et_seasons (
-    season_id SERIAL PRIMARY KEY,
-    season_name VARCHAR(255) NOT NULL -- Example: 'summer', 'winter', 'off-peak'
+    id SERIAL PRIMARY KEY,
+    season VARCHAR(255) NOT NULL, -- Example: 'summer', 'winter', 'off-peak'
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 
 -- Table for user payments
 CREATE TABLE at_user_payments (
-    payment_id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     booking_id INTEGER NOT NULL,
     payment_date DATE NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
     payment_method VARCHAR(255), -- Example: 'credit_card', 'paypal', etc.
-    FOREIGN KEY (user_id) REFERENCES at_users(id),
-    FOREIGN KEY (booking_id) REFERENCES at_bookings(id)
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (user_id) REFERENCES at_users(id),
+    --FOREIGN KEY (booking_id) REFERENCES at_bookings(id)
 );
