@@ -39,3 +39,11 @@ type BookingPeople struct {
 	Created   time.Time `json:"created" db:"created"`
 	Modified  time.Time `json:"modified" db:"modified"`
 }
+
+type GroupBooking struct {
+	ID        int    `db:"id" json:"id"`
+	GroupName string `db:"group_name" json:"group_name"`
+	OwnerID   int    `db:"owner_id" json:"owner_id"`
+	Created   string `db:"created" json:"created"`
+	Modified  string `db:"modified" json:"modified"`
+}
