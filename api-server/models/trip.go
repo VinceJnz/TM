@@ -59,11 +59,11 @@ type TripParticipantStatus struct {
 
 // TripCost represents the at_trip_costs table
 type TripCost struct {
-	ID         int       `db:"id" json:"id"`
-	TripID     int       `db:"trip_id" json:"trip_id"`
-	UserTypeID int       `db:"user_type_id" json:"user_type_id"`
-	SeasonID   int       `db:"season_id" json:"season_id"`
-	Amount     float64   `db:"amount" json:"amount"`
-	Created    time.Time `db:"created" json:"created"`
-	Modified   time.Time `db:"modified" json:"modified"`
+	ID             int       `db:"id" json:"id"`
+	TripID         int       `db:"trip_id" json:"trip_id"`
+	UserAgeGroupID int       `db:"user_age_group_id" json:"user_age_group_id"`
+	SeasonID       int       `db:"season_id" json:"season_id"`
+	Amount         float64   `db:"amount" json:"amount"`
+	Created        time.Time `db:"created" json:"created"`
+	Modified       time.Time `db:"modified" json:"modified"`
 }

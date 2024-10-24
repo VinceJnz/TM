@@ -131,12 +131,12 @@ func main() {
 	r.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Delete).Methods("DELETE")
 
 	// TripCost routes
-	tripCostHandler := handlerTripCost.New(db)
-	r.HandleFunc("/trip-costs", tripCostHandler.GetAll).Methods("GET")
-	r.HandleFunc("/trip-costs/{id:[0-9]+}", tripCostHandler.Get).Methods("GET")
-	r.HandleFunc("/trip-costs", tripCostHandler.Create).Methods("POST")
-	r.HandleFunc("/trip-costs/{id:[0-9]+}", tripCostHandler.Update).Methods("PUT")
-	r.HandleFunc("/trip-costs/{id:[0-9]+}", tripCostHandler.Delete).Methods("DELETE")
+	tripCost := handlerTripCost.New(db)
+	r.HandleFunc("/tripCost", tripCost.GetAll).Methods("GET")
+	r.HandleFunc("/tripCost/{id:[0-9]+}", tripCost.Get).Methods("GET")
+	r.HandleFunc("/tripCost", tripCost.Create).Methods("POST")
+	r.HandleFunc("/tripCost/{id:[0-9]+}", tripCost.Update).Methods("PUT")
+	r.HandleFunc("/tripCost/{id:[0-9]+}", tripCost.Delete).Methods("DELETE")
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
