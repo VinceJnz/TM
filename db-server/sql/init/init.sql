@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS st_users (
 -- Table for user status group
 CREATE TABLE et_user_status (
     id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled'
+    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member'
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
