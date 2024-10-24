@@ -23,7 +23,7 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.Booking{}
+	records := []models.UserPayments{}
 	err := h.db.Select(&records, `SELECT atup.*
 	FROM public.at_user_payments atup`)
 	if err == sql.ErrNoRows {
@@ -49,8 +49,8 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	records := []models.Booking{}
-	err = h.db.Select(&records, `SELECT atb.*, ebs.status, atbpcount.participants
+	records := []models.UserPayments{}
+	err = h.db.Select(&records, `SELECT atup.*
 	FROM public.at_user_payments atup
 	WHERE atup.booking_id = $1`, bookingID)
 	if err == sql.ErrNoRows {
@@ -76,9 +76,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := models.Booking{}
-	err = h.db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
-		FROM at_bookings WHERE id = $1`, id)
+	record := models.UserPayments{}
+	err = h.db.Get(&record, `SELECT id, user_id, booking_id, payment_date, amount, payment_method, created, modified 
+		FROM at_user_payments WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -94,7 +94,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.Booking
+	var record models.UserPayments
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -107,9 +107,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = tx.QueryRow(`
-        INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
-        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
+        INSERT INTO at_user_payments (user_id, booking_id, payment_date, amount, payment_method) 
+        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		record.UserID, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod,
 	).Scan(&record.ID)
 
 	if err != nil {
@@ -139,7 +139,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var record models.Booking
+	var record models.UserPayments
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -147,10 +147,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 
 	_, err = h.db.Exec(`
-		UPDATE at_bookings 
-		SET owner_id = $1, trip_id = $2, notes = $3, from_date = $4, to_date = $5, booking_status_id = $6 
-		WHERE id = $7`,
-		record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
+		UPDATE at_user_payments
+		SET user_id = $1, booking_id = $2, payment_date = $3, amount = $4, payment_method = $5
+		WHERE id = $6`,
+		record.UserID, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod,
 		record.ID,
 	)
 	if err != nil {
@@ -172,7 +172,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_bookings WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM at_user_payments WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, debugTag+"Delete() - Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS at_trips (
     --FOREIGN KEY (trip_type_id) REFERENCES trip_types(trip_type_id)
 );
 
--- Table for trip types
-CREATE TABLE et_trip_types (
+-- Table for trip type
+CREATE TABLE et_trip_type (
     id SERIAL PRIMARY KEY,
     type VARCHAR(255) NOT NULL, -- Example: 'hiking', 'camping', 'rafting'
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -69,6 +69,20 @@ CREATE TABLE IF NOT EXISTS et_trip_difficulty (
     level VARCHAR(50) NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for storing trip costs against user_types, seasons, and trip_types
+CREATE TABLE at_trip_costs (
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER NOT NULL,
+    user_type_id INTEGER NOT NULL,
+    season_id INTEGER NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL,
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (trip_id) REFERENCES at_trips(id),
+    --FOREIGN KEY (user_type_id) REFERENCES et_user_types(id),
+    --FOREIGN KEY (season_id) REFERENCES et_seasons(id)
 );
 
 CREATE TABLE IF NOT EXISTS at_bookings (
@@ -164,29 +178,6 @@ CREATE TABLE et_user_age_group (
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for storing trip costs against user_types, seasons, and trip_types
-CREATE TABLE at_trip_costs (
-    id SERIAL PRIMARY KEY,
-    trip_id INTEGER NOT NULL,
-    user_type_id INTEGER NOT NULL,
-    season_id INTEGER NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
-    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (trip_id) REFERENCES at_trips(id),
-    --FOREIGN KEY (user_type_id) REFERENCES et_user_types(id),
-    --FOREIGN KEY (season_id) REFERENCES et_seasons(id)
-);
-
--- Table for seasons
-CREATE TABLE et_seasons (
-    id SERIAL PRIMARY KEY,
-    season VARCHAR(255) NOT NULL, -- Example: 'summer', 'winter', 'off-peak'
-    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-
 -- Table for user payments
 CREATE TABLE at_user_payments (
     id SERIAL PRIMARY KEY,
@@ -199,4 +190,12 @@ CREATE TABLE at_user_payments (
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_id) REFERENCES at_users(id),
     --FOREIGN KEY (booking_id) REFERENCES at_bookings(id)
+);
+
+-- Table for seasons
+CREATE TABLE et_seasons (
+    id SERIAL PRIMARY KEY,
+    season VARCHAR(255) NOT NULL, -- Example: 'summer', 'winter', 'off-peak'
+    Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

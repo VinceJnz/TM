@@ -22,6 +22,13 @@ type UserStatus struct {
 	Modified time.Time `json:"modified" db:"modified"`
 }
 
+type UserAgeGroup struct {
+	ID       int       `json:"id" db:"id"`
+	AgeGroup string    `json:"age_group" db:"age_group"`
+	Created  time.Time `json:"created" db:"created"`
+	Modified time.Time `json:"modified" db:"modified"`
+}
+
 type UserPayments struct {
 	ID            int         `json:"id" db:"id"`
 	UserID        int         `json:"user_id" db:"user_id"`
