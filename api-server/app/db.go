@@ -37,9 +37,11 @@ func InitDB() (*sqlx.DB, error) {
 		if err != nil {
 			log.Println(debugTag+"InitDB()1 ", err)
 		} else {
+			log.Println(debugTag+"InitDB()2 connected", err)
 			return db, nil
 		}
 		time.Sleep(1 * time.Second)
 	}
+	log.Println(debugTag+"InitDB()3 ", err)
 	return nil, err
 }
