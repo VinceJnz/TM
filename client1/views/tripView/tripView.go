@@ -172,33 +172,34 @@ func (editor *ItemEditor) populateEditForm() {
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
-	var NameObj, FromDateObj, ToDateObj, MaxParticipantsObj, TripStatusObj js.Value
-	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemNotes")
+	var localObjs UI
+
+	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemNotes")
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
-	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+	localObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
-	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	localObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
-	MaxParticipantsObj, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
+	localObjs.MaxParticipants, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
 	editor.UiComponents.MaxParticipants.Set("min", 1)
 	editor.UiComponents.MaxParticipants.Call("setAttribute", "required", "true")
 
-	TripStatusObj, editor.UiComponents.TripStatusID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
+	localObjs.TripStatusID, editor.UiComponents.TripStatusID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
 	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", NameObj)
-	form.Call("appendChild", FromDateObj)
-	form.Call("appendChild", ToDateObj)
-	form.Call("appendChild", MaxParticipantsObj)
-	form.Call("appendChild", TripStatusObj)
+	form.Call("appendChild", localObjs.Name)
+	form.Call("appendChild", localObjs.FromDate)
+	form.Call("appendChild", localObjs.ToDate)
+	form.Call("appendChild", localObjs.MaxParticipants)
+	form.Call("appendChild", localObjs.TripStatusID)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")

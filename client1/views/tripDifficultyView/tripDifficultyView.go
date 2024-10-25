@@ -178,12 +178,13 @@ func (editor *ItemEditor) populateEditForm() {
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
-	var StatusObj js.Value
-	StatusObj, editor.UiComponents.Difficulty = viewHelpers.StringEdit(editor.CurrentRecord.Difficulty, editor.document, "Status", "text", "itemStatus")
+	var localObjs UI
+
+	localObjs.Difficulty, editor.UiComponents.Difficulty = viewHelpers.StringEdit(editor.CurrentRecord.Difficulty, editor.document, "Status", "text", "itemStatus")
 	editor.UiComponents.Difficulty.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", StatusObj)
+	form.Call("appendChild", localObjs.Difficulty)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")

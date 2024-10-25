@@ -176,20 +176,21 @@ func (editor *ItemEditor) populateEditForm() {
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
-	var NameObj, UsernameObj, EmailObj js.Value
-	NameObj, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
+	var localObjs UI
+
+	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
-	UsernameObj, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
 	editor.UiComponents.Username.Call("setAttribute", "required", "true")
 
-	EmailObj, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
+	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", NameObj)
-	form.Call("appendChild", UsernameObj)
-	form.Call("appendChild", EmailObj)
+	form.Call("appendChild", localObjs.Name)
+	form.Call("appendChild", localObjs.Username)
+	form.Call("appendChild", localObjs.Email)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")

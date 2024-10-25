@@ -177,31 +177,33 @@ func (editor *ItemEditor) populateEditForm() {
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
-	var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
-	NotesObj, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
+	//var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
+	var localObjs UI
+
+	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
 	editor.UiComponents.Notes.Set("minlength", 10)
 	editor.UiComponents.Notes.Call("setAttribute", "required", "true")
 
-	FromDateObj, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+	localObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	editor.UiComponents.FromDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
-	ToDateObj, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+	localObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	editor.UiComponents.ToDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
-	BookingStatusObj, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
+	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", NotesObj)
-	form.Call("appendChild", FromDateObj)
-	form.Call("appendChild", ToDateObj)
-	form.Call("appendChild", BookingStatusObj)
+	form.Call("appendChild", localObjs.Notes)
+	form.Call("appendChild", localObjs.FromDate)
+	form.Call("appendChild", localObjs.ToDate)
+	form.Call("appendChild", localObjs.BookingStatusID)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")

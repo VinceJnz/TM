@@ -39,15 +39,17 @@ const apiURL = "http://localhost:8085/tripType"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID       int       `json:"id"`
-	Type     string    `json:"type"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
+	ID         int       `json:"id"`
+	Level      string    `json:"level"`
+	LevelShort string    `json:"level_short"`
+	Created    time.Time `json:"created"`
+	Modified   time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Type js.Value
+	Level      js.Value
+	LevelShort js.Value
 }
 
 type Item struct {
@@ -152,7 +154,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	for _, item := range editor.Records {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Type)
+		optionElement.Set("text", item.Level)
 		if value == item.ID {
 			optionElement.Set("selected", true)
 		}
@@ -178,12 +180,16 @@ func (editor *ItemEditor) populateEditForm() {
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
-	var StatusObj js.Value
-	StatusObj, editor.UiComponents.Type = viewHelpers.StringEdit(editor.CurrentRecord.Type, editor.document, "Status", "text", "itemStatus")
-	editor.UiComponents.Type.Call("setAttribute", "required", "true")
+	var localObjs UI
+	localObjs.Level, editor.UiComponents.Level = viewHelpers.StringEdit(editor.CurrentRecord.Level, editor.document, "Status", "text", "itemStatus")
+	editor.UiComponents.Level.Call("setAttribute", "required", "true")
+
+	localObjs.LevelShort, editor.UiComponents.LevelShort = viewHelpers.StringEdit(editor.CurrentRecord.LevelShort, editor.document, "Status", "text", "itemStatus")
+	editor.UiComponents.LevelShort.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", StatusObj)
+	form.Call("appendChild", localObjs.Level)
+	form.Call("appendChild", localObjs.LevelShort)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -223,7 +229,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	//var err error
-	editor.CurrentRecord.Type = editor.UiComponents.Type.Get("value").String()
+	editor.CurrentRecord.Level = editor.UiComponents.Level.Get("value").String()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -367,7 +373,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Type)
+		itemDiv.Set("innerHTML", record.Level)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

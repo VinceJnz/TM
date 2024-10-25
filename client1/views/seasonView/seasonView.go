@@ -35,7 +35,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/bookingStatus"
+const apiURL = "http://localhost:8085/season"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -178,12 +178,13 @@ func (editor *ItemEditor) populateEditForm() {
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
-	var StatusObj js.Value
-	StatusObj, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentRecord.Status, editor.document, "Status", "text", "itemStatus")
+	var localObjs UI
+
+	localObjs.Status, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentRecord.Status, editor.document, "Status", "text", "itemStatus")
 	editor.UiComponents.Status.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", StatusObj)
+	form.Call("appendChild", localObjs.Status)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
