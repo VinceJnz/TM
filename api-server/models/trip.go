@@ -31,10 +31,11 @@ type TripStatus struct {
 }
 
 type TripDificulty struct {
-	ID       int       `json:"id" db:"id"`
-	Level    string    `json:"level" db:"level"`
-	Created  time.Time `json:"created" db:"created"`
-	Modified time.Time `json:"modified" db:"modified"`
+	ID         int       `json:"id" db:"id"`
+	Level      string    `json:"level" db:"level"`
+	LevelShort string    `json:"level_short" db:"level_short"`
+	Created    time.Time `json:"created" db:"created"`
+	Modified   time.Time `json:"modified" db:"modified"`
 }
 
 type TripType struct {

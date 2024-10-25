@@ -22,9 +22,9 @@ type UserStatus struct {
 	Modified time.Time `json:"modified" db:"modified"`
 }
 
-type UserAgeGroup struct {
+type UserCategory struct {
 	ID       int       `json:"id" db:"id"`
-	AgeGroup string    `json:"age_group" db:"age_group"`
+	Category string    `json:"category" db:"category"`
 	Created  time.Time `json:"created" db:"created"`
 	Modified time.Time `json:"modified" db:"modified"`
 }

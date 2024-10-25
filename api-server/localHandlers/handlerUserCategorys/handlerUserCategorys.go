@@ -1,4 +1,4 @@
-package handlerUserAgeGroup
+package handlerUserCategorys
 
 import (
 	"api-server/v2/models"
@@ -12,7 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debugTag = "handlerUserAgeGroup."
+const debugTag = "handlerUserCategorys."
 
 type Handler struct {
 	db *sqlx.DB
@@ -24,7 +24,7 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.UserAgeGroup{}
+	records := []models.UserCategory{}
 	err := h.db.Select(&records, `SELECT * FROM et_user_age_group`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -49,7 +49,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := models.UserAgeGroup{}
+	record := models.UserCategory{}
 	err = h.db.Get(&record, `SELECT * FROM et_user_age_group WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -66,7 +66,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.UserAgeGroup
+	var record models.UserCategory
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -75,7 +75,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	err := h.db.QueryRow(`
 		INSERT INTO et_user_age_group (age_group)
 		VALUES ($1) RETURNING id`,
-		record.AgeGroup,
+		record.Category,
 	).Scan(&record.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,7 +96,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var record models.UserAgeGroup
+	var record models.UserCategory
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -107,7 +107,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		UPDATE et_user_age_group 
 		SET age_group = $1 
 		WHERE id = $2`,
-		record.AgeGroup, record.ID,
+		record.Category, record.ID,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -13,7 +13,7 @@ import (
 	"api-server/v2/localHandlers/handlerTripStatus"
 	"api-server/v2/localHandlers/handlerTripType"
 	"api-server/v2/localHandlers/handlerUser"
-	"api-server/v2/localHandlers/handlerUserAgeGroup"
+	"api-server/v2/localHandlers/handlerUserCategorys"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"log"
 	"net/http"
@@ -47,13 +47,13 @@ func main() {
 	r.HandleFunc("/users/{id}", user.Update).Methods("PUT")
 	r.HandleFunc("/users/{id}", user.Delete).Methods("DELETE")
 
-	// UserAgeGroup routes
-	userAgeGroup := handlerUserAgeGroup.New(db)
-	r.HandleFunc("/userAgeGroup", userAgeGroup.GetAll).Methods("GET")
-	r.HandleFunc("/userAgeGroup/{id}", userAgeGroup.Get).Methods("GET")
-	r.HandleFunc("/userAgeGroup", userAgeGroup.Create).Methods("POST")
-	r.HandleFunc("/userAgeGroup/{id}", userAgeGroup.Update).Methods("PUT")
-	r.HandleFunc("/userAgeGroup/{id}", userAgeGroup.Delete).Methods("DELETE")
+	// UserCategory routes
+	userCategorys := handlerUserCategorys.New(db)
+	r.HandleFunc("/userCategorys", userCategorys.GetAll).Methods("GET")
+	r.HandleFunc("/userCategorys/{id}", userCategorys.Get).Methods("GET")
+	r.HandleFunc("/userCategorys", userCategorys.Create).Methods("POST")
+	r.HandleFunc("/userCategorys/{id}", userCategorys.Update).Methods("PUT")
+	r.HandleFunc("/userCategorys/{id}", userCategorys.Delete).Methods("DELETE")
 
 	// UserPayments routes
 	userPayments := handlerUserPayments.New(db)
@@ -131,12 +131,12 @@ func main() {
 	r.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Delete).Methods("DELETE")
 
 	// TripCost routes
-	tripCost := handlerTripCost.New(db)
-	r.HandleFunc("/tripCost", tripCost.GetAll).Methods("GET")
-	r.HandleFunc("/tripCost/{id:[0-9]+}", tripCost.Get).Methods("GET")
-	r.HandleFunc("/tripCost", tripCost.Create).Methods("POST")
-	r.HandleFunc("/tripCost/{id:[0-9]+}", tripCost.Update).Methods("PUT")
-	r.HandleFunc("/tripCost/{id:[0-9]+}", tripCost.Delete).Methods("DELETE")
+	tripCosts := handlerTripCost.New(db)
+	r.HandleFunc("/tripCosts", tripCosts.GetAll).Methods("GET")
+	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Get).Methods("GET")
+	r.HandleFunc("/tripCosts", tripCosts.Create).Methods("POST")
+	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Update).Methods("PUT")
+	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Delete).Methods("DELETE")
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
