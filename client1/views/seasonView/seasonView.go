@@ -35,7 +35,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/season"
+const apiURL = "http://localhost:8085/seasons"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
