@@ -4,8 +4,12 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
+	"client1/v2/views/seasonView"
+	"client1/v2/views/tripCostView"
+	"client1/v2/views/tripDifficultyView"
 	"client1/v2/views/tripParticipantStatusReport"
 	"client1/v2/views/tripStatusView"
+	"client1/v2/views/tripTypeView"
 	"client1/v2/views/tripView"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
@@ -27,7 +31,11 @@ const (
 	menuBookingEditor
 	menuBookingStatusEditor
 	menuTripEditor
+	menuTripCostEditor
+	menuTripDifficultyEditor
 	menuTripStatusEditor
+	menuTripTypeEditor
+	menuSeasonEditor
 	menuParticipantStatusView
 )
 
@@ -41,7 +49,11 @@ type viewElements struct {
 	bookingEditor         *bookingView.ItemEditor
 	bookingStatusEditor   *bookingStatusView.ItemEditor
 	tripEditor            *tripView.ItemEditor
+	tripCostEditor        *tripCostView.ItemEditor
+	tripDifficultyEditor  *tripDifficultyView.ItemEditor
 	tripStatusEditor      *tripStatusView.ItemEditor
+	tripTypeEditor        *tripTypeView.ItemEditor
+	seasonEditor          *seasonView.ItemEditor
 	participantStatusView *tripParticipantStatusReport.ItemEditor
 }
 
@@ -77,7 +89,11 @@ func (v *View) Setup() {
 	v.elements.bookingEditor = bookingView.New(v.Document, v.events)
 	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events)
 	v.elements.tripEditor = tripView.New(v.Document, v.events)
+	v.elements.tripCostEditor = tripCostView.New(v.Document, v.events)
+	v.elements.tripDifficultyEditor = tripDifficultyView.New(v.Document, v.events)
 	v.elements.tripStatusEditor = tripStatusView.New(v.Document, v.events)
+	v.elements.tripTypeEditor = tripTypeView.New(v.Document, v.events)
+	v.elements.seasonEditor = seasonView.New(v.Document, v.events)
 	v.elements.participantStatusView = tripParticipantStatusReport.New(v.Document, v.events)
 
 	// Add the navbar to the body
@@ -116,7 +132,11 @@ func (v *View) Setup() {
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
 	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.Document, "Trips", "fetchTripsBtn")
+	fetchTripCostBtn := viewHelpers.HRef(v.menuTripCost, v.Document, "Trip Cost", "fetchTripCostBtn")
+	fetchTripDifficultyBtn := viewHelpers.HRef(v.menuTripDifficulty, v.Document, "Trip Dificulty", "fetchTripDifficultyBtn")
 	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.Document, "Trip Status", "fetchTripStatusBtn")
+	fetchTripTypeBtn := viewHelpers.HRef(v.menuTripType, v.Document, "Trip Type", "fetchTripTypeBtn")
+	fetchSeasonBtn := viewHelpers.HRef(v.menuSeason, v.Document, "Season", "fetchSeasonBtn")
 	fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.Document, "Participant Status", "fetchTripParticipantStatusBtn")
 
 	// Add menu buttons to the side menu
@@ -128,7 +148,11 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripsBtn)
+	v.elements.sidemenu.Call("appendChild", fetchTripCostBtn)
+	v.elements.sidemenu.Call("appendChild", fetchTripDifficultyBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripStatusBtn)
+	v.elements.sidemenu.Call("appendChild", fetchTripTypeBtn)
+	v.elements.sidemenu.Call("appendChild", fetchSeasonBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripParticipantStatusBtn)
 
 	// append Editor Div's to the mainContent
@@ -165,8 +189,16 @@ func (v *View) hideCurrentEditor() {
 		v.elements.bookingStatusEditor.Hide()
 	case menuTripEditor:
 		v.elements.tripEditor.Hide()
+	case menuTripCostEditor:
+		v.elements.tripCostEditor.Hide()
+	case menuTripDifficultyEditor:
+		v.elements.tripDifficultyEditor.Hide()
 	case menuTripStatusEditor:
 		v.elements.tripStatusEditor.Hide()
+	case menuTripTypeEditor:
+		v.elements.tripTypeEditor.Hide()
+	case menuSeasonEditor:
+		v.elements.seasonEditor.Hide()
 	case menuParticipantStatusView:
 		v.elements.participantStatusView.Hide()
 	default:
@@ -237,6 +269,24 @@ func (v *View) menuTrip() {
 	v.elements.tripEditor.FetchItems()
 }
 
+func (v *View) menuTripCost() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuTripCostEditor
+	v.elements.tripCostEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Trip Cost")
+	v.elements.tripCostEditor.FetchItems()
+}
+
+func (v *View) menuTripDifficulty() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuTripDifficultyEditor
+	v.elements.tripDifficultyEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Trip Difficulty")
+	v.elements.tripDifficultyEditor.FetchItems()
+}
+
 func (v *View) menuTripStatus() {
 	v.closeSideMenu()
 	v.hideCurrentEditor()
@@ -244,6 +294,24 @@ func (v *View) menuTripStatus() {
 	v.elements.tripStatusEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Trip Status")
 	v.elements.tripStatusEditor.FetchItems()
+}
+
+func (v *View) menuTripType() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuTripTypeEditor
+	v.elements.tripTypeEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Trip Type")
+	v.elements.tripTypeEditor.FetchItems()
+}
+
+func (v *View) menuSeason() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuSeasonEditor
+	v.elements.seasonEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Season")
+	v.elements.seasonEditor.FetchItems()
 }
 
 func (v *View) menuParticipantStatus() {
