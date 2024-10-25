@@ -25,7 +25,7 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.UserCategory{}
-	err := h.db.Select(&records, `SELECT * FROM et_user_age_group`)
+	err := h.db.Select(&records, `SELECT * FROM et_user_categorys`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,7 +50,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.UserCategory{}
-	err = h.db.Get(&record, `SELECT * FROM et_user_age_group WHERE id = $1`, id)
+	err = h.db.Get(&record, `SELECT * FROM et_user_categorys WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -73,7 +73,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.db.QueryRow(`
-		INSERT INTO et_user_age_group (age_group)
+		INSERT INTO et_user_categorys (category)
 		VALUES ($1) RETURNING id`,
 		record.Category,
 	).Scan(&record.ID)
@@ -104,8 +104,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 
 	_, err = h.db.Exec(`
-		UPDATE et_user_age_group 
-		SET age_group = $1 
+		UPDATE et_user_categorys 
+		SET category = $1 
 		WHERE id = $2`,
 		record.Category, record.ID,
 	)
@@ -127,7 +127,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM et_user_age_group WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM et_user_categorys WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

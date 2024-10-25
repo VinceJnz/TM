@@ -24,7 +24,7 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripCost{}
-	err := h.db.Select(&records, `SELECT id, trip_id, user_age_group_id, season_id, amount, created, modified
+	err := h.db.Select(&records, `SELECT id, trip_id, et_user_category_id, season_id, amount, created, modified
                                   FROM at_trip_costs`)
 
 	if err == sql.ErrNoRows {
@@ -50,7 +50,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.TripCost{}
-	err = h.db.Get(&record, `SELECT id, trip_id, user_age_group_id, season_id, amount, created, modified
+	err = h.db.Get(&record, `SELECT id, trip_id, et_user_category_id, season_id, amount, created, modified
                              FROM at_trip_costs WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Trip cost not found", http.StatusNotFound)
@@ -80,7 +80,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = tx.QueryRow(`
-        INSERT INTO at_trip_costs (trip_id, user_age_group_id, season_id, amount) 
+        INSERT INTO at_trip_costs (trip_id, et_user_category_id, season_id, amount) 
         VALUES ($1, $2, $3, $4) RETURNING id`,
 		record.TripID, record.UserAgeGroupID, record.SeasonID, record.Amount,
 	).Scan(&record.ID)
@@ -119,7 +119,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.Exec(`
         UPDATE at_trip_costs 
-        SET trip_id = $1, user_age_group_id = $2, season_id = $3, amount = $4
+        SET trip_id = $1, et_user_category_id = $2, season_id = $3, amount = $4
         WHERE id = $5`,
 		record.TripID, record.UserAgeGroupID, record.SeasonID, record.Amount, record.ID,
 	)
