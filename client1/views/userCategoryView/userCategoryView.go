@@ -35,19 +35,19 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/bookingStatus"
+const apiURL = "http://localhost:8085/userCategorys"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID       int       `json:"id"`
-	Status   string    `json:"status"`
+	Category string    `json:"category"`
 	Created  time.Time `json:"created"`
 	Modified time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Status js.Value
+	Category js.Value
 }
 
 type Item struct {
@@ -152,7 +152,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	for _, item := range editor.Records {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Status)
+		optionElement.Set("text", item.Category)
 		if value == item.ID {
 			optionElement.Set("selected", true)
 		}
@@ -180,11 +180,11 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.Status, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentRecord.Status, editor.document, "Status", "text", "itemStatus")
-	editor.UiComponents.Status.Call("setAttribute", "required", "true")
+	localObjs.Category, editor.UiComponents.Category = viewHelpers.StringEdit(editor.CurrentRecord.Category, editor.document, "Category", "text", "itemCategory")
+	editor.UiComponents.Category.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", localObjs.Status)
+	form.Call("appendChild", localObjs.Category)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -224,7 +224,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	//var err error
-	editor.CurrentRecord.Status = editor.UiComponents.Status.Get("value").String()
+	editor.CurrentRecord.Category = editor.UiComponents.Category.Get("value").String()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -368,7 +368,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Status)
+		itemDiv.Set("innerHTML", record.Category)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
