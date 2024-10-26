@@ -1,9 +1,10 @@
-package userStatusView
+package tripCostGroupView
 
 import (
 	"bytes"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/views/tripCostView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"log"
@@ -13,7 +14,7 @@ import (
 	"time"
 )
 
-const debugTag = "userStatusView."
+const debugTag = "tripCostGroupView."
 
 type ItemState int
 
@@ -35,24 +36,28 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/userStatus"
+const apiURL = "http://localhost:8085/tripCostGroups"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID       int       `json:"id"`
-	Status   string    `json:"status"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
+	ID          int       `json:"id"`
+	Description string    `json:"description"`
+	Created     time.Time `json:"created"`
+	Modified    time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Status js.Value
+	Description js.Value
 }
 
-type Item struct {
-	Record TableData
+type ParentData struct {
+	ID int `json:"id"`
+}
+
+type children struct {
 	//Add child structures as necessary
+	TripCostItem *tripCostView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -61,18 +66,18 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
-	ItemList      []Item
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
 	ListDiv       js.Value
 	StateDiv      js.Value
-	ParentID      int
+	ParentData    ParentData
 	ViewState     ViewState
+	Children      children
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
@@ -98,9 +103,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	editor.Div.Call("appendChild", editor.StateDiv)
 
 	// Store supplied parent value
-	if len(idList) == 1 {
-		editor.ParentID = idList[0]
+	if len(parentData) != 0 {
+		editor.ParentData = parentData[0]
 	}
+
+	editor.Children.TripCostItem = tripCostView.New(editor.document, eventProcessor)
+	editor.Children.TripCostItem.FetchItems()
 
 	return editor
 }
@@ -131,40 +139,10 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.CurrentRecord = TableData{}
 
 	// Set default values for the new record // ********************* This needs to be changed for each api **********************
+	//editor.CurrentRecord.TripID = editor.ParentData.ID
 
 	editor.populateEditForm()
 	return nil
-}
-
-// ?????????????????????? document ref????????????
-func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
-	// Create a div for displaying Dropdown
-	fieldset := editor.document.Call("createElement", "fieldset")
-	fieldset.Set("className", "input-group")
-
-	// Create a label element
-	label := viewHelpers.Label(editor.document, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
-	StateDropDown := editor.document.Call("createElement", "select")
-	StateDropDown.Set("id", htmlID)
-
-	for _, item := range editor.Records {
-		optionElement := editor.document.Call("createElement", "option")
-		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Status)
-		if value == item.ID {
-			optionElement.Set("selected", true)
-		}
-		StateDropDown.Call("appendChild", optionElement)
-	}
-	fieldset.Call("appendChild", StateDropDown)
-
-	// Create an span element of error messages
-	span := viewHelpers.Span(editor.document, htmlID+"-error")
-	fieldset.Call("appendChild", span)
-
-	return fieldset, StateDropDown
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
@@ -180,11 +158,14 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.Status, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentRecord.Status, editor.document, "Status", "text", "itemStatus")
-	editor.UiComponents.Status.Call("setAttribute", "required", "true")
+	localObjs.Description, editor.UiComponents.Description = viewHelpers.StringEdit(editor.CurrentRecord.Description, editor.document, "Description", "text", "itemDescription")
+	editor.UiComponents.Description.Call("setAttribute", "required", "true")
+
+	//localObjs.TripC StatusID, editor.UiComponents.TripStatusID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
+	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", localObjs.Status)
+	form.Call("appendChild", localObjs.Description)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -225,7 +206,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	//var err error
-	editor.CurrentRecord.Status = editor.UiComponents.Status.Get("value").String()
+
+	editor.CurrentRecord.Description = editor.UiComponents.Description.Get("value").String()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -369,13 +351,13 @@ func (editor *ItemEditor) populateItemList() {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
 		// Create and add child views to Item
-		//editor.ItemList = append(editor.ItemList, Item{Record: record})
+		tripCostItem := tripCostView.New(editor.document, editor.events, tripCostView.ParentData{ID: record.ID})
 		//
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Status)
+		itemDiv.Set("innerHTML", "Cost group: "+record.Description)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
@@ -396,8 +378,19 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		}))
 
+		// Create a toggle modify-booking-list button
+		costItemButton := editor.document.Call("createElement", "button")
+		costItemButton.Set("innerHTML", "Cost Item")
+		costItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			tripCostItem.FetchItems()
+			tripCostItem.Toggle()
+			return nil
+		}))
+
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
+		itemDiv.Call("appendChild", costItemButton)
+		itemDiv.Call("appendChild", tripCostItem.Div)
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}

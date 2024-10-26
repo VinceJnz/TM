@@ -6,6 +6,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/userCategoryView"
+	"client1/v2/views/userStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
 	"log"
@@ -41,20 +42,22 @@ const apiURL = "http://localhost:8085/tripCosts"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID             int       `json:"id"`
-	TripID         int       `json:"trip_id"`
-	UserCategoryID int       `json:"user_category_id"`
-	UserCategory   string    `json:"user_category"`
-	SeasonID       int       `json:"season_id"`
-	Season         string    `json:"season"`
-	Amount         float64   `json:"amount"`
-	Created        time.Time `json:"created"`
-	Modified       time.Time `json:"modified"`
+	ID              int       `json:"id"`
+	TripCostGroupID int       `json:"trip_cost_group_id"`
+	UserStatusID    int       `json:"user_status_id"`
+	UserStatus      string    `json:"user_status"`
+	UserCategoryID  int       `json:"user_category_id"`
+	UserCategory    string    `json:"user_category"`
+	SeasonID        int       `json:"season_id"`
+	Season          string    `json:"season"`
+	Amount          float64   `json:"amount"`
+	Created         time.Time `json:"created"`
+	Modified        time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	TripID         js.Value
+	UserStatusID   js.Value
 	UserCategoryID js.Value
 	SeasonID       js.Value
 	Amount         js.Value
@@ -66,6 +69,7 @@ type ParentData struct {
 
 type children struct {
 	//Add child structures as necessary
+	UserStatus   *userStatusView.ItemEditor
 	UserCategory *userCategoryView.ItemEditor
 	Season       *seasonView.ItemEditor
 }
@@ -117,6 +121,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, paren
 		editor.ParentData = parentData[0]
 	}
 
+	editor.Children.UserStatus = userStatusView.New(editor.document, eventProcessor)
+	editor.Children.UserStatus.FetchItems()
+
 	editor.Children.UserCategory = userCategoryView.New(editor.document, eventProcessor)
 	editor.Children.UserCategory.FetchItems()
 
@@ -152,7 +159,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.CurrentRecord = TableData{}
 
 	// Set default values for the new record // ********************* This needs to be changed for each api **********************
-	editor.CurrentRecord.TripID = editor.ParentData.ID
+	editor.CurrentRecord.TripCostGroupID = editor.ParentData.ID
 
 	editor.populateEditForm()
 	return nil
@@ -171,6 +178,9 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
+	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserStatus.NewDropdown(editor.CurrentRecord.UserStatusID, "User Status", "itemUserStatusID")
+	//editor.UiComponents.UserCategoryID.Call("setAttribute", "required", "true")
+
 	localObjs.UserCategoryID, editor.UiComponents.UserCategoryID = editor.Children.UserCategory.NewDropdown(editor.CurrentRecord.UserCategoryID, "Category", "itemUserCategoryID")
 	//editor.UiComponents.UserCategoryID.Call("setAttribute", "required", "true")
 
@@ -182,6 +192,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Amount.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
+	form.Call("appendChild", localObjs.UserStatusID)
 	form.Call("appendChild", localObjs.UserCategoryID)
 	form.Call("appendChild", localObjs.SeasonID)
 	form.Call("appendChild", localObjs.Amount)
@@ -225,6 +236,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	var err error
+
+	editor.CurrentRecord.UserStatusID, err = strconv.Atoi(editor.UiComponents.UserStatusID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing UserStatusID:", err)
+		return nil
+	}
 
 	editor.CurrentRecord.UserCategoryID, err = strconv.Atoi(editor.UiComponents.UserCategoryID.Get("value").String())
 	if err != nil {
@@ -392,7 +409,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", "Cost category: Category "+record.UserCategory+" Season "+record.Season)
+		itemDiv.Set("innerHTML", "Cost category: UserStatus "+record.UserStatus+", Category "+record.UserCategory+", Season "+record.Season)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

@@ -5,6 +5,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingView"
+	"client1/v2/views/tripDifficultyView"
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"encoding/json"
@@ -46,7 +47,8 @@ type TableData struct {
 	OwnerID         int       `json:"owner_id"`
 	Name            string    `json:"trip_name"`
 	Location        string    `json:"location"`
-	Difficulty      string    `json:"trip_difficulty"`
+	DifficultyID    int       `json:"difficulty_level_id"`
+	Difficulty      string    `json:"difficulty_level"`
 	FromDate        time.Time `json:"from_date"`
 	ToDate          time.Time `json:"to_date"`
 	MaxParticipants int       `json:"max_participants"`
@@ -62,12 +64,14 @@ type UI struct {
 	Name            js.Value
 	FromDate        js.Value
 	ToDate          js.Value
+	DifficultyID    js.Value
 	MaxParticipants js.Value
 	TripStatusID    js.Value
 }
 
 type children struct {
 	//Add child structures as necessary
+	Difficulty *tripDifficultyView.ItemEditor
 	TripStatus *tripStatusView.ItemEditor
 }
 
@@ -121,6 +125,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
 	}
+
+	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor)
+	editor.Children.Difficulty.FetchItems()
 
 	editor.Children.TripStatus = tripStatusView.New(editor.document, eventProcessor)
 	editor.Children.TripStatus.FetchItems()
@@ -187,6 +194,9 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
+	localObjs.DifficultyID, editor.UiComponents.DifficultyID = editor.Children.Difficulty.NewDropdown(editor.CurrentRecord.DifficultyID, "Difficulty", "itemDifficultyID")
+	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+
 	localObjs.MaxParticipants, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
 	editor.UiComponents.MaxParticipants.Set("min", 1)
 	editor.UiComponents.MaxParticipants.Call("setAttribute", "required", "true")
@@ -198,6 +208,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.FromDate)
 	form.Call("appendChild", localObjs.ToDate)
+	form.Call("appendChild", localObjs.DifficultyID)
 	form.Call("appendChild", localObjs.MaxParticipants)
 	form.Call("appendChild", localObjs.TripStatusID)
 
@@ -260,6 +271,11 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing to_date:", err)
+		return nil
+	}
+	editor.CurrentRecord.DifficultyID, err = strconv.Atoi(editor.UiComponents.DifficultyID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing difficulty_id:", err)
 		return nil
 	}
 	editor.CurrentRecord.MaxParticipants, err = strconv.Atoi(editor.UiComponents.MaxParticipants.Get("value").String())
@@ -416,7 +432,6 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Create and add child views to Item
 		booking := bookingView.New(editor.document, editor.events, bookingView.ParentData{ID: record.ID, FromDate: record.FromDate, ToDate: record.ToDate})
-		//editor.ItemList = append(editor.ItemList, Item{Record: record, Booking: booking})
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
