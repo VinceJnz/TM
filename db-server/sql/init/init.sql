@@ -69,17 +69,9 @@ CREATE TABLE IF NOT EXISTS et_trip_difficulty (
     id SERIAL PRIMARY KEY,
     level VARCHAR(50) NOT NULL,  -- Example: 'Medium Fit', 'Slow Fit', 'Family', 'All'
     level_short VARCHAR(3) NOT NULL,  -- Example: 'MF', 'SF', 'F', 'A'
+    description VARCHAR(255) NOT NULL,  -- Example: Explaination of what medium fit trip means
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table for storing trip cost groups
-CREATE TABLE at_trip_cost_groups (
-    id SERIAL PRIMARY KEY,
-    description VARCHAR(50) NOT NULL,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (at_trip_costs_id) REFERENCES at_trip_costs(id),
 );
 
 -- Table for storing trip costs against user_categorys, seasons
@@ -96,6 +88,15 @@ CREATE TABLE at_trip_costs (
     --FOREIGN KEY (trip_cost_group_id) REFERENCES et_trip_cost_group(id),
     --FOREIGN KEY (user_category_id) REFERENCES et_user_category(id),
     --FOREIGN KEY (season_id) REFERENCES et_season(id),
+);
+
+-- Table for storing trip cost groups
+CREATE TABLE at_trip_cost_groups (
+    id SERIAL PRIMARY KEY,
+    description VARCHAR(50) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (at_trip_costs_id) REFERENCES at_trip_costs(id),
 );
 
 CREATE TABLE IF NOT EXISTS at_bookings (
