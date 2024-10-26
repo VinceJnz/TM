@@ -1,4 +1,4 @@
-package handlerTrip
+package handlerUserStatus
 
 import (
 	"database/sql"
@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debugTag = "handlerTrip."
+const debugTag = "handlerUserStatus."
 
 type Handler struct {
 	db *sqlx.DB
@@ -25,21 +25,8 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.Trip{}
-	//err := h.db.Select(&records, `SELECT att.*, etts.status as trip_status
-	//FROM public.at_trips att
-	//LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id`)
-
-	err := h.db.Select(&records, `SELECT att.*, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
-	FROM public.at_trips att
-	LEFT JOIN public.et_trip_difficulty ettd ON ettd.id=att.difficulty_level_id
-	JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
-	LEFT JOIN (SELECT atb.*, COUNT(atb.id) as participants
-		FROM public.at_bookings atb
-		JOIN public.at_booking_people atbp ON atbp.booking_id=atb.id
-		GROUP BY atb.id) atbcount ON atbcount.trip_id=att.id
-	GROUP BY att.id, ettd.level, etts.status`)
-
+	records := []models.BookingStatus{}
+	err := h.db.Select(&records, `SELECT * FROM et_user_status`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -49,6 +36,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(records)
 }
 
@@ -62,11 +50,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := models.Trip{}
-	err = h.db.Get(&record, `SELECT att.*, etts.status as trip_status
-	FROM public.at_trips att
-	LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
-	WHERE att.id = $1`, id)
+	record := models.BookingStatus{}
+	err = h.db.Get(&record, `SELECT * FROM et_user_status WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -82,14 +67,18 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.Trip
-	json.NewDecoder(r.Body).Decode(&record)
+	var record models.BookingStatus
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
 
-	err := h.db.QueryRow(
-		"INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID).Scan(&record.ID)
+	err := h.db.QueryRow(`
+		INSERT INTO et_user_status (status)
+		VALUES ($1) RETURNING id`,
+		record.Status,
+	).Scan(&record.ID)
 	if err != nil {
-		log.Printf("%v.Create()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -104,19 +93,24 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.Update()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
 
-	var record models.Trip
-	json.NewDecoder(r.Body).Decode(&record)
+	var record models.BookingStatus
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
 	record.ID = id
 
-	_, err = h.db.Exec("UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5, trip_status_id = $6 WHERE id = $7",
-		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.ID)
+	_, err = h.db.Exec(`
+		UPDATE et_user_status 
+		SET status = $1 
+		WHERE id = $2`,
+		record.Status, record.ID,
+	)
 	if err != nil {
-		log.Printf("%v.Update()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -130,14 +124,12 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.Delete()1 %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_trips WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM et_user_status WHERE id = $1", id)
 	if err != nil {
-		log.Printf("%v.Delete()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

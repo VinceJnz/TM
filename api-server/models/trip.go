@@ -12,7 +12,7 @@ type Trip struct {
 	Name            string      `json:"trip_name" db:"trip_name"`
 	Location        string      `json:"location" db:"location"`
 	DifficultyID    zero.Int    `json:"difficulty_level_id" db:"difficulty_level_id"`
-	Difficulty      zero.String `json:"level" db:"level"`
+	Difficulty      zero.String `json:"difficulty_level" db:"difficulty_level"`
 	FromDate        time.Time   `json:"from_date" db:"from_date"`
 	ToDate          time.Time   `json:"to_date" db:"to_date"`
 	MaxParticipants int         `json:"max_participants" db:"max_participants"`
@@ -63,21 +63,21 @@ type TripParticipantStatus struct {
 
 // TripCost represents the at_trip_costs table
 type TripCost struct {
-	ID              int       `db:"id" json:"id"`
-	TripCostGroupID int       `db:"at_trip_cost_group_id" json:"at_trip_cost_group_id"`
-	TripCostGroup   int       `db:"description" json:"description"`
-	UserStatusID    int       `db:"user_status_id" json:"user_status_id"`
-	UserStatus      string    `db:"status" json:"status"`
-	UserCategoryID  int       `db:"user_category_id" json:"user_category_id"`
-	UserCategory    string    `db:"user_category" json:"user_category"`
-	SeasonID        int       `db:"season_id" json:"season_id"`
-	Season          string    `db:"season" json:"season"`
-	Amount          float64   `db:"amount" json:"amount"`
-	Created         time.Time `db:"created" json:"created"`
-	Modified        time.Time `db:"modified" json:"modified"`
+	ID              int         `db:"id" json:"id"`
+	TripCostGroupID int         `db:"trip_cost_group_id" json:"trip_cost_group_id"`
+	Description     zero.String `db:"description" json:"description"`
+	UserStatusID    int         `db:"user_status_id" json:"user_status_id"`
+	UserStatus      zero.String `db:"user_status" json:"user_status"`
+	UserCategoryID  int         `db:"user_category_id" json:"user_category_id"`
+	UserCategory    zero.String `db:"user_category" json:"user_category"`
+	SeasonID        int         `db:"season_id" json:"season_id"`
+	Season          zero.String `db:"season" json:"season"`
+	Amount          float64     `db:"amount" json:"amount"`
+	Created         time.Time   `db:"created" json:"created"`
+	Modified        time.Time   `db:"modified" json:"modified"`
 }
 
-// TripCost represents the at_trip_costs table
+// TripCostGroup represents the at_trip_costs table
 type TripCostGroup struct {
 	ID          int       `db:"id" json:"id"`
 	Description string    `db:"description" json:"description"`

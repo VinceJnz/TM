@@ -24,8 +24,11 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripCost{}
-	err := h.db.Select(&records, `SELECT id, trip_id, et_user_category_id, season_id, amount, created, modified
-                                  FROM at_trip_costs`)
+	err := h.db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_category_id, etuc.category as user_category, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
+	FROM public.at_trip_costs attc
+	LEFT JOIN et_user_status etus on etus.id = attc.user_status_id
+	JOIN et_user_categorys etuc on etuc.id = attc.user_category_id
+	JOIN et_seasons ets on ets.id = attc.season_id`)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "No trip costs found", http.StatusNotFound)
@@ -50,7 +53,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.TripCost{}
-	err = h.db.Get(&record, `SELECT id, trip_id, et_user_category_id, season_id, amount, created, modified
+	err = h.db.Get(&record, `SELECT *
                              FROM at_trip_costs WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Trip cost not found", http.StatusNotFound)

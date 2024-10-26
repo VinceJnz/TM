@@ -9,12 +9,14 @@ import (
 	"api-server/v2/localHandlers/handlerSeasons"
 	"api-server/v2/localHandlers/handlerTrip"
 	"api-server/v2/localHandlers/handlerTripCost"
+	"api-server/v2/localHandlers/handlerTripCostGroup"
 	"api-server/v2/localHandlers/handlerTripDifficulty"
 	"api-server/v2/localHandlers/handlerTripStatus"
 	"api-server/v2/localHandlers/handlerTripType"
 	"api-server/v2/localHandlers/handlerUser"
 	"api-server/v2/localHandlers/handlerUserCategorys"
 	"api-server/v2/localHandlers/handlerUserPayments"
+	"api-server/v2/localHandlers/handlerUserStatus"
 	"log"
 	"net/http"
 
@@ -62,6 +64,14 @@ func main() {
 	r.HandleFunc("/userPayments", userPayments.Create).Methods("POST")
 	r.HandleFunc("/userPayments/{id}", userPayments.Update).Methods("PUT")
 	r.HandleFunc("/userPayments/{id}", userPayments.Delete).Methods("DELETE")
+
+	// UserStatus routes
+	userStatus := handlerUserStatus.New(db)
+	r.HandleFunc("/userStatus", userStatus.GetAll).Methods("GET")
+	r.HandleFunc("/userStatus/{id}", userStatus.Get).Methods("GET")
+	r.HandleFunc("/userStatus", userStatus.Create).Methods("POST")
+	r.HandleFunc("/userStatus/{id}", userStatus.Update).Methods("PUT")
+	r.HandleFunc("/userStatus/{id}", userStatus.Delete).Methods("DELETE")
 
 	// Booking routes
 	booking := handlerBooking.New(db)
@@ -137,6 +147,14 @@ func main() {
 	r.HandleFunc("/tripCosts", tripCosts.Create).Methods("POST")
 	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Update).Methods("PUT")
 	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Delete).Methods("DELETE")
+
+	// TripCostGroup routes
+	tripCostGroups := handlerTripCostGroup.New(db)
+	r.HandleFunc("/tripCostGroups", tripCostGroups.GetAll).Methods("GET")
+	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Get).Methods("GET")
+	r.HandleFunc("/tripCostGroups", tripCostGroups.Create).Methods("POST")
+	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Update).Methods("PUT")
+	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Delete).Methods("DELETE")
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
