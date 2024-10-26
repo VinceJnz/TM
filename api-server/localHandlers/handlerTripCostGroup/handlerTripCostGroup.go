@@ -1,4 +1,4 @@
-package handlerTripCost
+package handlerTripCostGroup
 
 import (
 	"api-server/v2/localHandlers/helpers"
@@ -11,7 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debugTag = "handlerTripCost."
+const debugTag = "handlerTripCostGroup."
 
 type Handler struct {
 	db *sqlx.DB
@@ -23,10 +23,9 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.TripCost{}
-	err := h.db.Select(&records, `SELECT id, trip_id, et_user_category_id, season_id, amount, created, modified
-                                  FROM at_trip_costs`)
-
+	records := []models.TripCostGroup{}
+	err := h.db.Select(&records, `SELECT *
+                                  FROM at_trip_cost_groups`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "No trip costs found", http.StatusNotFound)
 		return
@@ -50,8 +49,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.TripCost{}
-	err = h.db.Get(&record, `SELECT id, trip_id, et_user_category_id, season_id, amount, created, modified
-                             FROM at_trip_costs WHERE id = $1`, id)
+	err = h.db.Get(&record, `SELECT *
+                             FROM at_trip_cost_groups WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Trip cost not found", http.StatusNotFound)
 		return
@@ -67,7 +66,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create: adds a new trip cost record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.TripCost
+	var record models.TripCostGroup
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -80,9 +79,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = tx.QueryRow(`
-        INSERT INTO at_trip_costs (trip_cost_group_id, user_status_id, user_category_id, season_id, amount) 
-        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		record.TripCostGroupID, record.UserStatusID, record.UserCategoryID, record.SeasonID, record.Amount,
+        INSERT INTO at_trip_cost_groups (description) 
+        VALUES ($1) RETURNING id`,
+		record.Description,
 	).Scan(&record.ID)
 
 	if err != nil {
@@ -110,7 +109,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var record models.TripCost
+	var record models.TripCostGroup
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -118,10 +117,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 
 	_, err = h.db.Exec(`
-        UPDATE at_trip_costs 
-        SET trip_cost_group_id = $1, user_status_id = $2, user_category_id = $3, season_id = $4, amount = $5
-        WHERE id = $6`,
-		record.TripCostGroupID, record.UserStatusID, record.UserCategoryID, record.SeasonID, record.Amount, record.ID,
+        UPDATE at_trip_cost_groups 
+        SET description = $1
+        WHERE id = $1`,
+		record.Description, record.ID,
 	)
 	if err != nil {
 		log.Printf("%v.Update() failed to execute query: %v\n", debugTag, err)
@@ -142,7 +141,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_trip_costs WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM at_trip_cost_groups WHERE id = $1", id)
 	if err != nil {
 		log.Printf("%v.Delete() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)

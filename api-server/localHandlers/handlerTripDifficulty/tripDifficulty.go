@@ -73,9 +73,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.db.QueryRow(`
-		INSERT INTO et_trip_difficulty (difficulty)
-		VALUES ($1) RETURNING id`,
-		record.Level,
+		INSERT INTO et_trip_difficulty (level, level_short, description)
+		VALUES ($1, $2, $3) RETURNING id`,
+		record.Level, record.LevelShort, record.Description,
 	).Scan(&record.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -105,9 +105,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.Exec(`
 		UPDATE et_trip_difficulty 
-		SET difficulty = $1 
-		WHERE id = $2`,
-		record.Level, record.ID,
+		SET level = $1, level_short = $2, description = $3
+		WHERE id = $4`,
+		record.Level, record.LevelShort, record.Description, record.ID,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
