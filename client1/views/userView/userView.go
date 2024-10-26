@@ -194,10 +194,11 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
-	//cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
 	form.Call("appendChild", submitBtn)
+	form.Call("appendChild", cancelBtn)
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
@@ -245,6 +246,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
+	editor.resetEditForm()
+	return nil
+}
+
+// cancelItemEdit handles the cancelling of the item edit form
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
 	editor.resetEditForm()
 	return nil
 }

@@ -160,7 +160,11 @@ func (v *View) Setup() {
 	v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.tripCostEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.tripDifficultyEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripStatusEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.tripTypeEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.seasonEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.participantStatusView.Div)
 
 	// append statusOutput to the mainContent
