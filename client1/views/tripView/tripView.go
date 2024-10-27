@@ -1,14 +1,12 @@
 package tripView
 
 import (
-	"bytes"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/tripDifficultyView"
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/utils/viewHelpers"
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -313,36 +311,43 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
-	editor.updateStateDisplay(ItemStateSaving)
-	itemJSON, err := json.Marshal(item)
-	if err != nil {
-		editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
-		return
-	}
-	url := apiURL + "/" + strconv.Itoa(item.ID)
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
-	if err != nil {
-		editor.onCompletionMsg("Failed to create request: " + err.Error())
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
+	go func() {
+		editor.updateStateDisplay(ItemStateSaving)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		editor.onCompletionMsg("Failed to send request: " + err.Error())
-		return
-	}
-	defer resp.Body.Close()
+		httpProcessor.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 
-	if resp.StatusCode != http.StatusOK {
-		editor.onCompletionMsg("Non-OK HTTP status: " + resp.Status)
-		return
-	}
+		/*
+			itemJSON, err := json.Marshal(item)
+			if err != nil {
+				editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
+				return
+			}
+			url := apiURL + "/" + strconv.Itoa(item.ID)
+			req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
+			if err != nil {
+				editor.onCompletionMsg("Failed to create request: " + err.Error())
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
 
-	editor.FetchItems() // Refresh the item list
-	editor.updateStateDisplay(ItemStateNone)
-	editor.onCompletionMsg("Item record updated successfully")
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				editor.onCompletionMsg("Failed to send request: " + err.Error())
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				editor.onCompletionMsg("Non-OK HTTP status: " + resp.Status)
+				return
+			}
+		*/
+
+		editor.FetchItems() // Refresh the item list
+		editor.updateStateDisplay(ItemStateNone)
+		editor.onCompletionMsg("Item record updated successfully")
+	}()
 }
 
 // AddItem adds a new item to the item list
