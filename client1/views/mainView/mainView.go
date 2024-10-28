@@ -11,7 +11,7 @@ import (
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/tripTypeView"
 	"client1/v2/views/tripView"
-	"client1/v2/views/userCategoryView"
+	"client1/v2/views/userAgeGroupView"
 	"client1/v2/views/userStatusView"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
@@ -38,7 +38,7 @@ const (
 	menuTripStatusEditor
 	menuTripTypeEditor
 	menuSeasonEditor
-	menuUserCategoryEditor
+	menuUserAgeGroupEditor
 	menuUserStatusEditor
 	menuParticipantStatusView
 )
@@ -58,7 +58,7 @@ type viewElements struct {
 	tripStatusEditor      *tripStatusView.ItemEditor
 	tripTypeEditor        *tripTypeView.ItemEditor
 	seasonEditor          *seasonView.ItemEditor
-	userCategoryEditor    *userCategoryView.ItemEditor
+	userAgeGroupEditor    *userAgeGroupView.ItemEditor
 	userStatusEditor      *userStatusView.ItemEditor
 	participantStatusView *tripParticipantStatusReport.ItemEditor
 }
@@ -109,7 +109,7 @@ func (v *View) Setup() {
 	v.elements.tripStatusEditor = tripStatusView.New(v.Document, v.events)
 	v.elements.tripTypeEditor = tripTypeView.New(v.Document, v.events)
 	v.elements.seasonEditor = seasonView.New(v.Document, v.events)
-	v.elements.userCategoryEditor = userCategoryView.New(v.Document, v.events)
+	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.Document, v.events)
 	v.elements.userStatusEditor = userStatusView.New(v.Document, v.events)
 	v.elements.participantStatusView = tripParticipantStatusReport.New(v.Document, v.events)
 
@@ -186,7 +186,7 @@ func (v *View) Setup() {
 	v.elements.mainContent.Call("appendChild", v.elements.tripStatusEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripTypeEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.seasonEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.userCategoryEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.userAgeGroupEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.userStatusEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.participantStatusView.Div)
 
@@ -226,8 +226,8 @@ func (v *View) hideCurrentEditor() {
 		v.elements.tripTypeEditor.Hide()
 	case menuSeasonEditor:
 		v.elements.seasonEditor.Hide()
-	case menuUserCategoryEditor:
-		v.elements.userCategoryEditor.Hide()
+	case menuUserAgeGroupEditor:
+		v.elements.userAgeGroupEditor.Hide()
 	case menuUserStatusEditor:
 		v.elements.userStatusEditor.Hide()
 	case menuParticipantStatusView:
@@ -348,10 +348,10 @@ func (v *View) menuSeason() {
 func (v *View) menuUserCategory() {
 	v.closeSideMenu()
 	v.hideCurrentEditor()
-	v.menuChoice = menuUserCategoryEditor
-	v.elements.userCategoryEditor.Display()
+	v.menuChoice = menuUserAgeGroupEditor
+	v.elements.userAgeGroupEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "User Category")
-	v.elements.userCategoryEditor.FetchItems()
+	v.elements.userAgeGroupEditor.FetchItems()
 }
 
 func (v *View) menuUserStatus() {

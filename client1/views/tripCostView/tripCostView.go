@@ -4,7 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/seasonView"
-	"client1/v2/views/userCategoryView"
+	"client1/v2/views/userAgeGroupView"
 	"client1/v2/views/userStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
@@ -51,8 +51,8 @@ type TableData struct {
 	TripCostGroupID int       `json:"trip_cost_group_id"`
 	UserStatusID    int       `json:"user_status_id"`
 	UserStatus      string    `json:"user_status"`
-	UserCategoryID  int       `json:"user_category_id"`
-	UserCategory    string    `json:"user_category"`
+	UserAgeGroupID  int       `json:"user_age_group_id"`
+	UserAgeGroup    string    `json:"user_age_group"`
 	SeasonID        int       `json:"season_id"`
 	Season          string    `json:"season"`
 	Amount          float64   `json:"amount"`
@@ -63,7 +63,7 @@ type TableData struct {
 // ********************* This needs to be changed for each api **********************
 type UI struct {
 	UserStatusID   js.Value
-	UserCategoryID js.Value
+	UserAgeGroupID js.Value
 	SeasonID       js.Value
 	Amount         js.Value
 }
@@ -75,7 +75,7 @@ type ParentData struct {
 type children struct {
 	//Add child structures as necessary
 	UserStatus   *userStatusView.ItemEditor
-	UserCategory *userCategoryView.ItemEditor
+	UserAgeGroup *userAgeGroupView.ItemEditor
 	Season       *seasonView.ItemEditor
 }
 
@@ -132,8 +132,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, paren
 	editor.Children.UserStatus = userStatusView.New(editor.document, eventProcessor)
 	editor.Children.UserStatus.FetchItems()
 
-	editor.Children.UserCategory = userCategoryView.New(editor.document, eventProcessor)
-	editor.Children.UserCategory.FetchItems()
+	editor.Children.UserAgeGroup = userAgeGroupView.New(editor.document, eventProcessor)
+	editor.Children.UserAgeGroup.FetchItems()
 
 	editor.Children.Season = seasonView.New(editor.document, eventProcessor)
 	editor.Children.Season.FetchItems()
@@ -189,7 +189,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserStatus.NewDropdown(editor.CurrentRecord.UserStatusID, "User Status", "itemUserStatusID")
 	//editor.UiComponents.UserCategoryID.Call("setAttribute", "required", "true")
 
-	localObjs.UserCategoryID, editor.UiComponents.UserCategoryID = editor.Children.UserCategory.NewDropdown(editor.CurrentRecord.UserCategoryID, "Category", "itemUserCategoryID")
+	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.UserAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemUserAgeGroupID")
 	//editor.UiComponents.UserCategoryID.Call("setAttribute", "required", "true")
 
 	localObjs.SeasonID, editor.UiComponents.SeasonID = editor.Children.Season.NewDropdown(editor.CurrentRecord.SeasonID, "Season", "itemSeasonID")
@@ -201,7 +201,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.UserStatusID)
-	form.Call("appendChild", localObjs.UserCategoryID)
+	form.Call("appendChild", localObjs.UserAgeGroupID)
 	form.Call("appendChild", localObjs.SeasonID)
 	form.Call("appendChild", localObjs.Amount)
 
@@ -251,9 +251,9 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		return nil
 	}
 
-	editor.CurrentRecord.UserCategoryID, err = strconv.Atoi(editor.UiComponents.UserCategoryID.Get("value").String())
+	editor.CurrentRecord.UserAgeGroupID, err = strconv.Atoi(editor.UiComponents.UserAgeGroupID.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing UserCategoryID:", err)
+		log.Println("Error parsing UserAgeGroupID:", err)
 		return nil
 	}
 
@@ -355,7 +355,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", "Cost category: "+record.Season+", "+record.UserStatus+", "+record.UserCategory+", $"+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" ")
+		itemDiv.Set("innerHTML", "Cost category: "+record.Season+", "+record.UserStatus+", "+record.UserAgeGroup+", $"+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" ")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
