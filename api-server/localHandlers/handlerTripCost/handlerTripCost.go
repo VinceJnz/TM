@@ -24,17 +24,17 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripCost{}
-	err := h.db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuc.user_age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
+	err := h.db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
 	FROM public.at_trip_costs attc
 	LEFT JOIN et_user_status etus on etus.id = attc.user_status_id
-	JOIN et_user_age_groups etuc on etuc.id = attc.user_age_group_id
+	JOIN et_user_age_groups etuag on etuag.id = attc.user_age_group_id
 	JOIN et_seasons ets on ets.id = attc.season_id`)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "No trip costs found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vGetAll() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -47,7 +47,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := helpers.GetIDFromRequest(r)
 	if err != nil {
-		log.Printf("%v.Get() failed to retrieve ID: %v\n", debugTag, err)
+		log.Printf("%vGet() failed to retrieve ID: %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -59,7 +59,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Trip cost not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.Get() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vGet() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -127,7 +127,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount, record.ID,
 	)
 	if err != nil {
-		log.Printf("%v.Update() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vUpdate() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -147,7 +147,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.Exec("DELETE FROM at_trip_costs WHERE id = $1", id)
 	if err != nil {
-		log.Printf("%v.Delete() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vDelete() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

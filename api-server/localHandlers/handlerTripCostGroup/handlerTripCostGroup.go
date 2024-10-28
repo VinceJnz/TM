@@ -30,7 +30,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No trip costs found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vGetAll() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -43,7 +43,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := helpers.GetIDFromRequest(r)
 	if err != nil {
-		log.Printf("%v.Get() failed to retrieve ID: %v\n", debugTag, err)
+		log.Printf("%vGet() failed to retrieve ID: %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -55,7 +55,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Trip cost not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.Get() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vGet() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -123,7 +123,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		record.Description, record.ID,
 	)
 	if err != nil {
-		log.Printf("%v.Update() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vUpdate() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -143,7 +143,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.Exec("DELETE FROM at_trip_cost_groups WHERE id = $1", id)
 	if err != nil {
-		log.Printf("%v.Delete() failed to execute query: %v\n", debugTag, err)
+		log.Printf("%vDelete() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
