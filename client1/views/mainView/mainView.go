@@ -71,9 +71,18 @@ type View struct {
 }
 
 func New() *View {
-	return &View{
+	view := &View{
 		Document: js.Global().Get("document"),
 	}
+	window := js.Global().Get("window")
+	window.Call("addEventListener", "onbeforeunload", js.FuncOf(view.BeforeUnload))
+
+	return view
+}
+
+func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
+	log.Printf(debugTag + "New()1 onbeforeunload")
+	return nil
 }
 
 func (v *View) Setup() {

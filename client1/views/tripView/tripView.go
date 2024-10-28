@@ -35,6 +35,13 @@ const (
 	ViewStateBlock
 )
 
+type RecordState int
+
+const (
+	RecordStateReloadRequired RecordState = iota
+	RecordStateCurrent
+)
+
 // ********************* This needs to be changed for each api **********************
 const apiURL = "http://localhost:8085/trips"
 
@@ -86,6 +93,7 @@ type ItemEditor struct {
 	StateDiv      js.Value
 	ParentID      int
 	ViewState     ViewState
+	RecordState   RecordState
 	Children      children
 }
 
@@ -123,6 +131,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
 	}
+
+	editor.RecordState = RecordStateReloadRequired
 
 	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor)
 	editor.Children.Difficulty.FetchItems()
@@ -314,6 +324,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
 		httpProcessor.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record updated successfully")
@@ -325,6 +336,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
 		httpProcessor.NewRequest(http.MethodPost, apiURL, nil, &item)
+		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record added successfully")
@@ -332,20 +344,24 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	go func() {
-		var records []TableData
-		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
-		editor.Records = records
-		editor.populateItemList()
-		editor.updateStateDisplay(ItemStateNone)
-	}()
+	if editor.RecordState == RecordStateReloadRequired {
+		editor.RecordState = RecordStateCurrent
+		go func() {
+			var records []TableData
+			editor.updateStateDisplay(ItemStateFetching)
+			httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
+			editor.Records = records
+			editor.populateItemList()
+			editor.updateStateDisplay(ItemStateNone)
+		}()
+	}
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
 		httpProcessor.NewRequest(http.MethodDelete, apiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")

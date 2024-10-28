@@ -31,6 +31,13 @@ const (
 	ViewStateBlock
 )
 
+type RecordState int
+
+const (
+	RecordStateReloadRequired RecordState = iota
+	RecordStateCurrent
+)
+
 // ********************* This needs to be changed for each api **********************
 const apiURL = "http://localhost:8085/trips/participantStatus"
 
@@ -71,6 +78,7 @@ type ItemEditor struct {
 	StateDiv      js.Value
 	ParentID      int
 	ViewState     ViewState
+	RecordState   RecordState
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -98,6 +106,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idLis
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
 	}
+
+	editor.RecordState = RecordStateReloadRequired
 
 	return editor
 }
@@ -132,15 +142,17 @@ func (editor *ItemEditor) FetchItems() {
 			log.Printf(debugTag+"FetchItems()1 failure err: %v", err)
 		}
 	*/
-
-	go func() {
-		var records []TableData
-		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
-		editor.Records = records
-		editor.populateItemList()
-		editor.updateStateDisplay(ItemStateNone)
-	}()
+	if editor.RecordState == RecordStateReloadRequired {
+		editor.RecordState = RecordStateCurrent
+		go func() {
+			var records []TableData
+			editor.updateStateDisplay(ItemStateFetching)
+			httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
+			editor.Records = records
+			editor.populateItemList()
+			editor.updateStateDisplay(ItemStateNone)
+		}()
+	}
 }
 
 func (editor *ItemEditor) populateItemList() {

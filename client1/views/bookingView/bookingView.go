@@ -1,13 +1,11 @@
 package bookingView
 
 import (
-	"bytes"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingPeopleView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/utils/viewHelpers"
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -34,6 +32,13 @@ type ViewState int
 const (
 	ViewStateNone ViewState = iota
 	ViewStateBlock
+)
+
+type RecordState int
+
+const (
+	RecordStateReloadRequired RecordState = iota
+	RecordStateCurrent
 )
 
 // ********************* This needs to be changed for each api **********************
@@ -90,6 +95,7 @@ type ItemEditor struct {
 	PeopleEditor  *bookingPeopleView.ItemEditor
 	ParentData    ParentData
 	ViewState     ViewState
+	RecordState   RecordState
 	//Parent       js.Value
 }
 
@@ -123,6 +129,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, paren
 	if len(parentData) != 0 {
 		editor.ParentData = parentData[0]
 	}
+
+	editor.RecordState = RecordStateReloadRequired
 
 	editor.BookingStatus = bookingStatusView.New(editor.document, eventProcessor)
 	editor.BookingStatus.FetchItems()
@@ -295,32 +303,8 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	itemJSON, err := json.Marshal(item)
-	if err != nil {
-		editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
-		return
-	}
-	url := apiURL + "/" + strconv.Itoa(item.ID)
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
-	if err != nil {
-		editor.onCompletionMsg("Failed to create request: " + err.Error())
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		editor.onCompletionMsg("Failed to send request: " + err.Error())
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		editor.onCompletionMsg("Non-OK HTTP status: " + resp.Status)
-		return
-	}
-
+	httpProcessor.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
@@ -329,76 +313,36 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	itemJSON, err := json.Marshal(item)
-	if err != nil {
-		editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
-		return
-	}
-
-	url := apiURL
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(itemJSON))
-	if err != nil {
-		editor.onCompletionMsg("Failed to create request: " + err.Error())
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		editor.onCompletionMsg("Failed to send request: " + err.Error())
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		editor.onCompletionMsg("Not-OK HTTP status: " + resp.Status)
-		return
-	}
-
+	httpProcessor.NewRequest(http.MethodPost, apiURL, nil, &item)
+	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record added successfully")
 }
 
 func (editor *ItemEditor) FetchItems() {
-	localApiURL := apiURL
-	if editor.ParentData.ID != 0 {
-		localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentData.ID) + "/bookings"
+	if editor.RecordState == RecordStateReloadRequired {
+		editor.RecordState = RecordStateCurrent
+		localApiURL := apiURL
+		if editor.ParentData.ID != 0 {
+			localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentData.ID) + "/bookings"
+		}
+		go func() {
+			var records []TableData
+			editor.updateStateDisplay(ItemStateFetching)
+			httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
+			editor.Records = records
+			editor.populateItemList()
+			editor.updateStateDisplay(ItemStateNone)
+		}()
 	}
-	go func() {
-		var records []TableData
-		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, localApiURL, &records, nil)
-		editor.Records = records
-		editor.populateItemList()
-		editor.updateStateDisplay(ItemStateNone)
-	}()
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		req, err := http.NewRequest("DELETE", apiURL+"/"+strconv.Itoa(itemID), nil)
-		if err != nil {
-			editor.onCompletionMsg("Failed to create delete request: " + err.Error())
-			return
-		}
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			editor.onCompletionMsg("Error deleting item: " + err.Error())
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			editor.onCompletionMsg("Failed to delete item, status: " + resp.Status)
-			return
-		}
-
-		// After successful deletion, fetch updated item list
+		httpProcessor.NewRequest(http.MethodDelete, apiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")
