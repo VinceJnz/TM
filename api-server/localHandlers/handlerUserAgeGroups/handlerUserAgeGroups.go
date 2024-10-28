@@ -1,4 +1,4 @@
-package handlerUserCategorys
+package handlerUserAgeGroups
 
 import (
 	"api-server/v2/models"
@@ -12,7 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debugTag = "handlerUserCategorys."
+const debugTag = "handlerUserAgeGroups."
 
 type Handler struct {
 	db *sqlx.DB
@@ -24,8 +24,8 @@ func New(db *sqlx.DB) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.UserCategory{}
-	err := h.db.Select(&records, `SELECT * FROM et_user_categorys`)
+	records := []models.UserAgeGroups{}
+	err := h.db.Select(&records, `SELECT * FROM et_user_age_groups`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -49,8 +49,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := models.UserCategory{}
-	err = h.db.Get(&record, `SELECT * FROM et_user_categorys WHERE id = $1`, id)
+	record := models.UserAgeGroups{}
+	err = h.db.Get(&record, `SELECT * FROM et_user_age_groups WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -66,16 +66,16 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.UserCategory
+	var record models.UserAgeGroups
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
 	err := h.db.QueryRow(`
-		INSERT INTO et_user_categorys (category)
+		INSERT INTO et_user_age_groups (category)
 		VALUES ($1) RETURNING id`,
-		record.Category,
+		record.AgeGroup,
 	).Scan(&record.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,7 +96,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var record models.UserCategory
+	var record models.UserAgeGroups
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -104,10 +104,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 
 	_, err = h.db.Exec(`
-		UPDATE et_user_categorys 
+		UPDATE et_user_age_groups 
 		SET category = $1 
 		WHERE id = $2`,
-		record.Category, record.ID,
+		record.AgeGroup, record.ID,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -127,7 +127,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM et_user_categorys WHERE id = $1", id)
+	_, err = h.db.Exec("DELETE FROM et_user_age_groups WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -68,8 +68,8 @@ type TripCost struct {
 	Description     zero.String `db:"description" json:"description"`
 	UserStatusID    int         `db:"user_status_id" json:"user_status_id"`
 	UserStatus      zero.String `db:"user_status" json:"user_status"`
-	UserCategoryID  int         `db:"user_category_id" json:"user_category_id"`
-	UserCategory    zero.String `db:"user_category" json:"user_category"`
+	UserAgeGroupID  int         `db:"user_age_group_id" json:"user_age_group_id"`
+	UserAgeGroup    zero.String `db:"user_age_group" json:"user_age_group"`
 	SeasonID        int         `db:"season_id" json:"season_id"`
 	Season          zero.String `db:"season" json:"season"`
 	Amount          float64     `db:"amount" json:"amount"`

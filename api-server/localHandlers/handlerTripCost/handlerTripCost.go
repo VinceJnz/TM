@@ -24,10 +24,10 @@ func New(db *sqlx.DB) *Handler {
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripCost{}
-	err := h.db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_category_id, etuc.category as user_category, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
+	err := h.db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuc.user_age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
 	FROM public.at_trip_costs attc
 	LEFT JOIN et_user_status etus on etus.id = attc.user_status_id
-	JOIN et_user_categorys etuc on etuc.id = attc.user_category_id
+	JOIN et_user_age_groups etuc on etuc.id = attc.user_age_group_id
 	JOIN et_seasons ets on ets.id = attc.season_id`)
 
 	if err == sql.ErrNoRows {
@@ -83,9 +83,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = tx.QueryRow(`
-        INSERT INTO at_trip_costs (trip_cost_group_id, user_status_id, user_category_id, season_id, amount) 
+        INSERT INTO at_trip_costs (trip_cost_group_id, user_status_id, user_age_group_id, season_id, amount) 
         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		record.TripCostGroupID, record.UserStatusID, record.UserCategoryID, record.SeasonID, record.Amount,
+		record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount,
 	).Scan(&record.ID)
 
 	if err != nil {
@@ -122,9 +122,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.Exec(`
         UPDATE at_trip_costs 
-        SET trip_cost_group_id = $1, user_status_id = $2, user_category_id = $3, season_id = $4, amount = $5
+        SET trip_cost_group_id = $1, user_status_id = $2, user_age_group_id = $3, season_id = $4, amount = $5
         WHERE id = $6`,
-		record.TripCostGroupID, record.UserStatusID, record.UserCategoryID, record.SeasonID, record.Amount, record.ID,
+		record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount, record.ID,
 	)
 	if err != nil {
 		log.Printf("%v.Update() failed to execute query: %v\n", debugTag, err)

@@ -14,7 +14,7 @@ import (
 	"api-server/v2/localHandlers/handlerTripStatus"
 	"api-server/v2/localHandlers/handlerTripType"
 	"api-server/v2/localHandlers/handlerUser"
-	"api-server/v2/localHandlers/handlerUserCategorys"
+	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/handlerUserStatus"
 	"log"
@@ -50,12 +50,12 @@ func main() {
 	r.HandleFunc("/users/{id}", user.Delete).Methods("DELETE")
 
 	// UserCategory routes
-	userCategorys := handlerUserCategorys.New(db)
-	r.HandleFunc("/userCategorys", userCategorys.GetAll).Methods("GET")
-	r.HandleFunc("/userCategorys/{id}", userCategorys.Get).Methods("GET")
-	r.HandleFunc("/userCategorys", userCategorys.Create).Methods("POST")
-	r.HandleFunc("/userCategorys/{id}", userCategorys.Update).Methods("PUT")
-	r.HandleFunc("/userCategorys/{id}", userCategorys.Delete).Methods("DELETE")
+	userAgeGroups := handlerUserAgeGroups.New(db)
+	r.HandleFunc("/userAgeGroups", userAgeGroups.GetAll).Methods("GET")
+	r.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Get).Methods("GET")
+	r.HandleFunc("/userAgeGroups", userAgeGroups.Create).Methods("POST")
+	r.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Update).Methods("PUT")
+	r.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Delete).Methods("DELETE")
 
 	// UserPayments routes
 	userPayments := handlerUserPayments.New(db)
