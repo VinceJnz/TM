@@ -74,19 +74,19 @@ CREATE TABLE IF NOT EXISTS et_trip_difficulty (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for storing trip costs against user_categorys, seasons
+-- Table for storing trip costs against user_age_groups, seasons
 CREATE TABLE at_trip_costs (
     id SERIAL PRIMARY KEY,
     at_trip_cost_group_id INTEGER NOT NULL,
-    description VARCHAR(50) NOT NULL, --This could be derived from user_status, user_category, season
+    description VARCHAR(50) NOT NULL, --This could be derived from user_status, user_age_group, season
     user_status_id INTEGER NOT NULL,
-    user_category_id INTEGER NOT NULL,
+    user_age_group_id INTEGER NOT NULL,
     season_id INTEGER NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (trip_cost_group_id) REFERENCES et_trip_cost_group(id),
-    --FOREIGN KEY (user_category_id) REFERENCES et_user_category(id),
+    --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id),
     --FOREIGN KEY (season_id) REFERENCES et_season(id),
 );
 
@@ -156,27 +156,35 @@ CREATE TABLE IF NOT EXISTS st_users (
     email VARCHAR(255) NOT NULL UNIQUE,
     user_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
     user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
-    user_category_id INT NOT NULL DEFAULT 0,
+    user_age_group_id INT NOT NULL DEFAULT 0,
     user_status_id INT NOT NULL DEFAULT 0,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (user_category_id) REFERENCES et_user_category(id)
+    --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
     --FOREIGN KEY (user_status_id) REFERENCES et_user_status(id)
 );
 
 -- Table for user status group
 CREATE TABLE et_user_status (
     id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member'
+    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 
 -- Table for user age group
-CREATE TABLE et_user_categorys (
+CREATE TABLE et_user_age_groups (
     id SERIAL PRIMARY KEY,
-    category VARCHAR(255) NOT NULL, -- Example: 'infant', 'child', 'youth', 'adult'
+    age_group VARCHAR(255) NOT NULL, -- Example: 'infant', 'child', 'youth', 'adult'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for user age group
+CREATE TABLE et_member_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(255) NOT NULL, -- Example: 'member', 'non-member' ??????????
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
