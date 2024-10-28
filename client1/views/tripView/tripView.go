@@ -313,37 +313,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-
 		httpProcessor.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
-
-		/*
-			itemJSON, err := json.Marshal(item)
-			if err != nil {
-				editor.onCompletionMsg("Failed to marshal item data: " + err.Error())
-				return
-			}
-			url := apiURL + "/" + strconv.Itoa(item.ID)
-			req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
-			if err != nil {
-				editor.onCompletionMsg("Failed to create request: " + err.Error())
-				return
-			}
-			req.Header.Set("Content-Type", "application/json")
-
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			if err != nil {
-				editor.onCompletionMsg("Failed to send request: " + err.Error())
-				return
-			}
-			defer resp.Body.Close()
-
-			if resp.StatusCode != http.StatusOK {
-				editor.onCompletionMsg("Non-OK HTTP status: " + resp.Status)
-				return
-			}
-		*/
-
 		editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record updated successfully")

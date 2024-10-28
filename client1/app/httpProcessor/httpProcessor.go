@@ -47,43 +47,41 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	case http.MethodDelete:
 		itemJSON, err := json.Marshal(txDataStru)
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()1 ", "err =", err, "url =", url, "txDataStru =", txDataStru, "itemJSON =", itemJSON)
-			err = fmt.Errorf(debugTag+"NewRequest()1a failed to marshal item data: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest().MethodDelete.2 failed to marshal item data: %w", err)
 			return nil, err
 		}
 		req, err = http.NewRequest(http.MethodDelete, url, bytes.NewReader(itemJSON))
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1b failed to create request: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest().MethodDelete.3 failed to create request: %w", err)
 			return nil, err
 		}
 	case http.MethodGet:
 		req, err = http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1 failed to create request: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest().MethodGet.1 failed to create request: %w", err)
 			return nil, err
 		}
 	case http.MethodPut:
 		itemJSON, err := json.Marshal(txDataStru)
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1a failed to marshal item data: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest().MethodPut.1 failed to marshal item data: %w", err)
 			return nil, err
 		}
-		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
+		req, err = http.NewRequest("PUT", url, bytes.NewBuffer(itemJSON))
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1b failed to create request: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest().MethodPut.3 failed to create request: %w", err)
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
 	case http.MethodPost:
 		itemJSON, err := json.Marshal(txDataStru)
 		if err != nil {
-			err = fmt.Errorf(debugTag+"NewRequest()1a failed to marshal item data: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest().MethodPost.1 failed to marshal item data: %w", err)
 			return nil, err
 		}
 		req, err = http.NewRequest(http.MethodPost, url, bytes.NewBuffer(itemJSON))
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()2b ", "err =", err, "url =", url, "txDataStru =", txDataStru, "itemJSON =", itemJSON)
-			err = fmt.Errorf(debugTag+"NewRequest()1b failed to create request: %w", err)
+			err = fmt.Errorf(debugTag+"NewRequest().MethodPost.3 failed to create request: %w", err)
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
@@ -117,7 +115,6 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 
 	res, err := httpClient.Do(req) // This is the call to send the https request and receive the response
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %v %v %+v", debugTag+"NewRequest()4 ", "err =", err, "res =", res, "req.URL =", req.URL, "req =", req)
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)
 		callBackFail(err)
 		return nil, err
@@ -136,8 +133,8 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 		//The following decodes a string error message
 		resBody, err := io.ReadAll(res.Body)
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %v", debugTag+"NewRequest()6 ", "err =", err, "res.StatusCode =", res.StatusCode, "req.URL =", req.URL)
-			err = fmt.Errorf(debugTag+"newRequest()6 server response StatusCode=%v: error=%w", res.StatusCode, err)
+			log.Printf("%v %v %v %v %v %v %v", debugTag+"NewRequest()6a ", "err =", err, "res.StatusCode =", res.StatusCode, "req.URL =", req.URL)
+			err = fmt.Errorf(debugTag+"newRequest()6b server response StatusCode=%v: error=%w", res.StatusCode, err)
 			callBackFail(err)
 		}
 		err = fmt.Errorf(debugTag+"newRequest()7 server response StatusCode=%v: server message=%s", res.StatusCode, resBody)
@@ -148,8 +145,8 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	if rxDataStru != nil {
 		if err = json.NewDecoder(res.Body).Decode(&rxDataStru); err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
 			resBody, _ := io.ReadAll(res.Body)
-			log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8b ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
-			err = fmt.Errorf(debugTag+"newRequest()8 failed to decode JSON data: %w", err)
+			log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8a ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
+			err = fmt.Errorf(debugTag+"newRequest()8b failed to decode JSON data: %w", err)
 			callBackFail(err)
 			return nil, err
 		}
