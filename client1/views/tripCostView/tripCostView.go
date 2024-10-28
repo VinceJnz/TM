@@ -355,7 +355,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", "Cost category: UserStatus "+record.UserStatus+", Category "+record.UserCategory+", Season "+record.Season+", Cost "+strconv.FormatFloat(record.Amount, 'f', 2, 64))
+		itemDiv.Set("innerHTML", "Cost category: "+record.Season+" ,"+record.UserStatus+", "+record.UserCategory+", $"+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" ")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
