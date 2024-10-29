@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
+	"client1/v2/views/groupBookingView"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/tripCostGroupView"
 	"client1/v2/views/tripDifficultyView"
@@ -32,6 +33,7 @@ const (
 	menuUserEditor
 	menuBookingEditor
 	menuBookingStatusEditor
+	menuGroupBookingEditor
 	menuTripEditor
 	menuTripCostEditor
 	menuTripDifficultyEditor
@@ -52,6 +54,7 @@ type viewElements struct {
 	userEditor            *userView.ItemEditor
 	bookingEditor         *bookingView.ItemEditor
 	bookingStatusEditor   *bookingStatusView.ItemEditor
+	gropBookingEditor     *groupBookingView.ItemEditor
 	tripEditor            *tripView.ItemEditor
 	tripCostGroupEditor   *tripCostGroupView.ItemEditor
 	tripDifficultyEditor  *tripDifficultyView.ItemEditor
@@ -103,6 +106,7 @@ func (v *View) Setup() {
 	v.elements.userEditor = userView.New(v.Document, v.events)
 	v.elements.bookingEditor = bookingView.New(v.Document, v.events)
 	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events)
+	v.elements.gropBookingEditor = groupBookingView.New(v.Document, v.events)
 	v.elements.tripEditor = tripView.New(v.Document, v.events)
 	v.elements.tripCostGroupEditor = tripCostGroupView.New(v.Document, v.events)
 	v.elements.tripDifficultyEditor = tripDifficultyView.New(v.Document, v.events)
@@ -148,6 +152,7 @@ func (v *View) Setup() {
 	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
+	fetchGroupBookingBtn := viewHelpers.HRef(v.menuGroupBooking, v.Document, "Group Booking", "fetchGroupBookingsBtn")
 	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.Document, "Trips", "fetchTripsBtn")
 	fetchTripCostGroupBtn := viewHelpers.HRef(v.menuTripGroupCost, v.Document, "Trip Cost Group", "fetchTripCostGroupBtn")
 	fetchTripDifficultyBtn := viewHelpers.HRef(v.menuTripDifficulty, v.Document, "Trip Dificulty", "fetchTripDifficultyBtn")
@@ -166,6 +171,7 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
 	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
+	v.elements.sidemenu.Call("appendChild", fetchGroupBookingBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripsBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripCostGroupBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripDifficultyBtn)
@@ -180,6 +186,7 @@ func (v *View) Setup() {
 	v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.gropBookingEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripCostGroupEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.tripDifficultyEditor.Div)
@@ -289,6 +296,15 @@ func (v *View) menuBookingStatus() {
 	v.elements.bookingStatusEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Booking Status")
 	v.elements.bookingStatusEditor.FetchItems()
+}
+
+func (v *View) menuGroupBooking() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuGroupBookingEditor
+	v.elements.gropBookingEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Group Bookings")
+	v.elements.gropBookingEditor.FetchItems()
 }
 
 func (v *View) menuTrip() {
