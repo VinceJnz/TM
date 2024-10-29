@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS at_bookings (
     id SERIAL PRIMARY KEY,
     owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
     trip_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    person_id INTEGER NOT NULL DEFAULT 0,
+    person_id INTEGER NOT NULL DEFAULT 0, -- This field is only used for the group_bookings functionality. It is not needed for the booking_people functionality.
     notes TEXT,
     from_date TIMESTAMP DEFAULT NULL,
     to_date TIMESTAMP DEFAULT NULL,
@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS at_bookings (
 );
 
 -- Table for group bookings
+-- The assumption to make this work is that a booking only contains one person and bookings can be grouped by being assiociated with a group
 CREATE TABLE at_group_bookings (
     id SERIAL PRIMARY KEY,
     group_name VARCHAR(255) NOT NULL,
@@ -127,7 +128,9 @@ CREATE TABLE at_group_bookings (
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- This needs to be removed ************** it will no longer be needed once the booking table is updated.
+-- Table for adding people to a booking
+-- The assumption is that a booking can contain one or more people. group_bookings are not needed as each booking is a group of people.
+-- This will not be needed if the group_booking table is activated.
 CREATE TABLE IF NOT EXISTS at_booking_people
 (
     id SERIAL PRIMARY KEY,
