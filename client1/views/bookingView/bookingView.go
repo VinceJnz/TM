@@ -48,13 +48,17 @@ const apiURL = "http://localhost:8085/bookings"
 type TableData struct {
 	ID              int       `json:"id"`
 	OwnerID         int       `json:"owner_id"`
+	TripID          int       `json:"trip_id"`
+	PersonID        int       `json:"person_id"`
 	Notes           string    `json:"notes"`
 	FromDate        time.Time `json:"from_date"`
 	ToDate          time.Time `json:"to_date"`
-	Participants    int       `json:"participants"`
+	Participants    int       `json:"participants"` // Report generated field
+	GroupBookingID  int       `json:"group_booking_id"`
+	GroupBooking    string    `json:"group_booking"` // Report generated field
 	BookingStatusID int       `json:"booking_status_id"`
-	BookingStatus   string    `json:"booking_status"`
-	TripID          int       `json:"trip_id"`
+	BookingStatus   string    `json:"booking_status"` // Report generated field
+	BookingDate     time.Time `json:"booking_date"`
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`
 }
