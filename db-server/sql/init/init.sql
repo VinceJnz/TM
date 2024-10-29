@@ -33,72 +33,32 @@ CREATE USER api_user WITH PASSWORD 'api_password' SUPERUSER;
 -- Grant execute privilege on all functions in the public schema
 --GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO api_user;
 
-CREATE TABLE IF NOT EXISTS at_trips (
+-- Step 3: Create all the tables
+-- ToDo:
+--  1. Need to add code/settings to update modified columns
+
+----------------------------------------------
+-- Application tables
+----------------------------------------------
+
+-- Table for adding people to a booking
+-- The assumption is that a booking can contain one or more people. group_bookings are not needed as each booking is a group of people.
+-- This will not be needed if the group_booking table is activated.
+CREATE TABLE IF NOT EXISTS at_booking_people
+(
     id SERIAL PRIMARY KEY,
-    owner_ID INT NOT NULL DEFAULT 0,
-    trip_name TEXT NOT NULL,
-    location TEXT,
-    difficulty_level_id INT NOT NULL DEFAULT 0,
-    from_date DATE, -- season can be derived from the date
-    to_date DATE, -- season can be derived from the date
-    max_participants INTEGER NOT NULL DEFAULT 0,
-    trip_status_ID INT NOT NULL DEFAULT 0,
-    trip_type_id INTEGER NOT NULL DEFAULT 0,
-    at_trip_cost_group_id INTEGER NOT NULL DEFAULT 0,
-    created TIMESTAMP DEFAULT NOW(),
-    modified TIMESTAMP DEFAULT NOW()
-    --FOREIGN KEY (trip_type_id) REFERENCES trip_types(trip_type_id)
+    owner_id integer NOT NULL DEFAULT 0,
+    booking_id integer NOT NULL DEFAULT 0,
+    person_id integer NOT NULL DEFAULT 0,
+    notes text COLLATE pg_catalog."default",
+    created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (owner_id) REFERENCES at_users(id)
+    --FOREIGN KEY (booking_id) REFERENCES at_bookings(id)
+    --FOREIGN KEY (person_id) REFERENCES at_users(id)
 );
 
--- Table for trip type
-CREATE TABLE et_trip_type (
-    id SERIAL PRIMARY KEY,
-    type VARCHAR(255) NOT NULL, -- Example: 'hiking', 'camping', 'rafting', 'cycling', 'skiing'
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS et_trip_status (
-    id SERIAL PRIMARY KEY,
-    status VARCHAR(50) NOT NULL,  -- Example: 'Open', 'Closed', 'Cancelled', 'Postponed', 'Full'
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS et_trip_difficulty (
-    id SERIAL PRIMARY KEY,
-    level VARCHAR(50) NOT NULL,  -- Example: 'Medium Fit', 'Slow Fit', 'Family', 'All'
-    level_short VARCHAR(3) NOT NULL,  -- Example: 'MF', 'SF', 'F', 'A'
-    description VARCHAR(255) NOT NULL,  -- Example: Explaination of what medium fit trip means
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table for storing trip costs against user_age_groups, seasons
-CREATE TABLE at_trip_costs (
-    id SERIAL PRIMARY KEY,
-    at_trip_cost_group_id INTEGER NOT NULL,
-    description VARCHAR(50) NOT NULL, --This could be derived from user_status, user_age_group, season
-    user_status_id INTEGER NOT NULL,
-    user_age_group_id INTEGER NOT NULL,
-    season_id INTEGER NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (trip_cost_group_id) REFERENCES et_trip_cost_group(id),
-    --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id),
-    --FOREIGN KEY (season_id) REFERENCES et_season(id),
-);
-
--- Table for storing trip cost groups
-CREATE TABLE at_trip_cost_groups (
-    id SERIAL PRIMARY KEY,
-    description VARCHAR(50) NOT NULL,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (at_trip_costs_id) REFERENCES at_trip_costs(id),
-);
-
+-- Table for bookings info
 CREATE TABLE IF NOT EXISTS at_bookings (
     id SERIAL PRIMARY KEY,
     owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
@@ -128,68 +88,47 @@ CREATE TABLE at_group_bookings (
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for adding people to a booking
--- The assumption is that a booking can contain one or more people. group_bookings are not needed as each booking is a group of people.
--- This will not be needed if the group_booking table is activated.
-CREATE TABLE IF NOT EXISTS at_booking_people
-(
+-- Table for storing trip cost groups
+CREATE TABLE at_trip_cost_groups (
     id SERIAL PRIMARY KEY,
-    owner_id integer NOT NULL DEFAULT 0,
-    booking_id integer NOT NULL DEFAULT 0,
-    person_id integer NOT NULL DEFAULT 0,
-    notes text COLLATE pg_catalog."default",
-    created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (owner_id) REFERENCES at_users(id)
-    --FOREIGN KEY (booking_id) REFERENCES at_bookings(id)
-    --FOREIGN KEY (person_id) REFERENCES at_users(id)
-);
-
-CREATE TABLE IF NOT EXISTS et_booking_status (
-    id SERIAL PRIMARY KEY,
-    status VARCHAR(50) NOT NULL,
+    description VARCHAR(50) NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (at_trip_costs_id) REFERENCES at_trip_costs(id),
 );
 
-CREATE TABLE IF NOT EXISTS st_users (
+-- Table for storing trip costs against user_age_groups, seasons
+CREATE TABLE at_trip_costs (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    user_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
-    user_age_group_id INT NOT NULL DEFAULT 0,
-    user_status_id INT NOT NULL DEFAULT 0,
+    at_trip_cost_group_id INTEGER NOT NULL,
+    description VARCHAR(50) NOT NULL, --This could be derived from user_status, user_age_group, season
+    user_status_id INTEGER NOT NULL,
+    user_age_group_id INTEGER NOT NULL,
+    season_id INTEGER NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
-    --FOREIGN KEY (user_status_id) REFERENCES et_user_status(id)
+    --FOREIGN KEY (trip_cost_group_id) REFERENCES et_trip_cost_group(id),
+    --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id),
+    --FOREIGN KEY (season_id) REFERENCES et_season(id),
 );
 
--- Table for user status group
-CREATE TABLE et_user_status (
+-- Table for trip info
+CREATE TABLE IF NOT EXISTS at_trips (
     id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- Table for user age group
-CREATE TABLE et_user_age_groups (
-    id SERIAL PRIMARY KEY,
-    age_group VARCHAR(255) NOT NULL, -- Example: 'infant', 'child', 'youth', 'adult'
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table for user age group
-CREATE TABLE et_member_status (
-    id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'member', 'non-member' ??????????
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    owner_ID INT NOT NULL DEFAULT 0,
+    trip_name TEXT NOT NULL,
+    location TEXT,
+    difficulty_level_id INT NOT NULL DEFAULT 0,
+    from_date DATE, -- season can be derived from the date
+    to_date DATE, -- season can be derived from the date
+    max_participants INTEGER NOT NULL DEFAULT 0,
+    trip_status_ID INT NOT NULL DEFAULT 0,
+    trip_type_id INTEGER NOT NULL DEFAULT 0,
+    at_trip_cost_group_id INTEGER NOT NULL DEFAULT 0,
+    created TIMESTAMP DEFAULT NOW(),
+    modified TIMESTAMP DEFAULT NOW()
+    --FOREIGN KEY (trip_type_id) REFERENCES trip_types(trip_type_id)
 );
 
 -- Table for user payments
@@ -206,6 +145,26 @@ CREATE TABLE at_user_payments (
     --FOREIGN KEY (booking_id) REFERENCES at_bookings(id)
 );
 
+----------------------------------------------
+-- Enumeration tables
+----------------------------------------------
+
+-- Table for booking status
+CREATE TABLE IF NOT EXISTS et_booking_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(50) NOT NULL, -- Example: 'new', 'cancelled', 'success'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for user age group
+CREATE TABLE et_member_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(255) NOT NULL, -- Example: 'member', 'non-member' ??????????
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Table for seasons
 CREATE TABLE et_seasons (
     id SERIAL PRIMARY KEY,
@@ -215,3 +174,66 @@ CREATE TABLE et_seasons (
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Table for trip difficulty
+CREATE TABLE IF NOT EXISTS et_trip_difficulty (
+    id SERIAL PRIMARY KEY,
+    level VARCHAR(50) NOT NULL,  -- Example: 'Medium Fit', 'Slow Fit', 'Family', 'All'
+    level_short VARCHAR(3) NOT NULL,  -- Example: 'MF', 'SF', 'F', 'A'
+    description VARCHAR(255) NOT NULL,  -- Example: Explaination of what medium fit trip means
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for trip status
+CREATE TABLE IF NOT EXISTS et_trip_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(50) NOT NULL,  -- Example: 'Open', 'Closed', 'Cancelled', 'Postponed', 'Full'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for trip type
+CREATE TABLE et_trip_type (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(255) NOT NULL, -- Example: 'hiking', 'camping', 'rafting', 'cycling', 'skiing'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for user age group
+CREATE TABLE et_user_age_groups (
+    id SERIAL PRIMARY KEY,
+    age_group VARCHAR(255) NOT NULL, -- Example: 'infant', 'child', 'youth', 'adult'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for user status group
+CREATE TABLE et_user_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+----------------------------------------------
+-- Security tables
+----------------------------------------------
+
+-- Table for user info
+CREATE TABLE IF NOT EXISTS st_users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    user_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
+    user_age_group_id INT NOT NULL DEFAULT 0,
+    user_status_id INT NOT NULL DEFAULT 0,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
+    --FOREIGN KEY (user_status_id) REFERENCES et_user_status(id)
+);
+
