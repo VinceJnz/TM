@@ -175,6 +175,14 @@ CREATE TABLE et_seasons (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table for token status
+CREATE TABLE et_token_valid (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Table for trip difficulty
 CREATE TABLE IF NOT EXISTS et_trip_difficulty (
     id SERIAL PRIMARY KEY,
@@ -221,6 +229,21 @@ CREATE TABLE et_user_status (
 -- Security tables
 ----------------------------------------------
 
+-- Table for token info
+CREATE TABLE st_token (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(45) NOT NULL,
+    host VARCHAR(45) DEFAULT NULL,
+    token VARCHAR(45) DEFAULT NULL,
+    token_valid_id INT NOT NULL,
+    valid_from TIMESTAMP with time zone,
+    valid_to TIMESTAMP with time zone,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (token_valid_id) REFERENCES et_token_valid(id)
+);
+
 -- Table for user info
 CREATE TABLE IF NOT EXISTS st_users (
     id SERIAL PRIMARY KEY,
@@ -231,6 +254,9 @@ CREATE TABLE IF NOT EXISTS st_users (
     user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
     user_age_group_id INT NOT NULL DEFAULT 0,
     user_status_id INT NOT NULL DEFAULT 0,
+    user_password VARCHAR(45) DEFAULT NULL, -- This will probably not be used (see: salt, verifier)
+    salt BYTEA DEFAULT NULL, -- varbinary(30)
+    verifier BYTEA DEFAULT NULL, -- varbinary(500)
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
