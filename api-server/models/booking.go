@@ -15,6 +15,8 @@ type Booking struct {
 	FromDate        time.Time `json:"from_date" db:"from_date"`
 	ToDate          time.Time `json:"to_date" db:"to_date"`
 	Participants    zero.Int  `json:"participants" db:"participants"`
+	GroupBookingID  int       `json:"group_booking_id" db:"group_booking_id"`
+	GroupBooking    string    `json:"group_booking" db:"group_booking"`
 	BookingStatusID int       `json:"booking_status_id" db:"booking_status_id"`
 	BookingStatus   string    `json:"booking_status" db:"status"`
 	BookingDate     zero.Time `json:"booking_date" db:"booking_date"`
