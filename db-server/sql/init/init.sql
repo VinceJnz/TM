@@ -61,14 +61,14 @@ CREATE TABLE IF NOT EXISTS at_booking_people
 -- Table for bookings info
 CREATE TABLE IF NOT EXISTS at_bookings (
     id SERIAL PRIMARY KEY,
-    owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    owner_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
     trip_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
     person_id INTEGER NOT NULL DEFAULT 0, -- This field is only used for the group_bookings functionality. It is not needed for the booking_people functionality.
     notes TEXT,
     from_date TIMESTAMP DEFAULT NULL,
     to_date TIMESTAMP DEFAULT NULL,
     group_booking_id INTEGER, -- Is this booking for a group??
-    booking_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    booking_status_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
     booking_date DATE NOT NULL,
     Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS at_bookings (
 CREATE TABLE at_group_bookings (
     id SERIAL PRIMARY KEY,
     group_name VARCHAR(255) NOT NULL,
-    Owner_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0. This is the user_id for he user that created the group
+    Owner_id INT NOT NULL DEFAULT 0,  -- Default value set to 0. This is the user_id for he user that created the group
     Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -116,14 +116,14 @@ CREATE TABLE at_trip_costs (
 -- Table for trip info
 CREATE TABLE IF NOT EXISTS at_trips (
     id SERIAL PRIMARY KEY,
-    owner_ID INT NOT NULL DEFAULT 0,
+    owner_id INT NOT NULL DEFAULT 0,
     trip_name TEXT NOT NULL,
     location TEXT,
     difficulty_level_id INT NOT NULL DEFAULT 0,
     from_date DATE, -- season can be derived from the date
     to_date DATE, -- season can be derived from the date
     max_participants INTEGER NOT NULL DEFAULT 0,
-    trip_status_ID INT NOT NULL DEFAULT 0,
+    trip_status_id INT NOT NULL DEFAULT 0,
     trip_type_id INTEGER NOT NULL DEFAULT 0,
     at_trip_cost_group_id INTEGER NOT NULL DEFAULT 0,
     created TIMESTAMP DEFAULT NOW(),
@@ -225,6 +225,15 @@ CREATE TABLE et_user_status (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table for user status group
+CREATE TABLE et_user_account_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(255) NOT NULL, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
 ----------------------------------------------
 -- Security tables
 ----------------------------------------------
@@ -250,16 +259,19 @@ CREATE TABLE IF NOT EXISTS st_users (
     name VARCHAR(255) NOT NULL,
     username VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
-    user_status_ID INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    user_address VARCHAR(255),
+    member_code VARCHAR(20),
     user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
     user_age_group_id INT NOT NULL DEFAULT 0,
-    user_status_id INT NOT NULL DEFAULT 0,
+    user_status_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
     user_password VARCHAR(45) DEFAULT NULL, -- This will probably not be used (see: salt, verifier)
     salt BYTEA DEFAULT NULL, -- varbinary(30)
     verifier BYTEA DEFAULT NULL, -- varbinary(500)
+    user_account_status_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
+    --FOREIGN KEY (user_account_status_id) REFERENCES et_user_account_status(id)
     --FOREIGN KEY (user_status_id) REFERENCES et_user_status(id)
 );
 
