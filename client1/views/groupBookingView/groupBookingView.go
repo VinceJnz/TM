@@ -39,7 +39,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/tripCosts"
+const apiURL = "http://localhost:8085/groupBooking"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -300,7 +300,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", "Cost category: "+record.GroupName+" ")
+		itemDiv.Set("innerHTML", "Group Name: "+record.GroupName+" ")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
