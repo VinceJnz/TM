@@ -14,7 +14,7 @@ type User struct {
 	Email           string      `json:"email" db:"email"`
 	Address         zero.String `json:"user_address" db:"user_address"`
 	MemberCode      zero.String `json:"member_code" db:"member_code"`
-	BirthDate       zero.Time   `json:"birth_date" db:"birth_date"` //This can be used to calculate what age group to apply
+	BirthDate       zero.Time   `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
 	UserAgeGroupID  int         `json:"user_age_group_id" db:"user_age_group_id"`
 	UserStatusID    int         `json:"user_status_id" db:"user_status_id"`
 	Password        string      `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
