@@ -215,12 +215,16 @@ func (v *View) hideCurrentEditor() {
 	switch v.menuChoice {
 	case menuNone:
 	case menuHome:
+	case menuAbout:
+	case menuContact:
 	case menuUserEditor:
 		v.elements.userEditor.Hide()
 	case menuBookingEditor:
 		v.elements.bookingEditor.Hide()
 	case menuBookingStatusEditor:
 		v.elements.bookingStatusEditor.Hide()
+	case menuGroupBookingEditor:
+		v.elements.gropBookingEditor.Hide()
 	case menuTripEditor:
 		v.elements.tripEditor.Hide()
 	case menuTripCostEditor:
