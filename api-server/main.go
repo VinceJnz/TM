@@ -32,6 +32,9 @@ func main() {
 	defer db.Close()
 
 	r := mux.NewRouter()
+	// m := mux.NewRouter()
+	// r := m.PathPrefix("/api/v1").Subrouter()
+	// r.Use() // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
 	seasons := handlerSeasons.New(db)
