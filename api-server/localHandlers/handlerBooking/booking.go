@@ -5,6 +5,7 @@ import (
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -197,5 +198,34 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RecordValidation(record models.Booking) error {
-	return helpers.ValidateDatesFromLtTo(record.FromDate, record.ToDate)
+	if err := helpers.ValidateDatesFromLtTo(record.FromDate, record.ToDate); err != nil {
+		return err
+	}
+	if err := h.ParentRecordValidation(record); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *Handler) ParentRecordValidation(record models.Booking) error {
+	parentID := record.TripID
+
+	validationRecord := models.Trip{}
+	err := h.db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
+	FROM at_trips WHERE id = $1`, parentID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf(debugTag + "RecordValidationDates()1 - Record not found" + err.Error())
+	} else if err != nil {
+		return fmt.Errorf(debugTag + "RecordValidationDates()2 - Internal Server Error: " + err.Error())
+	}
+
+	if record.FromDate.Before(validationRecord.FromDate) {
+		return fmt.Errorf("dateError: Booking From-date is before Trip From-date")
+	}
+
+	if record.ToDate.After(validationRecord.ToDate) {
+		return fmt.Errorf("dateError: Booking To-date is after Trip To-date")
+	}
+
+	return nil
 }
