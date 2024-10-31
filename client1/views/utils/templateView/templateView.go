@@ -71,6 +71,7 @@ type View struct {
 type ItemEditor2 struct {
 	document      js.Value
 	events        *eventProcessor.EventProcessor
+	baseURL       string
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
@@ -86,7 +87,7 @@ type ItemEditor2 struct {
 */
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idList ...int) *View {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, idList ...int) *View {
 	return nil
 }
 

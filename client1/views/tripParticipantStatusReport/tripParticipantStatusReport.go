@@ -39,7 +39,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/trips/participantStatus"
+const apiURL = "/trips/participantStatus"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -67,6 +67,7 @@ type Item struct {
 type ItemEditor struct {
 	document      js.Value
 	events        *eventProcessor.EventProcessor
+	baseURL       string
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
@@ -82,10 +83,11 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
+	editor.baseURL = baseURL + apiURL
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
@@ -147,7 +149,7 @@ func (editor *ItemEditor) FetchItems() {
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
-			httpProcessor.NewRequest(http.MethodGet, apiURL, &records, nil)
+			httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
 			editor.updateStateDisplay(ItemStateNone)

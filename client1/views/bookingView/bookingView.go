@@ -42,7 +42,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "http://localhost:8085/bookings"
+const apiURL = "/bookings"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -86,6 +86,7 @@ type Item struct {
 type ItemEditor struct {
 	document      js.Value
 	events        *eventProcessor.EventProcessor
+	baseURL       string
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
@@ -104,10 +105,11 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, parentData ...ParentData) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
+	editor.baseURL = baseURL
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
@@ -136,10 +138,10 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, paren
 
 	editor.RecordState = RecordStateReloadRequired
 
-	editor.BookingStatus = bookingStatusView.New(editor.document, eventProcessor)
+	editor.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, baseURL)
 	editor.BookingStatus.FetchItems()
 
-	editor.PeopleEditor = bookingPeopleView.New(editor.document, editor.events)
+	editor.PeopleEditor = bookingPeopleView.New(editor.document, editor.events, baseURL)
 
 	return editor
 }
@@ -307,7 +309,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	httpProcessor.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+	httpProcessor.NewRequest(http.MethodPut, editor.baseURL+apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
@@ -317,7 +319,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	httpProcessor.NewRequest(http.MethodPost, apiURL, nil, &item)
+	httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL, nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
@@ -327,7 +329,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
-		localApiURL := apiURL
+		localApiURL := editor.baseURL + apiURL
 		if editor.ParentData.ID != 0 {
 			localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentData.ID) + "/bookings"
 		}
@@ -345,7 +347,7 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		httpProcessor.NewRequest(http.MethodDelete, apiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		httpProcessor.NewRequest(http.MethodDelete, editor.baseURL+apiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
@@ -364,7 +366,7 @@ func (editor *ItemEditor) populateItemList() {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
 		// Create and add child views to Item
-		bookingPeople := bookingPeopleView.New(editor.document, editor.events, record.ID)
+		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.baseURL, record.ID)
 		//editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
 
 		itemDiv := editor.document.Call("createElement", "div")
