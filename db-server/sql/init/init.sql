@@ -175,14 +175,6 @@ CREATE TABLE et_seasons (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for token status
-CREATE TABLE et_token_valid (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled'
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Table for trip difficulty
 CREATE TABLE IF NOT EXISTS et_trip_difficulty (
     id SERIAL PRIMARY KEY,
@@ -221,14 +213,6 @@ CREATE TABLE et_user_age_groups (
 CREATE TABLE et_user_status (
     id SERIAL PRIMARY KEY,
     status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table for user status group
-CREATE TABLE et_user_account_status (
-    id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -278,30 +262,40 @@ CREATE TABLE IF NOT EXISTS st_users (
 CREATE TABLE et_access_level (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete'
-    description VARCHAR(45) DEFAULT NULL
+    description VARCHAR(45) DEFAULT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE et_access_type (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'group', 'owner', 'world' ????? don't know if this is useful
-    description VARCHAR(45) DEFAULT NULL
+    description VARCHAR(45) DEFAULT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE et_resource (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'trip', 'user', 'booking', 'user_status'
-    description VARCHAR(45) DEFAULT NULL
+    description VARCHAR(45) DEFAULT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE et_token_valid (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL -- Example: 'No', 'Yes'
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'No', 'Yes'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE st_group (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'SysAdmin', 'Admin', 'User'
-    description VARCHAR(45) DEFAULT NULL
+    description VARCHAR(45) DEFAULT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE st_group_resource (
@@ -310,6 +304,8 @@ CREATE TABLE st_group_resource (
     resource_id INTEGER NOT NULL,
     access_level_id INTEGER NOT NULL,
     access_type_id INTEGER NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (group_id) REFERENCES st_group(id)
     --FOREIGN KEY (resource_id) REFERENCES st_resource(id)
     --FOREIGN KEY (access_level_id) REFERENCES et_access_level(id)
@@ -319,7 +315,18 @@ CREATE TABLE st_group_resource (
 CREATE TABLE st_user_group (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    group_id INTEGER NOT NULL
+    group_id INTEGER NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_id) REFERENCES st_users(id)
     --FOREIGN KEY (group_id) REFERENCES st_group(id)
 );
+
+-- Table for user status group
+CREATE TABLE et_user_account_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(255) NOT NULL, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
