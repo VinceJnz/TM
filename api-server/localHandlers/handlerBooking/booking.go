@@ -105,6 +105,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.RecordValidation(record); err != nil {
+		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
 	tx, err := h.db.Beginx() // Start transaction
 	if err != nil {
 		http.Error(w, debugTag+"Create()1: Could not start transaction", http.StatusInternalServerError)
@@ -151,6 +156,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
+	if err := h.RecordValidation(record); err != nil {
+		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
 	_, err = h.db.Exec(`
 		UPDATE at_bookings 
 		SET owner_id = $1, trip_id = $2, notes = $3, from_date = $4, to_date = $5, booking_status_id = $6 
@@ -184,4 +194,8 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) RecordValidation(record models.Booking) error {
+	return helpers.ValidateDatesFromLtTo(record.FromDate, record.ToDate)
 }

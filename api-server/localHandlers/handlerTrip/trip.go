@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
@@ -83,7 +84,15 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
-	json.NewDecoder(r.Body).Decode(&record)
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.RecordValidation(record); err != nil {
+		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 
 	err := h.db.QueryRow(
 		"INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
@@ -112,6 +121,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
 	json.NewDecoder(r.Body).Decode(&record)
 	record.ID = id
+
+	if err := h.RecordValidation(record); err != nil {
+		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 
 	_, err = h.db.Exec("UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5, trip_status_id = $6 WHERE id = $7",
 		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.ID)
@@ -143,4 +157,8 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) RecordValidation(record models.Trip) error {
+	return helpers.ValidateDatesFromLtTo(record.FromDate, record.ToDate)
 }
