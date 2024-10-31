@@ -19,9 +19,7 @@ type Session struct {
 	//Message mdlMessage.PageMsg
 }
 
-type HandlerFunc func(http.ResponseWriter, *http.Request, *Session)
-
-//type HandlerFunc func(http.Handler, *mdlSession.Item)
+type HandlerFunc func(http.ResponseWriter, *http.Request)
 
 type Handler struct {
 	db *sqlx.DB
@@ -29,6 +27,21 @@ type Handler struct {
 
 func New(db *sqlx.DB) *Handler {
 	return &Handler{db: db}
+}
+
+func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
+	session := &Session{}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//var err error
+
+		err := h.setRestResource(session, r)
+		//if err != nil {
+		log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
+		//}
+
+		next.ServeHTTP(w, r) // Access is correct so the request is passed to the next handler
+	})
 }
 
 //RequireUserAuth The input to this is a function of the form "fn(Session, ResponseWriter, Request)"
@@ -78,7 +91,7 @@ func (h *Handler) RequireRestAuth(fn HandlerFunc) http.HandlerFunc {
 			return
 		}
 		session.Control.AccessTypeID = accessTypeID
-		fn(w, r, session) // Access is correct so the request is passed to the next handler
+		fn(w, r) // Access is correct so the request is passed to the next handler
 	}
 }
 
@@ -128,7 +141,7 @@ func (h *Handler) setRestResource(session *Session, r *http.Request) error {
 		}
 	}
 	if err != nil {
-		log.Println(debugTag+"SetRestResource()7 ", "session =", "err =", err, session, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel)
+		log.Println(debugTag+"SetRestResource()7 ", "session =", session, "err =", err, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel)
 		log.Printf("%v %v %v %v %v %+v", debugTag+"SetRestResource()8", "urlSplit =", urlSplit, len(urlSplit), "r =", r)
 	}
 	return err

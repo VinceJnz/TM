@@ -2,6 +2,7 @@ package main
 
 import (
 	"api-server/v2/app"
+	"api-server/v2/localHandlers/handlerAuth"
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
@@ -31,10 +32,11 @@ func main() {
 	}
 	defer db.Close()
 
-	r := mux.NewRouter()
-	// m := mux.NewRouter()
-	// r := m.PathPrefix("/api/v1").Subrouter()
-	// r.Use() // Add some middleware, e.g. an auth handler
+	//r := mux.NewRouter()
+	m := mux.NewRouter()
+	r := m.PathPrefix("/api/v1").Subrouter()
+	auth := handlerAuth.New(db)
+	r.Use(auth.RequireRestAuthTst) // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
 	seasons := handlerSeasons.New(db)
