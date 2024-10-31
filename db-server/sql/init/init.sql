@@ -241,7 +241,7 @@ CREATE TABLE et_user_account_status (
 -- Table for token info
 CREATE TABLE st_token (
     id SERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id INTEGER NOT NULL,
     name VARCHAR(45) NOT NULL,
     host VARCHAR(45) DEFAULT NULL,
     token VARCHAR(45) DEFAULT NULL,
@@ -262,8 +262,8 @@ CREATE TABLE IF NOT EXISTS st_users (
     user_address VARCHAR(255),
     member_code VARCHAR(20),
     user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
-    user_age_group_id INT NOT NULL DEFAULT 0,
-    user_status_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    user_age_group_id INTEGER NOT NULL DEFAULT 0,
+    user_status_id INTEGER NOT NULL DEFAULT 0,  -- Default value set to 0
     user_password VARCHAR(45) DEFAULT NULL, -- This will probably not be used (see: salt, verifier)
     salt BYTEA DEFAULT NULL, -- varbinary(30)
     verifier BYTEA DEFAULT NULL, -- varbinary(500)
@@ -275,3 +275,51 @@ CREATE TABLE IF NOT EXISTS st_users (
     --FOREIGN KEY (user_status_id) REFERENCES et_user_status(id)
 );
 
+CREATE TABLE et_access_level (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete'
+    description VARCHAR(45) DEFAULT NULL
+);
+
+CREATE TABLE et_access_type (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'group', 'owner', 'world' ????? don't know if this is useful
+    description VARCHAR(45) DEFAULT NULL
+);
+
+CREATE TABLE et_resource (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'trip', 'user', 'booking', 'user_status'
+    description VARCHAR(45) DEFAULT NULL
+);
+
+CREATE TABLE et_token_valid (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(45) DEFAULT NULL -- Example: 'No', 'Yes'
+);
+
+CREATE TABLE st_group (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'SysAdmin', 'Admin', 'User'
+    description VARCHAR(45) DEFAULT NULL
+);
+
+CREATE TABLE st_group_resource (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL,
+    resource_id INTEGER NOT NULL,
+    access_level_id INTEGER NOT NULL,
+    access_type_id INTEGER NOT NULL,
+    --FOREIGN KEY (group_id) REFERENCES st_group(id)
+    --FOREIGN KEY (resource_id) REFERENCES st_resource(id)
+    --FOREIGN KEY (access_level_id) REFERENCES et_access_level(id)
+    --FOREIGN KEY (access_type_id) REFERENCES et_access_type(id)
+);
+
+CREATE TABLE st_user_group (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    group_id INTEGER NOT NULL
+    --FOREIGN KEY (user_id) REFERENCES st_users(id)
+    --FOREIGN KEY (group_id) REFERENCES st_group(id)
+);
