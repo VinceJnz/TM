@@ -13,7 +13,7 @@ import (
 const debugTag = "handlerAuth."
 
 type Session struct {
-	Session models.Token
+	Token   models.Token
 	User    models.User
 	Control models.Control
 	//Message mdlMessage.PageMsg
@@ -36,9 +36,9 @@ func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
 		//var err error
 
 		err := h.setRestResource(session, r)
-		//if err != nil {
-		log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
-		//}
+		if err != nil {
+			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
+		}
 
 		next.ServeHTTP(w, r) // Access is correct so the request is passed to the next handler
 	})
@@ -67,14 +67,14 @@ func (h *Handler) RequireRestAuth(fn HandlerFunc) http.HandlerFunc {
 		}
 		sessionToken, err := r.Cookie("session")
 		if err == http.ErrNoCookie { // If there is no session cookie
-			log.Printf("%v %v %v %v %+v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()3", "err =", err, "session.Session =", session.Session, "session.User =", session.User, "session.Control =", session.Control, "r =", r)
+			log.Printf("%v %v %v %v %+v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()3", "err =", err, "session.Token =", session.Token, "session.User =", session.User, "session.Control =", session.Control, "r =", r)
 			w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 			w.Write([]byte("Logon required - You don't have access to the requested resource."))
 			return
 		} else { // If there is a session cookie try to find it in the repository
 			//_, err = h.srvc.CheckToken(session, sessionToken.Value)
-			session.Session, err = h.FindSessionToken(sessionToken.Value)
-			session.User.ID = int(session.Session.UserID)
+			session.Token, err = h.FindSessionToken(sessionToken.Value)
+			session.User.ID = int(session.Token.UserID)
 			if err != nil { // could not find user sessionToken so user is not authorised
 				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()4", "err =", err, "session =", session, "r =", r)
 				//w.WriteHeader(http.StatusUnauthorized)
@@ -106,7 +106,7 @@ func (h *Handler) setRestResource(session *Session, r *http.Request) error {
 	session.Control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
 	urlSplit = strings.Split(session.Control.PrevURL, "/")
 	err = errors.New(debugTag + "SetRestResource()2 - Resource info not found") //this is the error returned if a valid resource is not identified
-	session.Session.Host.SetValid(r.RemoteAddr)
+	session.Token.Host.SetValid(r.RemoteAddr)
 	if urlSplit[1] == "api" {
 		apiVersion = urlSplit[2]
 		switch {
