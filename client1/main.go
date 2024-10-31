@@ -10,7 +10,7 @@ func main() {
 	log.Printf("%v", "main")
 
 	// Set up the HTML structure
-	view := mainView.New(mainView.AppConfig{BaseURL: "http://localhost:8085/api/v2"})
+	view := mainView.New(mainView.AppConfig{BaseURL: "http://localhost:8085/api/v1"})
 	view.Setup()
 
 	<-c

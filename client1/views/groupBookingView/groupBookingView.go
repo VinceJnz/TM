@@ -86,7 +86,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseU
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
-	editor.baseURL = baseURL + apiURL
+	editor.baseURL = baseURL
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
