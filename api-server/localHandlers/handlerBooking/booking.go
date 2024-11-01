@@ -24,6 +24,14 @@ func New(appConf *app.Config) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
+
+	userID, ok := r.Context().Value(h.appConf.UserIDKey).(int)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+	log.Printf(debugTag+"GetAll()1 userID %v\n", userID)
+
 	err := h.appConf.Db.Select(&records, `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
 	FROM public.at_bookings ab
 	JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id`)
@@ -31,7 +39,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll()2 %v\n", debugTag, err)
+		log.Printf(debugTag+"GetAll()2 %v\n", err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

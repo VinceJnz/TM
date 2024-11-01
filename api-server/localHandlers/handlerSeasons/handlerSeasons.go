@@ -30,7 +30,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetAll()2 %v\n", debugTag, err)
+		log.Printf(debugTag+"GetAll()2 %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

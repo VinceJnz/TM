@@ -27,6 +27,7 @@ import (
 
 func main() {
 	appConf := app.New()
+	defer appConf.Db.Close()
 
 	//r := mux.NewRouter()
 	m := mux.NewRouter()
@@ -81,6 +82,7 @@ func main() {
 	r.HandleFunc("/bookings", booking.Create).Methods("POST")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Update).Methods("PUT")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Delete).Methods("DELETE")
+	r.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET")
 
 	// BookingUsers routes
 	bookingPeople := handlerBookingPeople.New(appConf)
@@ -89,7 +91,7 @@ func main() {
 	r.HandleFunc("/bookingPeople", bookingPeople.Create).Methods("POST")
 	r.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Update).Methods("PUT")
 	r.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Delete).Methods("DELETE")
-	r.HandleFunc("/bookings/{id:[0-9]+}/people", bookingPeople.GetList).Methods("GET")
+	r.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET")
 
 	// GroupBookings routes
 	groupBooking := handlerGroupBooking.New(appConf)
@@ -114,7 +116,6 @@ func main() {
 	r.HandleFunc("/trips", trip.Create).Methods("POST")
 	r.HandleFunc("/trips/{id:[0-9]+}", trip.Update).Methods("PUT")
 	r.HandleFunc("/trips/{id:[0-9]+}", trip.Delete).Methods("DELETE")
-	r.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET")
 	r.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET")
 
 	// TripType routes

@@ -22,7 +22,6 @@ func New() *Config {
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer db.Close()
 
 	userIDKey := IdKey()
 	return &Config{
