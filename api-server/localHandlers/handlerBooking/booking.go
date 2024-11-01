@@ -1,7 +1,7 @@
 package handlerBooking
 
 import (
-	"api-server/v2/app"
+	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
@@ -14,10 +14,10 @@ import (
 const debugTag = "handlerBooking."
 
 type Handler struct {
-	appConf *app.Config
+	appConf *appCore.Config
 }
 
-func New(appConf *app.Config) *Handler {
+func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
 }
 

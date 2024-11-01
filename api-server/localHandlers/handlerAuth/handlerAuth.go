@@ -1,7 +1,7 @@
 package handlerAuth
 
 import (
-	"api-server/v2/app"
+	"api-server/v2/app/appCore"
 	"api-server/v2/models"
 	"context"
 	"errors"
@@ -22,15 +22,15 @@ type Session struct {
 type HandlerFunc func(http.ResponseWriter, *http.Request)
 
 //type Handler struct {
-//	appConf *app.Config
+//	appConf *appCore.Config
 //}
 
 type Handler struct {
-	appConf *app.Config
+	appConf *appCore.Config
 	Pool    map[string]*poolItem
 }
 
-func New(appConf *app.Config) *Handler {
+func New(appConf *appCore.Config) *Handler {
 	return &Handler{
 		appConf: appConf,
 		//srvc:    app.Service,
@@ -39,7 +39,7 @@ func New(appConf *app.Config) *Handler {
 	}
 }
 
-//func New(appConf *app.Config) *Handler {
+//func New(appConf *appCore.Config) *Handler {
 //	return &Handler{appConf: appConf}
 //}
 

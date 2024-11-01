@@ -24,7 +24,7 @@ type poolItem struct {
 }
 
 //type Handler struct {
-//	appConf *app.Config
+//	appConf *appCore.Config
 //	//srvc *store.Service
 //	//app  *core.Config
 //	Pool map[string]*poolItem
@@ -42,7 +42,7 @@ type clientVerify struct {
 	Token    string
 }
 
-//func New(appConf *app.Config) *Handler {
+//func New(appConf *appCore.Config) *Handler {
 //	return &Handler{
 //		appConf: appConf,
 //		//srvc:    app.Service,

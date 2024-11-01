@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"api-server/v2/app"
+	"api-server/v2/app/appCore"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
@@ -16,17 +16,16 @@ import (
 const debugTag = "handlerUser."
 
 type Handler struct {
-	appConf *app.Config
+	appConf *appCore.Config
 }
 
-func New(appConf *app.Config) *Handler {
+func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.User{}
-	err := h.appConf.Db.Select(&records, `SELECT id, name, username, email FROM st_users`)
+	records, err := h.GetAllQry()
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,8 +49,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := models.User{}
-	err = h.appConf.Db.Get(&record, "SELECT id, name, username, email FROM st_users WHERE id = $1", id)
+	record, err := h.GetQry(id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return

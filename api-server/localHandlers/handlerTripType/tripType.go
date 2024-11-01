@@ -1,7 +1,7 @@
 package handlerTripType
 
 import (
-	"api-server/v2/app"
+	"api-server/v2/app/appCore"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
@@ -15,10 +15,10 @@ import (
 const debugTag = "handlerTripType."
 
 type Handler struct {
-	appConf *app.Config
+	appConf *appCore.Config
 }
 
-func New(appConf *app.Config) *Handler {
+func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
 }
 

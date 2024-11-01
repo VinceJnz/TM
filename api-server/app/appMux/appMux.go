@@ -1,4 +1,4 @@
-package main
+package appMux
 
 import (
 	"api-server/v2/app/appCore"
@@ -18,17 +18,18 @@ import (
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/handlerUserStatus"
-	"log"
-	"net/http"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
-func main() {
-	appConf := appCore.New()
-	defer appConf.Db.Close()
+type Config struct {
+	auth          handlerAuth.Handler
+	seasons       handlerSeasons.Handler
+	user          handlerUser.Handler
+	userAgeGroups handlerUserAgeGroups.Handler
+}
 
+func MuxNew(appConf *appCore.Config) Config {
 	//r := mux.NewRouter()
 	m := mux.NewRouter()
 	r := m.PathPrefix("/api/v1").Subrouter()
@@ -167,16 +168,5 @@ func main() {
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Update).Methods("PUT")
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Delete).Methods("DELETE")
 
-	// Define CORS options
-	corsOpts := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:8081"}),        // Allow requests from http://localhost:8080
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}), // Allowed HTTP methods
-		handlers.AllowedHeaders([]string{"Content-Type"}),                 // Allowed headers
-	)
-
-	log.Println("Server running on port 8085")
-	log.Fatal(http.ListenAndServe(":8085", corsOpts(r))) // Apply CORS middleware
-
-	//log.Println("Server running on port 8085")
-	//log.Fatal(http.ListenAndServe(":8085", r))
+	return Config{}
 }
