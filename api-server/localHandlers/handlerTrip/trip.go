@@ -7,31 +7,31 @@ import (
 	"net/http"
 	"strconv"
 
+	"api-server/v2/app"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerTrip."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Trip{}
-	//err := h.db.Select(&records, `SELECT att.*, etts.status as trip_status
+	//err := h.appConf.Db.Select(&records, `SELECT att.*, etts.status as trip_status
 	//FROM public.at_trips att
 	//LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id`)
 
-	err := h.db.Select(&records, `SELECT att.*, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
+	err := h.appConf.Db.Select(&records, `SELECT att.*, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
 	FROM public.at_trips att
 	LEFT JOIN public.et_trip_difficulty ettd ON ettd.id=att.difficulty_level_id
 	JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
@@ -64,7 +64,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.Trip{}
-	err = h.db.Get(&record, `SELECT att.*, etts.status as trip_status
+	err = h.appConf.Db.Get(&record, `SELECT att.*, etts.status as trip_status
 	FROM public.at_trips att
 	LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 	WHERE att.id = $1`, id)
@@ -94,7 +94,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.db.QueryRow(
+	err := h.appConf.Db.QueryRow(
 		"INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
 		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID).Scan(&record.ID)
 	if err != nil {
@@ -127,7 +127,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5, trip_status_id = $6 WHERE id = $7",
+	_, err = h.appConf.Db.Exec("UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5, trip_status_id = $6 WHERE id = $7",
 		record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.ID)
 	if err != nil {
 		log.Printf("%v.Update()2 %v\n", debugTag, err)
@@ -149,7 +149,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_trips WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM at_trips WHERE id = $1", id)
 	if err != nil {
 		log.Printf("%v.Delete()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

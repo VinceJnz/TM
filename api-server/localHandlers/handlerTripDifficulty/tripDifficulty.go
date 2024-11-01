@@ -1,6 +1,7 @@
 package handlerTripDifficulty
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
@@ -9,23 +10,22 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerTripDifficulty."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripDificulty{}
-	err := h.db.Select(&records, `SELECT * FROM et_trip_difficulty`)
+	err := h.appConf.Db.Select(&records, `SELECT * FROM et_trip_difficulty`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,7 +50,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.TripDificulty{}
-	err = h.db.Get(&record, `SELECT * FROM et_trip_difficulty WHERE id = $1`, id)
+	err = h.appConf.Db.Get(&record, `SELECT * FROM et_trip_difficulty WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -72,7 +72,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.db.QueryRow(`
+	err := h.appConf.Db.QueryRow(`
 		INSERT INTO et_trip_difficulty (level, level_short, description)
 		VALUES ($1, $2, $3) RETURNING id`,
 		record.Level, record.LevelShort, record.Description,
@@ -103,7 +103,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	_, err = h.db.Exec(`
+	_, err = h.appConf.Db.Exec(`
 		UPDATE et_trip_difficulty 
 		SET level = $1, level_short = $2, description = $3
 		WHERE id = $4`,
@@ -127,7 +127,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM et_trip_difficulty WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM et_trip_difficulty WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

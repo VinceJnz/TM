@@ -1,6 +1,7 @@
 package handlerBooking
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
@@ -8,24 +9,22 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerBooking."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
-	err := h.db.Select(&records, `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
+	err := h.appConf.Db.Select(&records, `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
 	FROM public.at_bookings ab
 	JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id`)
 	if err == sql.ErrNoRows {
@@ -52,7 +51,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	records := []models.Booking{}
-	err = h.db.Select(&records, `SELECT atb.*, ebs.status, atbpcount.participants
+	err = h.appConf.Db.Select(&records, `SELECT atb.*, ebs.status, atbpcount.participants
 	FROM public.at_bookings atb
 	JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
 	LEFT JOIN (SELECT atbp.booking_id, COUNT(atbp.id) as participants
@@ -83,7 +82,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.Booking{}
-	err = h.db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
+	err = h.appConf.Db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
 		FROM at_bookings WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -111,7 +110,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Beginx() // Start transaction
+	tx, err := h.appConf.Db.Beginx() // Start transaction
 	if err != nil {
 		http.Error(w, debugTag+"Create()1: Could not start transaction", http.StatusInternalServerError)
 		return
@@ -162,7 +161,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec(`
+	_, err = h.appConf.Db.Exec(`
 		UPDATE at_bookings 
 		SET owner_id = $1, trip_id = $2, notes = $3, from_date = $4, to_date = $5, booking_status_id = $6 
 		WHERE id = $7`,
@@ -188,7 +187,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_bookings WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM at_bookings WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, debugTag+"Delete() - Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -211,7 +210,7 @@ func (h *Handler) ParentRecordValidation(record models.Booking) error {
 	parentID := record.TripID
 
 	validationRecord := models.Trip{}
-	err := h.db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
+	err := h.appConf.Db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
 	FROM at_trips WHERE id = $1`, parentID)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf(debugTag + "RecordValidationDates()1 - Record not found" + err.Error())

@@ -1,6 +1,7 @@
 package handlerUserAgeGroups
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
@@ -9,23 +10,22 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerUserAgeGroups."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.UserAgeGroups{}
-	err := h.db.Select(&records, `SELECT * FROM et_user_age_groups`)
+	err := h.appConf.Db.Select(&records, `SELECT * FROM et_user_age_groups`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,7 +50,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.UserAgeGroups{}
-	err = h.db.Get(&record, `SELECT * FROM et_user_age_groups WHERE id = $1`, id)
+	err = h.appConf.Db.Get(&record, `SELECT * FROM et_user_age_groups WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -72,7 +72,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.db.QueryRow(`
+	err := h.appConf.Db.QueryRow(`
 		INSERT INTO et_user_age_groups (category)
 		VALUES ($1) RETURNING id`,
 		record.AgeGroup,
@@ -103,7 +103,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	_, err = h.db.Exec(`
+	_, err = h.appConf.Db.Exec(`
 		UPDATE et_user_age_groups 
 		SET category = $1 
 		WHERE id = $2`,
@@ -127,7 +127,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM et_user_age_groups WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM et_user_age_groups WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

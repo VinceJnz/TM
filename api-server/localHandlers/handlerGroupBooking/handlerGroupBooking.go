@@ -1,30 +1,29 @@
 package handlerGroupBooking
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerGroupBooking."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all group bookings
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.GroupBooking{}
-	err := h.db.Select(&records, `SELECT id, group_name, owner_id, created, modified FROM at_group_bookings`)
+	err := h.appConf.Db.Select(&records, `SELECT id, group_name, owner_id, created, modified FROM at_group_bookings`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "No group bookings found", http.StatusNotFound)
 		return
@@ -48,7 +47,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.GroupBooking{}
-	err = h.db.Get(&record, `SELECT id, group_name, owner_id, created, modified 
+	err = h.appConf.Db.Get(&record, `SELECT id, group_name, owner_id, created, modified 
                              FROM at_group_bookings WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Group booking not found", http.StatusNotFound)
@@ -72,7 +71,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Begin transaction
-	tx, err := h.db.Beginx()
+	tx, err := h.appConf.Db.Beginx()
 	if err != nil {
 		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 		return
@@ -118,7 +117,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 
 	// Begin transaction
-	tx, err := h.db.Beginx()
+	tx, err := h.appConf.Db.Beginx()
 	if err != nil {
 		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 		return
@@ -157,7 +156,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Begin transaction
-	tx, err := h.db.Beginx()
+	tx, err := h.appConf.Db.Beginx()
 	if err != nil {
 		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 		return

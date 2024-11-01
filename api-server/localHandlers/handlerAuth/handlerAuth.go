@@ -1,13 +1,13 @@
 package handlerAuth
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/models"
+	"context"
 	"errors"
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerAuth."
@@ -22,11 +22,11 @@ type Session struct {
 type HandlerFunc func(http.ResponseWriter, *http.Request)
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
@@ -40,7 +40,9 @@ func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
 			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
 		}
 
-		next.ServeHTTP(w, r) // Access is correct so the request is passed to the next handler
+		ctx := context.WithValue(r.Context(), h.appConf.UserIDKey, session.User.ID)
+		next.ServeHTTP(w, r.WithContext(ctx)) // Access is correct so the request is passed to the next handler
+
 	})
 }
 
@@ -172,7 +174,7 @@ func (h *Handler) FindSessionToken(cookieStr string) (models.Token, error) {
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
-	err = h.db.QueryRow(sqlFindSessionToken, result.TokenStr).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
+	err = h.appConf.Db.QueryRow(sqlFindSessionToken, result.TokenStr).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"SessionRepo.FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
@@ -186,7 +188,7 @@ func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
 	result.Name.SetValid(name)
-	err = h.db.QueryRow(sqlFindToken, result.TokenStr, result.Name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
+	err = h.appConf.Db.QueryRow(sqlFindToken, result.TokenStr, result.Name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"SessionRepo.FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return result, err
@@ -230,7 +232,7 @@ const (
 func (h *Handler) CheckAccess(UserID int, ResourceName, ActionName string) (int, error) {
 	var err error
 	var accessType int
-	err = h.db.QueryRow(sqlCheckAccess, UserID, ResourceName, ActionName).Scan(&accessType)
+	err = h.appConf.Db.QueryRow(sqlCheckAccess, UserID, ResourceName, ActionName).Scan(&accessType)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
 		log.Println(debugTag+"AccessRepo.CheckAccess()3 ", "Access denied", "err =", err, "accessType =", accessType, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
 		return 0, err

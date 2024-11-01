@@ -26,20 +26,16 @@ import (
 )
 
 func main() {
-	db, err := app.InitDB()
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-	defer db.Close()
+	appConf := app.New()
 
 	//r := mux.NewRouter()
 	m := mux.NewRouter()
 	r := m.PathPrefix("/api/v1").Subrouter()
-	auth := handlerAuth.New(db)
+	auth := handlerAuth.New(appConf)
 	r.Use(auth.RequireRestAuthTst) // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
-	seasons := handlerSeasons.New(db)
+	seasons := handlerSeasons.New(appConf)
 	r.HandleFunc("/seasons", seasons.GetAll).Methods("GET")
 	r.HandleFunc("/seasons/{id}", seasons.Get).Methods("GET")
 	r.HandleFunc("/seasons", seasons.Create).Methods("POST")
@@ -47,7 +43,7 @@ func main() {
 	r.HandleFunc("/seasons/{id}", seasons.Delete).Methods("DELETE")
 
 	// User routes
-	user := handlerUser.New(db)
+	user := handlerUser.New(appConf)
 	r.HandleFunc("/users", user.GetAll).Methods("GET")
 	r.HandleFunc("/users/{id}", user.Get).Methods("GET")
 	r.HandleFunc("/users", user.Create).Methods("POST")
@@ -55,7 +51,7 @@ func main() {
 	r.HandleFunc("/users/{id}", user.Delete).Methods("DELETE")
 
 	// UserCategory routes
-	userAgeGroups := handlerUserAgeGroups.New(db)
+	userAgeGroups := handlerUserAgeGroups.New(appConf)
 	r.HandleFunc("/userAgeGroups", userAgeGroups.GetAll).Methods("GET")
 	r.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Get).Methods("GET")
 	r.HandleFunc("/userAgeGroups", userAgeGroups.Create).Methods("POST")
@@ -63,7 +59,7 @@ func main() {
 	r.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Delete).Methods("DELETE")
 
 	// UserPayments routes
-	userPayments := handlerUserPayments.New(db)
+	userPayments := handlerUserPayments.New(appConf)
 	r.HandleFunc("/userPayments", userPayments.GetAll).Methods("GET")
 	r.HandleFunc("/userPayments/{id}", userPayments.Get).Methods("GET")
 	r.HandleFunc("/userPayments", userPayments.Create).Methods("POST")
@@ -71,7 +67,7 @@ func main() {
 	r.HandleFunc("/userPayments/{id}", userPayments.Delete).Methods("DELETE")
 
 	// UserStatus routes
-	userStatus := handlerUserStatus.New(db)
+	userStatus := handlerUserStatus.New(appConf)
 	r.HandleFunc("/userStatus", userStatus.GetAll).Methods("GET")
 	r.HandleFunc("/userStatus/{id}", userStatus.Get).Methods("GET")
 	r.HandleFunc("/userStatus", userStatus.Create).Methods("POST")
@@ -79,7 +75,7 @@ func main() {
 	r.HandleFunc("/userStatus/{id}", userStatus.Delete).Methods("DELETE")
 
 	// Booking routes
-	booking := handlerBooking.New(db)
+	booking := handlerBooking.New(appConf)
 	r.HandleFunc("/bookings", booking.GetAll).Methods("GET")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Get).Methods("GET")
 	r.HandleFunc("/bookings", booking.Create).Methods("POST")
@@ -87,7 +83,7 @@ func main() {
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Delete).Methods("DELETE")
 
 	// BookingUsers routes
-	bookingPeople := handlerBookingPeople.New(db)
+	bookingPeople := handlerBookingPeople.New(appConf)
 	r.HandleFunc("/bookingPeople", bookingPeople.GetAll).Methods("GET")
 	r.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Get).Methods("GET")
 	r.HandleFunc("/bookingPeople", bookingPeople.Create).Methods("POST")
@@ -96,7 +92,7 @@ func main() {
 	r.HandleFunc("/bookings/{id:[0-9]+}/people", bookingPeople.GetList).Methods("GET")
 
 	// GroupBookings routes
-	groupBooking := handlerGroupBooking.New(db)
+	groupBooking := handlerGroupBooking.New(appConf)
 	r.HandleFunc("/groupBooking", groupBooking.GetAll).Methods("GET")
 	r.HandleFunc("/groupBooking/{id:[0-9]+}", groupBooking.Get).Methods("GET")
 	r.HandleFunc("/groupBooking", groupBooking.Create).Methods("POST")
@@ -104,7 +100,7 @@ func main() {
 	r.HandleFunc("/groupBooking/{id:[0-9]+}", groupBooking.Delete).Methods("DELETE")
 
 	// BookingStatus routes
-	bookingStatus := handlerBookingStatus.New(db)
+	bookingStatus := handlerBookingStatus.New(appConf)
 	r.HandleFunc("/bookingStatus", bookingStatus.GetAll).Methods("GET")
 	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Get).Methods("GET")
 	r.HandleFunc("/bookingStatus", bookingStatus.Create).Methods("POST")
@@ -112,7 +108,7 @@ func main() {
 	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Delete).Methods("DELETE")
 
 	// Trip routes
-	trip := handlerTrip.New(db)
+	trip := handlerTrip.New(appConf)
 	r.HandleFunc("/trips", trip.GetAll).Methods("GET")
 	r.HandleFunc("/trips/{id:[0-9]+}", trip.Get).Methods("GET")
 	r.HandleFunc("/trips", trip.Create).Methods("POST")
@@ -122,7 +118,7 @@ func main() {
 	r.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET")
 
 	// TripType routes
-	tripType := handlerTripType.New(db)
+	tripType := handlerTripType.New(appConf)
 	r.HandleFunc("/tripType", tripType.GetAll).Methods("GET")
 	r.HandleFunc("/tripType/{id:[0-9]+}", tripType.Get).Methods("GET")
 	r.HandleFunc("/tripType", tripType.Create).Methods("POST")
@@ -130,7 +126,7 @@ func main() {
 	r.HandleFunc("/tripType/{id:[0-9]+}", tripType.Delete).Methods("DELETE")
 
 	// TripStatus routes
-	tripStatus := handlerTripStatus.New(db)
+	tripStatus := handlerTripStatus.New(appConf)
 	r.HandleFunc("/tripStatus", tripStatus.GetAll).Methods("GET")
 	r.HandleFunc("/tripStatus/{id:[0-9]+}", tripStatus.Get).Methods("GET")
 	r.HandleFunc("/tripStatus", tripStatus.Create).Methods("POST")
@@ -138,7 +134,7 @@ func main() {
 	r.HandleFunc("/tripStatus/{id:[0-9]+}", tripStatus.Delete).Methods("DELETE")
 
 	// TripDifficulty routes
-	tripDifficulty := handlerTripDifficulty.New(db)
+	tripDifficulty := handlerTripDifficulty.New(appConf)
 	r.HandleFunc("/tripDifficulty", tripDifficulty.GetAll).Methods("GET")
 	r.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Get).Methods("GET")
 	r.HandleFunc("/tripDifficulty", tripDifficulty.Create).Methods("POST")
@@ -146,7 +142,7 @@ func main() {
 	r.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Delete).Methods("DELETE")
 
 	// TripCost routes
-	tripCosts := handlerTripCost.New(db)
+	tripCosts := handlerTripCost.New(appConf)
 	r.HandleFunc("/tripCosts", tripCosts.GetAll).Methods("GET")
 	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Get).Methods("GET")
 	r.HandleFunc("/tripCosts", tripCosts.Create).Methods("POST")
@@ -154,7 +150,7 @@ func main() {
 	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Delete).Methods("DELETE")
 
 	// TripCostGroup routes
-	tripCostGroups := handlerTripCostGroup.New(db)
+	tripCostGroups := handlerTripCostGroup.New(appConf)
 	r.HandleFunc("/tripCostGroups", tripCostGroups.GetAll).Methods("GET")
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Get).Methods("GET")
 	r.HandleFunc("/tripCostGroups", tripCostGroups.Create).Methods("POST")

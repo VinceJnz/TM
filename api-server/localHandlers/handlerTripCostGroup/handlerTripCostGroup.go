@@ -1,30 +1,29 @@
 package handlerTripCostGroup
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerTripCostGroup."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripCostGroup{}
-	err := h.db.Select(&records, `SELECT *
+	err := h.appConf.Db.Select(&records, `SELECT *
                                   FROM at_trip_cost_groups`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "No trip costs found", http.StatusNotFound)
@@ -49,7 +48,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.TripCost{}
-	err = h.db.Get(&record, `SELECT *
+	err = h.appConf.Db.Get(&record, `SELECT *
                              FROM at_trip_cost_groups WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Trip cost not found", http.StatusNotFound)
@@ -72,7 +71,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Beginx()
+	tx, err := h.appConf.Db.Beginx()
 	if err != nil {
 		http.Error(w, "Could not start transaction"+err.Error(), http.StatusInternalServerError)
 		return
@@ -116,7 +115,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	_, err = h.db.Exec(`
+	_, err = h.appConf.Db.Exec(`
         UPDATE at_trip_cost_groups 
         SET description = $1
         WHERE id = $1`,
@@ -141,7 +140,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_trip_cost_groups WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM at_trip_cost_groups WHERE id = $1", id)
 	if err != nil {
 		log.Printf("%vDelete() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)

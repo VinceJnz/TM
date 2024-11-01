@@ -7,26 +7,26 @@ import (
 	"net/http"
 	"strconv"
 
+	"api-server/v2/app"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerBookingPeople."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.BookingPeople{}
-	err := h.db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	err := h.appConf.Db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
 	FROM at_booking_people bp
 		JOIN st_users p ON p.id=bp.person_id`)
 	if err == sql.ErrNoRows {
@@ -54,7 +54,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	records := []models.BookingPeople{}
-	err = h.db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	err = h.appConf.Db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
 	FROM at_booking_people bp
 		JOIN st_users p ON p.id=bp.person_id
 	WHERE bp.booking_id = $1`, parentID)
@@ -82,7 +82,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.BookingPeople{}
-	err = h.db.Get(&record, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	err = h.appConf.Db.Get(&record, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
 	FROM at_booking_people bp
 		JOIN st_users p ON p.id=bp.person_id
 	WHERE bp.id = $1`, id)
@@ -108,7 +108,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.db.QueryRow(`
+	err := h.appConf.Db.QueryRow(`
 		INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) 
 		VALUES ($1, $2, $3, $4) RETURNING id`,
 		record.OwnerID, record.BookingID, record.PersonID, record.Notes,
@@ -141,7 +141,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	_, err = h.db.Exec(`
+	_, err = h.appConf.Db.Exec(`
 		UPDATE at_booking_people
 		SET owner_id = $1, booking_id = $2, person_id = $3, notes = $4
 		WHERE id = $5`,
@@ -167,7 +167,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_booking_people WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM at_booking_people WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

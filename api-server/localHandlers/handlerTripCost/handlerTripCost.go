@@ -1,30 +1,29 @@
 package handlerTripCost
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerTripCost."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripCost{}
-	err := h.db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
+	err := h.appConf.Db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
 	FROM public.at_trip_costs attc
 	LEFT JOIN et_user_status etus on etus.id = attc.user_status_id
 	JOIN et_user_age_groups etuag on etuag.id = attc.user_age_group_id
@@ -53,7 +52,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.TripCost{}
-	err = h.db.Get(&record, `SELECT *
+	err = h.appConf.Db.Get(&record, `SELECT *
                              FROM at_trip_costs WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Trip cost not found", http.StatusNotFound)
@@ -76,7 +75,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Beginx()
+	tx, err := h.appConf.Db.Beginx()
 	if err != nil {
 		http.Error(w, "Could not start transaction"+err.Error(), http.StatusInternalServerError)
 		return
@@ -120,7 +119,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	_, err = h.db.Exec(`
+	_, err = h.appConf.Db.Exec(`
         UPDATE at_trip_costs 
         SET trip_cost_group_id = $1, user_status_id = $2, user_age_group_id = $3, season_id = $4, amount = $5
         WHERE id = $6`,
@@ -145,7 +144,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_trip_costs WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM at_trip_costs WHERE id = $1", id)
 	if err != nil {
 		log.Printf("%vDelete() failed to execute query: %v\n", debugTag, err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)

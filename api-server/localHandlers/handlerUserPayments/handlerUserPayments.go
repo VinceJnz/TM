@@ -1,30 +1,29 @@
 package handlerUserPayments
 
 import (
+	"api-server/v2/app"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "handlerUserPayments."
 
 type Handler struct {
-	db *sqlx.DB
+	appConf *app.Config
 }
 
-func New(db *sqlx.DB) *Handler {
-	return &Handler{db: db}
+func New(appConf *app.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.UserPayments{}
-	err := h.db.Select(&records, `SELECT atup.*
+	err := h.appConf.Db.Select(&records, `SELECT atup.*
 	FROM public.at_user_payments atup`)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -50,7 +49,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	records := []models.UserPayments{}
-	err = h.db.Select(&records, `SELECT atup.*
+	err = h.appConf.Db.Select(&records, `SELECT atup.*
 	FROM public.at_user_payments atup
 	WHERE atup.booking_id = $1`, bookingID)
 	if err == sql.ErrNoRows {
@@ -77,7 +76,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := models.UserPayments{}
-	err = h.db.Get(&record, `SELECT id, user_id, booking_id, payment_date, amount, payment_method, created, modified 
+	err = h.appConf.Db.Get(&record, `SELECT id, user_id, booking_id, payment_date, amount, payment_method, created, modified 
 		FROM at_user_payments WHERE id = $1`, id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -100,7 +99,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Beginx() // Start transaction
+	tx, err := h.appConf.Db.Beginx() // Start transaction
 	if err != nil {
 		http.Error(w, debugTag+"Create()1: Could not start transaction", http.StatusInternalServerError)
 		return
@@ -146,7 +145,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	_, err = h.db.Exec(`
+	_, err = h.appConf.Db.Exec(`
 		UPDATE at_user_payments
 		SET user_id = $1, booking_id = $2, payment_date = $3, amount = $4, payment_method = $5
 		WHERE id = $6`,
@@ -172,7 +171,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec("DELETE FROM at_user_payments WHERE id = $1", id)
+	_, err = h.appConf.Db.Exec("DELETE FROM at_user_payments WHERE id = $1", id)
 	if err != nil {
 		http.Error(w, debugTag+"Delete() - Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return

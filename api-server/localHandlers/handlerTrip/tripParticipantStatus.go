@@ -12,7 +12,7 @@ import (
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 	records := []models.TripParticipantStatus{}
 
-	err := h.db.Select(&records, `WITH booking_order AS (
+	err := h.appConf.Db.Select(&records, `WITH booking_order AS (
     SELECT 
         atb.trip_id,
 		atb.id as booking_id,
