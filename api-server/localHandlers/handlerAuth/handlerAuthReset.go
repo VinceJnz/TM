@@ -27,8 +27,8 @@ func (h *Handler) AuthReset(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	username = vars["username"]
 
-	user := models.User{}
-	user, err = h.srvc.UserUtils.GetUserAuth(username)
+	user := models.UserAuth{}
+	user, err = h.GetUserAuth(username)
 	if err != nil {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()3 user not found ", "username =", username)
 		w.WriteHeader(http.StatusNotFound)
@@ -36,7 +36,7 @@ func (h *Handler) AuthReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((models.AccountStatus(user.UserStatusID.Int64) == models.AccountCurrent) || (models.AccountStatus(user.UserStatusID.Int64) == models.AccountResetRequired)) {
+	if !((models.AccountStatus(user.AccountStatusID.Int64) == models.AccountCurrent) || (models.AccountStatus(user.AccountStatusID.Int64) == models.AccountResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "username =", username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))

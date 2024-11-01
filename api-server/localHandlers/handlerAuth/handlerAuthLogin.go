@@ -25,13 +25,13 @@ import (
 func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var username string
-	var user models.User
+	var user models.UserAuth
 
 	vars := mux.Vars(r)
 	username = vars["username"]
 
 	//Get the salt for the user
-	user, err = h.srvc.UserUtils.GetUserSalt(username)
+	user, err = h.GetUserSalt(username)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthGetSalt()5 ", "err =", err, "user =", user)
 		return
@@ -56,7 +56,7 @@ func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	var err error
 	//var username string
-	var user models.User
+	var user models.UserAuth
 	var A = &big.Int{}
 	var ServerVerify serverVerify
 	var group = srp.RFC5054Group3072 //?????????? This needs to be managed at run time ??????????????
@@ -66,7 +66,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	user.Username = vars["username"]
 
 	//Get store user auth info (salt, etc...)
-	user, err = h.srvc.UserUtils.GetUserAuth(user.Username)
+	user, err = h.GetUserAuth(user.Username)
 	if err != nil {
 		log.Println(debugTag + "Handler.AuthGetKeyB()5 Fatal: can't retrieve user auth")
 		return

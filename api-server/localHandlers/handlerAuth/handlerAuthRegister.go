@@ -73,7 +73,7 @@ func (h *Handler) PoolGet(token string) *poolItem {
 // Create creates a new user account and responds with a token that can be used to validate the email address
 func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var user models.User
+	var user models.UserAuth
 
 	//Process the web data
 	body, err := io.ReadAll(r.Body)
@@ -104,7 +104,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Set the password in the DB
-	err = h.srvc.UserUtils.PutUserAuth(user)
+	err = h.PutUserAuth(user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()7 ", "err =", err, "user =", user)
 		status, err := ctrlMain.SqlErr(err)

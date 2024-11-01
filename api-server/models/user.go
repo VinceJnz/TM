@@ -59,3 +59,21 @@ type UserPayments struct {
 	Created       time.Time   `json:"created" db:"created"`
 	Modified      time.Time   `json:"modified" db:"modified"`
 }
+
+// User stores user information
+type UserAuth struct {
+	ID          int
+	Status      string
+	DisplayName string
+	Username    string
+	//Phone          zero.String
+	Email zero.String
+	//Address        zero.String
+	//DOB            zero.Time
+	//MemberCode zero.String
+	//Password       zero.String //Probably should never populate this field????
+	AccountStatusID zero.Int
+	//MemberStatusID zero.Int
+	Salt     []byte
+	Verifier *big.Int //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
+}
