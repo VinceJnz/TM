@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"encoding/json"
 	"io"
@@ -75,7 +76,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err != nil {
 		log.Println(debugTag+"Handler.AuthUpdate()2 ", "err =", err, "r.PostForm =", r.PostForm, "body =", string(body))
-		status, err := ctrlMain.SqlErr(err)
+		status, err := helpers.SqlErr(err)
 		http.Error(w, err.Error(), status)
 		return
 	}

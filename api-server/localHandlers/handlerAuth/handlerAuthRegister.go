@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"encoding/json"
 	"io"
@@ -80,7 +81,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err != nil {
 		log.Println(debugTag+"Handler.AccountCreate()2 ", "err =", err, "r.PostForm =", r.PostForm, "body =", string(body))
-		status, err := ctrlMain.SqlErr(err)
+		status, err := helpers.SqlErr(err)
 		http.Error(w, err.Error(), status)
 		return
 	}
@@ -98,7 +99,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	user.ID, err = h.srvc.User.WriteDB(0, &user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()6 ", "err =", err, "user =", user)
-		status, err := ctrlMain.SqlErr(err)
+		status, err := helpers.SqlErr(err)
 		http.Error(w, err.Error(), status)
 		return
 	}
@@ -107,7 +108,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	err = h.PutUserAuth(user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()7 ", "err =", err, "user =", user)
-		status, err := ctrlMain.SqlErr(err)
+		status, err := helpers.SqlErr(err)
 		http.Error(w, err.Error(), status)
 		return
 	}
@@ -166,7 +167,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	token, err := h.srvc.Session.FindToken("accountValidation", tokenStr)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()5 ", "err =", err, "token =", token)
-		status, err := ctrlMain.SqlErr(err)
+		status, err := helpers.SqlErr(err)
 		http.Error(w, err.Error(), status)
 		return
 	}

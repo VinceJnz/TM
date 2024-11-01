@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-//const debugTag = "helpers."
+const debugTag = "helpers."
 
 func GetIDFromRequest(r *http.Request) (int, error) {
 	params := mux.Vars(r)

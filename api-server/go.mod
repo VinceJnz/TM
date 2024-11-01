@@ -4,6 +4,7 @@ go 1.21.5
 
 require (
 	github.com/1Password/srp v0.2.0
+	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/guregu/null/v5 v5.0.0
@@ -14,6 +15,7 @@ require (
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	golang.org/x/text v0.3.4 // indirect
