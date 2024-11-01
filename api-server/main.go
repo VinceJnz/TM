@@ -35,6 +35,15 @@ func main() {
 	auth := handlerAuth.New(appConf)
 	r.Use(auth.RequireRestAuthTst) // Add some middleware, e.g. an auth handler
 
+	//SRP authentication and registration process handlers
+	r.HandleFunc("/api/v1/auth/register/", auth.AccountCreate).Methods("Post")
+	r.HandleFunc("/api/v1/auth/{username}/salt/", auth.AuthGetSalt).Methods("Get", "Options")
+	r.HandleFunc("/api/v1/auth/{username}/key/{A}", auth.AuthGetKeyB).Methods("Get")
+	r.HandleFunc("/api/v1/auth/proof/", auth.AuthCheckClientProof).Methods("Post")
+	r.HandleFunc("/api/v1/auth/validate/{token}", auth.AccountValidate).Methods("Get")
+	r.HandleFunc("/api/v1/auth/reset/{username}/password/", auth.AuthReset).Methods("Get")
+	r.HandleFunc("/api/v1/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
+
 	// Seasons routes
 	seasons := handlerSeasons.New(appConf)
 	r.HandleFunc("/seasons", seasons.GetAll).Methods("GET")

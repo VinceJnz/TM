@@ -7,6 +7,16 @@ import (
 	"github.com/guregu/null/v5/zero"
 )
 
+type AccountStatus int64
+
+const (
+	AccountCurrent AccountStatus = iota + 1
+	AccountDisabled
+	AccountNew
+	AccountVerified
+	AccountResetRequired
+)
+
 type User struct {
 	ID              int         `json:"id" db:"id"`
 	Name            string      `json:"name" db:"name"`
@@ -16,11 +26,11 @@ type User struct {
 	MemberCode      zero.String `json:"member_code" db:"member_code"`
 	BirthDate       zero.Time   `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
 	UserAgeGroupID  int         `json:"user_age_group_id" db:"user_age_group_id"`
-	UserStatusID    int         `json:"user_status_id" db:"user_status_id"`
+	UserStatusID    zero.Int    `json:"user_status_id" db:"user_status_id"`
 	Password        string      `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
 	Salt            []byte      `json:"salt" db:"salt"`
 	Verifier        *big.Int    `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-	AccountStatusID int         `json:"user_account_status_id" db:"user_account_status_id"`
+	AccountStatusID zero.Int    `json:"user_account_status_id" db:"user_account_status_id"`
 	Created         time.Time   `json:"created" db:"created"`
 	Modified        time.Time   `json:"modified" db:"modified"`
 }

@@ -21,13 +21,27 @@ type Session struct {
 
 type HandlerFunc func(http.ResponseWriter, *http.Request)
 
+//type Handler struct {
+//	appConf *app.Config
+//}
+
 type Handler struct {
 	appConf *app.Config
+	Pool    map[string]*poolItem
 }
 
 func New(appConf *app.Config) *Handler {
-	return &Handler{appConf: appConf}
+	return &Handler{
+		appConf: appConf,
+		//srvc:    app.Service,
+		//app:     app,
+		Pool: make(map[string]*poolItem),
+	}
 }
+
+//func New(appConf *app.Config) *Handler {
+//	return &Handler{appConf: appConf}
+//}
 
 func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
 	session := &Session{}
