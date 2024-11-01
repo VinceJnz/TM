@@ -331,7 +331,7 @@ func (editor *ItemEditor) FetchItems() {
 		editor.RecordState = RecordStateCurrent
 		localApiURL := editor.baseURL + apiURL
 		if editor.ParentData.ID != 0 {
-			localApiURL = "http://localhost:8085/trips/" + strconv.Itoa(editor.ParentData.ID) + "/bookings"
+			localApiURL = editor.baseURL + "/trips/" + strconv.Itoa(editor.ParentData.ID) + apiURL
 		}
 		go func() {
 			var records []TableData
