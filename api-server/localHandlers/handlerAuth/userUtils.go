@@ -35,15 +35,15 @@ WHERE su.User_status_ID=1 AND sug.Group_ID=$1`
 
 // CheckPassword checks that the users Auth info matches the Auth info stored in the DB
 // Need to depreciate this ??????????????? why??????????????? it is currently used by ctrlMainLogin
-func (h *Handler) CheckUserAuth(username, password string) (models.UserAuth, error) {
+func (h *Handler) CheckUserAuth(username, password string) (models.User, error) {
 	var err error
-	var result models.UserAuth
+	var result models.User
 
 	//err = r.DBConn.QueryRow(sqlCheckUserAuth, username, password).Scan(&result.ID, &result.UserName, &result.Salt)
 	err = h.appConf.Db.QueryRow(sqlCheckUserAuth, username).Scan(&result.ID, &result.Username, &result.Salt)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"UserUtilsRepo.CheckPassword()2 ", "err =", err, "result =", result, "r.DBConn.DB =", h.appConf.Db.DB)
-		return models.UserAuth{}, err //password check failed
+		return models.User{}, err //password check failed
 	}
 	//return result, nil //nil error = password check succeeded, return User.ID, User.UserName
 	return result, errors.New("Depreciated")
@@ -53,7 +53,7 @@ func (h *Handler) CheckUserAuth(username, password string) (models.UserAuth, err
 // Need to depreciate this ??????????????? why??????????????? it is currently used in by the following...
 // handler\rest\ctrlAuth\ctrlAuthRegister.go:107:14: h.srvc.PutUserAuth undefined (type *store.Service has no field or method PutUserAuth)
 // handler\rest\ctrlAuth\ctrlAuthReset.go:127:14: h.srvc.PutUserAuth undefined (type *store.Service has no field or method PutUserAuth)
-func (h *Handler) PutUserAuth(user models.UserAuth) error {
+func (h *Handler) UserAuthUpdate(user models.User) error {
 	var err error
 	v, _ := user.Verifier.GobEncode() //Might need to do the encoding here
 
@@ -67,24 +67,24 @@ func (h *Handler) PutUserAuth(user models.UserAuth) error {
 }
 
 // GetUserAuth retrieves the user auth info from the user table
-func (h *Handler) GetUserAuth(username string) (models.UserAuth, error) {
+func (h *Handler) GetUserAuth(username string) (models.User, error) {
 	var err error
 	//var result User
 	var v []byte
-	result := &models.UserAuth{
+	result := &models.User{
 		Verifier: &big.Int{},
 	}
 
-	err = h.appConf.Db.QueryRow(sqlGetUserAuth, username).Scan(&result.ID, &result.Username, &result.DisplayName, &result.Email, &result.AccountStatusID, &result.Salt, &v) //??????? Validator might fail, so we will need to post process it ???????
+	err = h.appConf.Db.QueryRow(sqlGetUserAuth, username).Scan(&result.ID, &result.Username, &result.Name, &result.Email, &result.AccountStatusID, &result.Salt, &v) //??????? Validator might fail, so we will need to post process it ???????
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"UserUtilsRepo.GetUserAuth()2 ", "err =", err, "result =", result, "r.DBConn.DB =", h.appConf.Db.DB)
-		return models.UserAuth{}, err //get UserAuth failed
+		return models.User{}, err //get UserAuth failed
 	}
 
 	err = result.Verifier.GobDecode(v) //Decode the verifier
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"UserUtilsRepo.GetUserAuth()3 ", "err =", err, "result =", result, "v =", v)
-		return models.UserAuth{}, err //get UserAuth failed
+		return models.User{}, err //get UserAuth failed
 	}
 
 	return *result, nil //return UserAuth info
@@ -104,10 +104,10 @@ func (h *Handler) GetUserSalt(username string) (models.UserAuth, error) {
 }
 
 // GetAdminList retrieves the user details (email address, etc) for the specified group
-func (h *Handler) GetAdminList(groupID int64) ([]models.UserAuth, error) {
+func (h *Handler) GetAdminList(groupID int64) ([]models.User, error) {
 	var err error
-	var result models.UserAuth
-	var list []models.UserAuth
+	var result models.User
+	var list []models.User
 
 	rows, err := h.appConf.Db.Query(sqlGetAdminList, groupID)
 	if err != nil {
@@ -117,7 +117,7 @@ func (h *Handler) GetAdminList(groupID int64) ([]models.UserAuth, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		err = rows.Scan(&result.ID, &result.Username, &result.DisplayName, &result.Email)
+		err = rows.Scan(&result.ID, &result.Username, &result.Name, &result.Email)
 		if err != nil {
 			log.Println(debugTag+"UserUtilsRepo.GetAdminList()2 - ", "sqlGetAdminList =", sqlGetAdminList, "result =", result, "err =", err)
 			//log.Fatal(err)

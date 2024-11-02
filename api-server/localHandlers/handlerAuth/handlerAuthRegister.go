@@ -74,7 +74,7 @@ func (h *Handler) PoolGet(token string) *poolItem {
 // Create creates a new user account and responds with a token that can be used to validate the email address
 func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var user models.UserAuth
+	var user models.User
 
 	//Process the web data
 	body, err := io.ReadAll(r.Body)
@@ -95,8 +95,8 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Create the new user record in the DB - this doesn't store the password
-	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.AccountCreate()5", "h.srvc =", h.srvc, "&user =", &user)
-	user.ID, err = h.srvc.User.WriteDB(0, &user)
+	log.Printf("%v %v %+v", debugTag+"Handler.AccountCreate()5", "&user =", &user)
+	user.ID, err = h.UserWriteQry(user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()6 ", "err =", err, "user =", user)
 		status, err := helpers.SqlErr(err)
@@ -105,7 +105,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Set the password in the DB
-	err = h.PutUserAuth(user)
+	err = h.UserAuthUpdate(user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()7 ", "err =", err, "user =", user)
 		status, err := helpers.SqlErr(err)
@@ -124,7 +124,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	//Send email to the user with the token so that they can validate the new logon ?????????
 	//h.app.EmailSvc.SendMail(application.Email, "vince.jennings@gmail.com", "New account validation", "New user: "+user.UserName+" <"+user.Email.String+">\n Validation link "+r.Header["Origin"][0]+h.app.Settings.APIprefix+"/accountvalidate/"+token.TokenStr.String)
 	//h.app.EmailSvc.SendMail(user.Email.String, "New account validation", "New user: "+user.UserName+" <"+user.Email.String+">\n Validation link "+r.Header["Origin"][0]+h.app.Settings.APIprefix+"/auth/validate/"+token.TokenStr.String)
-	json.NewEncoder(w).Encode("Account created. Check your email for a validation link" + "New user: " + user.Username + " <" + user.Email.String + ">\n Validation link " + r.Header["Origin"][0] + h.app.Settings.APIprefix + "/auth/validate/" + token.TokenStr.String)
+	json.NewEncoder(w).Encode("Account created. Check your email for a validation link" + "New user: " + user.Username + " <" + user.Email.String + ">\n Validation link " + r.Header["Origin"][0] + h.appConf.Settings.APIprefix + "/auth/validate/" + token.TokenStr.String)
 	//json.NewEncoder(w).Encode("Account created. Check your email for a validation link")
 }
 
@@ -149,7 +149,8 @@ func (h *Handler) createToken(userID int, host, tokenName string, duration strin
 	token.ValidFrom.SetValid(validFrom)
 	token.ValidTo.SetValid(validTo)
 
-	token.ID, err = h.srvc.Token.WriteDB(token.ID, &token)
+	//token.ID, err = h.srvc.Token.WriteDB(token.ID, &token)
+	token.ID, err = h.TokenWriteQry(token)
 
 	return token, err
 }
@@ -164,7 +165,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tokenStr = vars["token"]
 
-	token, err := h.srvc.Session.FindToken("accountValidation", tokenStr)
+	token, err := h.FindToken("accountValidation", tokenStr)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()5 ", "err =", err, "token =", token)
 		status, err := helpers.SqlErr(err)
@@ -172,7 +173,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//delete/invalidate the token - it is allowed to be used only once.
-	err = h.srvc.Token.DeleteDB(token.ID)
+	err = h.TokenDeleteQry(token.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()6 ", "err =", err, "token =", token)
 		return
@@ -180,19 +181,19 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 
 	//Set the user account to verified
 	//err = h.srvc.SetUserStatus(token.UserID, mdlUser.Verified)
-	err = h.srvc.UserStatus.SetStatusID(token.UserID, models.AccountVerified)
+	err = h.UserSetStatusID(token.UserID, models.AccountVerified)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7 ", "err =", err, "token =", token)
 		return
 	}
 
 	//Get the user details and Send an email to the user
-	user := models.User{}
-	h.srvc.User.ReadDB(token.UserID, &user)
-	//h.app.EmailSvc.SendMail(user.Email.String, "New account validated", user.DisplayName+": Your account for '"+user.UserName+" <"+user.Email.String+">' has been validated.\nAn administrator will review your account and activate it shortly.")
+	user, err := h.UserReadQry(token.UserID)
+	log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7 ", "err =", err, "user =", user)
+	//h.app.EmailSvc.SendMail(user.Email.String, "New account validated", user.Name+": Your account for '"+user.Username+" <"+user.Email.String+">' has been validated.\nAn administrator will review your account and activate it shortly.")
 
 	//Notify administrators of the validated accounts
-	adminList, err := h.srvc.UserUtils.GetAdminList(1)
+	adminList, err := h.GetAdminList(1)
 	if err == nil {
 		for _, adminUser := range adminList {
 			log.Printf("%v %v %+v", debugTag+"Handler.AccountValidate()8 ", "adminUser =", adminUser)

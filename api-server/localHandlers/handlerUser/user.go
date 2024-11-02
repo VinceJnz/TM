@@ -68,9 +68,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.User
 	json.NewDecoder(r.Body).Decode(&record)
 
-	err := h.appConf.Db.QueryRow(
-		"INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id",
-		record.Name, record.Username, record.Email).Scan(&record.ID)
+	err := h.CreateQry(record)
 	if err != nil {
 		log.Printf("%v.Create()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,8 +94,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&record)
 	record.ID = id
 
-	_, err = h.appConf.Db.Exec("UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4",
-		record.Name, record.Username, record.Email, record.ID)
+	err = h.UpdateQry(record)
 	if err != nil {
 		log.Printf("%v.Update()2 %v\n", debugTag, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

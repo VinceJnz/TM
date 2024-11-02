@@ -28,7 +28,7 @@ func (h *Handler) AuthReset(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	username = vars["username"]
 
-	user := models.UserAuth{}
+	user := models.User{}
 	user, err = h.GetUserAuth(username)
 	if err != nil {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()3 user not found ", "username =", username)
@@ -89,14 +89,14 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err = h.srvc.Session.FindToken("passwordReset", tokenStr)
+	token, err = h.FindToken("passwordReset", tokenStr)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()5 ", "err =", err, "tokenStr =", tokenStr)
 		return
 	}
 
 	//Get the server user info
-	err = h.srvc.User.ReadDB(token.UserID, &userS)
+	userS, err = h.UserReadQry(token.UserID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()6 ", "err =", err, "token =", token)
 		return
@@ -109,7 +109,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.srvc.Token.DeleteDB(token.ID)
+	err = h.TokenDeleteQry(token.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()7 ", "err =", err, "token =", token)
 	}
@@ -124,14 +124,14 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 	userS.Verifier = userC.Verifier
 	userS.Salt = userC.Salt
 
-	err = h.srvc.UserUtils.PutUserAuth(userS)
+	err = h.UserAuthUpdate(userS)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()9 ", "err =", err, "userS =", userS)
 		return
 	}
 
 	if models.AccountStatus(userS.UserStatusID.ValueOrZero()) == models.AccountResetRequired {
-		err = h.srvc.UserStatus.SetStatusID(userS.ID, models.AccountCurrent)
+		err = h.UserSetStatusID(userS.ID, models.AccountCurrent)
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()10 ", "err =", err, "userS =", userS)
 		}

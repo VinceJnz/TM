@@ -21,7 +21,7 @@ type User struct {
 	ID              int         `json:"id" db:"id"`
 	Name            string      `json:"name" db:"name"`
 	Username        string      `json:"username" db:"username"`
-	Email           string      `json:"email" db:"email"`
+	Email           zero.String `json:"email" db:"email"`
 	Address         zero.String `json:"user_address" db:"user_address"`
 	MemberCode      zero.String `json:"member_code" db:"member_code"`
 	BirthDate       zero.Time   `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
@@ -62,10 +62,10 @@ type UserPayments struct {
 
 // User stores user information
 type UserAuth struct {
-	ID          int
-	Status      string
-	DisplayName string
-	Username    string
+	ID       int
+	Status   string
+	Name     string
+	Username string
 	//Phone          zero.String
 	Email zero.String
 	//Address        zero.String

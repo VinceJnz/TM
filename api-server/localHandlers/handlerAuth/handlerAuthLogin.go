@@ -57,7 +57,7 @@ func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	var err error
 	//var username string
-	var user models.UserAuth
+	var user models.User
 	var A = &big.Int{}
 	var ServerVerify serverVerify
 	var group = srp.RFC5054Group3072 //?????????? This needs to be managed at run time ??????????????
@@ -183,7 +183,8 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.srvc.User.ReadDB(userID, &user) //Fetch the user details
+	//h.srvc.User.ReadDB(userID, &user) //Fetch the user details
+	user, err = h.UserReadQry(userID)
 
 	// If all okay we can let the user know
 	http.SetCookie(w, sessionToken)
@@ -231,15 +232,15 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 	tokenItem.ValidFrom.SetValid(time.Now())
 	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
 
-	tokenItem.ID, err = h.srvc.Token.WriteDB(tokenItem.ID, &tokenItem)
+	tokenItem.ID, err = h.TokenWriteQry(tokenItem)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 	} else {
-		err = h.srvc.TokenUtils.CleanOld(tokenItem.ID)
+		err = h.TokenCleanOld(tokenItem.ID)
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}
-		h.srvc.TokenUtils.CleanExpired()
+		h.TokenCleanExpired()
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}
