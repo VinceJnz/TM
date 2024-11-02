@@ -20,6 +20,7 @@ import (
 	"api-server/v2/localHandlers/handlerUserStatus"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/handlers"
 )
@@ -28,7 +29,8 @@ func main() {
 	app := appCore.New()
 	defer app.Close()
 
-	r := app.Mux.PathPrefix("/api/v1").Subrouter()
+	//r := app.Mux.PathPrefix("/api/v1").Subrouter()
+	r := app.Mux.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	auth := handlerAuth.New(app)
 	r.Use(auth.RequireRestAuthTst) // Add some middleware, e.g. an auth handler
 
