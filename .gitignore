@@ -11,3 +11,4 @@ logs
 log*
 Server*
 log*.txt
+.env
