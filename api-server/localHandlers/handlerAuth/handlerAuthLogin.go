@@ -179,12 +179,18 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to create cookie"))
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()8: createSessionToken fail", "", err, "userID =", userID, "r.RemoteAddr =", r.RemoteAddr)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()8: Failed to create cookie, createSessionToken fail", "", err, "userID =", userID, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
 
 	//h.srvc.User.ReadDB(userID, &user) //Fetch the user details
 	user, err = h.UserReadQry(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to retreive user details"))
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()9: Failed to retreive user details", "", err, "userID =", userID, "r.RemoteAddr =", r.RemoteAddr)
+		return
+	}
 
 	// If all okay we can let the user know
 	http.SetCookie(w, sessionToken)
