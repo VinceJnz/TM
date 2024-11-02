@@ -22,30 +22,27 @@ import (
 	"net/http"
 
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 )
 
 func main() {
-	appConf := appCore.New()
-	defer appConf.Db.Close()
+	app := appCore.New()
+	defer app.Close()
 
-	//r := mux.NewRouter()
-	m := mux.NewRouter()
-	r := m.PathPrefix("/api/v1").Subrouter()
-	auth := handlerAuth.New(appConf)
+	r := app.Mux.PathPrefix("/api/v1").Subrouter()
+	auth := handlerAuth.New(app)
 	r.Use(auth.RequireRestAuthTst) // Add some middleware, e.g. an auth handler
 
 	//SRP authentication and registration process handlers
-	r.HandleFunc("/api/v1/auth/register/", auth.AccountCreate).Methods("Post")
-	r.HandleFunc("/api/v1/auth/{username}/salt/", auth.AuthGetSalt).Methods("Get", "Options")
-	r.HandleFunc("/api/v1/auth/{username}/key/{A}", auth.AuthGetKeyB).Methods("Get")
-	r.HandleFunc("/api/v1/auth/proof/", auth.AuthCheckClientProof).Methods("Post")
-	r.HandleFunc("/api/v1/auth/validate/{token}", auth.AccountValidate).Methods("Get")
-	r.HandleFunc("/api/v1/auth/reset/{username}/password/", auth.AuthReset).Methods("Get")
-	r.HandleFunc("/api/v1/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
+	r.HandleFunc("/auth/register/", auth.AccountCreate).Methods("Post")
+	r.HandleFunc("/auth/{username}/salt/", auth.AuthGetSalt).Methods("Get", "Options")
+	r.HandleFunc("/auth/{username}/key/{A}", auth.AuthGetKeyB).Methods("Get")
+	r.HandleFunc("/auth/proof/", auth.AuthCheckClientProof).Methods("Post")
+	r.HandleFunc("/auth/validate/{token}", auth.AccountValidate).Methods("Get")
+	r.HandleFunc("/auth/reset/{username}/password/", auth.AuthReset).Methods("Get")
+	r.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
 
 	// Seasons routes
-	seasons := handlerSeasons.New(appConf)
+	seasons := handlerSeasons.New(app)
 	r.HandleFunc("/seasons", seasons.GetAll).Methods("GET")
 	r.HandleFunc("/seasons/{id}", seasons.Get).Methods("GET")
 	r.HandleFunc("/seasons", seasons.Create).Methods("POST")
@@ -53,7 +50,7 @@ func main() {
 	r.HandleFunc("/seasons/{id}", seasons.Delete).Methods("DELETE")
 
 	// User routes
-	user := handlerUser.New(appConf)
+	user := handlerUser.New(app)
 	r.HandleFunc("/users", user.GetAll).Methods("GET")
 	r.HandleFunc("/users/{id}", user.Get).Methods("GET")
 	r.HandleFunc("/users", user.Create).Methods("POST")
@@ -61,7 +58,7 @@ func main() {
 	r.HandleFunc("/users/{id}", user.Delete).Methods("DELETE")
 
 	// UserCategory routes
-	userAgeGroups := handlerUserAgeGroups.New(appConf)
+	userAgeGroups := handlerUserAgeGroups.New(app)
 	r.HandleFunc("/userAgeGroups", userAgeGroups.GetAll).Methods("GET")
 	r.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Get).Methods("GET")
 	r.HandleFunc("/userAgeGroups", userAgeGroups.Create).Methods("POST")
@@ -69,7 +66,7 @@ func main() {
 	r.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Delete).Methods("DELETE")
 
 	// UserPayments routes
-	userPayments := handlerUserPayments.New(appConf)
+	userPayments := handlerUserPayments.New(app)
 	r.HandleFunc("/userPayments", userPayments.GetAll).Methods("GET")
 	r.HandleFunc("/userPayments/{id}", userPayments.Get).Methods("GET")
 	r.HandleFunc("/userPayments", userPayments.Create).Methods("POST")
@@ -77,7 +74,7 @@ func main() {
 	r.HandleFunc("/userPayments/{id}", userPayments.Delete).Methods("DELETE")
 
 	// UserStatus routes
-	userStatus := handlerUserStatus.New(appConf)
+	userStatus := handlerUserStatus.New(app)
 	r.HandleFunc("/userStatus", userStatus.GetAll).Methods("GET")
 	r.HandleFunc("/userStatus/{id}", userStatus.Get).Methods("GET")
 	r.HandleFunc("/userStatus", userStatus.Create).Methods("POST")
@@ -85,7 +82,7 @@ func main() {
 	r.HandleFunc("/userStatus/{id}", userStatus.Delete).Methods("DELETE")
 
 	// Booking routes
-	booking := handlerBooking.New(appConf)
+	booking := handlerBooking.New(app)
 	r.HandleFunc("/bookings", booking.GetAll).Methods("GET")
 	r.HandleFunc("/bookings/{id:[0-9]+}", booking.Get).Methods("GET")
 	r.HandleFunc("/bookings", booking.Create).Methods("POST")
@@ -94,7 +91,7 @@ func main() {
 	r.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET")
 
 	// BookingUsers routes
-	bookingPeople := handlerBookingPeople.New(appConf)
+	bookingPeople := handlerBookingPeople.New(app)
 	r.HandleFunc("/bookingPeople", bookingPeople.GetAll).Methods("GET")
 	r.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Get).Methods("GET")
 	r.HandleFunc("/bookingPeople", bookingPeople.Create).Methods("POST")
@@ -103,7 +100,7 @@ func main() {
 	r.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET")
 
 	// GroupBookings routes
-	groupBooking := handlerGroupBooking.New(appConf)
+	groupBooking := handlerGroupBooking.New(app)
 	r.HandleFunc("/groupBooking", groupBooking.GetAll).Methods("GET")
 	r.HandleFunc("/groupBooking/{id:[0-9]+}", groupBooking.Get).Methods("GET")
 	r.HandleFunc("/groupBooking", groupBooking.Create).Methods("POST")
@@ -111,7 +108,7 @@ func main() {
 	r.HandleFunc("/groupBooking/{id:[0-9]+}", groupBooking.Delete).Methods("DELETE")
 
 	// BookingStatus routes
-	bookingStatus := handlerBookingStatus.New(appConf)
+	bookingStatus := handlerBookingStatus.New(app)
 	r.HandleFunc("/bookingStatus", bookingStatus.GetAll).Methods("GET")
 	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Get).Methods("GET")
 	r.HandleFunc("/bookingStatus", bookingStatus.Create).Methods("POST")
@@ -119,7 +116,7 @@ func main() {
 	r.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Delete).Methods("DELETE")
 
 	// Trip routes
-	trip := handlerTrip.New(appConf)
+	trip := handlerTrip.New(app)
 	r.HandleFunc("/trips", trip.GetAll).Methods("GET")
 	r.HandleFunc("/trips/{id:[0-9]+}", trip.Get).Methods("GET")
 	r.HandleFunc("/trips", trip.Create).Methods("POST")
@@ -128,7 +125,7 @@ func main() {
 	r.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET")
 
 	// TripType routes
-	tripType := handlerTripType.New(appConf)
+	tripType := handlerTripType.New(app)
 	r.HandleFunc("/tripType", tripType.GetAll).Methods("GET")
 	r.HandleFunc("/tripType/{id:[0-9]+}", tripType.Get).Methods("GET")
 	r.HandleFunc("/tripType", tripType.Create).Methods("POST")
@@ -136,7 +133,7 @@ func main() {
 	r.HandleFunc("/tripType/{id:[0-9]+}", tripType.Delete).Methods("DELETE")
 
 	// TripStatus routes
-	tripStatus := handlerTripStatus.New(appConf)
+	tripStatus := handlerTripStatus.New(app)
 	r.HandleFunc("/tripStatus", tripStatus.GetAll).Methods("GET")
 	r.HandleFunc("/tripStatus/{id:[0-9]+}", tripStatus.Get).Methods("GET")
 	r.HandleFunc("/tripStatus", tripStatus.Create).Methods("POST")
@@ -144,7 +141,7 @@ func main() {
 	r.HandleFunc("/tripStatus/{id:[0-9]+}", tripStatus.Delete).Methods("DELETE")
 
 	// TripDifficulty routes
-	tripDifficulty := handlerTripDifficulty.New(appConf)
+	tripDifficulty := handlerTripDifficulty.New(app)
 	r.HandleFunc("/tripDifficulty", tripDifficulty.GetAll).Methods("GET")
 	r.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Get).Methods("GET")
 	r.HandleFunc("/tripDifficulty", tripDifficulty.Create).Methods("POST")
@@ -152,7 +149,7 @@ func main() {
 	r.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Delete).Methods("DELETE")
 
 	// TripCost routes
-	tripCosts := handlerTripCost.New(appConf)
+	tripCosts := handlerTripCost.New(app)
 	r.HandleFunc("/tripCosts", tripCosts.GetAll).Methods("GET")
 	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Get).Methods("GET")
 	r.HandleFunc("/tripCosts", tripCosts.Create).Methods("POST")
@@ -160,7 +157,7 @@ func main() {
 	r.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Delete).Methods("DELETE")
 
 	// TripCostGroup routes
-	tripCostGroups := handlerTripCostGroup.New(appConf)
+	tripCostGroups := handlerTripCostGroup.New(app)
 	r.HandleFunc("/tripCostGroups", tripCostGroups.GetAll).Methods("GET")
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Get).Methods("GET")
 	r.HandleFunc("/tripCostGroups", tripCostGroups.Create).Methods("POST")

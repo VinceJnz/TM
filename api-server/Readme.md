@@ -1,6 +1,11 @@
 # Info
 
 
+## Env
+
+<https://towardsdatascience.com/use-environment-variable-in-your-next-golang-project-39e17c3aaa66>
+
+
 ## sqlx
 
 Illustrated guide to SQLX
