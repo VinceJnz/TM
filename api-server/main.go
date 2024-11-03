@@ -26,13 +26,13 @@ import (
 )
 
 func main() {
-	app := appCore.New()
+	app := appCore.New(false)
 	defer app.Close()
 
 	//r := app.Mux.PathPrefix("/api/v1").Subrouter()
 	r := app.Mux.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	auth := handlerAuth.New(app)
-	r.Use(auth.RequireRestAuthTst) // Add some middleware, e.g. an auth handler
+	r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
 	//SRP authentication and registration process handlers
 	r.HandleFunc("/auth/register/", auth.AccountCreate).Methods("Post")

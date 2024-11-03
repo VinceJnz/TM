@@ -9,28 +9,30 @@ import (
 
 type ContextKey string
 
-type Config struct {
-	Db        *sqlx.DB
-	UserIDKey ContextKey
-	Settings  settings
-	Mux       *mux.Router
-}
-
-func IdKey() ContextKey {
+func GenerateUserIDContextKey() ContextKey { // User for generating the context key for passing values via the context (ctx)
 	return ContextKey("userID")
 }
 
-func New() *Config {
+type Config struct {
+	Db        *sqlx.DB
+	UserIDKey ContextKey // User for passing the user id value via the context (ctx)
+	Settings  settings
+	Mux       *mux.Router
+	TestMode  bool
+}
+
+func New(testMode bool) *Config {
 	db, err := InitDB()
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
 
-	userIDKey := IdKey()
+	userIDKey := GenerateUserIDContextKey()
 	return &Config{
 		Db:        db,
 		UserIDKey: userIDKey,
 		Mux:       mux.NewRouter(),
+		TestMode:  testMode,
 	}
 }
 

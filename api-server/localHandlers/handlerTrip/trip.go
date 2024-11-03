@@ -31,13 +31,15 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	//FROM public.at_trips att
 	//LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id`)
 
-	userID, ok := r.Context().Value(h.appConf.UserIDKey).(int)
+	userID, ok := r.Context().Value(h.appConf.UserIDKey).(int) // Used to retrieve the userID from the context so that access level can be assessed.
 	if !ok {
+		log.Printf(debugTag+"GetAll()1 userID %v\n", userID)
 		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
 		return
 	}
-	log.Printf(debugTag+"GetAll()1 userID %v\n", userID)
+	log.Printf(debugTag+"GetAll()2 userID %v\n", userID)
 
+	// Need to add some code to check if the user has access.
 	err := h.appConf.Db.Select(&records, `SELECT att.*, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
 	FROM public.at_trips att
 	LEFT JOIN public.et_trip_difficulty ettd ON ettd.id=att.difficulty_level_id
@@ -52,7 +54,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf(debugTag+"GetAll()2 %v\n", err)
+		log.Printf(debugTag+"GetAll()3 %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -68,46 +68,62 @@ func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
 
 // RequireRestAuth checks that the request is authorised, i.e. the user has been given a cookie by loging on.
 // func (h *Handler) RequireRestAuth(fn func(http.ResponseWriter, *http.Request, *mdlSession.Item)) http.HandlerFunc {
-func (h *Handler) RequireRestAuth(fn HandlerFunc) http.HandlerFunc {
+// func (h *Handler) RequireRestAuth(next HandlerFunc) http.HandlerFunc {
+func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 	session := &Session{}
 	//log.Println(debugTag + "Handler.RequireRestAuth()1")
+	if h.appConf.TestMode {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			//var err error
 
-	//anonymous function. This is returned by this function and called via Mux.HandleFunc
-	return func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		var accessTypeID int
-
-		err = h.setRestResource(session, r)
-		if err != nil {
-			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()2", "err =", err, "session =", session, "r =", r)
-		}
-		sessionToken, err := r.Cookie("session")
-		if err == http.ErrNoCookie { // If there is no session cookie
-			log.Printf("%v %v %v %v %+v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()3", "err =", err, "session.Token =", session.Token, "session.User =", session.User, "session.Control =", session.Control, "r =", r)
-			w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-			w.Write([]byte("Logon required - You don't have access to the requested resource."))
-			return
-		} else { // If there is a session cookie try to find it in the repository
-			//_, err = h.srvc.CheckToken(session, sessionToken.Value)
-			session.Token, err = h.FindSessionToken(sessionToken.Value)
-			session.User.ID = int(session.Token.UserID)
-			if err != nil { // could not find user sessionToken so user is not authorised
-				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()4", "err =", err, "session =", session, "r =", r)
-				//w.WriteHeader(http.StatusUnauthorized)
-				//w.WriteHeader(http.StatusForbidden)
-				w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-				w.Write([]byte("Token not authorised - You don't have access to the requested resource."))
-				return
+			err := h.setRestResource(session, r)
+			if err != nil {
+				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
 			}
-		}
-		accessTypeID, err = h.UserCheckAccess(session.User.ID, session.Control.ResourceName, session.Control.AccessLevel)
-		if err != nil { // user doesn't have correct access to the resource
-			log.Printf("%v %v %v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()5", "err =", err, "session =", session, "session.User =", session.User, "r =", r)
-			http.Error(w, "You don't have access to the requested resource.", http.StatusForbidden)
-			return
-		}
-		session.Control.AccessTypeID = accessTypeID
-		fn(w, r) // Access is correct so the request is passed to the next handler
+
+			ctx := context.WithValue(r.Context(), h.appConf.UserIDKey, session.User.ID) // Store userID in the context
+			next.ServeHTTP(w, r.WithContext(ctx))                                       // Access is correct so the request is passed to the next handler
+		})
+	} else {
+		//anonymous function. This is returned by this function and called via Mux.HandleFunc
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var err error
+
+			// Plan to remove this and focus on only checking the user authentication in this handler. Will pass the userID to subsequent handlers for authorisation (access) checking.
+			//var accessTypeID int
+			//err = h.setRestResource(session, r)
+			//if err != nil {
+			//	log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()2", "err =", err, "session =", session, "r =", r)
+			//}
+			sessionToken, err := r.Cookie("session")
+			if err == http.ErrNoCookie { // If there is no session cookie
+				log.Printf("%v %v %v %v %+v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()3", "err =", err, "session.Token =", session.Token, "session.User =", session.User, "session.Control =", session.Control, "r =", r)
+				w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+				w.Write([]byte("Logon required - You don't have access to the requested resource."))
+				return
+			} else { // If there is a session cookie try to find it in the repository
+				//_, err = h.srvc.CheckToken(session, sessionToken.Value)
+				session.Token, err = h.FindSessionToken(sessionToken.Value)
+				session.User.ID = int(session.Token.UserID)
+				if err != nil { // could not find user sessionToken so user is not authorised
+					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()4", "err =", err, "session =", session, "r =", r)
+					w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+					w.Write([]byte("Token not authorised - You don't have access to the requested resource."))
+					return
+				}
+			}
+			// Plan to remove this. Will only check that the user is authenticated (logged in). Will pass the userID to subsequent handlers for authorisation (access) checking.
+			//accessTypeID, err = h.UserCheckAccess(session.User.ID, session.Control.ResourceName, session.Control.AccessLevel)
+			//if err != nil { // user doesn't have correct access to the resource
+			//	log.Printf("%v %v %v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()5", "err =", err, "session =", session, "session.User =", session.User, "r =", r)
+			//	http.Error(w, "You don't have access to the requested resource.", http.StatusForbidden)
+			//	return
+			//}
+			//session.Control.AccessTypeID = accessTypeID
+
+			ctx := context.WithValue(r.Context(), h.appConf.UserIDKey, session.User.ID) // Store User ID in the context
+			next.ServeHTTP(w, r.WithContext(ctx))                                       // Access is correct so the request is passed to the next handler
+		})
 	}
 }
 
