@@ -71,7 +71,7 @@ type AppConfig struct {
 }
 
 type View struct {
-	Document   js.Value
+	document   js.Value
 	elements   viewElements
 	events     *eventProcessor.EventProcessor
 	menuChoice MenuChoice
@@ -80,7 +80,7 @@ type View struct {
 
 func New(config AppConfig) *View {
 	view := &View{
-		Document: js.Global().Get("document"),
+		document: js.Global().Get("document"),
 		config:   config,
 	}
 	window := js.Global().Get("window")
@@ -99,36 +99,36 @@ func (v *View) Setup() {
 	v.events.AddEventHandler("displayStatus", v.updateStatus)
 
 	// Create new body element and other page elements
-	newBody := v.Document.Call("createElement", "body")
+	newBody := v.document.Call("createElement", "body")
 	newBody.Set("id", debugTag+"body")
 
-	v.elements.sidemenu = v.Document.Call("createElement", "div")
-	v.elements.navbar = v.Document.Call("createElement", "div")
-	v.elements.mainContent = v.Document.Call("createElement", "div")
-	v.elements.statusOutput = v.Document.Call("createElement", "div")
-	v.elements.pageTitle = v.Document.Call("createElement", "div")
+	v.elements.sidemenu = v.document.Call("createElement", "div")
+	v.elements.navbar = v.document.Call("createElement", "div")
+	v.elements.mainContent = v.document.Call("createElement", "div")
+	v.elements.statusOutput = v.document.Call("createElement", "div")
+	v.elements.pageTitle = v.document.Call("createElement", "div")
 
 	// Create editor div objects
-	v.elements.userEditor = userView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.bookingEditor = bookingView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.bookingStatusEditor = bookingStatusView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.gropBookingEditor = groupBookingView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.tripEditor = tripView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.tripCostGroupEditor = tripCostGroupView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.tripDifficultyEditor = tripDifficultyView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.tripStatusEditor = tripStatusView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.tripTypeEditor = tripTypeView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.seasonEditor = seasonView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.userStatusEditor = userStatusView.New(v.Document, v.events, v.config.BaseURL)
-	v.elements.participantStatusView = tripParticipantStatusReport.New(v.Document, v.events, v.config.BaseURL)
+	v.elements.userEditor = userView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.bookingEditor = bookingView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.bookingStatusEditor = bookingStatusView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.gropBookingEditor = groupBookingView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.tripEditor = tripView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.tripCostGroupEditor = tripCostGroupView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.tripDifficultyEditor = tripDifficultyView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.tripStatusEditor = tripStatusView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.tripTypeEditor = tripTypeView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.seasonEditor = seasonView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.config.BaseURL)
+	v.elements.participantStatusView = tripParticipantStatusReport.New(v.document, v.events, v.config.BaseURL)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
 	newBody.Call("appendChild", v.elements.navbar)
 
 	// Add the menu icon to the navbar
-	menuIcon := v.Document.Call("createElement", "div")
+	menuIcon := v.document.Call("createElement", "div")
 	menuIcon.Set("id", "menuIcon")
 	menuIcon.Set("innerHTML", "&#9776;")
 	menuIcon.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -151,23 +151,23 @@ func (v *View) Setup() {
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Create the menu buttons
-	xBtn := viewHelpers.HRef(v.menuX, v.Document, "&times;", "xBtn")
-	homeBtn := viewHelpers.HRef(v.menuHome, v.Document, "Home", "homeBtn")
-	aboutBtn := viewHelpers.HRef(v.menuAbout, v.Document, "About", "aboutBtn")
-	contactBtn := viewHelpers.HRef(v.menuContact, v.Document, "Contact", "contactBtn")
-	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.Document, "Users", "fetchUsersBtn")
-	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.Document, "Bookings", "fetchBookingsBtn")
-	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.Document, "BookingStatus", "fetchBookingStatusBtn")
-	fetchGroupBookingBtn := viewHelpers.HRef(v.menuGroupBooking, v.Document, "Group Booking", "fetchGroupBookingsBtn")
-	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.Document, "Trips", "fetchTripsBtn")
-	fetchTripCostGroupBtn := viewHelpers.HRef(v.menuTripGroupCost, v.Document, "Trip Cost Group", "fetchTripCostGroupBtn")
-	fetchTripDifficultyBtn := viewHelpers.HRef(v.menuTripDifficulty, v.Document, "Trip Dificulty", "fetchTripDifficultyBtn")
-	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.Document, "Trip Status", "fetchTripStatusBtn")
-	fetchTripTypeBtn := viewHelpers.HRef(v.menuTripType, v.Document, "Trip Type", "fetchTripTypeBtn")
-	fetchSeasonBtn := viewHelpers.HRef(v.menuSeason, v.Document, "Season", "fetchSeasonBtn")
-	fetchUserCategoryBtn := viewHelpers.HRef(v.menuUserCategory, v.Document, "User Category", "fetchUserCategoryBtn")
-	fetchUserStatusBtn := viewHelpers.HRef(v.menuUserStatus, v.Document, "User Status", "fetchUserStatusBtn")
-	fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.Document, "Participant Status", "fetchTripParticipantStatusBtn")
+	xBtn := viewHelpers.HRef(v.menuX, v.document, "&times;", "xBtn")
+	homeBtn := viewHelpers.HRef(v.menuHome, v.document, "Home", "homeBtn")
+	aboutBtn := viewHelpers.HRef(v.menuAbout, v.document, "About", "aboutBtn")
+	contactBtn := viewHelpers.HRef(v.menuContact, v.document, "Contact", "contactBtn")
+	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.document, "Users", "fetchUsersBtn")
+	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.document, "Bookings", "fetchBookingsBtn")
+	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.document, "BookingStatus", "fetchBookingStatusBtn")
+	fetchGroupBookingBtn := viewHelpers.HRef(v.menuGroupBooking, v.document, "Group Booking", "fetchGroupBookingsBtn")
+	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.document, "Trips", "fetchTripsBtn")
+	fetchTripCostGroupBtn := viewHelpers.HRef(v.menuTripGroupCost, v.document, "Trip Cost Group", "fetchTripCostGroupBtn")
+	fetchTripDifficultyBtn := viewHelpers.HRef(v.menuTripDifficulty, v.document, "Trip Dificulty", "fetchTripDifficultyBtn")
+	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.document, "Trip Status", "fetchTripStatusBtn")
+	fetchTripTypeBtn := viewHelpers.HRef(v.menuTripType, v.document, "Trip Type", "fetchTripTypeBtn")
+	fetchSeasonBtn := viewHelpers.HRef(v.menuSeason, v.document, "Season", "fetchSeasonBtn")
+	fetchUserCategoryBtn := viewHelpers.HRef(v.menuUserCategory, v.document, "User Category", "fetchUserCategoryBtn")
+	fetchUserStatusBtn := viewHelpers.HRef(v.menuUserStatus, v.document, "User Status", "fetchUserStatusBtn")
+	fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.document, "Participant Status", "fetchTripParticipantStatusBtn")
 
 	// Add menu buttons to the side menu
 	v.elements.sidemenu.Call("appendChild", xBtn)
@@ -214,7 +214,7 @@ func (v *View) Setup() {
 	newBody.Call("appendChild", v.elements.mainContent)
 
 	// Replace the existing body with the new body
-	v.Document.Get("documentElement").Call("replaceChild", newBody, v.Document.Get("body"))
+	v.document.Get("documentElement").Call("replaceChild", newBody, v.document.Get("body"))
 }
 
 func (v *View) hideCurrentEditor() {
@@ -426,7 +426,7 @@ func (v *View) updateStatus(event eventProcessor.Event) {
 		return
 	}
 	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
-	msgDiv := v.Document.Call("createElement", "div")
+	msgDiv := v.document.Call("createElement", "div")
 	msgDiv.Set("innerHTML", message)
 	v.elements.statusOutput.Call("appendChild", msgDiv)
 	go func() {
