@@ -2,10 +2,30 @@ package viewAccountLogout
 
 import (
 	"log"
+	"syscall/js"
 	"time"
 )
 
 const debugTag = "viewAccountLogout."
+
+type UI struct {
+	Notes           js.Value
+	FromDate        js.Value
+	ToDate          js.Value
+	BookingStatusID js.Value
+}
+
+type ParentData struct {
+	ID       int       `json:"id"`
+	FromDate time.Time `json:"from_date"`
+	ToDate   time.Time `json:"to_date"`
+}
+
+type Item struct {
+	Record TableData
+	//Add child structures as necessary
+	//BookingPeople *bookingPeopleView.ItemEditor
+}
 
 type Page struct {
 	loggedIn   bool

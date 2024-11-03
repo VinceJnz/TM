@@ -1,11 +1,32 @@
 package viewAccountReset
 
 import (
+	"client1/v2/views/account/viewAccountModels"
 	"log"
+	"syscall/js"
 	"time"
 )
 
 const debugTag = "viewAccountReset."
+
+type UI struct {
+	Notes           js.Value
+	FromDate        js.Value
+	ToDate          js.Value
+	BookingStatusID js.Value
+}
+
+type ParentData struct {
+	ID       int       `json:"id"`
+	FromDate time.Time `json:"from_date"`
+	ToDate   time.Time `json:"to_date"`
+}
+
+type Item struct {
+	Record TableData
+	//Add child structures as necessary
+	//BookingPeople *bookingPeopleView.ItemEditor
+}
 
 type processStep int
 
@@ -17,9 +38,9 @@ const (
 
 // ItemView structure for  view
 type ItemView struct {
-	Item          *mdlUser.SrpItem
+	Item          *viewAccountModels.SrpItem
 	Dispatcher    *Event.Dispatcher
-	Message       mdlMessage.Item
+	Message       viewAccountModels.Message
 	PasswordChk   string
 	Token         string // This is a temp value, used for testing account verification (instead using of email)
 	ProcessStep   processStep
@@ -30,7 +51,7 @@ type ItemView struct {
 // New creates a new ItemView
 func New(V *AppConfig) *ItemView {
 	newView := new(ItemView)
-	newView.Item = &mdlUser.SrpItem{}
+	newView.Item = &viewAccountModels.SrpItem{}
 	newView.Dispatcher = d
 	newView.ProcessStep = getUsername
 	newView.FormValid = false
@@ -56,10 +77,10 @@ func (p *ItemView) onSubmit(event *Event) {
 }
 
 func (p *ItemView) onSubmitOk(svrMessage interface{}) {
-	message := &mdlMessage.Item{
+	message := &viewAccountModels.Message{
 		Id:     0,
 		Text:   svrMessage.(string), //???? need to explain why ????? e.g. user name not found, or account locked?
-		Status: mdlMessage.StatusInfo,
+		Status: viewAccountModels.MessageStatusInfo,
 	}
 	//Step forwards in the process....
 	switch p.ProcessStep {
@@ -69,7 +90,7 @@ func (p *ItemView) onSubmitOk(svrMessage interface{}) {
 	case getToken:
 		p.ProcessStep = finished
 		p.Token = ""
-		p.Item = &mdlUser.SrpItem{}
+		p.Item = &viewAccountModels.SrpItem{}
 		p.FormValid = false
 	case finished:
 	}
@@ -81,10 +102,10 @@ func (p *ItemView) onSubmitOk(svrMessage interface{}) {
 
 func (p *ItemView) onSubmitErr(svrMessage interface{}) {
 	//Item not valid
-	message := &mdlMessage.Item{
+	message := &viewAccountModels.Message{
 		Id:     0,
 		Text:   "Username taken: " + svrMessage.(string), //p.Message.Text = err.Error() ???????????????
-		Status: mdlMessage.StatusInfo,
+		Status: viewAccountModels.MessageStatusInfo,
 	}
 	//Step backwards in the process....
 	switch p.ProcessStep {
@@ -154,7 +175,7 @@ func (p *ItemView) FormValidation() {
 
 // Render vecty render function
 // Collect the user name, password and token from the user
-func (p *ItemView) Render() ComponentOrHTML {
+func (p *ItemView) Render() {
 	return Div(
 		Markup(
 			Class("form-group"),

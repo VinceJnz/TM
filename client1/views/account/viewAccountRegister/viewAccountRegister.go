@@ -2,8 +2,8 @@ package viewAccountRegister
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/views/account/viewAccountModels"
 	"log"
-	"math/big"
 	"strconv"
 	"syscall/js"
 	"time"
@@ -11,75 +11,23 @@ import (
 
 const debugTag = "viewAccountRegister."
 
-type ItemState int
-
-const (
-	ItemStateNone     ItemState = iota
-	ItemStateFetching           //ItemState = 1
-	ItemStateEditing            //ItemState = 2
-	ItemStateAdding             //ItemState = 3
-	ItemStateSaving             //ItemState = 4
-	ItemStateDeleting           //ItemState = 5
-	ItemStateSubmitted
-)
-
-type ViewState int
-
-const (
-	ViewStateNone ViewState = iota
-	ViewStateBlock
-)
-
-type RecordState int
-
-const (
-	RecordStateReloadRequired RecordState = iota
-	RecordStateCurrent
-)
-
-type MessageStatus int
-
-const (
-	MessageStatusEmpty MessageStatus = iota
-	MessageStatusInfo
-	MessageStatusWarning
-	MessageStatusError
-)
-
-type Message struct {
-	Id     int64
-	Text   string
-	Status MessageStatus
+type UI struct {
+	Notes           js.Value
+	FromDate        js.Value
+	ToDate          js.Value
+	BookingStatusID js.Value
 }
 
-// ServerVerify contains the verify info sent from the server
-type ServerVerify struct {
-	B     *big.Int `json:"B"`
-	Proof []byte   `json:"Proof"`
-	Token string   `json:"Token"`
-}
-
-// ClientVerify contains the clinet SRP verify info and is sent to the server
-type ClientVerify struct {
-	UserName string `json:"UserName"`
-	Proof    []byte `json:"Proof"`
-	Token    string `json:"Token"`
-}
-
-// SrpItem contains the user SRP info
-type SrpItem struct {
-	Item
-	Salt     []byte   `json:"Salt"`     //Not user editable
-	Verifier *big.Int `json:"Verifier"` //Not user editable
-	Password string   `json:"Password"` //srp means this is not longer needed.
-	Server   ServerVerify
-	Client   ClientVerify
+type ParentData struct {
+	ID       int       `json:"id"`
+	FromDate time.Time `json:"from_date"`
+	ToDate   time.Time `json:"to_date"`
 }
 
 type TableData struct {
-	Item *SrpItem
+	Item *viewAccountModels.SrpItem
 	//Dispatcher    *Event.Dispatcher
-	Message       Message
+	Message       viewAccountModels.Message
 	PasswordChk   string
 	FormValid     bool
 	PasswordMatch bool
@@ -96,7 +44,7 @@ type ItemEditor struct {
 	events        *eventProcessor.EventProcessor
 	baseURL       string
 	CurrentRecord TableData
-	ItemState     ItemState
+	ItemState     viewAccountModels.ItemState
 	Records       []TableData
 	ItemList      []Item
 	UiComponents  UI
@@ -109,7 +57,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseU
 	editor.document = document
 	editor.events = eventProcessor
 	editor.baseURL = baseURL
-	editor.ItemState = ItemStateNone
+	editor.ItemState = viewAccountModels.ItemStateNone
 
 	return editor
 }
@@ -132,10 +80,10 @@ func (p *ItemView) onSubmit() {
 }
 
 func (p *ItemView) onSubmitOk(svrMessage interface{}) {
-	message := &mdlMessage.Item{
+	message := &viewAccountModels.Message{
 		Id:     0,
 		Text:   svrMessage.(string), //???? need to explain why ????? e.g. user name taken?
-		Status: mdlMessage.StatusInfo,
+		Status: viewAccountModels.MessageStatusInfo,
 	}
 	p.Dispatcher.Dispatch(&storeMessage.SetMessage{Item: message})
 	//Message.Set(message) //need to record the message ID messageID := ...
@@ -145,10 +93,10 @@ func (p *ItemView) onSubmitOk(svrMessage interface{}) {
 func (p *ItemView) onSubmitErr(err interface{}) {
 	log.Printf("%v %v %+v %v %+v", debugTag+"ItemView.onSubmitErr()1 ", "p.Item =", p.Item, "err =", err.(error))
 	//Item not valid
-	message := &mdlMessage.Item{
+	message := &viewAccountModels.Message{
 		Id:     0,
 		Text:   "Username taken: " + err.(error).Error(),
-		Status: mdlMessage.StatusWarning,
+		Status: viewAccountModels.MessageStatusWarning,
 	}
 	p.Dispatcher.Dispatch(&storeMessage.SetMessage{Item: message})
 	//Message.Set(message) //need to record the message ID messageID := ...
