@@ -37,15 +37,15 @@ func (editor *ItemEditor) getSalt() {
 		//Display message  to user ??????????????
 		editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
-	log.Printf(debugTag+"LogonForm.getSalt()1 CurrentRecord: %+v, url: %v", editor.CurrentRecord, apiURL+"/"+editor.CurrentRecord.Username+"/salt/")
+	log.Printf(debugTag+"LogonForm.getSalt()1 CurrentRecord: %+v, url: %v", editor.CurrentRecord, editor.baseURL+apiURL+"/"+editor.CurrentRecord.Username+"/salt/")
 	username := editor.CurrentRecord.Username
 	//if editor.RecordState == RecordStateReloadRequired {
 	//	editor.RecordState = RecordStateCurrent
 	go func() {
-		log.Printf(debugTag+"LogonForm.getSalt()2 CurrentRecord: %+v, username: %+v, url: %v", editor.CurrentRecord, username, apiURL+"/"+editor.CurrentRecord.Username+"/salt/")
+		log.Printf(debugTag+"LogonForm.getSalt()2 CurrentRecord: %+v, username: %+v, url: %v", editor.CurrentRecord, username, editor.baseURL+apiURL+"/"+editor.CurrentRecord.Username+"/salt/")
 		var salt []byte
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, apiURL+"/"+username+"/salt/", &salt, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+"/"+username+"/salt/", &salt, success, fail)
 		editor.Children.SrpRecord.Salt = salt
 		editor.updateStateDisplay(ItemStateNone)
 	}()
@@ -87,7 +87,7 @@ func (editor *ItemEditor) getServerVerify() {
 	go func() {
 		var record ServerVerify
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, apiURL+editor.CurrentRecord.Username+"/key/"+string(strA), &record, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+editor.CurrentRecord.Username+"/key/"+string(strA), &record, success, fail)
 		editor.Children.ServerVerifyRecord = record
 		editor.updateStateDisplay(ItemStateNone)
 	}()
@@ -155,7 +155,7 @@ func (editor *ItemEditor) checkServerKey() {
 		record.Token = editor.Children.ServerVerifyRecord.Token
 
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, apiURL+"/proof/", &record, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+"/proof/", &record, success, fail)
 		editor.Children.ClientVerifyRecord = record
 		editor.updateStateDisplay(ItemStateNone)
 	}()
