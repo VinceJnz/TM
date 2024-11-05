@@ -1,4 +1,4 @@
-package userView
+package loginView
 
 import (
 	"client1/v2/app/eventProcessor"
@@ -10,9 +10,11 @@ import (
 	"strconv"
 	"syscall/js"
 	"time"
+
+	"github.com/1Password/srp"
 )
 
-const debugTag = "userView."
+const debugTag = "loginViewA."
 
 type ItemState int
 
@@ -70,9 +72,18 @@ type UI struct {
 	Email    js.Value
 }
 
-type Item struct {
-	Record TableData
+type ParentData struct {
+	ID       int       `json:"id"`
+	FromDate time.Time `json:"from_date"`
+	ToDate   time.Time `json:"to_date"`
+}
+
+type children struct {
 	//Add child structures as necessary
+	SrpRecord          SrpItem
+	ServerVerifyRecord ServerVerify
+	ClientVerifyRecord ClientVerify
+	Group              int
 }
 
 type ItemEditor struct {
@@ -82,7 +93,6 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
-	ItemList      []Item
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
@@ -91,6 +101,11 @@ type ItemEditor struct {
 	ParentID      int
 	ViewState     ViewState
 	RecordState   RecordState
+	Children      children
+
+	LoggedIn  bool
+	SrpClient *srp.SRP
+	FormValid bool
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -125,6 +140,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseU
 		editor.ParentID = idList[0]
 	}
 
+	editor.Children.Group = srp.RFC5054Group3072
 	editor.RecordState = RecordStateReloadRequired
 
 	return editor
@@ -261,14 +277,15 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
-	switch editor.ItemState {
-	case ItemStateEditing:
-		go editor.UpdateItem(editor.CurrentRecord)
-	case ItemStateAdding:
-		go editor.AddItem(editor.CurrentRecord)
-	default:
-		editor.onCompletionMsg("Invalid item state for submission")
-	}
+	//switch editor.ItemState {
+	//case ItemStateEditing:
+	//	go editor.UpdateItem(editor.CurrentRecord)
+	//case ItemStateAdding:
+	//	go editor.AddItem(editor.CurrentRecord)
+	//default:
+	//	editor.onCompletionMsg("Invalid item state for submission")
+	//}
+	editor.authProcess()
 
 	editor.resetEditForm()
 	return nil
