@@ -61,7 +61,7 @@ type UserPayments struct {
 }
 
 // User stores user information
-type UserAuth struct {
+type UserAuthXXX struct {
 	ID       int
 	Status   string
 	Name     string

@@ -26,7 +26,7 @@ import (
 func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var username string
-	var user models.UserAuth
+	var user models.User
 
 	vars := mux.Vars(r)
 	username = vars["username"]

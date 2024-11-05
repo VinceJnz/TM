@@ -91,14 +91,14 @@ func (h *Handler) GetUserAuth(username string) (models.User, error) {
 }
 
 // GetUserSalt gets the Auth salt for the specified username
-func (h *Handler) GetUserSalt(username string) (models.UserAuth, error) {
+func (h *Handler) GetUserSalt(username string) (models.User, error) {
 	var err error
-	var result models.UserAuth
+	var result models.User
 
 	err = h.appConf.Db.QueryRow(sqlGetUserSalt, username).Scan(&result.ID, &result.Username, &result.AccountStatusID, &result.Salt)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %v %v %+v %v %+v", debugTag+"UserUtilsRepo.GetUserSalt()2 ", "err =", err, "username =", username, "sqlGetUserSalt =", sqlGetUserSalt, "result =", result, "r.DBConn.DB =", h.appConf.Db.DB)
-		return models.UserAuth{}, err //GetSalt failed
+		return models.User{}, err //GetSalt failed
 	}
 	return result, nil //return User.ID, User.UserName, User.Salt
 }
