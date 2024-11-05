@@ -59,6 +59,20 @@ func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Val
 	return button
 }
 
+// func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+func Button2(onClick func() interface{}, doc js.Value, displayText, htmlID string) js.Value {
+	button := doc.Call("createElement", "button")
+	button.Set("id", htmlID)
+	button.Set("type", "button")
+	button.Set("innerHTML", displayText)
+	f := func(this js.Value, args []js.Value) interface{} {
+		onClick()
+		return nil
+	}
+	button.Call("addEventListener", "click", js.FuncOf(f))
+	return button
+}
+
 // func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 func SubmitButton(doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")

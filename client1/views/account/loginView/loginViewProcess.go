@@ -43,9 +43,8 @@ func (editor *ItemEditor) getSalt() {
 	go func() {
 		var salt []byte
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+"auth/"+editor.CurrentRecord.Username+"/salt/", &salt, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+editor.CurrentRecord.Username+"/salt/", &salt, success, fail)
 		editor.Children.SrpRecord.Salt = salt
-		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//}
@@ -72,8 +71,10 @@ func (editor *ItemEditor) getServerVerify() {
 		//editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
 
-	kdf := srp.KDFRFC5054(editor.CurrentRecord.Salt, editor.CurrentRecord.Username, editor.CurrentRecord.Password) // Really. Don't use this KDF
+	// WARNING ***********************************************************************************************************************************************************************************
+	kdf := srp.KDFRFC5054(editor.CurrentRecord.Salt, editor.CurrentRecord.Username, editor.CurrentRecord.Password) // WARNING !!!!!!!!!!!!!!!!!!!! Really. Don't use this KDF !!!!!!!!!!!!!!!!!!!!
 	editor.SrpClient = srp.NewSRPClient(srp.KnownGroups[editor.Children.Group], kdf, nil)
+	// WARNING ***********************************************************************************************************************************************************************************
 
 	//Fetch client ephemeral public key
 	A = editor.SrpClient.EphemeralPublic()
@@ -84,9 +85,8 @@ func (editor *ItemEditor) getServerVerify() {
 	go func() {
 		var record ServerVerify
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+"auth/"+editor.CurrentRecord.Username+"/key/"+string(strA), &record, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+editor.CurrentRecord.Username+"/key/"+string(strA), &record, success, fail)
 		editor.Children.ServerVerifyRecord = record
-		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//}
@@ -153,9 +153,8 @@ func (editor *ItemEditor) checkServerKey() {
 		record.Token = editor.Children.ServerVerifyRecord.Token
 
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+"auth/proof/", &record, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+"/proof/", &record, success, fail)
 		editor.Children.ClientVerifyRecord = record
-		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//}

@@ -2,6 +2,7 @@ package mainView
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/views/account/loginView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/groupBookingView"
@@ -27,6 +28,7 @@ type MenuChoice int
 
 const (
 	menuNone MenuChoice = iota
+	menuLogin
 	menuHome
 	menuAbout
 	menuContact
@@ -51,6 +53,7 @@ type viewElements struct {
 	mainContent           js.Value
 	statusOutput          js.Value
 	pageTitle             js.Value
+	loginEditor           *loginView.ItemEditor
 	userEditor            *userView.ItemEditor
 	bookingEditor         *bookingView.ItemEditor
 	bookingStatusEditor   *bookingStatusView.ItemEditor
@@ -109,6 +112,7 @@ func (v *View) Setup() {
 	v.elements.pageTitle = v.document.Call("createElement", "div")
 
 	// Create editor div objects
+	v.elements.loginEditor = loginView.New(v.document, v.events, v.config.BaseURL)
 	v.elements.userEditor = userView.New(v.document, v.events, v.config.BaseURL)
 	v.elements.bookingEditor = bookingView.New(v.document, v.events, v.config.BaseURL)
 	v.elements.bookingStatusEditor = bookingStatusView.New(v.document, v.events, v.config.BaseURL)
@@ -151,6 +155,7 @@ func (v *View) Setup() {
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Create the menu buttons
+	loginBtn := viewHelpers.HRef(v.menuLogin, v.document, "Login", "loginBtn")
 	xBtn := viewHelpers.HRef(v.menuX, v.document, "&times;", "xBtn")
 	homeBtn := viewHelpers.HRef(v.menuHome, v.document, "Home", "homeBtn")
 	aboutBtn := viewHelpers.HRef(v.menuAbout, v.document, "About", "aboutBtn")
@@ -170,6 +175,7 @@ func (v *View) Setup() {
 	fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.document, "Participant Status", "fetchTripParticipantStatusBtn")
 
 	// Add menu buttons to the side menu
+	v.elements.sidemenu.Call("appendChild", loginBtn)
 	v.elements.sidemenu.Call("appendChild", xBtn)
 	v.elements.sidemenu.Call("appendChild", homeBtn)
 	v.elements.sidemenu.Call("appendChild", aboutBtn)
@@ -189,6 +195,7 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Call("appendChild", fetchTripParticipantStatusBtn)
 
 	// append Editor Div's to the mainContent
+	v.elements.mainContent.Call("appendChild", v.elements.loginEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
@@ -219,6 +226,8 @@ func (v *View) Setup() {
 
 func (v *View) hideCurrentEditor() {
 	switch v.menuChoice {
+	case menuLogin:
+		v.elements.loginEditor.Hide()
 	case menuNone:
 	case menuHome:
 	case menuAbout:
@@ -279,6 +288,16 @@ func (v *View) menuContact() {
 	v.hideCurrentEditor()
 	v.menuChoice = menuContact
 	v.elements.pageTitle.Set("innerHTML", "Contact")
+}
+
+func (v *View) menuLogin() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuLogin
+	v.elements.loginEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Login")
+	//v.elements.userEditor.FetchItems()
+	v.elements.loginEditor.NewItemData()
 }
 
 func (v *View) menuUser() {
