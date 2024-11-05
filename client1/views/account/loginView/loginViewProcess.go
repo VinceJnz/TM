@@ -26,24 +26,26 @@ func (editor *ItemEditor) getSalt() {
 	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getSalt()2 success: ", "err =", err, "s.Item =", editor.CurrentRecord) //Log the error in the browser
+			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getSalt()3 success: ", "err =", err, "s.Item =", editor.CurrentRecord) //Log the error in the browser
 		}
 		// Next process step
 		editor.getServerVerify()
 	}
 
 	fail := func(err error) {
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getSalt()3 fail: ", "err =", err, "s.Item =", editor.CurrentRecord) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getSalt()4 fail: ", "err =", err, "s.Item =", editor.CurrentRecord) //Log the error in the browser
 		//Display message  to user ??????????????
 		editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
-
+	log.Printf(debugTag+"LogonForm.getSalt()1 CurrentRecord: %+v, url: %v", editor.CurrentRecord, apiURL+"/"+editor.CurrentRecord.Username+"/salt/")
+	username := editor.CurrentRecord.Username
 	//if editor.RecordState == RecordStateReloadRequired {
 	//	editor.RecordState = RecordStateCurrent
 	go func() {
+		log.Printf(debugTag+"LogonForm.getSalt()2 CurrentRecord: %+v, username: %+v, url: %v", editor.CurrentRecord, username, apiURL+"/"+editor.CurrentRecord.Username+"/salt/")
 		var salt []byte
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+editor.CurrentRecord.Username+"/salt/", &salt, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, apiURL+"/"+username+"/salt/", &salt, success, fail)
 		editor.Children.SrpRecord.Salt = salt
 		editor.updateStateDisplay(ItemStateNone)
 	}()
@@ -85,7 +87,7 @@ func (editor *ItemEditor) getServerVerify() {
 	go func() {
 		var record ServerVerify
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+editor.CurrentRecord.Username+"/key/"+string(strA), &record, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, apiURL+editor.CurrentRecord.Username+"/key/"+string(strA), &record, success, fail)
 		editor.Children.ServerVerifyRecord = record
 		editor.updateStateDisplay(ItemStateNone)
 	}()
@@ -153,7 +155,7 @@ func (editor *ItemEditor) checkServerKey() {
 		record.Token = editor.Children.ServerVerifyRecord.Token
 
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+"/proof/", &record, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, apiURL+"/proof/", &record, success, fail)
 		editor.Children.ClientVerifyRecord = record
 		editor.updateStateDisplay(ItemStateNone)
 	}()

@@ -193,7 +193,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
 	editor.UiComponents.Username.Call("setAttribute", "required", "true")
 
-	localObjs.Username, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Password", "password", "itemPassword")
+	localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "itemPassword")
 	editor.UiComponents.Password.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
@@ -234,12 +234,14 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
 		event.Call("preventDefault")
-		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
+		log.Println(debugTag + "SubmitItemEdit()1 prevent event default")
 	}
 
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
+
+	log.Printf(debugTag+"SubmitItemEdit()2 Username %v, Password %v", editor.CurrentRecord.Username, editor.CurrentRecord.Password)
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
