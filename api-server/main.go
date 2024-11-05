@@ -29,19 +29,18 @@ func main() {
 	app := appCore.New(false)
 	defer app.Close()
 
-	//r := app.Mux.PathPrefix("/api/v1").Subrouter()
+	r := app.Mux.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 
 	auth := handlerAuth.New(app)
 	//SRP authentication and registration process handlers
-	app.Mux.HandleFunc("/auth/register/", auth.AccountCreate).Methods("Post")
-	app.Mux.HandleFunc("/auth/{username}/salt/", auth.AuthGetSalt).Methods("Get", "Options")
-	app.Mux.HandleFunc("/auth/{username}/key/{A}", auth.AuthGetKeyB).Methods("Get")
-	app.Mux.HandleFunc("/auth/proof/", auth.AuthCheckClientProof).Methods("Post")
-	app.Mux.HandleFunc("/auth/validate/{token}", auth.AccountValidate).Methods("Get")
-	app.Mux.HandleFunc("/auth/reset/{username}/password/", auth.AuthReset).Methods("Get")
-	app.Mux.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
+	r.HandleFunc("/auth/register/", auth.AccountCreate).Methods("Post")
+	r.HandleFunc("/auth/{username}/salt/", auth.AuthGetSalt).Methods("Get", "Options")
+	r.HandleFunc("/auth/{username}/key/{A}", auth.AuthGetKeyB).Methods("Get")
+	r.HandleFunc("/auth/proof/", auth.AuthCheckClientProof).Methods("Post")
+	r.HandleFunc("/auth/validate/{token}", auth.AccountValidate).Methods("Get")
+	r.HandleFunc("/auth/reset/{username}/password/", auth.AuthReset).Methods("Get")
+	r.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
 
-	r := app.Mux.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
