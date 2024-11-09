@@ -141,19 +141,11 @@ func (h *Handler) TokenWriteQry(record models.Token) (int, error) {
 }
 
 func (h *Handler) TokenDeleteQry(recordID int) error {
-	_, err := h.appConf.Db.Exec("DELETE FROM st_users WHERE id = $1", recordID)
+	_, err := h.appConf.Db.Exec("DELETE FROM st_users WHERE id = $1 AND ", recordID)
 	return err
 }
 
 const (
-	//	sqlTokenCleanOld = `DELETE st1
-	//FROM st_token st
-	//	JOIN st_token st1 ON st1.User_ID = st.User_ID
-	//								AND st1.Name = st.Name
-	//								AND substring(st1.host FROM '.+]') = substring(st.host FROM '.+]')
-	//								AND st1.ID <> st.ID
-	//WHERE st.ID = $1`
-
 	sqlTokenCleanOld = `DELETE FROM st_token st
 		USING st_token st1
 		WHERE st1.ID = $1
@@ -223,7 +215,7 @@ func (h *Handler) FindSessionToken(cookieStr string) (models.Token, error) {
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
 	err = h.appConf.Db.QueryRow(sqlFindSessionToken, result.TokenStr).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"SessionRepo.FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
+		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
 	}
 	return result, nil
@@ -237,8 +229,37 @@ func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
 	result.Name.SetValid(name)
 	err = h.appConf.Db.QueryRow(sqlFindToken, result.TokenStr, result.Name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"SessionRepo.FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
+		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return result, err
 	}
 	return result, nil
+}
+
+const (
+	//Finds records associated with a users access
+	//no access is allowed if no records are found
+	//sqlAccessCheck = `SELECT c.ID, c.User_ID, c.Name, c.token, c.token_valid_ID, c.Valid_From, c.Valid_To
+	//FROM st_token c
+	//	JOIN st_user u ON u.ID=c.User_ID
+	//	LEFT JOIN se_token_valid sv ON sv.ID=c.token_valid_ID
+	//WHERE c.token=$1 AND c.Name='session' AND c.token_valid_ID=1 AND u.User_status_ID=1`
+
+	sqlAccessCheck = `SELECT DISTINCT eal.ID, eal.Name
+	FROM st_user stu
+	 JOIN st_user_group stug ON sug.User_ID=stu.ID
+	 JOIN st_group_resource stgr ON sgr.Group_ID=sug.Group_ID
+	 JOIN et_resource etr ON etr.ID=sgr.Resource_ID
+	 JOIN et_access_level etal ON etal.ID = sgr.Access_level_ID 
+	WHERE stu.ID=$1 AND etr.ID=$2`
+)
+
+func (h *Handler) AccessCheck(userID int, resourceID int, accessLevelID int) error {
+	var err error
+	var result int
+	err = h.appConf.Db.QueryRow(sqlAccessCheck, userID, resourceID, accessLevelID).Scan(&result)
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %+v", debugTag+"AccessCheck1", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
+		return err
+	}
+	return nil
 }

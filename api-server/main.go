@@ -23,13 +23,15 @@ import (
 	"os"
 
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 func main() {
-	app := appCore.New(false)
+	app := appCore.New(true)
 	defer app.Close()
 
-	r := app.Mux.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	m := mux.NewRouter()
+	r := m.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 
 	auth := handlerAuth.New(app)
 	//SRP authentication and registration process handlers
@@ -40,6 +42,7 @@ func main() {
 	r.HandleFunc("/auth/validate/{token}", auth.AccountValidate).Methods("Get")
 	r.HandleFunc("/auth/reset/{username}/password/", auth.AuthReset).Methods("Get")
 	r.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
+	r.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Post")
 
 	r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 

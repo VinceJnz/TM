@@ -3,7 +3,6 @@ package appCore
 import (
 	"log"
 
-	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -17,7 +16,6 @@ type Config struct {
 	Db        *sqlx.DB
 	UserIDKey ContextKey // User for passing the user id value via the context (ctx)
 	Settings  settings
-	Mux       *mux.Router
 	TestMode  bool
 }
 
@@ -31,7 +29,6 @@ func New(testMode bool) *Config {
 	return &Config{
 		Db:        db,
 		UserIDKey: userIDKey,
-		Mux:       mux.NewRouter(),
 		TestMode:  testMode,
 	}
 }
