@@ -1,5 +1,7 @@
 # Info
 
+myuser
+mypassword
 
 ## Env
 
