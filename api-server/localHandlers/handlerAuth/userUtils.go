@@ -21,7 +21,7 @@ import (
 const (
 	//Returns a result if the username/password combination is correct and the user account is current.
 	//sqlGetUserSalt   = `SELECT ID, User_name, Salt FROM st_user WHERE User_name=? and User_status_ID=1`
-	sqlGetUserSalt = `SELECT ID, username, user_status_id, Salt FROM st_users WHERE username=$1` //The controller needs to check the User_status_ID to make sure the auth process should proceed.
+	sqlGetUserSalt = `SELECT ID, username, user_account_status_id, salt FROM st_users WHERE username=$1` //The controller needs to check the User_status_ID to make sure the auth process should proceed.
 	//sqlCheckUserAuth = `SELECT ID, User_name, Salt FROM st_user WHERE User_name=? and Password=? and User_status_ID=1`
 	sqlCheckUserAuth = `SELECT ID, username, Salt FROM st_users WHERE username=$1 and user_status_id=1`
 	//sqlPutUserAuth   = `UPDATE st_user SET Password=?, Salt=?, Verifier=? WHERE ID=?`

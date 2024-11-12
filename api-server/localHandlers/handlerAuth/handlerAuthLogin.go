@@ -34,7 +34,7 @@ func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 	//Get the salt for the user
 	user, err = h.GetUserSalt(username)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthGetSalt()5 ", "err =", err, "user =", user)
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthGetSalt()1 ", "err =", err, "user =", user)
 		return
 	}
 
@@ -47,6 +47,7 @@ func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Password reset required."))
 	default:
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthGetSalt()2 ", "err =", err, "user =", user)
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Not authorized"))
 	}
