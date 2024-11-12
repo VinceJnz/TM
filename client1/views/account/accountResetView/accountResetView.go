@@ -36,7 +36,7 @@ const (
 type ProcessStep int
 
 const (
-	ProcessStepGetUsername processStep = iota
+	ProcessStepGetUsername ProcessStep = iota
 	ProcessStepGetToken
 	ProcessStepFinished
 )
@@ -232,6 +232,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Email)
+	form.Call("appendChild", localObjs.Password)
+	form.Call("appendChild", localObjs.PasswordChk)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -336,6 +338,7 @@ func (editor *ItemEditor) FetchItems() {
 	}
 }
 
+/*
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
@@ -346,6 +349,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()
 }
+*/
 
 func (editor *ItemEditor) populateItemList() {
 	/*

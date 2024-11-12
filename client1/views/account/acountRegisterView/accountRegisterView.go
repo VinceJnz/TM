@@ -224,6 +224,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Email)
+	form.Call("appendChild", localObjs.Password)
+	form.Call("appendChild", localObjs.PasswordChk)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")

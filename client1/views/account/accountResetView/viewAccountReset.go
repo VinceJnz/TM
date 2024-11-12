@@ -1,11 +1,8 @@
 package accountResetView
 
-import (
-	"time"
-)
-
 //const debugTag = "viewAccountReset."
 
+/*
 type ParentData struct {
 	ID       int       `json:"id"`
 	FromDate time.Time `json:"from_date"`
@@ -19,6 +16,7 @@ const (
 	getToken
 	finished
 )
+*/
 
 /*
 // New creates a new ItemView

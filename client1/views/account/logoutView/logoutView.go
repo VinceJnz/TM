@@ -35,7 +35,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "/auth"
+//const apiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -134,10 +134,12 @@ func (editor *ItemEditor) NewItemData() {
 //func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
 //}
 
+/*
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
 }
+*/
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
@@ -177,17 +179,27 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 
+	// Create form buttons
+	//submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
+	//cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
+
+	// Append elements to form
+	//form.Call("appendChild", submitBtn)
+	//form.Call("appendChild", cancelBtn)
+
 	//Add something to do the logout ????????????????????
 
 	editor.resetEditForm()
 	return nil
 }
 
+/*
 // cancelItemEdit handles the cancelling of the item edit form
 func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
 	editor.resetEditForm()
 	return nil
 }
+*/
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {

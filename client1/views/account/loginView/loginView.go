@@ -200,7 +200,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Password)
 
-	// Create submit button
+	// Create form buttons
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
