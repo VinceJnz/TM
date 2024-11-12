@@ -7,7 +7,6 @@ import (
 	"log"
 	"math/big"
 	"net/http"
-	"strconv"
 	"syscall/js"
 	"time"
 )
@@ -41,7 +40,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "/users"
+const apiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -72,6 +71,9 @@ type UI struct {
 	PasswordChk js.Value
 }
 
+type ParentData struct {
+}
+
 type Item struct {
 	Record TableData
 	//Add child structures as necessary
@@ -90,13 +92,13 @@ type ItemEditor struct {
 	EditDiv       js.Value
 	//ListDiv       js.Value
 	StateDiv    js.Value
-	ParentID    int
+	ParentData  ParentData
 	ViewState   ViewState
 	RecordState RecordState
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.document = document
 	editor.events = eventProcessor
@@ -123,8 +125,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseU
 	editor.Div.Call("appendChild", editor.StateDiv)
 
 	// Store supplied parent value
-	if len(idList) == 1 {
-		editor.ParentID = idList[0]
+	if len(parentData) != 0 {
+		editor.ParentData = parentData[0]
 	}
 
 	editor.RecordState = RecordStateReloadRequired
@@ -161,34 +163,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 	editor.populateEditForm()
 	return nil
-}
-
-// ?????????????????????? document ref????????????
-func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
-	// Create a div for displaying Dropdown
-	fieldset := editor.document.Call("createElement", "fieldset")
-	fieldset.Set("className", "input-group")
-
-	StateDropDown := editor.document.Call("createElement", "select")
-	StateDropDown.Set("id", htmlID)
-
-	for _, item := range editor.Records {
-		optionElement := editor.document.Call("createElement", "option")
-		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Name)
-		if value == item.ID {
-			optionElement.Set("selected", true)
-		}
-		StateDropDown.Call("appendChild", optionElement)
-	}
-
-	// Create a label element
-	label := viewHelpers.Label(editor.document, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
-	fieldset.Call("appendChild", StateDropDown)
-
-	return fieldset, StateDropDown
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
@@ -278,8 +252,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
 	switch editor.ItemState {
-	case ItemStateEditing:
-		go editor.UpdateItem(editor.CurrentRecord)
+	//case ItemStateEditing:
+	//     go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
 		go editor.AddItem(editor.CurrentRecord)
 	default:
@@ -296,6 +270,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 	return nil
 }
 
+/*
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
@@ -305,17 +280,19 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
+*/
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL, nil, &item)
+	httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL+"/register/", nil, &item)
 	editor.RecordState = RecordStateReloadRequired
-	editor.FetchItems() // Refresh the item list
+	//editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
-	editor.onCompletionMsg("Item record added successfully")
+	editor.onCompletionMsg("Account successfully created???")
 }
 
+/*
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
@@ -329,7 +306,9 @@ func (editor *ItemEditor) FetchItems() {
 		}()
 	}
 }
+*/
 
+/*
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
@@ -340,9 +319,10 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()
 }
+*/
 
+/*
 func (editor *ItemEditor) populateItemList() {
-	/*
 		editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 		// Add New Item button
@@ -385,8 +365,8 @@ func (editor *ItemEditor) populateItemList() {
 
 			editor.ListDiv.Call("appendChild", itemDiv)
 		}
-	*/
 }
+*/
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	editor.ItemState = newState

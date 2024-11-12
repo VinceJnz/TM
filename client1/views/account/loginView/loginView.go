@@ -2,6 +2,7 @@ package loginView
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/views/account/acountRegisterView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
@@ -208,6 +209,23 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", submitBtn)
 	form.Call("appendChild", cancelBtn)
 
+	// ********************* This needs to be changed for each api **********************
+	// Create and add child views and buttons to Item
+	register := acountRegisterView.New(editor.document, editor.events, editor.baseURL, acountRegisterView.ParentData{})
+
+	// Create a toggle child button
+	registerButton := editor.document.Call("createElement", "button")
+	registerButton.Set("innerHTML", "Register")
+	registerButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		register.NewItemData(this, args) // WARNING ... this is different for the page ...
+		register.Toggle()
+		return nil
+	}))
+
+	// Append child components to editor div
+	editor.EditDiv.Call("appendChild", registerButton)
+	editor.EditDiv.Call("appendChild", register.Div)
+
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
 
@@ -220,7 +238,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.EditDiv.Set("innerHTML", "")
 
 	// Reset CurrentItem
-	editor.CurrentRecord = TableData{}
+	//editor.CurrentRecord = TableData{}
 
 	// Reset UI components
 	editor.UiComponents = UI{}
