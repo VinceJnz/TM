@@ -260,7 +260,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
-	editor.resetEditForm()
+	//editor.resetEditForm()
 	return nil
 }
 
@@ -285,6 +285,11 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
+	item, err := authCreate(item)
+	if err != nil {
+		log.Println(debugTag + "AddItem()1 Cannot create account. Failed to create auth data for item.")
+		return
+	}
 	httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL+"/register/", nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	//editor.FetchItems() // Refresh the item list
