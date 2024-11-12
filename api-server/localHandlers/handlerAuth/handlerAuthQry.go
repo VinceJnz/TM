@@ -8,7 +8,7 @@ import (
 // sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
 const (
 	sqlUserCheckAccess = `SELECT eat.ID
-	FROM st_user su
+	FROM st_users su
 		JOIN st_user_group sug ON sug.User_ID=su.ID
 		JOIN st_group sg ON sg.ID=sug.Group_ID
 		JOIN st_group_resource sgr ON sgr.Group_ID=sg.ID
@@ -88,7 +88,7 @@ func (h *Handler) UserWriteQry(record models.User) (int, error) {
 
 const (
 	//Sets the user status
-	sqlSetStatus = `UPDATE st_user SET User_status_ID=$1 WHERE ID=$2`
+	sqlSetStatus = `UPDATE st_users SET User_status_ID=$1 WHERE ID=$2`
 )
 
 // SetStatusID sets the users account status
@@ -194,14 +194,14 @@ const (
 	//if the cookie is not valid it will not return the cookie.
 	sqlFindSessionToken = `SELECT c.ID, c.User_ID, c.Name, c.token, c.token_valid_ID, c.Valid_From, c.Valid_To
 	FROM st_token c
-		JOIN st_user u ON u.ID=c.User_ID
+		JOIN st_users u ON u.ID=c.User_ID
 		LEFT JOIN se_token_valid sv ON sv.ID=c.token_valid_ID
 	WHERE c.token=$1 AND c.Name='session' AND c.token_valid_ID=1 AND u.User_status_ID=1`
 
 	//Finds valid tokens where user account exists and the token name is the same as the name passed in
 	sqlFindToken = `SELECT c.ID, c.User_ID, c.Name, c.token, c.token_valid_ID, c.Valid_From, c.Valid_To
 	FROM st_token c
-		JOIN st_user u ON u.ID=c.User_ID
+		JOIN st_users u ON u.ID=c.User_ID
 		LEFT JOIN se_token_valid sv ON sv.ID=c.token_valid_ID
 	WHERE c.token=$1 AND c.Name=$2 AND c.token_valid_ID=1`
 )

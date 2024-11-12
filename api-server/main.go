@@ -44,7 +44,7 @@ func main() {
 	r.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
 	r.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Post")
 
-	r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	//r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
 	seasons := handlerSeasons.New(app)
