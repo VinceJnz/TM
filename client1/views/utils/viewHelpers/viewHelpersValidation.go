@@ -41,3 +41,15 @@ func ValidateDatesFromLtTo(dateName DateName, fromDateObj, toDateObj js.Value) {
 		}
 	}
 }
+
+func ValidateNewPassword(passwordObj, passwordChkObj js.Value) {
+	password := passwordObj.Get("value").String()
+	passwordChk := passwordChkObj.Get("value").String()
+
+	//passwordObj.Call("setCustomValidity", "")
+	passwordChkObj.Call("setCustomValidity", "")
+	if password != passwordChk {
+		//passwordObj.Call("setCustomValidity", "Passwords do not match")
+		passwordChkObj.Call("setCustomValidity", "Passwords do not match")
+	}
+}
