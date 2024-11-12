@@ -25,7 +25,7 @@ const (
 	//sqlCheckUserAuth = `SELECT ID, User_name, Salt FROM st_user WHERE User_name=? and Password=? and User_status_ID=1`
 	sqlCheckUserAuth = `SELECT ID, username, Salt FROM st_users WHERE username=$1 and user_status_id=1`
 	//sqlPutUserAuth   = `UPDATE st_user SET Password=?, Salt=?, Verifier=? WHERE ID=?`
-	sqlPutUserAuth = `UPDATE st_users SET salt=$1, verifier=$2 WHERE id=$3`
+	sqlUserAuthUpdate = `UPDATE st_users SET salt=$1, verifier=$2 WHERE id=$3`
 	//sqlGetUserAuth   = `SELECT ID, User_name, Email, Salt, Verifier FROM st_user WHERE User_name=? and User_status_ID=1`
 	sqlGetUserAuth  = `SELECT ID, username, name, email, user_status_id, salt, verifier FROM st_users WHERE username=$1` //The controller needs to check the User_status_ID to make sure the auth process should proceed.
 	sqlGetAdminList = `SELECT su.ID, su.username, su.name, su.email
@@ -55,11 +55,12 @@ func (h *Handler) CheckUserAuth(username, password string) (models.User, error) 
 // handler\rest\ctrlAuth\ctrlAuthReset.go:127:14: h.srvc.PutUserAuth undefined (type *store.Service has no field or method PutUserAuth)
 func (h *Handler) UserAuthUpdate(user models.User) error {
 	var err error
-	v, _ := user.Verifier.GobEncode() //Might need to do the encoding here
+	v, err := user.Verifier.GobEncode() //Might need to do the encoding here
+	log.Printf("%v %v %+v %v %+v %v %+v", debugTag+"UserAuthUpdate()1 ", "user =", user, "err =", err, "v =", v)
 
-	result, err := h.appConf.Db.Exec(sqlPutUserAuth, user.Salt, v, user.ID)
+	result, err := h.appConf.Db.Exec(sqlUserAuthUpdate, user.Salt, v, user.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"PutUserAuth()2 ", "err =", err, "result =", result, "r.DBConn.DB =", h.appConf.Db.DB)
+		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"UserAuthUpdate()2 ", "err =", err, "result =", result, "r.DBConn.DB =", h.appConf.Db.DB)
 		return err //Auth set failed
 	}
 	return nil //Auth set succeeded
@@ -86,6 +87,8 @@ func (h *Handler) GetUserAuth(username string) (models.User, error) {
 		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"GetUserAuth()3 ", "err =", err, "result =", result, "v =", v)
 		return models.User{}, err //get UserAuth failed
 	}
+
+	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"GetUserAuth()4 ", "err =", err, "result =", result, "v =", v)
 
 	return *result, nil //return UserAuth info
 }

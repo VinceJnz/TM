@@ -115,7 +115,7 @@ const (
 
 func (h *Handler) TokenInsertQry(record models.Token) (int, error) {
 	err := h.appConf.Db.QueryRow(sqlTokenInsert,
-		record.UserID, record.Name, record.Host, record.TokenStr, record.ValidID, record.ValidFrom, record.ValidTo, record.ID).Scan(record.ID)
+		record.UserID, record.Name, record.Host, record.TokenStr, record.ValidID, record.ValidFrom, record.ValidTo).Scan(&record.ID)
 	return record.ID, err
 }
 

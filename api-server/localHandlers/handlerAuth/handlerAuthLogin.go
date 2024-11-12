@@ -77,7 +77,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	//Create a server instance
 	server := srp.NewSRPServer(srp.KnownGroups[group], user.Verifier, nil)
 	if server == nil {
-		log.Println(debugTag + "Handler.AuthGetKeyB()6 Couldn't set up server")
+		log.Printf(debugTag+"Handler.AuthGetKeyB()6 Couldn't set up server. group = %v, user = %+v, userVerifier = %+v, strA = %v", group, user, user.Verifier.String(), strA)
 		return
 	}
 
