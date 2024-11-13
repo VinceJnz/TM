@@ -67,6 +67,8 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	strA := vars["A"]
 	user.Username = vars["username"]
 
+	log.Printf(debugTag+"Handler.AuthGetKeyB()1: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v\n", err, user, group, ServerVerify, strA)
+
 	//Get store user auth info (salt, etc...)
 	user, err = h.GetUserAuth(user.Username)
 	if err != nil {
