@@ -123,6 +123,8 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v\n", err, user, group, ServerVerify, strA)
+
 	//server publicKey(B), Proof and a Token is sent to client
 	json.NewEncoder(w).Encode(ServerVerify)
 }
