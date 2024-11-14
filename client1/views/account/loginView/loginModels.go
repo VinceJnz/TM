@@ -3,13 +3,13 @@ package loginView
 import "math/big"
 
 //SrpItem contains the user SRP info
-type SrpItem struct {
-	Salt     []byte   `json:"Salt"`     //Not user editable
-	Verifier *big.Int `json:"Verifier"` //Not user editable
-	Password string   `json:"Password"` //srp means this is not longer needed.
-	Server   ServerVerify
-	Client   ClientVerify
-}
+//type SrpItem struct {
+//	Salt     []byte   `json:"Salt"`     //Not user editable
+//	Verifier *big.Int `json:"Verifier"` //Not user editable
+//	Password string   `json:"Password"` //srp means this is not longer needed.
+//	//Server   ServerVerify
+//	//Client   ClientVerify
+//}
 
 //ServerVerify contains the verify info sent from the server
 type ServerVerify struct {

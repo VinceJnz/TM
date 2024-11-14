@@ -77,10 +77,8 @@ type ParentData struct {
 
 type children struct {
 	//Add child structures as necessary
-	SrpRecord          SrpItem
-	ServerVerifyRecord ServerVerify
-	ClientVerifyRecord ClientVerify
-	Group              int
+	SrpClient *srp.SRP
+	SrpGroup  int
 }
 
 type ItemEditor struct {
@@ -101,7 +99,6 @@ type ItemEditor struct {
 	Children      children
 
 	LoggedIn  bool
-	SrpClient *srp.SRP
 	FormValid bool
 }
 
@@ -137,7 +134,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseU
 		editor.ParentID = idList[0]
 	}
 
-	editor.Children.Group = srp.RFC5054Group3072
+	editor.Children.SrpGroup = srp.RFC5054Group3072
 	editor.RecordState = RecordStateReloadRequired
 
 	return editor
