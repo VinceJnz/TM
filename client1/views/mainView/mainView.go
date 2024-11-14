@@ -449,7 +449,7 @@ func (v *View) updateStatus(event eventProcessor.Event) {
 	msgDiv.Set("innerHTML", message)
 	v.elements.statusOutput.Call("appendChild", msgDiv)
 	go func() {
-		time.Sleep(5 * time.Second) // Wait for the specified duration
+		time.Sleep(30 * time.Second) // Wait for the specified duration
 		msgDiv.Call("remove")
 	}()
 }
