@@ -249,6 +249,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
+	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique

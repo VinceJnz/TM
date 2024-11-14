@@ -169,7 +169,7 @@ func (editor *ItemEditor) checkServerKey() {
 	//	editor.RecordState = RecordStateCurrent
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+"/proof/", &ClientVerifyRecord, nil, success, fail)
+		httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL+"/proof/", &ClientVerifyRecord, nil, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//}
