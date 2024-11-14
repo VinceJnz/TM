@@ -88,7 +88,7 @@ func (h *Handler) GetUserAuth(username string) (models.User, error) {
 		return models.User{}, err //get UserAuth failed
 	}
 
-	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"GetUserAuth()4 ", "err =", err, "result =", result, "v =", v)
+	//log.Printf("%v %v %v %v %+v %v %+v", debugTag+"GetUserAuth()4 ", "err =", err, "result =", result, "v =", v)
 
 	return *result, nil //return UserAuth info
 }
