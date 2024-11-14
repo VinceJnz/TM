@@ -177,6 +177,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()5 ", "err =", err, "token =", token)
 		status, err := helpers.SqlErr(err)
+		w.WriteHeader(http.StatusInternalServerError)
 		http.Error(w, err.Error(), status)
 		return
 	}
@@ -184,6 +185,9 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	err = h.TokenDeleteQry(token.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()6 ", "err =", err, "token =", token)
+		status, err := helpers.SqlErr(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), status)
 		return
 	}
 
@@ -192,13 +196,27 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	err = h.UserSetStatusID(token.UserID, models.AccountVerified)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7 ", "err =", err, "token =", token)
+		status, err := helpers.SqlErr(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), status)
 		return
 	}
 
 	//Get the user details and Send an email to the user
 	user, err := h.UserReadQry(token.UserID)
-	log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7 ", "err =", err, "user =", user)
-	//h.app.EmailSvc.SendMail(user.Email.String, "New account validated", user.Name+": Your account for '"+user.Username+" <"+user.Email.String+">' has been validated.\nAn administrator will review your account and activate it shortly.")
+	if err != nil {
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7a ", "err =", err, "user =", user) // User this for testing
+		status, err := helpers.SqlErr(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), status)
+		return
+	}
+	if h.appConf.TestMode {
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7a ", "err =", err, "user =", user) // User this for testing
+	} else {
+		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.AccountValidate()7b ", "err =", err, "email to user =", user.Email.String, "New account validated", user.Name+": Your account for '"+user.Username+" <"+user.Email.String+">' has been validated.\nAn administrator will review your account and activate it shortly.") // User this for testing
+		//h.app.EmailSvc.SendMail(user.Email.String, "New account validated", user.Name+": Your account for '"+user.Username+" <"+user.Email.String+">' has been validated.\nAn administrator will review your account and activate it shortly.")
+	}
 
 	//Notify administrators of the validated accounts
 	adminList, err := h.GetAdminList(1)

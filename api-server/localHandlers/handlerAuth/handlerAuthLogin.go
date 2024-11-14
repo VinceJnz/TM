@@ -67,7 +67,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	strA := vars["A"]
 	user.Username = vars["username"]
 
-	log.Printf(debugTag+"Handler.AuthGetKeyB()1: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v\n", err, user, group, ServerVerify, strA)
+	//log.Printf(debugTag+"Handler.AuthGetKeyB()1: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v\n", err, user, group, ServerVerify, strA)
 
 	//Get store user auth info (salt, etc...)
 	user, err = h.GetUserAuth(user.Username)
@@ -88,8 +88,6 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	token := uuid.NewV4().String()
 	h.PoolAdd(token, user.ID, server)
 	ServerVerify.Token = token
-
-	h.PoolList()
 
 	//ctx := context.WithValue(context.Background(), token, server)
 	//ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -127,7 +125,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v, A=%v\n", err, user, group, ServerVerify, strA, A)
+	//log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v, A=%v\n", err, user, group, ServerVerify, strA, A)
 
 	//server publicKey(B), Proof and a Token is sent to client
 	json.NewEncoder(w).Encode(ServerVerify)
@@ -161,12 +159,10 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Recover server instance from pool and delete it from the pool (it only gets used once in this process)
-	h.PoolList()
-
 	authItem := h.PoolGet(ClientVerify.Token)
+	h.PoolDelete(ClientVerify.Token)
 	userID := authItem.userID
 	server := authItem.serverSRP
-	h.PoolDelete(ClientVerify.Token)
 	if server == nil {
 		log.Printf("%v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()6 Fatal: Couldn't set up server", "authItem =", authItem, "ClientVerify =", ClientVerify)
 		return
@@ -201,9 +197,9 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%v %v %v %v %+v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()10: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", sessionToken)
+	//log.Printf("%v %v %v %v %+v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()10: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", sessionToken)
 
-	// If all okay we can let the user know
+	// If all okay we can set the sessionCookie and let the user know
 	http.SetCookie(w, sessionToken)
 	w.WriteHeader(http.StatusOK)
 	//w.Write([]byte("Login successful"))
