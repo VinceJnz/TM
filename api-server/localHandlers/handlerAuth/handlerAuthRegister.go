@@ -18,11 +18,6 @@ import (
 
 //const debugTag = "handlerAuth."
 
-type poolItem struct {
-	serverSRP *srp.SRP
-	userID    int
-}
-
 //type Handler struct {
 //	appConf *appCore.Config
 //	//srvc *store.Service
@@ -51,8 +46,15 @@ type clientVerify struct {
 //	}
 //}
 
+type poolItem struct {
+	serverSRP *srp.SRP
+	userID    int
+}
+
+type poolList map[string]poolItem
+
 func (h *Handler) PoolAdd(token string, userID int, srpServer *srp.SRP) {
-	p := &poolItem{
+	p := poolItem{
 		serverSRP: srpServer,
 		userID:    userID,
 	}
@@ -63,7 +65,7 @@ func (h *Handler) PoolDelete(token string) {
 	delete(h.Pool, token)
 }
 
-func (h *Handler) PoolGet(token string) *poolItem {
+func (h *Handler) PoolGet(token string) poolItem {
 	return h.Pool[token]
 }
 
@@ -200,5 +202,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 			//h.app.EmailSvc.SendMail(adminUser.Email.String, "New account to be activated ", "Hi "+adminUser.DisplayName+",\nPlease check this new user.\n"+user.DisplayName+": '"+user.UserName+" <"+user.Email.String+">'\nPlease review the account, add it to a group and activate it if appropriate.")
 		}
 	}
+
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode("account validated")
 }

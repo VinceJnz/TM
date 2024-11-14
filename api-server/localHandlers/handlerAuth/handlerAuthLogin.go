@@ -160,9 +160,9 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 
 	//Recover server instance from pool and delete it from the pool (it only gets used once in this process)
 	authItem := h.PoolGet(ClientVerify.Token)
-	h.PoolDelete(ClientVerify.Token)
 	userID := authItem.userID
 	server := authItem.serverSRP
+	h.PoolDelete(ClientVerify.Token)
 	if server == nil {
 		log.Printf("%v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()6 Fatal: Couldn't set up server", "group =", group, "ClientVerify =", ClientVerify)
 		return
@@ -196,6 +196,8 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()9: Failed to retreive user details", "", err, "userID =", userID, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
+
+	log.Printf("%v %v %v %v %+v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()10: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", sessionToken)
 
 	// If all okay we can let the user know
 	http.SetCookie(w, sessionToken)
