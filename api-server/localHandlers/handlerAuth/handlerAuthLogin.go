@@ -89,6 +89,8 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	h.PoolAdd(token, user.ID, server)
 	ServerVerify.Token = token
 
+	h.PoolList()
+
 	//ctx := context.WithValue(context.Background(), token, server)
 	//ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	go h.AuthCancel(token) //Remove the pool item after a timeout
@@ -138,7 +140,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var user models.User
 	var ClientVerify clientVerify
-	var group = srp.RFC5054Group3072 //?????????? This needs to be managed at run time ??????????????
+	//var group = srp.RFC5054Group3072 //?????????? This needs to be managed at run time ??????????????
 
 	//Process the web data
 	body, err := io.ReadAll(r.Body)
@@ -153,18 +155,20 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 	//Read the data from the web form
 	err = json.Unmarshal(body, &ClientVerify)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthCheckClientProof()4 ", "err =", err, "body =", string(body))
+		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"Handler.AuthCheckClientProof()4 ", "err=", err, "body=", string(body), "ClientVerify=", ClientVerify)
 		http.Error(w, err.Error(), http.StatusNotAcceptable)
 		return
 	}
 
 	//Recover server instance from pool and delete it from the pool (it only gets used once in this process)
+	h.PoolList()
+
 	authItem := h.PoolGet(ClientVerify.Token)
 	userID := authItem.userID
 	server := authItem.serverSRP
 	h.PoolDelete(ClientVerify.Token)
 	if server == nil {
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()6 Fatal: Couldn't set up server", "group =", group, "ClientVerify =", ClientVerify)
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()6 Fatal: Couldn't set up server", "authItem =", authItem, "ClientVerify =", ClientVerify)
 		return
 	}
 

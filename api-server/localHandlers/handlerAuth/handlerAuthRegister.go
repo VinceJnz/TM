@@ -69,6 +69,12 @@ func (h *Handler) PoolGet(token string) poolItem {
 	return h.Pool[token]
 }
 
+func (h *Handler) PoolList() {
+	for i, v := range h.Pool {
+		log.Printf("Pool item=%v, details=%+v", i, v)
+	}
+}
+
 //*************************************************************************************************
 // Register (Account create)
 //*************************************************************************************************
