@@ -112,6 +112,7 @@ func (editor *ItemEditor) getServerVerify() {
 func (editor *ItemEditor) checkServerKey() {
 	var err error
 	var ClientVerifyRecord ClientVerify
+	var username string
 
 	success := func(err error) {
 		//Call the next step in the Auth process
@@ -119,10 +120,10 @@ func (editor *ItemEditor) checkServerKey() {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()2 success: ", "err=", err, "s.Item=", editor.CurrentRecord) //Log the error in the browser
 		}
 		editor.Children.ClientVerifyRecord = ClientVerifyRecord
-		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()0 success: ", "err=", err, "editor.CurrentRecord=", editor.CurrentRecord, "editor.Children=", editor.Children) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v %v %+v %v %v", debugTag+"LogonForm.checkServerKey()0 success: ", "err=", err, "editor.CurrentRecord=", editor.CurrentRecord, "editor.Children=", editor.Children, "username=", username) //Log the error in the browser
 		// Next process step
 		// Need to do something here to signify the login being successful!!!!
-		editor.onCompletionMsg(debugTag + "checkServerKey()1 " + err.Error())
+		editor.onCompletionMsg(debugTag + "checkServerKey()1 successfully completed login:" + username)
 		//editor.loginOk(err)
 	}
 
@@ -169,7 +170,7 @@ func (editor *ItemEditor) checkServerKey() {
 	//	editor.RecordState = RecordStateCurrent
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL+"/proof/", &ClientVerifyRecord, nil, success, fail)
+		httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL+"/proof/", &username, &ClientVerifyRecord, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//}
