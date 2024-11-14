@@ -104,14 +104,14 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// server sends its ephemeral public key, B, to client
-	// client sets it as others public key.
+	// The server creates its ephemeral public key, B
+	// The key needs to be sent to the client and the client sets it as others public key.
 	if ServerVerify.B = server.EphemeralPublic(); ServerVerify.B == nil {
 		log.Printf(debugTag + "Handler.AuthGetKeyB()8 server couldn't make B")
 		return
 	}
 
-	// server can now make the session key.
+	// server can now make the server key. //This is not used here, it is used later --> server sets up a block cipher with the key
 	serverKey, err := server.Key()
 	if err != nil || serverKey == nil {
 		log.Printf(debugTag+"Handler.AuthGetKeyB()9 Fatal: something went wrong making server key: %s\n", err)
@@ -125,7 +125,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v\n", err, user, group, ServerVerify, strA)
+	log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v, A=%v\n", err, user, group, ServerVerify, strA, A)
 
 	//server publicKey(B), Proof and a Token is sent to client
 	json.NewEncoder(w).Encode(ServerVerify)
