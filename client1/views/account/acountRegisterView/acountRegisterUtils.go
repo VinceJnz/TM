@@ -12,7 +12,7 @@ func authCreate(Item TableData) (TableData, error) {
 	var err error
 
 	//group has to be negoiated between client and server
-	group := srp.RFC5054Group3072
+	Item.group = srp.RFC5054Group3072
 
 	// Generate 8 bytes of random salt. Be sure to use crypto/rand for all
 	// of your random number needs
@@ -28,7 +28,7 @@ func authCreate(Item TableData) (TableData, error) {
 
 	// this is still our first use scenario, but the client needs to create
 	// an SRP client to generate the verifier.
-	firstClient := srp.NewSRPClient(srp.KnownGroups[group], x, nil)
+	firstClient := srp.NewSRPClient(srp.KnownGroups[Item.group], x, nil)
 	if firstClient == nil {
 		log.Fatal("couldn't setup client")
 	}

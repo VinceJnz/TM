@@ -60,6 +60,8 @@ type TableData struct {
 	AccountStatusID int       `json:"user_account_status_id"`
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`
+
+	group int // This is for debug purposes
 }
 
 // ********************* This needs to be changed for each api **********************
@@ -284,17 +286,32 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
+	success := func(err error) {
+		if err != nil {
+			log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()4 success error: ", "err =", err, "item =", item) //Log the error in the browser
+		}
+		log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()5 success: ", "err =", err, "item =", item) //Log the error in the browser
+		// Next process step
+		editor.onCompletionMsg("Account successfully created???")
+	}
+
+	fail := func(err error) {
+		log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()6 fail: ", "err =", err, "item =", item) //Log the error in the browser
+		editor.onCompletionMsg("Account creation failed???")
+	}
+
 	editor.updateStateDisplay(ItemStateSaving)
 	item, err := authCreate(item)
 	if err != nil {
 		log.Println(debugTag + "AddItem()1 Cannot create account. Failed to create auth data for item.")
 		return
 	}
-	httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL+"/register/", nil, &item)
-	editor.RecordState = RecordStateReloadRequired
-	//editor.FetchItems() // Refresh the item list
-	editor.updateStateDisplay(ItemStateNone)
-	editor.onCompletionMsg("Account successfully created???")
+	go func() {
+		httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL+"/register/", nil, &item, success, fail)
+		editor.RecordState = RecordStateReloadRequired
+		//editor.FetchItems() // Refresh the item list
+		editor.updateStateDisplay(ItemStateNone)
+	}()
 }
 
 /*

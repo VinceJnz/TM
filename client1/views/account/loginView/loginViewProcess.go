@@ -87,18 +87,18 @@ func (editor *ItemEditor) getServerVerify() {
 
 	//Fetch client ephemeral public key
 	A = editor.SrpClient.EphemeralPublic()
-	strA, _ := A.MarshalText()
+	byteStrA, _ := A.MarshalText()
 
 	username := editor.CurrentRecord.Username
-	log.Printf(debugTag+"LogonForm.getServerVerify()3 CurrentRecord: %+v, username: %+v, url: %v", editor.CurrentRecord, username, editor.baseURL+apiURL+"/"+username+"/salt/")
+	log.Printf(debugTag+"LogonForm.getServerVerify()3 CurrentRecord=%+v, username=%+v, url=%v, byteStrA=%v, A=%v", editor.CurrentRecord, username, editor.baseURL+apiURL+"/"+username+"/key/"+string(byteStrA), byteStrA, A)
 
 	//if editor.RecordState == RecordStateReloadRequired {
 	//	editor.RecordState = RecordStateCurrent
 	go func() {
-		log.Printf(debugTag+"LogonForm.getServerVerify()4 CurrentRecord: %+v, username: %+v, url: %v", editor.CurrentRecord, username, editor.baseURL+apiURL+"/"+username+"/salt/")
+		log.Printf(debugTag+"LogonForm.getServerVerify()4 CurrentRecord=%+v, username=%+v, url=%v", editor.CurrentRecord, username, editor.baseURL+apiURL+"/"+username+"/key/"+string(byteStrA))
 
 		editor.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+"/"+username+"/key/"+string(strA), &ServerVerifyRecord, nil, success, fail)
+		httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL+"/"+username+"/key/"+string(byteStrA), &ServerVerifyRecord, nil, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//}
@@ -116,10 +116,10 @@ func (editor *ItemEditor) checkServerKey() {
 	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()2 success: ", "err =", err, "s.Item =", editor.CurrentRecord) //Log the error in the browser
+			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()2 success: ", "err=", err, "s.Item=", editor.CurrentRecord) //Log the error in the browser
 		}
 		editor.Children.ClientVerifyRecord = ClientVerifyRecord
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()0 success: ", "err =", err, "editor.Children =", editor.Children) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()0 success: ", "err=", err, "editor.CurrentRecord=", editor.CurrentRecord, "editor.Children=", editor.Children) //Log the error in the browser
 		// Next process step
 		// Need to do something here to signify the login being successful!!!!
 		editor.onCompletionMsg(debugTag + "checkServerKey()1 " + err.Error())
@@ -127,7 +127,7 @@ func (editor *ItemEditor) checkServerKey() {
 	}
 
 	fail := func(err error) {
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()3 fail: ", "err =", err, "editor.Children =", editor.Children) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()3 fail: ", "err=", err, "editor.Children=", editor.Children) //Log the error in the browser
 		//editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
 
@@ -135,7 +135,7 @@ func (editor *ItemEditor) checkServerKey() {
 	// Client should check error status here as defense against
 	// a malicious B sent from server
 	if err = editor.SrpClient.SetOthersPublic(editor.Children.ServerVerifyRecord.B); err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()4 fail: ", "err =", err, "s.Item =", editor.CurrentRecord) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()4 fail: ", "err=", err, "editor.Children=", editor.Children) //Log the error in the browser
 		// The process has failed
 		//log.Fatalf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()4 fail: ", "err =", err, "s.Item =", s.Item)
 	}
@@ -143,13 +143,13 @@ func (editor *ItemEditor) checkServerKey() {
 	// client can now make the session key
 	clientKey, err := editor.SrpClient.Key()
 	if err != nil || clientKey == nil {
-		log.Printf(debugTag+"LogonForm.checkServerKey()6 Fatal: something went wrong making server key: %s", err)
+		log.Printf(debugTag+"LogonForm.checkServerKey()6 Fatal: something went wrong making client session key: %s", err)
 	}
 
 	// client tests tests that the server sent a good proof
 	if !editor.SrpClient.GoodServerProof(editor.CurrentRecord.Salt, editor.CurrentRecord.Username, editor.Children.ServerVerifyRecord.Proof) {
 		// Client must bail and not send a its own proof back to the server
-		log.Fatalf(debugTag+"LogonForm.checkServerKey()7 Fatal: bad proof from server: salt=%+v, username=%v, proof=%v", editor.CurrentRecord.Salt, editor.CurrentRecord.Username, editor.Children.ServerVerifyRecord.Proof)
+		log.Fatalf(debugTag+"LogonForm.checkServerKey()7 Fatal: bad proof from server: CurrentRecord=%+v, ServerVerifyRecord=%+v", editor.CurrentRecord, editor.Children.ServerVerifyRecord)
 		return
 	}
 
@@ -163,7 +163,7 @@ func (editor *ItemEditor) checkServerKey() {
 	ClientVerifyRecord.Proof = clientProof
 	ClientVerifyRecord.Token = editor.Children.ServerVerifyRecord.Token
 	editor.Children.ClientVerifyRecord = ClientVerifyRecord
-	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()9 ", "err =", err, "editor.Children =", editor.Children, "editor.CurrentRecord =", editor.CurrentRecord) //Log the error in the browser
+	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()9 ", "err =", err, "editor.Children =", editor.Children, "editor.CurrentRecord=", editor.CurrentRecord) //Log the error in the browser
 
 	//if editor.RecordState == RecordStateReloadRequired {
 	//	editor.RecordState = RecordStateCurrent
