@@ -171,9 +171,10 @@ func main() {
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:8081"}),        // Allow requests from http://localhost:8080
+		handlers.AllowedOrigins([]string{"http://localhost:8081"}),        // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // or "*" if you want to test without restrictions
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}), // Allowed HTTP methods
 		handlers.AllowedHeaders([]string{"Content-Type"}),                 // Allowed headers
+		//handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
 	log.Println("Server running on port 8085")

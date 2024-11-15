@@ -222,17 +222,18 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 	var err error
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
 	sessionToken := &http.Cookie{
-		Name:   "session",
-		Value:  uuid.NewV4().String(),
-		Path:   "/",
-		Domain: "localhost",
+		Name:  "session",
+		Value: uuid.NewV4().String(),
+		Path:  "/",
+		//Domain: "localhost",
 		//Expires:    time.Time{},
 		//RawExpires: "",
 		//MaxAge:     0,
 		Secure:   false,
 		HttpOnly: false,
 		//SameSite: http.SameSiteNoneMode,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
+		//SameSite: http.SameSiteStrictMode,
 		//Raw:        "",
 		//Unparsed:   []string{},
 	}
