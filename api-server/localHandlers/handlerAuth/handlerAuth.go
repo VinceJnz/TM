@@ -44,12 +44,11 @@ func New(appConf *appCore.Config) *Handler {
 //}
 
 func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
-	session := &Session{}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//var err error
 
-		err := h.setRestResource(session, r)
+		session, err := h.setRestResource(r)
 		if err != nil {
 			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
 		}
@@ -70,15 +69,33 @@ func (h *Handler) RequireRestAuthTst(next http.Handler) http.Handler {
 // func (h *Handler) RequireRestAuth(fn func(http.ResponseWriter, *http.Request, *mdlSession.Item)) http.HandlerFunc {
 // func (h *Handler) RequireRestAuth(next HandlerFunc) http.HandlerFunc {
 func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
-	session := &Session{}
+	//session := &Session{}
 	//log.Println(debugTag + "Handler.RequireRestAuth()1")
 	if h.appConf.TestMode {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			//var err error
 
-			err := h.setRestResource(session, r)
+			session, err := h.setRestResource(r)
 			if err != nil {
 				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
+			}
+
+			sessionToken, err := r.Cookie("session")
+			if err == http.ErrNoCookie { // If there is no session cookie
+				log.Printf("%v %v %v %v %v %v %+v %v %+v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()3", "err =", err, "sessionToken =", sessionToken, "session =", session, "session.Token =", session.Token, "session.User =", session.User, "session.Control =", session.Control, "r =", r)
+				//w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+				//w.Write([]byte("Logon required - You don't have access to the requested resource."))
+				//return
+			} else { // If there is a session cookie try to find it in the repository
+				//_, err = h.srvc.CheckToken(session, sessionToken.Value)
+				session.Token, err = h.FindSessionToken(sessionToken.Value)
+				session.User.ID = int(session.Token.UserID)
+				if err != nil { // could not find user sessionToken so user is not authorised
+					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()4", "err =", err, "session =", session, "r =", r)
+					//w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+					//w.Write([]byte("Token not authorised - You don't have access to the requested resource."))
+					//return
+				}
 			}
 
 			ctx := context.WithValue(r.Context(), h.appConf.UserIDKey, session.User.ID) // Store userID in the context
@@ -88,6 +105,11 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 		//anonymous function. This is returned by this function and called via Mux.HandleFunc
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var err error
+
+			session, err := h.setRestResource(r)
+			if err != nil {
+				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "session =", session, "r =", r)
+			}
 
 			// Plan to remove this and focus on only checking the user authentication in this handler. Will pass the userID to subsequent handlers for authorisation (access) checking.
 			//var accessTypeID int
@@ -130,10 +152,11 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 // SetRestResource Splits the request url and extracts the resource being accessed and what level of access is being requested
 // This is used to determine if a user is permitted to access the resource
 // func setRestResource(session *mdlSession.Session, r *http.Request) error {
-func (h *Handler) setRestResource(session *Session, r *http.Request) error {
+func (h *Handler) setRestResource(r *http.Request) (Session, error) {
 	var err error
 	var urlSplit []string
 	var apiVersion string
+	var session Session
 
 	session.Control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
 	urlSplit = strings.Split(session.Control.PrevURL, "/")
@@ -176,5 +199,5 @@ func (h *Handler) setRestResource(session *Session, r *http.Request) error {
 		log.Println(debugTag+"SetRestResource()7 ", "session =", session, "err =", err, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel)
 		log.Printf("%v %v %v %v %v %+v", debugTag+"SetRestResource()8", "urlSplit =", urlSplit, len(urlSplit), "r =", r)
 	}
-	return err
+	return session, err
 }

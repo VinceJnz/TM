@@ -33,8 +33,8 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := r.Context().Value(h.appConf.UserIDKey).(int) // Used to retrieve the userID from the context so that access level can be assessed.
 	if !ok {
-		log.Printf(debugTag+"GetAll()1 userID %v\n", userID)
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		log.Printf(debugTag+"GetAll()1 UserID not available in request context. userID=%v\n", userID)
+		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
 		return
 	}
 	log.Printf(debugTag+"GetAll()2 userID %v\n", userID)
