@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/cookiejar"
 	"time"
 )
 
@@ -32,8 +33,12 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	var err error
 	var req *http.Request
 	var res *http.Response
+
+	// Create a cookie jar
+	jar, _ := cookiejar.New(nil)
+
 	httpClient := &http.Client{
-		//Jar: jar,
+		Jar: jar,
 		//Timeout: time.Minute,
 		Timeout: 5 * time.Second,
 		//Transport: &http.Transport{
