@@ -138,6 +138,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var user models.User
 	var ClientVerify clientVerify
+	var sessionToken *http.Cookie
 	//var group = srp.RFC5054Group3072 //?????????? This needs to be managed at run time ??????????????
 
 	//Process the web data
@@ -180,7 +181,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 
 	//Authentication successful
 	//Create and store a new cookie
-	sessionToken, err := h.createSessionToken(userID, r.RemoteAddr)
+	sessionToken, err = h.createSessionToken(userID, r.RemoteAddr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to create cookie"))
@@ -188,7 +189,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//h.srvc.User.ReadDB(userID, &user) //Fetch the user details
+	//Fetch the user details
 	user, err = h.UserReadQry(userID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -197,7 +198,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.AuthCheckClientProof()10: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", sessionToken)
+	log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.AuthCheckClientProof()11: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", *sessionToken)
 
 	// If all okay we can set the sessionCookie and let the user know
 	http.SetCookie(w, sessionToken)
@@ -221,10 +222,10 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 	var err error
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
 	sessionToken := &http.Cookie{
-		Name:  "session",
-		Value: uuid.NewV4().String(),
-		Path:  "/",
-		//Domain:     "",
+		Name:   "session",
+		Value:  uuid.NewV4().String(),
+		Path:   "/",
+		Domain: "localhost",
 		//Expires:    time.Time{},
 		//RawExpires: "",
 		//MaxAge:     0,
