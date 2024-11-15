@@ -31,6 +31,7 @@ func NewRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) (*http.Request, error) {
 	var err error
 	var req *http.Request
+	var res *http.Response
 	httpClient := &http.Client{
 		//Jar: jar,
 		//Timeout: time.Minute,
@@ -91,6 +92,15 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 	}
 
 	callBackSuccess := func(error) {
+		cookies := res.Cookies()
+		if len(cookies) == 0 {
+			log.Printf(debugTag + "NewRequest()0 there are no cookies")
+		} else {
+			for i, v := range cookies {
+				log.Printf(debugTag+"NewRequest()0 cookie=%v, details=%+v", i, v)
+			}
+		}
+
 		err = fmt.Errorf(debugTag+"newRequest()2a INFORMATION: Using default success-callback: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderOk is called
 	} //The function to be called to render the request results
@@ -113,7 +123,7 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 		}
 	}
 
-	res, err := httpClient.Do(req) // This is the call to send the https request and receive the response
+	res, err = httpClient.Do(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)
 		callBackFail(err)
@@ -156,6 +166,15 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 		//log.Printf("%v %v %v %v %p %+v", debugTag+"Client.SendRequest()8c ", "req.URL =", req.URL, "dataStru =", dataStru, dataStru)
 		resBody, err := io.ReadAll(res.Body)
 		log.Printf("%v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - data is nil ", "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
+	}
+
+	cookies := res.Cookies()
+	if len(cookies) == 0 {
+		log.Printf(debugTag + "NewRequest()0 there are no cookies")
+	} else {
+		for i, v := range cookies {
+			log.Printf(debugTag+"NewRequest()0 cookie=%v, details=%+v", i, v)
+		}
 	}
 
 	callBackSuccess(nil)
