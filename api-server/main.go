@@ -26,11 +26,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const debugTag = "main."
+
 func main() {
 	app := appCore.New(true)
 	defer app.Close()
 
 	m := mux.NewRouter()
+
+	// Setup your API subrouter with CORS middleware
 	r := m.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 
 	auth := handlerAuth.New(app)
@@ -44,7 +48,7 @@ func main() {
 	r.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
 	r.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Post")
 
-	r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	//r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
 	seasons := handlerSeasons.New(app)
@@ -171,15 +175,31 @@ func main() {
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:8081"}),        // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // or "*" if you want to test without restrictions
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}), // Allowed HTTP methods
-		handlers.AllowedHeaders([]string{"Content-Type"}),                 // Allowed headers
-		//handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
+		handlers.AllowedOrigins([]string{"http://localhost:8081"}),                                             // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // "http://localhost:8081" // or "*" if you want to test without restrictions
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),                           // Allowed HTTP methods
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}), // Allowed headers
+		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
 	log.Println("Server running on port 8085")
 	log.Fatal(http.ListenAndServe(":8085", corsOpts(r))) // Apply CORS middleware
 
 	//log.Println("Server running on port 8085")
-	//log.Fatal(http.ListenAndServe(":8085", r))
+}
+
+func CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8081")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		// If it's an OPTIONS request, just return without passing to next handler
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
