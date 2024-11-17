@@ -8,6 +8,15 @@ mypassword
 <https://towardsdatascience.com/use-environment-variable-in-your-next-golang-project-39e17c3aaa66>
 
 
+## Cookie handling
+
+It appears that modern browsers will only accept cookies via https!
+
+there's a whole bunch of settings needed to make cookies work correctly.
+see chatGpt thread.
+
+
+
 ## sqlx
 
 Illustrated guide to SQLX
