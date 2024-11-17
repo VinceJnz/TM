@@ -128,6 +128,10 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 		}
 	}
 
+	//req.Header.Set("Authorization", "Bearer your_token_here")
+	req.Header.Set("Access-Control-Allow-Credentials", "true")
+	req.Header.Set("Content-Type", "application/json")
+
 	res, err = httpClient.Do(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)

@@ -105,7 +105,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()2 success: ", "err=", err, "s.Item=", editor.CurrentRecord) //Log the error in the browser
 		}
 		//editor.Children.ClientVerifyRecord = ClientVerifyRecord // Save the ClientVerifyRecord - This is probably not required ???????????????
-		//log.Printf("%v %v %v %v %+v %v %+v %v %v", debugTag+"LogonForm.checkServerKey()0 success: ", "err=", err, "editor.CurrentRecord=", editor.CurrentRecord, "editor.Children=", editor.Children, "username=", username) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v %v %+v %v %v", debugTag+"LogonForm.checkServerKey()0 success: ", "err=", err, "editor.CurrentRecord=", editor.CurrentRecord, "editor.Children=", editor.Children, "username=", username) //Log the error in the browser
 		// Next process step
 		editor.loginComplete(username)
 	}
@@ -146,7 +146,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 	ClientVerifyRecord.UserName = username
 	ClientVerifyRecord.Proof = clientProof
 	ClientVerifyRecord.Token = serverVerifyRecord.Token
-	//log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()9 ", "err =", err, "editor.Children =", editor.Children, "editor.CurrentRecord=", editor.CurrentRecord) //Log the error in the browser
+	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()9 ", "err =", err, "editor.Children =", editor.Children, "editor.CurrentRecord=", editor.CurrentRecord) //Log the error in the browser
 
 	// client sends its proof to the server. Server checks
 	go func() {
@@ -159,6 +159,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 
 func (editor *ItemEditor) loginComplete(username string) {
 	// Need to do something here to signify the login being successful!!!!
+	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"loginComplete()1 ", "username =", username, "editor.Children =", editor.Children, "editor.CurrentRecord =", editor.CurrentRecord) //Log the error in the browser
 
-	editor.onCompletionMsg(debugTag + "checkServerKey()1 successfully completed login:" + username)
+	editor.onCompletionMsg(debugTag + "loginComplete()2 successfully completed login:" + username)
 }
