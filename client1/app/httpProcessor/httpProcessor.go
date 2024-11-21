@@ -20,7 +20,7 @@ type Client struct {
 	//apiKey    string
 	//User       *mdlUser.User
 	//Session bool
-	CookieJar  *cookiejar.Jar
+	//CookieJar  *cookiejar.Jar
 	HTTPClient *http.Client
 }
 
@@ -44,8 +44,8 @@ func New(baseURL string) *Client {
 	}
 
 	return &Client{
-		BaseURL:    baseURL,
-		CookieJar:  jar,
+		BaseURL: baseURL,
+		//CookieJar:  jar,
 		HTTPClient: httpClient,
 	}
 }
@@ -124,7 +124,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 
 	callBackSuccess := func(error) {
 		cookies := res.Cookies()
-		log.Printf(debugTag+"NewRequest()0a Cookies: %v", c.CookieJar.Cookies(req.URL))
+		log.Printf(debugTag+"NewRequest()0a Cookies: %v", c.HTTPClient.Jar.Cookies(req.URL))
 		if len(cookies) == 0 {
 			log.Printf(debugTag + "NewRequest()0b there are no cookies")
 		} else {
@@ -159,6 +159,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 	//req.Header.Set("Authorization", "Bearer your_token_here")
 	req.Header.Set("Access-Control-Allow-Credentials", "true")
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "http://localhost:8081") // Set the Origin header
 
 	res, err = c.HTTPClient.Do(req) // This is the call to send the https request and receive the response
 	if err != nil {
