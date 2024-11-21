@@ -1,0 +1,30 @@
+############################################################
+# STAGE1: Use a lightweight Go image to build the binary
+FROM golang:1.21.10-alpine AS apibuilder
+
+# Set working directory in the container
+WORKDIR /app
+
+# Copy the Go API server source code to the container
+COPY ./api-server/ .
+COPY ./certs/api-server/ ./certs
+
+# Build the Go API server
+RUN go mod download
+RUN go build -o apiserver .
+
+############################################################
+# STAGE 2: Create a clean image for the final output
+FROM alpine:latest AS final
+
+# Copy the compiled webserver binary from the builder stage
+COPY --from=apibuilder /app/apiserver .
+COPY --from=apibuilder /app/.env .
+COPY --from=apibuilder /app/certs/* /etc/ssl/certs
+
+# Expose the port the API server listens on
+EXPOSE 8085
+EXPOSE 8185
+
+# Command to run the API server
+CMD ["./apiserver"]
