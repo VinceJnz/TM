@@ -81,7 +81,9 @@ type children struct {
 }
 
 type ItemEditor struct {
-	document      js.Value
+	client   *httpProcessor.Client
+	document js.Value
+
 	events        *eventProcessor.EventProcessor
 	baseURL       string
 	CurrentRecord TableData
@@ -99,11 +101,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
+	editor.client = client
 	editor.document = document
 	editor.events = eventProcessor
-	editor.baseURL = baseURL
+
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
@@ -136,10 +139,10 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseU
 
 	editor.RecordState = RecordStateReloadRequired
 
-	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor, editor.baseURL)
+	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor, editor.client)
 	editor.Children.Difficulty.FetchItems()
 
-	editor.Children.TripStatus = tripStatusView.New(editor.document, eventProcessor, editor.baseURL)
+	editor.Children.TripStatus = tripStatusView.New(editor.document, eventProcessor, editor.client)
 	editor.Children.TripStatus.FetchItems()
 
 	return editor
@@ -325,7 +328,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-		httpProcessor.NewRequest(http.MethodPut, editor.baseURL+apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+		editor.client.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
@@ -337,7 +340,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-		httpProcessor.NewRequest(http.MethodPost, editor.baseURL+apiURL, nil, &item)
+		editor.client.NewRequest(http.MethodPost, apiURL, nil, &item)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
@@ -351,7 +354,7 @@ func (editor *ItemEditor) FetchItems() {
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
-			httpProcessor.NewRequest(http.MethodGet, editor.baseURL+apiURL, &records, nil)
+			editor.client.NewRequest(http.MethodGet, apiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
 			editor.updateStateDisplay(ItemStateNone)
@@ -362,7 +365,7 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		httpProcessor.NewRequest(http.MethodDelete, editor.baseURL+apiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		editor.client.NewRequest(http.MethodDelete, apiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
@@ -410,7 +413,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		// ********************* This needs to be changed for each api **********************
 		// Create and add child views and buttons to Item
-		booking := bookingView.New(editor.document, editor.events, editor.baseURL, bookingView.ParentData{ID: record.ID, FromDate: record.FromDate, ToDate: record.ToDate})
+		booking := bookingView.New(editor.document, editor.events, editor.client, bookingView.ParentData{ID: record.ID, FromDate: record.FromDate, ToDate: record.ToDate})
 
 		// Create a toggle child list button
 		bookingButton := editor.document.Call("createElement", "button")

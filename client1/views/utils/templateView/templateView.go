@@ -48,6 +48,7 @@ type ItemRecord interface {
 }
 
 type View struct {
+	client   *httpProcessor.Client
 	document js.Value
 	events   *eventProcessor.EventProcessor
 
@@ -69,7 +70,9 @@ type View struct {
 
 /*
 type ItemEditor2 struct {
+	client        *http.Client
 	document      js.Value
+
 	events        *eventProcessor.EventProcessor
 	baseURL       string
 	CurrentRecord TableData
@@ -87,7 +90,7 @@ type ItemEditor2 struct {
 */
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, idList ...int) *View {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *View {
 	return nil
 }
 
@@ -235,7 +238,7 @@ func (v *View) FetchItems() {
 		//var records []TableData
 		records := v.ItemEditor.RecordSlicePtr()
 		v.updateStateDisplay(ItemStateFetching)
-		httpProcessor.NewRequest(http.MethodGet, v.Endpoint, &records, nil)
+		v.client.NewRequest(http.MethodGet, v.Endpoint, &records, nil)
 		//v.ItemEditor.SetRecords(records)
 		v.populateItemList()
 		v.updateStateDisplay(ItemStateNone)

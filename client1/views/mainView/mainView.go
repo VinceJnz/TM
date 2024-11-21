@@ -2,6 +2,7 @@ package mainView
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/account/loginView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
@@ -69,22 +70,23 @@ type viewElements struct {
 	participantStatusView *tripParticipantStatusReport.ItemEditor
 }
 
-type AppConfig struct {
+type ViewConfig struct {
 	BaseURL string
 }
 
 type View struct {
+	client     *httpProcessor.Client
 	document   js.Value
 	elements   viewElements
 	events     *eventProcessor.EventProcessor
 	menuChoice MenuChoice
-	config     AppConfig
+	//config     AppConfig
 }
 
-func New(config AppConfig) *View {
+func New(client *httpProcessor.Client) *View {
 	view := &View{
+		client:   client,
 		document: js.Global().Get("document"),
-		config:   config,
 	}
 	window := js.Global().Get("window")
 	window.Call("addEventListener", "onbeforeunload", js.FuncOf(view.BeforeUnload))
@@ -112,20 +114,20 @@ func (v *View) Setup() {
 	v.elements.pageTitle = v.document.Call("createElement", "div")
 
 	// Create editor div objects
-	v.elements.loginEditor = loginView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.userEditor = userView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.bookingEditor = bookingView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.bookingStatusEditor = bookingStatusView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.gropBookingEditor = groupBookingView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.tripEditor = tripView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.tripCostGroupEditor = tripCostGroupView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.tripDifficultyEditor = tripDifficultyView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.tripStatusEditor = tripStatusView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.tripTypeEditor = tripTypeView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.seasonEditor = seasonView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.config.BaseURL)
-	v.elements.participantStatusView = tripParticipantStatusReport.New(v.document, v.events, v.config.BaseURL)
+	v.elements.loginEditor = loginView.New(v.document, v.events, v.client)
+	v.elements.userEditor = userView.New(v.document, v.events, v.client)
+	v.elements.bookingEditor = bookingView.New(v.document, v.events, v.client)
+	v.elements.bookingStatusEditor = bookingStatusView.New(v.document, v.events, v.client)
+	v.elements.gropBookingEditor = groupBookingView.New(v.document, v.events, v.client)
+	v.elements.tripEditor = tripView.New(v.document, v.events, v.client)
+	v.elements.tripCostGroupEditor = tripCostGroupView.New(v.document, v.events, v.client)
+	v.elements.tripDifficultyEditor = tripDifficultyView.New(v.document, v.events, v.client)
+	v.elements.tripStatusEditor = tripStatusView.New(v.document, v.events, v.client)
+	v.elements.tripTypeEditor = tripTypeView.New(v.document, v.events, v.client)
+	v.elements.seasonEditor = seasonView.New(v.document, v.events, v.client)
+	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.client)
+	v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.client)
+	v.elements.participantStatusView = tripParticipantStatusReport.New(v.document, v.events, v.client)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")

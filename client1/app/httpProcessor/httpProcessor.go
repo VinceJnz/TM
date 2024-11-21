@@ -2,7 +2,6 @@ package httpProcessor
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,24 +15,47 @@ const debugTag = "httpProcessor."
 
 // Client provides the connection to the rest interface (is used by a store to read/write/update data????)
 type Client struct {
-	Ctx     context.Context
+	//Ctx     context.Context
 	BaseURL string
 	//apiKey    string
 	//User       *mdlUser.User
-	Session bool
+	//Session bool
 	//CookieJar  http.CookieJar
-	HTTPSClient *http.Client
+	HTTPClient *http.Client
 }
 
-func NewRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) {
-	newRequest(method, url, rxDataStru, txDataStru, callBacks...)
+func New(baseURL string) *Client {
+	// Create a cookie jar
+	jar, _ := cookiejar.New(nil)
+
+	httpClient := &http.Client{
+		Jar: jar,
+		//Timeout: time.Minute,
+		Timeout: 5 * time.Second,
+		//Transport: &http.Transport{
+		//	TLSClientConfig: &tls.Config{
+		//		//Certificates: []tls.Certificate{cert},
+		//		//RootCAs:      caCertPool,
+		//	},
+		//},
+	}
+
+	return &Client{
+		BaseURL:    baseURL,
+		HTTPClient: httpClient,
+	}
 }
 
-func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) (*http.Request, error) {
+func (c *Client) NewRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) {
+	c.newRequest(method, url, rxDataStru, txDataStru, callBacks...)
+}
+
+func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) (*http.Request, error) {
 	var err error
 	var req *http.Request
 	var res *http.Response
 
+	url = c.BaseURL + url
 	// Create a cookie jar
 	jar, _ := cookiejar.New(nil)
 
@@ -98,11 +120,13 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 
 	callBackSuccess := func(error) {
 		cookies := res.Cookies()
+		log.Printf(debugTag+"NewRequest()0a Cookies: %v", jar.Cookies(req.URL))
 		if len(cookies) == 0 {
-			log.Printf(debugTag + "NewRequest()0 there are no cookies")
+			log.Printf(debugTag + "NewRequest()0b there are no cookies")
 		} else {
+			log.Printf(debugTag + "NewRequest()0c checking cookie list...")
 			for i, v := range cookies {
-				log.Printf(debugTag+"NewRequest()0 cookie=%v, details=%+v", i, v)
+				log.Printf(debugTag+"NewRequest()0d cookie=%v, details=%+v", i, v)
 			}
 		}
 
@@ -179,10 +203,10 @@ func newRequest(method, url string, rxDataStru, txDataStru interface{}, callBack
 
 	cookies := res.Cookies()
 	if len(cookies) == 0 {
-		log.Printf(debugTag + "NewRequest()0 there are no cookies")
+		log.Printf(debugTag + "NewRequest()10 there are no cookies")
 	} else {
 		for i, v := range cookies {
-			log.Printf(debugTag+"NewRequest()0 cookie=%v, details=%+v", i, v)
+			log.Printf(debugTag+"NewRequest()10 cookie=%v, details=%+v", i, v)
 		}
 	}
 

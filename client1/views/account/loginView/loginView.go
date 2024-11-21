@@ -2,6 +2,7 @@ package loginView
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/account/acountRegisterView"
 	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
@@ -81,7 +82,9 @@ type children struct {
 }
 
 type ItemEditor struct {
-	document      js.Value
+	client   *httpProcessor.Client
+	document js.Value
+
 	events        *eventProcessor.EventProcessor
 	baseURL       string
 	CurrentRecord TableData
@@ -102,11 +105,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, baseURL string, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
+	editor.client = client
 	editor.document = document
 	editor.events = eventProcessor
-	editor.baseURL = baseURL
+
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
@@ -207,7 +211,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item
-	register := acountRegisterView.New(editor.document, editor.events, editor.baseURL, acountRegisterView.ParentData{})
+	register := acountRegisterView.New(editor.document, editor.events, editor.client, acountRegisterView.ParentData{})
 
 	// Create a toggle child button
 	registerButton := editor.document.Call("createElement", "button")
