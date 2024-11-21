@@ -20,7 +20,7 @@ type Client struct {
 	//apiKey    string
 	//User       *mdlUser.User
 	//Session bool
-	//CookieJar  http.CookieJar
+	CookieJar  *cookiejar.Jar
 	HTTPClient *http.Client
 }
 
@@ -42,6 +42,7 @@ func New(baseURL string) *Client {
 
 	return &Client{
 		BaseURL:    baseURL,
+		CookieJar:  jar,
 		HTTPClient: httpClient,
 	}
 }
@@ -57,19 +58,19 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 
 	url = c.BaseURL + url
 	// Create a cookie jar
-	jar, _ := cookiejar.New(nil)
+	//jar, _ := cookiejar.New(nil)
 
-	httpClient := &http.Client{
-		Jar: jar,
-		//Timeout: time.Minute,
-		Timeout: 5 * time.Second,
-		//Transport: &http.Transport{
-		//	TLSClientConfig: &tls.Config{
-		//		//Certificates: []tls.Certificate{cert},
-		//		//RootCAs:      caCertPool,
-		//	},
-		//},
-	}
+	//httpClient := &http.Client{
+	//	Jar: jar,
+	//	//Timeout: time.Minute,
+	//	Timeout: 5 * time.Second,
+	//	//Transport: &http.Transport{
+	//	//	TLSClientConfig: &tls.Config{
+	//	//		//Certificates: []tls.Certificate{cert},
+	//	//		//RootCAs:      caCertPool,
+	//	//	},
+	//	//},
+	//}
 
 	switch method {
 	case http.MethodDelete:
@@ -120,7 +121,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 
 	callBackSuccess := func(error) {
 		cookies := res.Cookies()
-		log.Printf(debugTag+"NewRequest()0a Cookies: %v", jar.Cookies(req.URL))
+		log.Printf(debugTag+"NewRequest()0a Cookies: %v", c.CookieJar.Cookies(req.URL))
 		if len(cookies) == 0 {
 			log.Printf(debugTag + "NewRequest()0b there are no cookies")
 		} else {
@@ -156,7 +157,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 	req.Header.Set("Access-Control-Allow-Credentials", "true")
 	req.Header.Set("Content-Type", "application/json")
 
-	res, err = httpClient.Do(req) // This is the call to send the https request and receive the response
+	res, err = c.HTTPClient.Do(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)
 		callBackFail(err)
