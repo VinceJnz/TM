@@ -230,8 +230,8 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 		//RawExpires: "",
 		//MaxAge:     0,
 		//Secure:   false,
-		Secure:   true,
-		HttpOnly: false,
+		Secure:   true,  //https --> true,
+		HttpOnly: false, //https --> true, http --> false
 		SameSite: http.SameSiteNoneMode,
 		//SameSite: http.SameSiteLaxMode,
 		//SameSite: http.SameSiteStrictMode,

@@ -34,6 +34,10 @@ func main() {
 
 	m := mux.NewRouter()
 
+	//m.PathPrefix("/").Handler(http.FileServer(http.Dir("/")))
+	m.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("/static"))))
+	//m.PathPrefix("/").Handler(http.FileServer(http.Dir("/static")))
+
 	// Setup your API subrouter with CORS middleware
 	r := m.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 
@@ -48,7 +52,7 @@ func main() {
 	r.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
 	r.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Post")
 
-	//r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
 	seasons := handlerSeasons.New(app)
@@ -181,13 +185,94 @@ func main() {
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
-	log.Println("Server running on port 8085")
-	log.Fatal(http.ListenAndServe(":8085", corsOpts(r))) // Apply CORS middleware
+	corsMuxHandler := corsOpts(r)
 
-	//log.Println("Server running on port 8085")
+	// Paths to certificate and key files
+	crtFile := "/etc/ssl/certs/localhost.crt" // "../certs/api-server/cert.pem"
+	keyFile := "/etc/ssl/certs/localhost.key" // "../certs/api-server/key.pem"
+
+	go func() {
+		log.Println(debugTag + "HTTP server running on http://localhost:9080")
+		if err := http.ListenAndServe(":9080", corsMuxHandler); err != nil {
+			log.Fatalf("HTTP server error: %v", err)
+		}
+	}()
+
+	go func() {
+		log.Println(debugTag + "HTTPS server running on https://localhost:9443")
+		if err := http.ListenAndServeTLS(":9443", crtFile, keyFile, corsMuxHandler); err != nil {
+			log.Fatalf("HTTPS server error: %v", err)
+		}
+	}()
+
+	// Block the main goroutine to keep the servers running
+	select {}
+
+	/*
+		//******************************************************************
+		// Config and Start HTTP
+		//******************************************************************
+
+		server := &http.Server{
+			//Addr:         ":" + *portHttp,
+			Addr: ":" + app.Settings.PortHttp,
+
+			ReadTimeout:  5 * time.Minute, // 5 min to allow for delays when 'curl' on OSx prompts for username/password
+			WriteTimeout: 10 * time.Second,
+			//TLSConfig:    &tls.Config{ServerName: *host},
+			//Handler: (main.LogRequest(app.Mux)),
+			Handler: (corsMuxHandler),
+		}
+
+		go func() error {
+			if err := server.ListenAndServe(); err != nil {
+				//log.Fatal(err)
+				log.Fatal("Web server (HTTP): ", err)
+				return fmt.Errorf("Server failed to start: %w", err)
+			}
+			return nil
+			//err_http := http.ListenAndServe(":8085", main.LogRequest(app.Mux))
+			//if err_http != nil {
+			//	log.Fatal("Web server (HTTP): ", err_http)
+			//}
+		}()
+
+		//******************************************************************
+		// Config and Start HTTPS
+		//******************************************************************
+
+		serverTLS := &http.Server{
+			//Addr:         ":" + *portHttps,
+			Addr:         ":" + app.Settings.PortHttps,
+			ReadTimeout:  5 * time.Minute, // 5 min to allow for delays when 'curl' on OSx prompts for username/password
+			WriteTimeout: 10 * time.Second,
+			//TLSConfig: &tls.Config{
+			//	ServerName: *host,
+			//	ClientAuth: tls.ClientAuthType(*certOpt),
+			//	MinVersion: tls.VersionTLS12, // TLS versions below 1.2 are considered insecure - see https://www.rfc-editor.org/rfc/rfc7525.txt for details
+			//},
+			//TLSConfig: getTLSConfig(*host, *clientCaCert, *serverCaCert, tls.ClientAuthType(*certOpt)),
+			TLSConfig: &tls.Config{
+				ServerName: host,
+				ClientAuth: certOpt,
+				ClientCAs:  caCertPool,
+				MinVersion: tls.VersionTLS12, // TLS versions below 1.2 are considered insecure - see https://www.rfc-editor.org/rfc/rfc7525.txt for details
+			},
+			//getTLSConfig(app.Settings.Host,
+			//	app.Settings.ClientCaCert,
+			//	app.Settings.ServerCaCert,
+			//	tls.ClientAuthType(app.Settings.CertOpt)),
+			Handler: corsMuxHandler,
+		}
+
+		if err := serverTLS.ListenAndServeTLS(app.Settings.ServerCert, app.Settings.ServerKey); err != nil {
+			log.Fatal(debugTag+"Web server (HTTPS): ", err)
+		}
+	*/
 }
 
-func CorsMiddleware(next http.Handler) http.Handler {
+/*
+func XXCorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8081")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -203,3 +288,4 @@ func CorsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+*/
