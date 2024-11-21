@@ -26,7 +26,10 @@ type Client struct {
 
 func New(baseURL string) *Client {
 	// Create a cookie jar
-	jar, _ := cookiejar.New(nil)
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		log.Fatalf(debugTag+"New() Error creating cookie jar: %v", err)
+	}
 
 	httpClient := &http.Client{
 		Jar: jar,
