@@ -182,6 +182,8 @@ func main() {
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Update).Methods("PUT")
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Delete).Methods("DELETE")
 
+	//r.PathPrefix("/client/").Handler(http.StripPrefix("/client/", http.FileServer(http.Dir("/static/"))))
+	//r.PathPrefix("/client/").Handler(http.StripPrefix("/client/", http.FileServer(http.Dir("./static/"))))
 	r.PathPrefix("/client/").Handler(http.StripPrefix("/client/", http.FileServer(http.Dir("./static"))))
 
 	// Define CORS options
