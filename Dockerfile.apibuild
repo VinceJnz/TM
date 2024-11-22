@@ -25,7 +25,7 @@ WORKDIR /app
 
 # Copy the Go API server source code to the container
 COPY ./api-server/ .
-COPY ./certs/api-server/ ./certs
+COPY ./certs/api-server/ ./certs/
 
 # Build the Go API server
 RUN go mod download
@@ -36,15 +36,15 @@ RUN go build -o apiserver .
 FROM alpine:latest AS final
 
 # Copy the compiled wasm binary from the builder stage
-COPY --from=wasmbuilder /app/main.wasm .
-COPY --from=wasmbuilder /app/wasm_exec.js .
+COPY --from=wasmbuilder /app/main.wasm ./static/
+COPY --from=wasmbuilder /app/wasm_exec.js ./static/
 
 # Copy the compiled webserver binary from the builder stage
 COPY --from=apibuilder /app/apiserver .
 COPY --from=apibuilder /app/.env .
-COPY --from=apibuilder /app/certs/* /etc/ssl/certs
-COPY --from=apibuilder /app/static/*.html ./static
-COPY --from=apibuilder /app/static/favicon.ico ./static
+COPY --from=apibuilder /app/certs/* /etc/ssl/certs/
+COPY --from=apibuilder /app/static/*.html ./static/
+COPY --from=apibuilder /app/static/favicon.ico ./static/
 
 # Expose the port the API server listens on
 EXPOSE 9080
