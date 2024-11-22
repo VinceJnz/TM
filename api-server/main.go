@@ -18,6 +18,7 @@ import (
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/handlerUserStatus"
+	"api-server/v2/localHandlers/helpers"
 	"log"
 	"net/http"
 	"os"
@@ -33,10 +34,14 @@ func main() {
 	defer app.Close()
 
 	m := mux.NewRouter()
-
+	//m.Use(helpers.LogRequest)
 	//m.PathPrefix("/").Handler(http.FileServer(http.Dir("/")))
-	m.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("/static"))))
-	//m.PathPrefix("/").Handler(http.FileServer(http.Dir("/static")))
+	//m.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("/static"))))
+	// Serve files from the "static" folder at the "/" path prefix
+	m.PathPrefix("/").Handler(http.FileServer(http.Dir("/static")))
+	// Serve all files in the /static folder
+	m.PathPrefix("/client/").Handler(http.StripPrefix("/client/", http.FileServer(http.Dir("/static"))))
+	m.PathPrefix("/static/").Handler(http.FileServer(http.Dir("/static")))
 
 	// Setup your API subrouter with CORS middleware
 	r := m.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
@@ -52,7 +57,7 @@ func main() {
 	r.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
 	r.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Post")
 
-	r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	//r.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
 	// Seasons routes
 	seasons := handlerSeasons.New(app)
@@ -177,6 +182,8 @@ func main() {
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Update).Methods("PUT")
 	r.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Delete).Methods("DELETE")
 
+	r.PathPrefix("/client/").Handler(http.StripPrefix("/client/", http.FileServer(http.Dir("./static"))))
+
 	// Define CORS options
 	corsOpts := handlers.CORS(
 		handlers.AllowedOrigins([]string{"http://localhost:8081"}),                                             // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // "http://localhost:8081" // or "*" if you want to test without restrictions
@@ -185,7 +192,7 @@ func main() {
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
-	corsMuxHandler := corsOpts(r)
+	corsMuxHandler := helpers.LogRequest(corsOpts(r))
 
 	// Paths to certificate and key files
 	crtFile := "/etc/ssl/certs/localhost.crt" // "../certs/api-server/cert.pem"
