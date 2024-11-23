@@ -48,6 +48,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		FROM public.at_bookings atb
 		JOIN public.at_booking_people atbp ON atbp.booking_id=atb.id
 		GROUP BY atb.id) atbcount ON atbcount.trip_id=att.id
+	WHERE att.owner_id = userID
 	GROUP BY att.id, ettd.level, etts.status`)
 
 	if err == sql.ErrNoRows {

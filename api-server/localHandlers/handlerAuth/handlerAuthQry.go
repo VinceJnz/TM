@@ -196,7 +196,7 @@ const (
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
 		LEFT JOIN et_token_valid ettv ON ettv.ID=stt.token_valid_ID
-	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid_ID=1 AND stu.User_status_ID=1`
+	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid_ID=1 AND (stu.User_status_ID=1 OR stu.User_status_ID=0)`
 
 	//Finds valid tokens where user account exists and the token name is the same as the name passed in
 	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid_ID, stt.Valid_From, stt.Valid_To

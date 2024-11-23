@@ -70,7 +70,7 @@ func LogRequest(wr http.Handler) http.Handler {
 			return
 		}
 
-		log.Printf(debugTag+`{"HTTPinfo":%v}`, string(infoJSON))
+		log.Printf(debugTag+`LogRequest {"HTTPinfo":%v}`, string(infoJSON))
 	})
 }
 

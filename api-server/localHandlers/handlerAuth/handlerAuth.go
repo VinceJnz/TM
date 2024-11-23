@@ -97,7 +97,7 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 					//return
 				}
 			}
-
+			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()5", "err =", err, "session =", session, "r =", r)
 			ctx := context.WithValue(r.Context(), h.appConf.UserIDKey, session.User.ID) // Store userID in the context
 			next.ServeHTTP(w, r.WithContext(ctx))                                       // Access is correct so the request is passed to the next handler
 		})
