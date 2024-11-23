@@ -43,12 +43,16 @@ COPY --from=wasmbuilder /app/wasm_exec.js ./static/
 COPY --from=apibuilder /app/apiserver .
 COPY --from=apibuilder /app/.env .
 COPY --from=apibuilder /app/certs/* /etc/ssl/certs/
+
 COPY --from=apibuilder /app/static/*.html ./static/
 COPY --from=apibuilder /app/static/favicon.ico ./static/
 
+COPY --from=apibuilder /app/static/*.html .
+COPY --from=apibuilder /app/static/favicon.ico .
+
 # Expose the port the API server listens on
-EXPOSE 9080
-EXPOSE 9443
+EXPOSE 8085
+EXPOSE 8086
 
 # Command to run the API server
 CMD ["./apiserver"]

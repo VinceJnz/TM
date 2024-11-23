@@ -41,8 +41,8 @@ services:
       dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
     container_name: apiserver
     ports:
-      - "9080:9080"
-      - "9443:9443"
+      - "8085:8085"
+      - "8086:8086"
     networks:
       - mynetwork
     environment:
