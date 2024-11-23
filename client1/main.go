@@ -11,8 +11,7 @@ func main() {
 	log.Printf("%v", "main")
 
 	// Set up the HTML structure
-	//client := httpProcessor.New("http://localhost:9080/api/v1")
-	client := httpProcessor.New("https://localhost:9443/api/v1")
+	client := httpProcessor.New("https://localhost:8086/api/v1")
 	view := mainView.New(client)
 	view.Setup()
 
