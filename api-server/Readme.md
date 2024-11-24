@@ -10,11 +10,12 @@ mypassword
 
 ## Cookie handling
 
-It appears that modern browsers will only accept cookies via https!
-
 there's a whole bunch of settings needed to make cookies work correctly.
 see chatGpt thread.
 
+For cookies to be accepted in the browser:
+Modern browsers will only accept session cookies via https
+The wasm client needs to be served from an https server
 
 
 ## sqlx
