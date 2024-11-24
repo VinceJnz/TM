@@ -12,18 +12,7 @@ import (
 
 const debugTag = "handlerAuth."
 
-type Session struct {
-	Token   models.Token
-	User    models.User
-	Control models.Control
-	//Message mdlMessage.PageMsg
-}
-
 type HandlerFunc func(http.ResponseWriter, *http.Request)
-
-//type Handler struct {
-//	appConf *appCore.Config
-//}
 
 type Handler struct {
 	appConf *appCore.Config
@@ -39,10 +28,6 @@ func New(appConf *appCore.Config) *Handler {
 	}
 }
 
-//func New(appConf *appCore.Config) *Handler {
-//	return &Handler{appConf: appConf}
-//}
-
 //RequireUserAuth The input to this is a function of the form "fn(Session, ResponseWriter, Request)"
 //The return from this function is "http.HandlerFunc"
 //This function uses an anonymouse function to form a closure around "var Session"
@@ -50,141 +35,96 @@ func New(appConf *appCore.Config) *Handler {
 // ??????? or possibly be added as a seperate wrapper?????
 
 // RequireRestAuth checks that the request is authorised, i.e. the user has been given a cookie by loging on.
-// func (h *Handler) RequireRestAuth(fn func(http.ResponseWriter, *http.Request, *mdlSession.Item)) http.HandlerFunc {
-// func (h *Handler) RequireRestAuth(next HandlerFunc) http.HandlerFunc {
 func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
-	var err error
-	var control models.Control
-	var token models.Token
-	var userID int
-	//log.Println(debugTag + "Handler.RequireRestAuth()1")
-	if h.appConf.TestMode {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			//var err error
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var session models.Session
+		var token models.Token
+		var err error
 
-			control, err = h.setRestResource(r)
-			if err != nil {
-				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "control =", control, "r =", r)
-			}
+		//token.Host.SetValid(r.RemoteAddr) // Do we need to check the host when we ceck the session cookie???
 
-			sessionCookie, err := r.Cookie("session")
-			if err == http.ErrNoCookie { // If there is no session cookie
-				log.Printf("%v %v %v %v %v %v %+v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()3", "err =", err, "sessionCookie =", sessionCookie, "token =", token, "userID =", userID, "control =", control, "r =", r)
-				//w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-				//w.Write([]byte("Logon required - You don't have access to the requested resource."))
-				//return
-			} else { // If there is a session cookie try to find it in the repository
-				//_, err = h.srvc.CheckToken(session, sessionToken.Value)
-				token, err = h.FindSessionToken(sessionCookie.Value)
-				userID = int(token.UserID)
-				if err != nil { // could not find user sessionToken so user is not authorised
-					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()4", "err =", err, "token =", token, "r =", r)
-					//w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-					//w.Write([]byte("Token not authorised - You don't have access to the requested resource."))
-					//return
-				}
-			}
-			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()5", "err =", err, "token =", token, "r =", r)
-			ctx := context.WithValue(r.Context(), h.appConf.UserIDKey, userID) // Store userID in the context
-			next.ServeHTTP(w, r.WithContext(ctx))                              // Access is correct so the request is passed to the next handler
-		})
-	} else {
-		//anonymous function. This is returned by this function and called via Mux.HandleFunc
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var err error
-
-			control, err = h.setRestResource(r)
-			if err != nil {
-				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()1", "err =", err, "control =", control, "r =", r)
-			}
-
-			// Plan to remove this and focus on only checking the user authentication in this handler. Will pass the userID to subsequent handlers for authorisation (access) checking.
-			//var accessTypeID int
-			//err = h.setRestResource(session, r)
-			//if err != nil {
-			//	log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()2", "err =", err, "session =", session, "r =", r)
-			//}
-			sessionCookie, err := r.Cookie("session")
-			if err == http.ErrNoCookie { // If there is no session cookie
-				log.Printf("%v %v %v %v %+v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()3", "err =", err, "token =", token, "userID =", userID, "control =", control, "r =", r)
+		sessionCookie, err := r.Cookie("session")
+		if err == http.ErrNoCookie { // If there is no session cookie
+			log.Printf("%v %v %v %v %v %v %+v\n", debugTag+"Handler.RequireRestAuth()1", "err =", err, "sessionCookie =", sessionCookie, "r =", r)
+			w.WriteHeader(http.StatusNetworkAuthenticationRequired)
+			w.Write([]byte("Logon required."))
+			return
+		} else { // If there is a session cookie try to find it in the repository
+			token, err = h.FindSessionToken(sessionCookie.Value)
+			if err != nil { // could not find user session cookie in DB so user is not authorised
+				log.Printf("%v %v %v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()2", "err =", err, "sessionCookie =", sessionCookie, "token =", token, "r =", r)
 				w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-				w.Write([]byte("Logon required - You don't have access to the requested resource."))
+				w.Write([]byte("Logon required."))
 				return
-			} else { // If there is a session cookie try to find it in the repository
-				//_, err = h.srvc.CheckToken(session, sessionToken.Value)
-				token, err = h.FindSessionToken(sessionCookie.Value)
-				userID = int(token.UserID)
-				if err != nil { // could not find user sessionToken so user is not authorised
-					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()4", "err =", err, "token =", token, "r =", r)
-					w.WriteHeader(http.StatusNetworkAuthenticationRequired)
-					w.Write([]byte("Token not authorised - You don't have access to the requested resource."))
+			} else {
+				session, err = h.setRestResource(r)
+				if err != nil {
+					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()3", "err =", err, "session =", session, "r =", r)
+					w.WriteHeader(http.StatusUnauthorized)
+					w.Write([]byte("Not authorised - You don't have access to the requested resource."))
 					return
+				} else {
+					// check access to resource
+					session.AccessTypeID, err = h.UserCheckAccess(token.UserID, session.ResourceName, session.AccessMethod)
+					if err != nil {
+						log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()4", "err =", err, "session =", session, "r =", r)
+						w.WriteHeader(http.StatusUnauthorized)
+						w.Write([]byte("Not authorised - You don't have access to the requested resource."))
+						return
+					}
 				}
 			}
-			// Plan to remove this. Will only check that the user is authenticated (logged in). Will pass the userID to subsequent handlers for authorisation (access) checking.
-			//accessTypeID, err = h.UserCheckAccess(session.User.ID, session.Control.ResourceName, session.Control.AccessLevel)
-			//if err != nil { // user doesn't have correct access to the resource
-			//	log.Printf("%v %v %v %v %+v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()5", "err =", err, "session =", session, "session.User =", session.User, "r =", r)
-			//	http.Error(w, "You don't have access to the requested resource.", http.StatusForbidden)
-			//	return
-			//}
-			//session.Control.AccessTypeID = accessTypeID
-
-			ctx := context.WithValue(r.Context(), h.appConf.UserIDKey, userID) // Store User ID in the context
-			next.ServeHTTP(w, r.WithContext(ctx))                              // Access is correct so the request is passed to the next handler
-		})
-	}
+		}
+		w.WriteHeader(http.StatusOK)
+		ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session) // Store userID in the context. This can be used to filter rows in subsequent handlers
+		next.ServeHTTP(w, r.WithContext(ctx))                                  // Access is correct so the request is passed to the next handler
+	})
 }
 
 // SetRestResource Splits the request url and extracts the resource being accessed and what level of access is being requested
 // This is used to determine if a user is permitted to access the resource
 // func setRestResource(session *mdlSession.Session, r *http.Request) error {
-func (h *Handler) setRestResource(r *http.Request) (models.Control, error) {
+func (h *Handler) setRestResource(r *http.Request) (models.Session, error) {
 	var err error
 	var urlSplit []string
 	var apiVersion string
-	var control models.Control
+	var control models.Session
 
 	control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
 	urlSplit = strings.Split(control.PrevURL, "/")
-	err = errors.New(debugTag + "SetRestResource()2 - Resource info not found") //this is the error returned if a valid resource is not identified
-	//session.Token.Host.SetValid(r.RemoteAddr)
-	if urlSplit[1] == "api" {
-		apiVersion = urlSplit[2]
-		switch {
-		case apiVersion == "v1":
-			switch {
-			case len(urlSplit) == 3:
-				control.ResourceName = urlSplit[3]
-				control.AccessLevel = r.Method //???? get, put, del, ...
-				err = nil
-				//log.Println(debugTag+"SetRestResource()2 ", "r.Method =", r.Method, "session =", session, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel, "err =", err)
-			case len(urlSplit) == 4:
-				control.ResourceName = urlSplit[3]
-				control.AccessLevel = r.Method //???? get, put, del, ...
-				err = nil
-				//log.Println(debugTag+"SetRestResource()3 ", "r.Method =", r.Method, "session =", session, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel, "err =", err)
-			case len(urlSplit) == 5:
-				control.ResourceName = urlSplit[3]
-				control.AccessLevel = r.Method //???? get, put, del, ...
-				err = nil
-				//log.Println(debugTag+"SetRestResource()4 ", "r.Method =", r.Method, "session =", session, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel, "err =", err)
-			case len(urlSplit) == 6:
-				control.ResourceName = urlSplit[3]
-				control.AccessLevel = r.Method //???? get, put, del, ...
-				err = nil
-				//log.Println(debugTag+"SetRestResource()5 ", "r.Method =", r.Method, "session =", session, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel, "err =", err)
-			case len(urlSplit) == 7:
-				control.ResourceName = urlSplit[5]
-				control.AccessLevel = r.Method //???? get, put, del, ...
-				err = nil
-				//log.Println(debugTag+"SetRestResource()6 ", "r.Method =", r.Method, "session =", session, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", session.Control.ResourceName, "session.Control.AccessLevel =", session.Control.AccessLevel, "err =", err)
-			}
-		}
-	}
+	err = errors.New(debugTag + "SetRestResource()1 - Resource info not found") //this is the error returned if a valid resource is not identified
 	if err != nil {
-		log.Println(debugTag+"SetRestResource()7 ", "control =", control, "err =", err, "urlSplit =", urlSplit, "len(urlSplit) =", len(urlSplit), "session.Control.ResourceName =", control.ResourceName, "session.Control.AccessLevel =", control.AccessLevel)
-		log.Printf("%v %v %v %v %v %+v", debugTag+"SetRestResource()8", "urlSplit =", urlSplit, len(urlSplit), "r =", r)
+		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()2 ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+		return models.Session{}, err
+	}
+	control.AccessMethod = r.Method // get, put, post, del, ...
+	switch urlSplit[1] {
+	case "api":
+		apiVersion = urlSplit[2]
+		switch apiVersion {
+		case "v1":
+			switch len(urlSplit) {
+			case 3:
+				control.ResourceName = urlSplit[3]
+			case 4:
+				control.ResourceName = urlSplit[3]
+			case 5:
+				control.ResourceName = urlSplit[3]
+			case 6:
+				control.ResourceName = urlSplit[3]
+			case 7:
+				control.ResourceName = urlSplit[5]
+			default:
+				log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()4 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+				return models.Session{}, errors.New(debugTag + "setRestResource()4 invalid url")
+			}
+		default:
+			log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()5 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+			return models.Session{}, errors.New(debugTag + "setRestResource()5 invalid url")
+		}
+	default:
+		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()6 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+		return models.Session{}, errors.New(debugTag + "setRestResource()6 invalid url")
 	}
 	return control, err
 }

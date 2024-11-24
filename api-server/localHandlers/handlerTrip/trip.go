@@ -28,13 +28,13 @@ func New(appConf *appCore.Config) *Handler {
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Trip{}
 
-	userID, ok := r.Context().Value(h.appConf.UserIDKey).(int) // Used to retrieve the userID from the context so that access level can be assessed.
+	session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	if !ok {
-		log.Printf(debugTag+"GetAll()1 UserID not available in request context. userID=%v\n", userID)
+		log.Printf(debugTag+"GetAll()1 UserID not available in request context. userID=%v\n", session.UserID)
 		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
 		return
 	}
-	log.Printf(debugTag+"GetAll()2 userID %v\n", userID)
+	log.Printf(debugTag+"GetAll()2 userID %v\n", session.UserID)
 
 	// Need to add some code to check if the user has access.
 	err := h.appConf.Db.Select(&records, `SELECT att.*, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
@@ -46,7 +46,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		JOIN public.at_booking_people atbp ON atbp.booking_id=atb.id
 		GROUP BY atb.id) atbcount ON atbcount.trip_id=att.id
 	WHERE att.owner_id = $1
-	GROUP BY att.id, ettd.level, etts.status`, userID)
+	GROUP BY att.id, ettd.level, etts.status`, session.UserID)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)

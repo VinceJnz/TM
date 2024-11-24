@@ -28,6 +28,17 @@ Illustrated guide to SQLX
 
 ## data access management
 
+There are 3 issues to consider:
+1. Does the user have access to the resource (Table)?
+    1. Not viable: Implement in the DB if the DB has the user ID. The current design does not provide the user ID to the DB sothis cant be implemented
+    2. Implement in the handler. The handler has the user ID and resource name, but each hander will be required to run a query to determine access.
+    3. Implement a wrapper handler to inspect/check the resource access. Simpler implementation than point 2.
+
+2. What rows does the user have access to?
+3. What columns does the user have access to?
+
+
+
 User groups provide members access to records (aka resources). The records are filtered by ownership.
 User groups have an admin flag. If this is set then members of the group can access all the records of the associated resources regardless of ownership.
 

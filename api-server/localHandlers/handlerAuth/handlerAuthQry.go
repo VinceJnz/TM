@@ -2,24 +2,25 @@ package handlerAuth
 
 import (
 	"api-server/v2/models"
+	"errors"
 	"log"
 )
 
 // sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
 const (
-	sqlUserCheckAccess = `SELECT eat.ID
-	FROM st_users su
-		JOIN st_user_group sug ON sug.User_ID=su.ID
-		JOIN st_group sg ON sg.ID=sug.Group_ID
-		JOIN st_group_resource sgr ON sgr.Group_ID=sg.ID
-		JOIN se_resource er ON er.ID=sgr.Resource_ID
-		JOIN se_access_level eal ON eal.ID=sgr.Access_level_ID
-		JOIN se_access_type eat ON eat.ID=sgr.Access_type_ID
-	WHERE su.ID=$1
-		AND su.User_status_ID=1
-		AND er.Name=$2
-		AND eal.Name=$3
-	GROUP BY eat.ID
+	sqlUserCheckAccess = `SELECT etat.ID
+	FROM st_users stu
+		JOIN st_user_group stug ON stug.User_ID=stu.ID
+		JOIN st_group stg ON stg.ID=stug.Group_ID
+		JOIN st_group_resource stgr ON stgr.Group_ID=stg.ID
+		JOIN et_resource etr ON etr.ID=stgr.Resource_ID
+		JOIN et_access_level etal ON etal.ID=stgr.Access_level_ID
+		JOIN et_access_type etat ON etat.ID=stgr.Access_type_ID
+	WHERE stu.ID=$1
+		AND stu.User_status_ID=1
+		AND etr.Name=$2
+		AND etal.Name=$3
+	GROUP BY etat.ID
 	LIMIT 1`
 )
 
@@ -34,7 +35,7 @@ const (
 // Resource = name of the data resource being accesses being accessed
 // Action = type of access request action e.g. view, save, edit, list, delete
 //
-//	func CheckAccess(UserID, Resource string, Action string) bool {
+//	func UserCheckAccess(UserID, Resource string, Action string) bool {
 //			// check that the user has permissions to take the requested action
 //			// this might also consider information in record being accessed
 //	}
@@ -44,7 +45,7 @@ func (h *Handler) UserCheckAccess(UserID int, ResourceName, ActionName string) (
 	err = h.appConf.Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName).Scan(&accessType)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
 		log.Println(debugTag+"AccessRepo.CheckAccess()3 ", "Access denied", "err =", err, "accessType =", accessType, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
-		return 0, err
+		return 0, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
 	}
 	return accessType, nil
 }

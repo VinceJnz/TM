@@ -8,15 +8,15 @@ import (
 
 type ContextKey string
 
-func GenerateUserIDContextKey() ContextKey { // User for generating the context key for passing values via the context (ctx)
-	return ContextKey("userID")
+func GenerateSessionIDContextKey() ContextKey { // User for generating the context key for passing values via the context (ctx)
+	return ContextKey("sessionID")
 }
 
 type Config struct {
-	Db        *sqlx.DB
-	UserIDKey ContextKey // User for passing the user id value via the context (ctx)
-	Settings  settings
-	TestMode  bool
+	Db           *sqlx.DB
+	SessionIDKey ContextKey // User for passing the user id value via the context (ctx)
+	Settings     settings
+	TestMode     bool
 }
 
 func New(testMode bool) *Config {
@@ -25,11 +25,11 @@ func New(testMode bool) *Config {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
 
-	userIDKey := GenerateUserIDContextKey()
+	sessionIDKey := GenerateSessionIDContextKey()
 	return &Config{
-		Db:        db,
-		UserIDKey: userIDKey,
-		TestMode:  testMode,
+		Db:           db,
+		SessionIDKey: sessionIDKey,
+		TestMode:     testMode,
 	}
 }
 

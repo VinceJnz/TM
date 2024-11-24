@@ -2,14 +2,6 @@ package models
 
 import "github.com/guregu/null/v5/zero"
 
-// Item = UserSession information that is passed around in the server side application
-type XXSession struct {
-	//Session mdlToken.Item
-	//User    mdlUser.Item
-	//Control Control
-	//Message mdlMessage.PageMsg
-}
-
 // Token stores cookies for user sessions
 type Token struct {
 	ID        int
@@ -23,14 +15,16 @@ type Token struct {
 	ValidTo   zero.Time
 }
 
-// Control = access control information derived from a user's access levels and the requested resource
-type Control struct {
-	PrevURL       string //????
-	ResourceName  string
-	AccessLevel   string
-	AccessLevelID int
-	AccessType    string
-	AccessTypeID  int
+// Session = access control information derived from a user's access levels and the requested resource
+type Session struct {
+	UserID         int
+	PrevURL        string //????
+	ResourceName   string
+	ResourceID     int
+	AccessMethod   string
+	AccessMethodID int
+	AccessType     string
+	AccessTypeID   int
 }
 
 // AccessLevel is the enumeration of the data access level

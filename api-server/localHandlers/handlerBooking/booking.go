@@ -25,12 +25,12 @@ func New(appConf *appCore.Config) *Handler {
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Booking{}
 
-	userID, ok := r.Context().Value(h.appConf.UserIDKey).(int)
+	session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session)
 	if !ok {
 		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
 		return
 	}
-	log.Printf(debugTag+"GetAll()1 userID %v\n", userID)
+	log.Printf(debugTag+"GetAll()1 userID %v\n", session.UserID)
 
 	err := h.appConf.Db.Select(&records, `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
 	FROM public.at_bookings ab
