@@ -294,6 +294,7 @@ CREATE TABLE st_group (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'SysAdmin', 'Admin', 'User'
     description VARCHAR(45) DEFAULT NULL,
+    admin_flag BOOLEAN DEFAULT FALSE,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

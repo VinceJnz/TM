@@ -35,20 +35,20 @@ RUN go build -o apiserver .
 # STAGE 3: Create a clean image for the final output
 FROM alpine:latest AS final
 
-# Copy the compiled wasm binary from the builder stage
+# Copy the compiled wasm binary from the builder stage to the static folder
 COPY --from=wasmbuilder /app/main.wasm ./static/
 COPY --from=wasmbuilder /app/wasm_exec.js ./static/
+
+# Copy the static files from the builder stage to the static folder
+COPY --from=apibuilder /app/static/*.html ./static/
+COPY --from=apibuilder /app/static/favicon.ico ./static/
+#COPY --from=apibuilder /app/static/*.html .
+#COPY --from=apibuilder /app/static/favicon.ico .
 
 # Copy the compiled webserver binary from the builder stage
 COPY --from=apibuilder /app/apiserver .
 COPY --from=apibuilder /app/.env .
 COPY --from=apibuilder /app/certs/* /etc/ssl/certs/
-
-COPY --from=apibuilder /app/static/*.html ./static/
-COPY --from=apibuilder /app/static/favicon.ico ./static/
-
-COPY --from=apibuilder /app/static/*.html .
-COPY --from=apibuilder /app/static/favicon.ico .
 
 # Expose the port the API server listens on
 EXPOSE 8085
