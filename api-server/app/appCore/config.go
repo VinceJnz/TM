@@ -36,3 +36,7 @@ func New(testMode bool) *Config {
 func (c *Config) Close() {
 	c.Db.Close()
 }
+
+func (c *Config) Access() {
+
+}

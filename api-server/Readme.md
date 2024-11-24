@@ -25,6 +25,13 @@ Illustrated guide to SQLX
 
 
 
+
+## data access management
+
+User groups provide members access to records (aka resources). The records are filtered by ownership.
+User groups have an admin flag. If this is set then members of the group can access all the records of the associated resources regardless of ownership.
+
+
 ## New queries
 
 Count the number participants above and below max_participants threshold

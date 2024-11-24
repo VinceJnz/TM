@@ -3,7 +3,7 @@ package models
 import "github.com/guregu/null/v5/zero"
 
 // Item = UserSession information that is passed around in the server side application
-type Session struct {
+type XXSession struct {
 	//Session mdlToken.Item
 	//User    mdlUser.Item
 	//Control Control

@@ -238,11 +238,6 @@ func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
 const (
 	//Finds records associated with a users access
 	//no access is allowed if no records are found
-	//sqlAccessCheck = `SELECT c.ID, c.User_ID, c.Name, c.token, c.token_valid_ID, c.Valid_From, c.Valid_To
-	//FROM st_token c
-	//	JOIN st_user u ON u.ID=c.User_ID
-	//	LEFT JOIN se_token_valid sv ON sv.ID=c.token_valid_ID
-	//WHERE c.token=$1 AND c.Name='session' AND c.token_valid_ID=1 AND u.User_status_ID=1`
 
 	sqlAccessCheck = `SELECT DISTINCT eal.ID, eal.Name
 	FROM st_user stu

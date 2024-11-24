@@ -27,9 +27,6 @@ func New(appConf *appCore.Config) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	records := []models.Trip{}
-	//err := h.appConf.Db.Select(&records, `SELECT att.*, etts.status as trip_status
-	//FROM public.at_trips att
-	//LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id`)
 
 	userID, ok := r.Context().Value(h.appConf.UserIDKey).(int) // Used to retrieve the userID from the context so that access level can be assessed.
 	if !ok {
