@@ -261,7 +261,7 @@ CREATE TABLE IF NOT EXISTS st_users (
 
 CREATE TABLE et_access_level (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete'
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete' OR: 'none', 'select', 'insert', 'update', 'delete'
     description VARCHAR(45) DEFAULT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
