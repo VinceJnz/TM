@@ -175,9 +175,7 @@ func main() {
 	subR.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Delete).Methods("DELETE")
 
 	// Static handlers
-	r.PathPrefix("/client/").Handler(http.StripPrefix("/client/", http.FileServer(http.Dir("./static"))))
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir(".")))
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
 	// For debugging: Log all registered routes
 	//r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
