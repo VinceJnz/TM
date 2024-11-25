@@ -261,15 +261,16 @@ CREATE TABLE IF NOT EXISTS st_users (
 
 CREATE TABLE et_access_level (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete' OR: 'none', 'select', 'insert', 'update', 'delete'
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete' (OR: 'none', 'select', 'insert', 'update', 'delete')
     description VARCHAR(45) DEFAULT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- I think this can be removed and replaced with an admin flag
 CREATE TABLE et_access_type (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL, -- Example: 'group', 'owner', 'world' ????? don't know if this is useful
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'admin', 'owner', 'user' ????? don't know if this is useful
     description VARCHAR(45) DEFAULT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -277,7 +278,7 @@ CREATE TABLE et_access_type (
 
 CREATE TABLE et_resource (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL, -- Example: 'trip', 'user', 'booking', 'user_status'
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'trips', 'users', 'bookings', 'user_status' (the url to to access the resource)
     description VARCHAR(45) DEFAULT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -302,9 +303,10 @@ CREATE TABLE st_group (
 CREATE TABLE st_group_resource (
     id SERIAL PRIMARY KEY,
     group_id INTEGER NOT NULL,
-    resource_id INTEGER NOT NULL,
+    resource_id INTEGER NOT NULL, -- ID for the url to to access the resource
     access_level_id INTEGER NOT NULL,
     access_type_id INTEGER NOT NULL,
+    admin_flag BOOLEAN DEFAULT FALSE,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (group_id) REFERENCES st_group(id)
