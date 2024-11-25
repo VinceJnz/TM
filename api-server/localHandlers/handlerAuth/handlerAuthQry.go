@@ -18,8 +18,8 @@ const (
 		JOIN et_access_type etat ON etat.ID=stgr.Access_type_ID
 	WHERE stu.ID=$1
 		AND stu.User_status_ID=1
-		AND etr.Name=$2
-		AND etal.Name=$3
+		AND UPPER(etr.Name)=UPPER($2)
+		AND UPPER(etal.Name)=UPPER($3)
 	GROUP BY etat.ID, stgr.admin_flag
 	LIMIT 1`
 )

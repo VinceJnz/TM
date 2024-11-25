@@ -94,9 +94,9 @@ func (h *Handler) setRestResource(r *http.Request) (models.Session, error) {
 
 	control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
 	urlSplit = strings.Split(control.PrevURL, "/")
-	err = errors.New(debugTag + "SetRestResource()1 - Resource info not found") //this is the error returned if a valid resource is not identified
-	if err != nil {
+	if len(urlSplit) == 0 {
 		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()2 ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+		err = errors.New(debugTag + "SetRestResource()1 - Resource info not found") //this is the error returned if a valid resource is not identified
 		return models.Session{}, err
 	}
 	control.AccessMethod = r.Method // get, put, post, del, ...
