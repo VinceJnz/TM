@@ -8,7 +8,7 @@ import (
 
 // sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
 const (
-	sqlUserCheckAccess = `SELECT etat.ID, stgr.admin_flag
+	XXsqlUserCheckAccess = `SELECT etat.ID, stgr.admin_flag
 	FROM st_users stu
 		JOIN st_user_group stug ON stug.User_ID=stu.ID
 		JOIN st_group stg ON stg.ID=stug.Group_ID
@@ -21,6 +21,22 @@ const (
 		AND UPPER(etr.Name)=UPPER($2)
 		AND UPPER(etal.Name)=UPPER($3)
 	GROUP BY etat.ID, stgr.admin_flag
+	LIMIT 1`
+
+	sqlUserCheckAccess = `SELECT etat.ID, (stgr.admin_flag OR stg.admin_flag) AS admin_flag
+	FROM st_users stu
+		JOIN st_user_group stug ON stug.User_ID=stu.ID
+		JOIN st_group stg ON stg.ID=stug.Group_ID
+		JOIN st_group_resource stgr ON stgr.Group_ID=stg.ID
+		JOIN et_resource etr ON etr.ID=stgr.Resource_ID
+		JOIN et_access_level etal ON etal.ID=stgr.Access_level_ID
+		JOIN et_access_type etat ON etat.ID=stgr.Access_type_ID
+	WHERE stu.ID=$1
+		AND stu.User_status_ID=1
+		AND ((UPPER(etr.Name)=$2
+		AND UPPER(etal.Name)=$3)
+			 OR stg.admin_flag)
+	GROUP BY etat.ID, stgr.admin_flag, stg.admin_flag
 	LIMIT 1`
 )
 
