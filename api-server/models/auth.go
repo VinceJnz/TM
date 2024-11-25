@@ -25,6 +25,7 @@ type Session struct {
 	AccessMethodID int
 	AccessType     string
 	AccessTypeID   int
+	AdminFlag      bool
 }
 
 // AccessLevel is the enumeration of the data access level
@@ -45,4 +46,10 @@ type AccessType struct {
 type Resource struct {
 	ID   int64
 	Name string // Example: trip, booking, user, etc
+}
+
+// Resource is the enumeration of the url name of the Resource being accessed
+type AccessCheck struct {
+	AccessTypeID int
+	AdminFlag    bool
 }

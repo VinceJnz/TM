@@ -8,7 +8,7 @@ import (
 
 // sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
 const (
-	sqlUserCheckAccess = `SELECT etat.ID
+	sqlUserCheckAccess = `SELECT etat.ID, stgr.admin_flag
 	FROM st_users stu
 		JOIN st_user_group stug ON stug.User_ID=stu.ID
 		JOIN st_group stg ON stg.ID=stug.Group_ID
@@ -20,7 +20,7 @@ const (
 		AND stu.User_status_ID=1
 		AND etr.Name=$2
 		AND etal.Name=$3
-	GROUP BY etat.ID
+	GROUP BY etat.ID, stgr.admin_flag
 	LIMIT 1`
 )
 
@@ -39,15 +39,16 @@ const (
 //			// check that the user has permissions to take the requested action
 //			// this might also consider information in record being accessed
 //	}
-func (h *Handler) UserCheckAccess(UserID int, ResourceName, ActionName string) (int, error) {
+func (h *Handler) UserCheckAccess(UserID int, ResourceName, ActionName string) (models.AccessCheck, error) {
 	var err error
-	var accessType int
-	err = h.appConf.Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName).Scan(&accessType)
+	var access models.AccessCheck
+
+	err = h.appConf.Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName).Scan(&access.AccessTypeID, &access.AdminFlag)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
-		log.Println(debugTag+"AccessRepo.CheckAccess()3 ", "Access denied", "err =", err, "accessType =", accessType, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
-		return 0, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
+		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"CheckAccess()3 Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
+		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
 	}
-	return accessType, nil
+	return access, nil
 }
 
 func (h *Handler) UserReadQry(id int) (models.User, error) {

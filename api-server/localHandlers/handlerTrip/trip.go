@@ -45,8 +45,8 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		FROM public.at_bookings atb
 		JOIN public.at_booking_people atbp ON atbp.booking_id=atb.id
 		GROUP BY atb.id) atbcount ON atbcount.trip_id=att.id
-	WHERE att.owner_id = $1
-	GROUP BY att.id, ettd.level, etts.status`, session.UserID)
+	WHERE att.owner_id = $1 OR true=$2
+	GROUP BY att.id, ettd.level, etts.status`, session.UserID, session.AdminFlag)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)

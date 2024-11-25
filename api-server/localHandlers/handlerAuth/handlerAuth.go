@@ -65,13 +65,15 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 					return
 				} else {
 					// check access to resource
-					session.AccessTypeID, err = h.UserCheckAccess(token.UserID, session.ResourceName, session.AccessMethod)
+					accessCheck, err := h.UserCheckAccess(token.UserID, session.ResourceName, session.AccessMethod)
 					if err != nil {
 						log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()4", "err =", err, "session =", session, "r =", r)
 						w.WriteHeader(http.StatusUnauthorized)
 						w.Write([]byte("Not authorised - You don't have access to the requested resource."))
 						return
 					}
+					session.AccessTypeID = accessCheck.AccessTypeID
+					session.AdminFlag = accessCheck.AdminFlag
 				}
 			}
 		}
