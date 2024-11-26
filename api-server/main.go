@@ -2,13 +2,18 @@ package main
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/localHandlers/handlerAccessLevel"
+	"api-server/v2/localHandlers/handlerAccessType"
 	"api-server/v2/localHandlers/handlerAuth"
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
 	"api-server/v2/localHandlers/handlerGroupBooking"
+	"api-server/v2/localHandlers/handlerResource"
 	"api-server/v2/localHandlers/handlerSeasons"
 	"api-server/v2/localHandlers/handlerSecurityGroup"
+	"api-server/v2/localHandlers/handlerSecurityGroupResource"
+	"api-server/v2/localHandlers/handlerSecurityUserGroup"
 	"api-server/v2/localHandlers/handlerTrip"
 	"api-server/v2/localHandlers/handlerTripCost"
 	"api-server/v2/localHandlers/handlerTripCostGroup"
@@ -54,19 +59,24 @@ func main() {
 	subR2.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
 	// Add route groups
-	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))               // Seasons routes
-	addRouteGroup(subR2, "users", handlerUser.New(app))                    // User routes
-	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))   // UserCategory routes
-	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))     // UserPayments routes
-	addRouteGroup(subR2, "userStatus", handlerUserStatus.New(app))         // UserStatus routes
-	addRouteGroup(subR2, "groupBooking", handlerGroupBooking.New(app))     // GroupBookings routes
-	addRouteGroup(subR2, "bookingStatus", handlerBookingStatus.New(app))   // BookingStatus routes
-	addRouteGroup(subR2, "tripType", handlerTripType.New(app))             // TripType routes
-	addRouteGroup(subR2, "tripStatus", handlerTripStatus.New(app))         // TripStatus routes
-	addRouteGroup(subR2, "tripDifficulty", handlerTripDifficulty.New(app)) // TripDifficulty routes
-	addRouteGroup(subR2, "tripCosts", handlerTripCost.New(app))            // TripCost routes
-	addRouteGroup(subR2, "tripCostGroups", handlerTripCostGroup.New(app))  // TripCostGroup routes
-	addRouteGroup(subR2, "securityGroup", handlerSecurityGroup.New(app))   // TripCostGroup routes
+	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))                             // Seasons routes
+	addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
+	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserCategory routes
+	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))                   // UserPayments routes
+	addRouteGroup(subR2, "userStatus", handlerUserStatus.New(app))                       // UserStatus routes
+	addRouteGroup(subR2, "groupBooking", handlerGroupBooking.New(app))                   // GroupBookings routes
+	addRouteGroup(subR2, "bookingStatus", handlerBookingStatus.New(app))                 // BookingStatus routes
+	addRouteGroup(subR2, "tripType", handlerTripType.New(app))                           // TripType routes
+	addRouteGroup(subR2, "tripStatus", handlerTripStatus.New(app))                       // TripStatus routes
+	addRouteGroup(subR2, "tripDifficulty", handlerTripDifficulty.New(app))               // TripDifficulty routes
+	addRouteGroup(subR2, "tripCosts", handlerTripCost.New(app))                          // TripCost routes
+	addRouteGroup(subR2, "tripCostGroups", handlerTripCostGroup.New(app))                // TripCostGroup routes
+	addRouteGroup(subR2, "securityGroup", handlerSecurityGroup.New(app))                 // SecurityGroup routes
+	addRouteGroup(subR2, "securityGroupResource", handlerSecurityGroupResource.New(app)) // SecurityGroupResource routes
+	addRouteGroup(subR2, "securityUserGroup", handlerSecurityUserGroup.New(app))         // SecurityUserGroup routes
+	addRouteGroup(subR2, "securityAccessLevel", handlerAccessLevel.New(app))             // AccessLevel routes
+	addRouteGroup(subR2, "securityAccessType", handlerAccessType.New(app))               // AccessType routes
+	addRouteGroup(subR2, "securityResource", handlerResource.New(app))                   // Resource routes
 
 	booking := handlerBooking.New(app)                                              // Booking routes
 	addRouteGroup(subR2, "bookings", booking)                                       // Booking routes
@@ -81,12 +91,12 @@ func main() {
 	subR2.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET") // Trip routes
 
 	// For debugging: Log all registered routes
-	subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		path, _ := route.GetPathTemplate()
-		methods, _ := route.GetMethods()
-		log.Printf("Registered routes for subR2: %s %v", path, methods)
-		return nil
-	})
+	//subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+	//	path, _ := route.GetPathTemplate()
+	//	methods, _ := route.GetMethods()
+	//	log.Printf("Registered routes for subR2: %s %v", path, methods)
+	//	return nil
+	//})
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
