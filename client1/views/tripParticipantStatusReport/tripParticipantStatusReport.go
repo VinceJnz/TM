@@ -69,7 +69,6 @@ type ItemEditor struct {
 	document js.Value
 
 	events        *eventProcessor.EventProcessor
-	baseURL       string
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData

@@ -68,7 +68,6 @@ type ItemEditor struct {
 	document js.Value
 
 	events        *eventProcessor.EventProcessor
-	baseURL       string
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
@@ -200,10 +199,10 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Level.Call("setAttribute", "required", "true")
 
 	localObjs.LevelShort, editor.UiComponents.LevelShort = viewHelpers.StringEdit(editor.CurrentRecord.LevelShort, editor.document, "Short Level", "text", "itemLevelShort")
-	editor.UiComponents.Level.Call("setAttribute", "required", "true")
+	editor.UiComponents.LevelShort.Call("setAttribute", "required", "true")
 
 	localObjs.Description, editor.UiComponents.Description = viewHelpers.StringEdit(editor.CurrentRecord.Description, editor.document, "Description", "text", "itemDescription")
-	editor.UiComponents.Level.Call("setAttribute", "required", "true")
+	editor.UiComponents.Description.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Level)

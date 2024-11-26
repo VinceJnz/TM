@@ -88,7 +88,6 @@ type ItemEditor struct {
 	document js.Value
 
 	events        *eventProcessor.EventProcessor
-	baseURL       string
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
@@ -332,9 +331,9 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
-		localApiURL := editor.baseURL + apiURL
+		localApiURL := editor.client.BaseURL + apiURL
 		if editor.ParentData.ID != 0 {
-			localApiURL = editor.baseURL + "/trips/" + strconv.Itoa(editor.ParentData.ID) + apiURL
+			localApiURL = editor.client.BaseURL + "/trips/" + strconv.Itoa(editor.ParentData.ID) + apiURL
 		}
 		go func() {
 			var records []TableData

@@ -3,10 +3,13 @@ package mainView
 import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/views/accessLevelView"
+	"client1/v2/views/accessTypeView"
 	"client1/v2/views/account/loginView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/groupBookingView"
+	"client1/v2/views/resourceView"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/tripCostGroupView"
 	"client1/v2/views/tripDifficultyView"
@@ -46,6 +49,9 @@ const (
 	menuUserAgeGroupEditor
 	menuUserStatusEditor
 	menuParticipantStatusView
+	menuResourceEditor
+	menuAccessLevelEditor
+	menuAccessTypeEditor
 )
 
 type viewElements struct {
@@ -68,6 +74,9 @@ type viewElements struct {
 	userAgeGroupEditor    *userAgeGroupView.ItemEditor
 	userStatusEditor      *userStatusView.ItemEditor
 	participantStatusView *tripParticipantStatusReport.ItemEditor
+	resourceEditor        *resourceView.ItemEditor
+	accessLevelEditor     *accessLevelView.ItemEditor
+	accessTypeEditor      *accessTypeView.ItemEditor
 }
 
 type ViewConfig struct {
@@ -128,6 +137,9 @@ func (v *View) Setup() {
 	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.client)
 	v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.client)
 	v.elements.participantStatusView = tripParticipantStatusReport.New(v.document, v.events, v.client)
+	v.elements.resourceEditor = resourceView.New(v.document, v.events, v.client)
+	v.elements.accessLevelEditor = accessLevelView.New(v.document, v.events, v.client)
+	v.elements.accessTypeEditor = accessTypeView.New(v.document, v.events, v.client)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
@@ -175,6 +187,9 @@ func (v *View) Setup() {
 	fetchUserCategoryBtn := viewHelpers.HRef(v.menuUserCategory, v.document, "User Category", "fetchUserCategoryBtn")
 	fetchUserStatusBtn := viewHelpers.HRef(v.menuUserStatus, v.document, "User Status", "fetchUserStatusBtn")
 	fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.document, "Participant Status", "fetchTripParticipantStatusBtn")
+	fetchResourceBtn := viewHelpers.HRef(v.menuResource, v.document, "Resource", "fetchResourceBtn")
+	fetchAccessLevelBtn := viewHelpers.HRef(v.menuAccessLevel, v.document, "Access Level", "fetchAccessLevelBtn")
+	fetchAccessTypeBtn := viewHelpers.HRef(v.menuAccessType, v.document, "Access Type", "fetchAccessTypeBtn")
 
 	// Add menu buttons to the side menu
 	v.elements.sidemenu.Call("appendChild", loginBtn)
@@ -195,6 +210,9 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Call("appendChild", fetchUserCategoryBtn)
 	v.elements.sidemenu.Call("appendChild", fetchUserStatusBtn)
 	v.elements.sidemenu.Call("appendChild", fetchTripParticipantStatusBtn)
+	v.elements.sidemenu.Call("appendChild", fetchResourceBtn)
+	v.elements.sidemenu.Call("appendChild", fetchAccessLevelBtn)
+	v.elements.sidemenu.Call("appendChild", fetchAccessTypeBtn)
 
 	// append Editor Div's to the mainContent
 	v.elements.mainContent.Call("appendChild", v.elements.loginEditor.Div)
@@ -211,6 +229,9 @@ func (v *View) Setup() {
 	v.elements.mainContent.Call("appendChild", v.elements.userAgeGroupEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.userStatusEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.participantStatusView.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.resourceEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.accessLevelEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.accessTypeEditor.Div)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput.Set("id", "statusOutput")
@@ -260,6 +281,12 @@ func (v *View) hideCurrentEditor() {
 		v.elements.userStatusEditor.Hide()
 	case menuParticipantStatusView:
 		v.elements.participantStatusView.Hide()
+	case menuResourceEditor:
+		v.elements.resourceEditor.Hide()
+	case menuAccessLevelEditor:
+		v.elements.accessLevelEditor.Hide()
+	case menuAccessTypeEditor:
+		v.elements.accessTypeEditor.Hide()
 	default:
 	}
 }
@@ -417,6 +444,33 @@ func (v *View) menuParticipantStatus() {
 	v.elements.participantStatusView.Display()
 	v.elements.pageTitle.Set("innerHTML", "Trip Participant Status")
 	v.elements.participantStatusView.FetchItems()
+}
+
+func (v *View) menuResource() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuResourceEditor
+	v.elements.resourceEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Resource")
+	v.elements.resourceEditor.FetchItems()
+}
+
+func (v *View) menuAccessLevel() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuAccessLevelEditor
+	v.elements.accessLevelEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Access Level")
+	v.elements.accessLevelEditor.FetchItems()
+}
+
+func (v *View) menuAccessType() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuAccessTypeEditor
+	v.elements.accessTypeEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Access Type")
+	v.elements.accessTypeEditor.FetchItems()
 }
 
 func (v *View) toggleSideMenu() {
