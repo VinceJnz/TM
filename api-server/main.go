@@ -55,7 +55,7 @@ func main() {
 
 	// Add route groups
 	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))               // Seasons routes
-	addRouteGroup(subR2, "user", handlerUser.New(app))                     // User routes
+	addRouteGroup(subR2, "users", handlerUser.New(app))                    // User routes
 	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))   // UserCategory routes
 	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))     // UserPayments routes
 	addRouteGroup(subR2, "userStatus", handlerUserStatus.New(app))         // UserStatus routes
@@ -69,7 +69,7 @@ func main() {
 	addRouteGroup(subR2, "securityGroup", handlerSecurityGroup.New(app))   // TripCostGroup routes
 
 	booking := handlerBooking.New(app)                                              // Booking routes
-	addRouteGroup(subR2, "booking", booking)                                        // Booking routes
+	addRouteGroup(subR2, "bookings", booking)                                       // Booking routes
 	subR2.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET") // Booking routes
 
 	bookingPeople := handlerBookingPeople.New(app)                                                // BookingPeople routes
@@ -77,7 +77,7 @@ func main() {
 	subR2.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET") // BookingPeople routes
 
 	trip := handlerTrip.New(app)                                                           // Trip routes
-	addRouteGroup(subR2, "trip", trip)                                                     // Trip routes
+	addRouteGroup(subR2, "trips", trip)                                                    // Trip routes
 	subR2.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET") // Trip routes
 
 	// For debugging: Log all registered routes
