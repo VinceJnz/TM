@@ -41,6 +41,20 @@ func Input(value string, doc js.Value, labelText string, inputType string, htmlI
 	return input
 }
 
+// Input creates an input element with the given value, type, and ID.
+func CheckBox(value bool, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
+	// Create an input element
+	input := doc.Call("createElement", "input")
+	input.Set("id", htmlID)
+	input.Set("name", labelText)
+	input.Set("type", inputType)
+	input.Set("value", true) // This is the return value
+	if value {
+		input.Set("checked", true)
+	}
+	return input
+}
+
 // Form creates a form element with the given ID.
 func Form(onSubmit func(this js.Value, args []js.Value) interface{}, doc js.Value, htmlID string) js.Value {
 	Form := doc.Call("createElement", "form")
