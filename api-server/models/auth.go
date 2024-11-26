@@ -1,6 +1,10 @@
 package models
 
-import "github.com/guregu/null/v5/zero"
+import (
+	"time"
+
+	"github.com/guregu/null/v5/zero"
+)
 
 // Token stores cookies for user sessions
 type Token struct {
@@ -28,24 +32,28 @@ type Session struct {
 	AdminFlag      bool
 }
 
-// AccessLevel is the enumeration of the data access level
-type AccessLevel struct {
-	ID          int64
-	Name        string // Examples:
-	Description string
+type AccessLevel struct { // -- Example: 'none', 'get', 'post', 'put', 'delete' (OR: 'none', 'select', 'insert', 'update', 'delete')
+	ID          int       `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	Created     time.Time `json:"created" db:"created"`
+	Modified    time.Time `json:"modified" db:"modified"`
 }
 
-// AccessType is the enumeration of the data access type
-type AccessType struct {
-	ID          int64
-	Name        string // Examples: get, post, put, delete
-	Description string
+type AccessType struct { //-- Example: 'admin', 'owner', 'user' ????? don't know if this is useful
+	ID          int       `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	Created     time.Time `json:"created" db:"created"`
+	Modified    time.Time `json:"modified" db:"modified"`
 }
 
-// Resource is the enumeration of the url name of the Resource being accessed
-type Resource struct {
-	ID   int64
-	Name string // Example: trip, booking, user, etc
+type Resource struct { //-- Example: 'trips', 'users', 'bookings', 'user_status' (the url to to access the resource)
+	ID          int       `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	Created     time.Time `json:"created" db:"created"`
+	Modified    time.Time `json:"modified" db:"modified"`
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed

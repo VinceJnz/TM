@@ -8,6 +8,7 @@ import (
 	"api-server/v2/localHandlers/handlerBookingStatus"
 	"api-server/v2/localHandlers/handlerGroupBooking"
 	"api-server/v2/localHandlers/handlerSeasons"
+	"api-server/v2/localHandlers/handlerSecurityGroup"
 	"api-server/v2/localHandlers/handlerTrip"
 	"api-server/v2/localHandlers/handlerTripCost"
 	"api-server/v2/localHandlers/handlerTripCostGroup"
@@ -52,128 +53,40 @@ func main() {
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	subR2.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 
-	// Seasons routes
-	seasons := handlerSeasons.New(app)
-	subR2.HandleFunc("/seasons", seasons.GetAll).Methods("GET")
-	subR2.HandleFunc("/seasons/{id}", seasons.Get).Methods("GET")
-	subR2.HandleFunc("/seasons", seasons.Create).Methods("POST")
-	subR2.HandleFunc("/seasons/{id}", seasons.Update).Methods("PUT")
-	subR2.HandleFunc("/seasons/{id}", seasons.Delete).Methods("DELETE")
+	// Add route groups
+	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))               // Seasons routes
+	addRouteGroup(subR2, "user", handlerUser.New(app))                     // User routes
+	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))   // UserCategory routes
+	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))     // UserPayments routes
+	addRouteGroup(subR2, "userStatus", handlerUserStatus.New(app))         // UserStatus routes
+	addRouteGroup(subR2, "groupBooking", handlerGroupBooking.New(app))     // GroupBookings routes
+	addRouteGroup(subR2, "bookingStatus", handlerBookingStatus.New(app))   // BookingStatus routes
+	addRouteGroup(subR2, "tripType", handlerTripType.New(app))             // TripType routes
+	addRouteGroup(subR2, "tripStatus", handlerTripStatus.New(app))         // TripStatus routes
+	addRouteGroup(subR2, "tripDifficulty", handlerTripDifficulty.New(app)) // TripDifficulty routes
+	addRouteGroup(subR2, "tripCosts", handlerTripCost.New(app))            // TripCost routes
+	addRouteGroup(subR2, "tripCostGroups", handlerTripCostGroup.New(app))  // TripCostGroup routes
+	addRouteGroup(subR2, "securityGroup", handlerSecurityGroup.New(app))   // TripCostGroup routes
 
-	// User routes
-	user := handlerUser.New(app)
-	subR2.HandleFunc("/users", user.GetAll).Methods("GET")
-	subR2.HandleFunc("/users/{id}", user.Get).Methods("GET")
-	subR2.HandleFunc("/users", user.Create).Methods("POST")
-	subR2.HandleFunc("/users/{id}", user.Update).Methods("PUT")
-	subR2.HandleFunc("/users/{id}", user.Delete).Methods("DELETE")
+	booking := handlerBooking.New(app)                                              // Booking routes
+	addRouteGroup(subR2, "booking", booking)                                        // Booking routes
+	subR2.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET") // Booking routes
 
-	// UserCategory routes
-	userAgeGroups := handlerUserAgeGroups.New(app)
-	subR2.HandleFunc("/userAgeGroups", userAgeGroups.GetAll).Methods("GET")
-	subR2.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Get).Methods("GET")
-	subR2.HandleFunc("/userAgeGroups", userAgeGroups.Create).Methods("POST")
-	subR2.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Update).Methods("PUT")
-	subR2.HandleFunc("/userAgeGroups/{id}", userAgeGroups.Delete).Methods("DELETE")
+	bookingPeople := handlerBookingPeople.New(app)                                                // BookingPeople routes
+	addRouteGroup(subR2, "bookingPeople", bookingPeople)                                          // BookingPeople routes
+	subR2.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET") // BookingPeople routes
 
-	// UserPayments routes
-	userPayments := handlerUserPayments.New(app)
-	subR2.HandleFunc("/userPayments", userPayments.GetAll).Methods("GET")
-	subR2.HandleFunc("/userPayments/{id}", userPayments.Get).Methods("GET")
-	subR2.HandleFunc("/userPayments", userPayments.Create).Methods("POST")
-	subR2.HandleFunc("/userPayments/{id}", userPayments.Update).Methods("PUT")
-	subR2.HandleFunc("/userPayments/{id}", userPayments.Delete).Methods("DELETE")
+	trip := handlerTrip.New(app)                                                           // Trip routes
+	addRouteGroup(subR2, "trip", trip)                                                     // Trip routes
+	subR2.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET") // Trip routes
 
-	// UserStatus routes
-	userStatus := handlerUserStatus.New(app)
-	subR2.HandleFunc("/userStatus", userStatus.GetAll).Methods("GET")
-	subR2.HandleFunc("/userStatus/{id}", userStatus.Get).Methods("GET")
-	subR2.HandleFunc("/userStatus", userStatus.Create).Methods("POST")
-	subR2.HandleFunc("/userStatus/{id}", userStatus.Update).Methods("PUT")
-	subR2.HandleFunc("/userStatus/{id}", userStatus.Delete).Methods("DELETE")
-
-	// Booking routes
-	booking := handlerBooking.New(app)
-	subR2.HandleFunc("/bookings", booking.GetAll).Methods("GET")
-	subR2.HandleFunc("/bookings/{id:[0-9]+}", booking.Get).Methods("GET")
-	subR2.HandleFunc("/bookings", booking.Create).Methods("POST")
-	subR2.HandleFunc("/bookings/{id:[0-9]+}", booking.Update).Methods("PUT")
-	subR2.HandleFunc("/bookings/{id:[0-9]+}", booking.Delete).Methods("DELETE")
-	subR2.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET")
-
-	// BookingUsers routes
-	bookingPeople := handlerBookingPeople.New(app)
-	subR2.HandleFunc("/bookingPeople", bookingPeople.GetAll).Methods("GET")
-	subR2.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Get).Methods("GET")
-	subR2.HandleFunc("/bookingPeople", bookingPeople.Create).Methods("POST")
-	subR2.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Update).Methods("PUT")
-	subR2.HandleFunc("/bookingPeople/{id:[0-9]+}", bookingPeople.Delete).Methods("DELETE")
-	subR2.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET")
-
-	// GroupBookings routes
-	groupBooking := handlerGroupBooking.New(app)
-	subR2.HandleFunc("/groupBooking", groupBooking.GetAll).Methods("GET")
-	subR2.HandleFunc("/groupBooking/{id:[0-9]+}", groupBooking.Get).Methods("GET")
-	subR2.HandleFunc("/groupBooking", groupBooking.Create).Methods("POST")
-	subR2.HandleFunc("/groupBooking/{id:[0-9]+}", groupBooking.Update).Methods("PUT")
-	subR2.HandleFunc("/groupBooking/{id:[0-9]+}", groupBooking.Delete).Methods("DELETE")
-
-	// BookingStatus routes
-	bookingStatus := handlerBookingStatus.New(app)
-	subR2.HandleFunc("/bookingStatus", bookingStatus.GetAll).Methods("GET")
-	subR2.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Get).Methods("GET")
-	subR2.HandleFunc("/bookingStatus", bookingStatus.Create).Methods("POST")
-	subR2.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Update).Methods("PUT")
-	subR2.HandleFunc("/bookingStatus/{id:[0-9]+}", bookingStatus.Delete).Methods("DELETE")
-
-	// Trip routes
-	trip := handlerTrip.New(app)
-	subR2.HandleFunc("/trips", trip.GetAll).Methods("GET")
-	subR2.HandleFunc("/trips/{id:[0-9]+}", trip.Get).Methods("GET")
-	subR2.HandleFunc("/trips", trip.Create).Methods("POST")
-	subR2.HandleFunc("/trips/{id:[0-9]+}", trip.Update).Methods("PUT")
-	subR2.HandleFunc("/trips/{id:[0-9]+}", trip.Delete).Methods("DELETE")
-	subR2.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET")
-
-	// TripType routes
-	tripType := handlerTripType.New(app)
-	subR2.HandleFunc("/tripType", tripType.GetAll).Methods("GET")
-	subR2.HandleFunc("/tripType/{id:[0-9]+}", tripType.Get).Methods("GET")
-	subR2.HandleFunc("/tripType", tripType.Create).Methods("POST")
-	subR2.HandleFunc("/tripType/{id:[0-9]+}", tripType.Update).Methods("PUT")
-	subR2.HandleFunc("/tripType/{id:[0-9]+}", tripType.Delete).Methods("DELETE")
-
-	// TripStatus routes
-	tripStatus := handlerTripStatus.New(app)
-	subR2.HandleFunc("/tripStatus", tripStatus.GetAll).Methods("GET")
-	subR2.HandleFunc("/tripStatus/{id:[0-9]+}", tripStatus.Get).Methods("GET")
-	subR2.HandleFunc("/tripStatus", tripStatus.Create).Methods("POST")
-	subR2.HandleFunc("/tripStatus/{id:[0-9]+}", tripStatus.Update).Methods("PUT")
-	subR2.HandleFunc("/tripStatus/{id:[0-9]+}", tripStatus.Delete).Methods("DELETE")
-
-	// TripDifficulty routes
-	tripDifficulty := handlerTripDifficulty.New(app)
-	subR2.HandleFunc("/tripDifficulty", tripDifficulty.GetAll).Methods("GET")
-	subR2.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Get).Methods("GET")
-	subR2.HandleFunc("/tripDifficulty", tripDifficulty.Create).Methods("POST")
-	subR2.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Update).Methods("PUT")
-	subR2.HandleFunc("/tripDifficulty/{id:[0-9]+}", tripDifficulty.Delete).Methods("DELETE")
-
-	// TripCost routes
-	tripCosts := handlerTripCost.New(app)
-	subR2.HandleFunc("/tripCosts", tripCosts.GetAll).Methods("GET")
-	subR2.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Get).Methods("GET")
-	subR2.HandleFunc("/tripCosts", tripCosts.Create).Methods("POST")
-	subR2.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Update).Methods("PUT")
-	subR2.HandleFunc("/tripCosts/{id:[0-9]+}", tripCosts.Delete).Methods("DELETE")
-
-	// TripCostGroup routes
-	tripCostGroups := handlerTripCostGroup.New(app)
-	subR2.HandleFunc("/tripCostGroups", tripCostGroups.GetAll).Methods("GET")
-	subR2.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Get).Methods("GET")
-	subR2.HandleFunc("/tripCostGroups", tripCostGroups.Create).Methods("POST")
-	subR2.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Update).Methods("PUT")
-	subR2.HandleFunc("/tripCostGroups/{id:[0-9]+}", tripCostGroups.Delete).Methods("DELETE")
+	// For debugging: Log all registered routes
+	subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		path, _ := route.GetPathTemplate()
+		methods, _ := route.GetMethods()
+		log.Printf("Registered routes for subR2: %s %v", path, methods)
+		return nil
+	})
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
@@ -280,21 +193,19 @@ func main() {
 	*/
 }
 
-/*
-func XXCorsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8081")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		// If it's an OPTIONS request, just return without passing to next handler
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
+type genericHandler interface {
+	GetAll(w http.ResponseWriter, r *http.Request)
+	Get(w http.ResponseWriter, r *http.Request)
+	Create(w http.ResponseWriter, r *http.Request)
+	Update(w http.ResponseWriter, r *http.Request)
+	Delete(w http.ResponseWriter, r *http.Request)
 }
-*/
+
+func addRouteGroup(r *mux.Router, u string, h genericHandler) {
+	r.HandleFunc("/"+u, h.GetAll).Methods("GET")
+	r.HandleFunc("/"+u+"/{id:[0-9]+}", h.Get).Methods("GET")
+	r.HandleFunc("/"+u, h.Create).Methods("POST")
+	r.HandleFunc("/"+u+"/{id:[0-9]+}", h.Update).Methods("PUT")
+	r.HandleFunc("/"+u+"/{id:[0-9]+}", h.Delete).Methods("DELETE")
+	// Add some code to register the route resource for managing security access
+}
