@@ -33,59 +33,32 @@ const debugTag = "mainView."
 
 type MenuChoice int
 
-const (
-	menuNone MenuChoice = iota
-	menuLogin
-	menuHome
-	menuAbout
-	menuContact
-	menuUserEditor
-	menuBookingEditor
-	menuBookingStatusEditor
-	menuGroupBookingEditor
-	menuTripEditor
-	menuTripCostEditor
-	menuTripDifficultyEditor
-	menuTripStatusEditor
-	menuTripTypeEditor
-	menuSeasonEditor
-	menuUserAgeGroupEditor
-	menuUserStatusEditor
-	menuParticipantStatusView
-	menuResourceEditor
-	menuAccessLevelEditor
-	menuAccessTypeEditor
-	menuSecurityUserGroup
-	menuSecurityGroup
-	menuSecurityGroupResource
-)
-
 type viewElements struct {
-	sidemenu                    js.Value
-	navbar                      js.Value
-	mainContent                 js.Value
-	statusOutput                js.Value
-	pageTitle                   js.Value
-	loginEditor                 *loginView.ItemEditor
-	userEditor                  *userView.ItemEditor
-	bookingEditor               *bookingView.ItemEditor
-	bookingStatusEditor         *bookingStatusView.ItemEditor
-	gropBookingEditor           *groupBookingView.ItemEditor
-	tripEditor                  *tripView.ItemEditor
-	tripCostGroupEditor         *tripCostGroupView.ItemEditor
-	tripDifficultyEditor        *tripDifficultyView.ItemEditor
-	tripStatusEditor            *tripStatusView.ItemEditor
-	tripTypeEditor              *tripTypeView.ItemEditor
-	seasonEditor                *seasonView.ItemEditor
-	userAgeGroupEditor          *userAgeGroupView.ItemEditor
-	userStatusEditor            *userStatusView.ItemEditor
-	participantStatusReport     *tripParticipantStatusReport.ItemEditor
-	resourceEditor              *resourceView.ItemEditor
-	accessLevelEditor           *accessLevelView.ItemEditor
-	accessTypeEditor            *accessTypeView.ItemEditor
-	securityUserGroupEditor     *securityUserGroupView.ItemEditor
-	securityGroupEditor         *securityGroupView.ItemEditor
-	securityGroupResourceEditor *securityGroupResourceView.ItemEditor
+	sidemenu     js.Value
+	navbar       js.Value
+	mainContent  js.Value
+	statusOutput js.Value
+	pageTitle    js.Value
+	//loginEditor                 *loginView.ItemEditor
+	//userEditor                  *userView.ItemEditor
+	//bookingEditor               *bookingView.ItemEditor
+	//bookingStatusEditor         *bookingStatusView.ItemEditor
+	//gropBookingEditor           *groupBookingView.ItemEditor
+	//tripEditor                  *tripView.ItemEditor
+	//tripCostGroupEditor         *tripCostGroupView.ItemEditor
+	//tripDifficultyEditor        *tripDifficultyView.ItemEditor
+	//tripStatusEditor            *tripStatusView.ItemEditor
+	//tripTypeEditor              *tripTypeView.ItemEditor
+	//seasonEditor                *seasonView.ItemEditor
+	//userAgeGroupEditor          *userAgeGroupView.ItemEditor
+	//userStatusEditor            *userStatusView.ItemEditor
+	//participantStatusReport     *tripParticipantStatusReport.ItemEditor
+	//resourceEditor              *resourceView.ItemEditor
+	//accessLevelEditor           *accessLevelView.ItemEditor
+	//accessTypeEditor            *accessTypeView.ItemEditor
+	//securityUserGroupEditor     *securityUserGroupView.ItemEditor
+	//securityGroupEditor         *securityGroupView.ItemEditor
+	//securityGroupResourceEditor *securityGroupResourceView.ItemEditor
 }
 
 type viewElement interface {
@@ -105,11 +78,11 @@ type ViewConfig struct {
 }
 
 type View struct {
-	client     *httpProcessor.Client
-	document   js.Value
-	elements   viewElements
-	events     *eventProcessor.EventProcessor
-	menuChoice MenuChoice
+	client   *httpProcessor.Client
+	document js.Value
+	elements viewElements
+	events   *eventProcessor.EventProcessor
+	//menuChoice MenuChoice
 	//config     AppConfig
 	menuChoice2 string
 	elements2   map[string]viewElement
@@ -147,26 +120,23 @@ func (v *View) Setup() {
 	v.elements.pageTitle = v.document.Call("createElement", "div")
 
 	// Create editor div objects
-	v.elements.loginEditor = loginView.New(v.document, v.events, v.client)
-	v.elements.userEditor = userView.New(v.document, v.events, v.client)
-	v.elements.bookingEditor = bookingView.New(v.document, v.events, v.client)
-	v.elements.bookingStatusEditor = bookingStatusView.New(v.document, v.events, v.client)
-	v.elements.gropBookingEditor = groupBookingView.New(v.document, v.events, v.client)
-	v.elements.tripEditor = tripView.New(v.document, v.events, v.client)
-	v.elements.tripCostGroupEditor = tripCostGroupView.New(v.document, v.events, v.client)
-	v.elements.tripDifficultyEditor = tripDifficultyView.New(v.document, v.events, v.client)
-	v.elements.tripStatusEditor = tripStatusView.New(v.document, v.events, v.client)
-	v.elements.tripTypeEditor = tripTypeView.New(v.document, v.events, v.client)
-	v.elements.seasonEditor = seasonView.New(v.document, v.events, v.client)
-	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.client)
-	v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.client)
-	v.elements.participantStatusReport = tripParticipantStatusReport.New(v.document, v.events, v.client)
-	v.elements.resourceEditor = resourceView.New(v.document, v.events, v.client)
-	v.elements.accessLevelEditor = accessLevelView.New(v.document, v.events, v.client)
-	v.elements.accessTypeEditor = accessTypeView.New(v.document, v.events, v.client)
-	v.elements.securityUserGroupEditor = securityUserGroupView.New(v.document, v.events, v.client)
-	v.elements.securityGroupEditor = securityGroupView.New(v.document, v.events, v.client)
-	v.elements.securityGroupResourceEditor = securityGroupResourceView.New(v.document, v.events, v.client)
+	//v.elements.loginEditor = loginView.New(v.document, v.events, v.client)
+	//v.elements.userEditor = userView.New(v.document, v.events, v.client)
+	//v.elements.bookingEditor = bookingView.New(v.document, v.events, v.client)
+	//v.elements.bookingStatusEditor = bookingStatusView.New(v.document, v.events, v.client)
+	//v.elements.gropBookingEditor = groupBookingView.New(v.document, v.events, v.client)
+	//v.elements.tripEditor = tripView.New(v.document, v.events, v.client)
+	//v.elements.tripCostGroupEditor = tripCostGroupView.New(v.document, v.events, v.client)
+	//v.elements.tripDifficultyEditor = tripDifficultyView.New(v.document, v.events, v.client)
+	//v.elements.tripStatusEditor = tripStatusView.New(v.document, v.events, v.client)
+	//v.elements.tripTypeEditor = tripTypeView.New(v.document, v.events, v.client)
+	//v.elements.seasonEditor = seasonView.New(v.document, v.events, v.client)
+	//v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.client)
+	//v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.client)
+	//v.elements.participantStatusReport = tripParticipantStatusReport.New(v.document, v.events, v.client)
+	//v.elements.resourceEditor = resourceView.New(v.document, v.events, v.client)
+	//v.elements.accessLevelEditor = accessLevelView.New(v.document, v.events, v.client)
+	//v.elements.accessTypeEditor = accessTypeView.New(v.document, v.events, v.client)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
@@ -189,85 +159,97 @@ func (v *View) Setup() {
 	// Add the side menu to the body
 	v.elements.sidemenu.Set("id", "sideMenu")
 	v.elements.sidemenu.Set("className", "sidemenu")
-	//v.elements.sidemenu.Set("innerHTML", `<a href="javascript:void(0)" class="closebtn" onclick="toggleSideMenu()">&times;</a>
-	//						   <a href="#">Home</a>
-	//						   <a href="#">About</a>
-	//						   <a href="#">Contact</a>`)
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Create the menu buttons
-	loginBtn := viewHelpers.HRef(v.menuLogin, v.document, "Login", "loginBtn")
-	xBtn := viewHelpers.HRef(v.menuX, v.document, "&times;", "xBtn")
-	homeBtn := viewHelpers.HRef(v.menuHome, v.document, "Home", "homeBtn")
-	aboutBtn := viewHelpers.HRef(v.menuAbout, v.document, "About", "aboutBtn")
-	contactBtn := viewHelpers.HRef(v.menuContact, v.document, "Contact", "contactBtn")
+	//loginBtn := viewHelpers.HRef(v.menuLogin, v.document, "Login", "loginBtn")
+	//xBtn := viewHelpers.HRef(v.menuX, v.document, "&times;", "xBtn")
+	//homeBtn := viewHelpers.HRef(v.menuHome, v.document, "Home", "homeBtn")
+	//aboutBtn := viewHelpers.HRef(v.menuAbout, v.document, "About", "aboutBtn")
+	//contactBtn := viewHelpers.HRef(v.menuContact, v.document, "Contact", "contactBtn")
 
-	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.document, "Users", "fetchUsersBtn")
-	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.document, "Bookings", "fetchBookingsBtn")
-	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.document, "BookingStatus", "fetchBookingStatusBtn")
-	fetchGroupBookingBtn := viewHelpers.HRef(v.menuGroupBooking, v.document, "Group Booking", "fetchGroupBookingsBtn")
-	fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.document, "Trips", "fetchTripsBtn")
-	fetchTripCostGroupBtn := viewHelpers.HRef(v.menuTripGroupCost, v.document, "Trip Cost Group", "fetchTripCostGroupBtn")
-	fetchTripDifficultyBtn := viewHelpers.HRef(v.menuTripDifficulty, v.document, "Trip Dificulty", "fetchTripDifficultyBtn")
-	fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.document, "Trip Status", "fetchTripStatusBtn")
-	fetchTripTypeBtn := viewHelpers.HRef(v.menuTripType, v.document, "Trip Type", "fetchTripTypeBtn")
-	fetchSeasonBtn := viewHelpers.HRef(v.menuSeason, v.document, "Season", "fetchSeasonBtn")
-	fetchUserCategoryBtn := viewHelpers.HRef(v.menuUserCategory, v.document, "User Category", "fetchUserCategoryBtn")
-	fetchUserStatusBtn := viewHelpers.HRef(v.menuUserStatus, v.document, "User Status", "fetchUserStatusBtn")
-	fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.document, "Participant Status", "fetchTripParticipantStatusBtn")
-	fetchResourceBtn := viewHelpers.HRef(v.menuResource, v.document, "Resource", "fetchResourceBtn")
-	fetchAccessLevelBtn := viewHelpers.HRef(v.menuAccessLevel, v.document, "Access Level", "fetchAccessLevelBtn")
-	fetchAccessTypeBtn := viewHelpers.HRef(v.menuAccessType, v.document, "Access Type", "fetchAccessTypeBtn")
-	fetchSecurityUserGroupBtn := viewHelpers.HRef(v.menuSecurityUserGroup, v.document, "User Group", "fetchSecurityUserGroup")
-	fetchSecurityGroupBtn := viewHelpers.HRef(v.menuSecurityGroup, v.document, "Group", "fetchSecurityGroup")
-	fetchSecurityGroupResourceBtn := viewHelpers.HRef(v.menuSecurityGroupResource, v.document, "Group Resource", "fetchSecurityGroupResource")
+	//fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.document, "Users", "fetchUsersBtn")
+	//fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.document, "Bookings", "fetchBookingsBtn")
+	//fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.document, "BookingStatus", "fetchBookingStatusBtn")
+	//fetchGroupBookingBtn := viewHelpers.HRef(v.menuGroupBooking, v.document, "Group Booking", "fetchGroupBookingsBtn")
+	//fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.document, "Trips", "fetchTripsBtn")
+	//fetchTripCostGroupBtn := viewHelpers.HRef(v.menuTripGroupCost, v.document, "Trip Cost Group", "fetchTripCostGroupBtn")
+	//fetchTripDifficultyBtn := viewHelpers.HRef(v.menuTripDifficulty, v.document, "Trip Dificulty", "fetchTripDifficultyBtn")
+	//fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.document, "Trip Status", "fetchTripStatusBtn")
+	//fetchTripTypeBtn := viewHelpers.HRef(v.menuTripType, v.document, "Trip Type", "fetchTripTypeBtn")
+	//fetchSeasonBtn := viewHelpers.HRef(v.menuSeason, v.document, "Season", "fetchSeasonBtn")
+	//fetchUserCategoryBtn := viewHelpers.HRef(v.menuUserCategory, v.document, "User Category", "fetchUserCategoryBtn")
+	//fetchUserStatusBtn := viewHelpers.HRef(v.menuUserStatus, v.document, "User Status", "fetchUserStatusBtn")
+	//fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.document, "Participant Status", "fetchTripParticipantStatusBtn")
+	//fetchResourceBtn := viewHelpers.HRef(v.menuResource, v.document, "Resource", "fetchResourceBtn")
+	//fetchAccessLevelBtn := viewHelpers.HRef(v.menuAccessLevel, v.document, "Access Level", "fetchAccessLevelBtn")
+	//fetchAccessTypeBtn := viewHelpers.HRef(v.menuAccessType, v.document, "Access Type", "fetchAccessTypeBtn")
 
 	// Add menu buttons to the side menu
-	v.elements.sidemenu.Call("appendChild", loginBtn)
-	v.elements.sidemenu.Call("appendChild", xBtn)
-	v.elements.sidemenu.Call("appendChild", homeBtn)
-	v.elements.sidemenu.Call("appendChild", aboutBtn)
-	v.elements.sidemenu.Call("appendChild", contactBtn)
-	v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
-	v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
-	v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
-	v.elements.sidemenu.Call("appendChild", fetchGroupBookingBtn)
-	v.elements.sidemenu.Call("appendChild", fetchTripsBtn)
-	v.elements.sidemenu.Call("appendChild", fetchTripCostGroupBtn)
-	v.elements.sidemenu.Call("appendChild", fetchTripDifficultyBtn)
-	v.elements.sidemenu.Call("appendChild", fetchTripStatusBtn)
-	v.elements.sidemenu.Call("appendChild", fetchTripTypeBtn)
-	v.elements.sidemenu.Call("appendChild", fetchSeasonBtn)
-	v.elements.sidemenu.Call("appendChild", fetchUserCategoryBtn)
-	v.elements.sidemenu.Call("appendChild", fetchUserStatusBtn)
-	v.elements.sidemenu.Call("appendChild", fetchTripParticipantStatusBtn)
-	v.elements.sidemenu.Call("appendChild", fetchResourceBtn)
-	v.elements.sidemenu.Call("appendChild", fetchAccessLevelBtn)
-	v.elements.sidemenu.Call("appendChild", fetchAccessTypeBtn)
-	v.elements.sidemenu.Call("appendChild", fetchSecurityUserGroupBtn)
-	v.elements.sidemenu.Call("appendChild", fetchSecurityGroupBtn)
-	v.elements.sidemenu.Call("appendChild", fetchSecurityGroupResourceBtn)
+	//v.elements.sidemenu.Call("appendChild", loginBtn)
+	//v.elements.sidemenu.Call("appendChild", xBtn)
+	//v.elements.sidemenu.Call("appendChild", homeBtn)
+	//v.elements.sidemenu.Call("appendChild", aboutBtn)
+	//v.elements.sidemenu.Call("appendChild", contactBtn)
+
+	//v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchGroupBookingBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchTripsBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchTripCostGroupBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchTripDifficultyBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchTripStatusBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchTripTypeBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchSeasonBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchUserCategoryBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchUserStatusBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchTripParticipantStatusBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchResourceBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchAccessLevelBtn)
+	//v.elements.sidemenu.Call("appendChild", fetchAccessTypeBtn)
 
 	// append Editor Div's to the mainContent
-	v.elements.mainContent.Call("appendChild", v.elements.loginEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.gropBookingEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.tripEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.tripCostGroupEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.tripDifficultyEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.tripStatusEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.tripTypeEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.seasonEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.userAgeGroupEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.userStatusEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.participantStatusReport.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.resourceEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.accessLevelEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.accessTypeEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.loginEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.gropBookingEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.tripEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.tripCostGroupEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.tripDifficultyEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.tripStatusEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.tripTypeEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.seasonEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.userAgeGroupEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.userStatusEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.participantStatusReport.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.resourceEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.accessLevelEditor.Div)
+	//v.elements.mainContent.Call("appendChild", v.elements.accessTypeEditor.Div)
 
-	v.AddViewItem("Home2", "Home2", nil)
+	v.AddViewItem("&times;", "xBtn", nil)
+	v.AddViewItem("Home", "Home", nil)
+	v.AddViewItem("About", "About", nil)
+	v.AddViewItem("Contact", "Contact", nil)
+
+	v.AddViewItem("Login", "Login", loginView.New(v.document, v.events, v.client))
+	v.AddViewItem("User", "User", userView.New(v.document, v.events, v.client))
+	v.AddViewItem("Booking", "Booking", bookingView.New(v.document, v.events, v.client))
+	v.AddViewItem("Booking Status", "Booking Status", bookingStatusView.New(v.document, v.events, v.client))
+	v.AddViewItem("Group Booking", "Group Booking", groupBookingView.New(v.document, v.events, v.client))
+	v.AddViewItem("Trip", "Trip", tripView.New(v.document, v.events, v.client))
+	v.AddViewItem("Trip Cost Group", "Trip Cost Group", tripCostGroupView.New(v.document, v.events, v.client))
+	v.AddViewItem("Trip Difficulty", "Trip Difficulty", tripDifficultyView.New(v.document, v.events, v.client))
+	v.AddViewItem("Trip Status", "Trip Status", tripStatusView.New(v.document, v.events, v.client))
+	v.AddViewItem("Trip Type", "Trip Type", tripTypeView.New(v.document, v.events, v.client))
+	v.AddViewItem("Season", "Season", seasonView.New(v.document, v.events, v.client))
+	v.AddViewItem("User Age Group", "User Age Group", userAgeGroupView.New(v.document, v.events, v.client))
+	v.AddViewItem("User Status", "User Status", userStatusView.New(v.document, v.events, v.client))
+	v.AddViewItem("Trip Participant", "Trip Participant", tripParticipantStatusReport.New(v.document, v.events, v.client))
+	v.AddViewItem("Resource", "Resource", resourceView.New(v.document, v.events, v.client))
+	v.AddViewItem("Access Level", "Access Level", accessLevelView.New(v.document, v.events, v.client))
+	v.AddViewItem("Access Type", "Access Type", accessTypeView.New(v.document, v.events, v.client))
 	v.AddViewItem("User Group", "User Group", securityUserGroupView.New(v.document, v.events, v.client))
 	v.AddViewItem("Group", "Group", securityGroupView.New(v.document, v.events, v.client))
 	v.AddViewItem("Group Resource", "Group Resource", securityGroupResourceView.New(v.document, v.events, v.client))
@@ -313,265 +295,6 @@ func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element viewElement)
 		}
 	}
 	return fn
-}
-
-func (v *View) hideCurrentEditor() {
-	switch v.menuChoice {
-	case menuLogin:
-		v.elements.loginEditor.Hide()
-	case menuNone:
-	case menuHome:
-	case menuAbout:
-	case menuContact:
-	case menuUserEditor:
-		v.elements.userEditor.Hide()
-	case menuBookingEditor:
-		v.elements.bookingEditor.Hide()
-	case menuBookingStatusEditor:
-		v.elements.bookingStatusEditor.Hide()
-	case menuGroupBookingEditor:
-		v.elements.gropBookingEditor.Hide()
-	case menuTripEditor:
-		v.elements.tripEditor.Hide()
-	case menuTripCostEditor:
-		v.elements.tripCostGroupEditor.Hide()
-	case menuTripDifficultyEditor:
-		v.elements.tripDifficultyEditor.Hide()
-	case menuTripStatusEditor:
-		v.elements.tripStatusEditor.Hide()
-	case menuTripTypeEditor:
-		v.elements.tripTypeEditor.Hide()
-	case menuSeasonEditor:
-		v.elements.seasonEditor.Hide()
-	case menuUserAgeGroupEditor:
-		v.elements.userAgeGroupEditor.Hide()
-	case menuUserStatusEditor:
-		v.elements.userStatusEditor.Hide()
-	case menuParticipantStatusView:
-		v.elements.participantStatusReport.Hide()
-	case menuResourceEditor:
-		v.elements.resourceEditor.Hide()
-	case menuAccessLevelEditor:
-		v.elements.accessLevelEditor.Hide()
-	case menuAccessTypeEditor:
-		v.elements.accessTypeEditor.Hide()
-	case menuSecurityUserGroup:
-		v.elements.securityUserGroupEditor.Hide()
-	case menuSecurityGroup:
-		v.elements.securityGroupEditor.Hide()
-	case menuSecurityGroupResource:
-		v.elements.securityGroupResourceEditor.Hide()
-	default:
-	}
-}
-
-func (v *View) menuX() {
-	v.closeSideMenu()
-	//v.hideCurrentEditor()
-	//v.menuChoice = menuNone
-	//v.elements.pageTitle.Set("innerHTML", "")
-}
-
-func (v *View) menuHome() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuHome
-	v.elements.pageTitle.Set("innerHTML", "Home")
-}
-
-func (v *View) menuAbout() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuAbout
-	v.elements.pageTitle.Set("innerHTML", "About")
-}
-
-func (v *View) menuContact() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuContact
-	v.elements.pageTitle.Set("innerHTML", "Contact")
-}
-
-func (v *View) menuLogin() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuLogin
-	v.elements.loginEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Login")
-	//v.elements.userEditor.FetchItems()
-	v.elements.loginEditor.NewItemData()
-}
-
-func (v *View) menuUser() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuUserEditor
-	v.elements.userEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Users")
-	v.elements.userEditor.FetchItems()
-}
-
-func (v *View) menuBooking() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuBookingEditor
-	v.elements.bookingEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Bookings")
-	v.elements.bookingEditor.FetchItems()
-}
-
-func (v *View) menuBookingStatus() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuBookingStatusEditor
-	v.elements.bookingStatusEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Booking Status")
-	v.elements.bookingStatusEditor.FetchItems()
-}
-
-func (v *View) menuGroupBooking() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuGroupBookingEditor
-	v.elements.gropBookingEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Group Bookings")
-	v.elements.gropBookingEditor.FetchItems()
-}
-
-func (v *View) menuTrip() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuTripEditor
-	v.elements.tripEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Trips")
-	v.elements.tripEditor.FetchItems()
-}
-
-func (v *View) menuTripGroupCost() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuTripCostEditor
-	v.elements.tripCostGroupEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Trip Cost Group")
-	v.elements.tripCostGroupEditor.FetchItems()
-}
-
-func (v *View) menuTripDifficulty() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuTripDifficultyEditor
-	v.elements.tripDifficultyEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Trip Difficulty")
-	v.elements.tripDifficultyEditor.FetchItems()
-}
-
-func (v *View) menuTripStatus() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuTripStatusEditor
-	v.elements.tripStatusEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Trip Status")
-	v.elements.tripStatusEditor.FetchItems()
-}
-
-func (v *View) menuTripType() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuTripTypeEditor
-	v.elements.tripTypeEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Trip Type")
-	v.elements.tripTypeEditor.FetchItems()
-}
-
-func (v *View) menuSeason() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuSeasonEditor
-	v.elements.seasonEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Season")
-	v.elements.seasonEditor.FetchItems()
-}
-
-func (v *View) menuUserCategory() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuUserAgeGroupEditor
-	v.elements.userAgeGroupEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "User Category")
-	v.elements.userAgeGroupEditor.FetchItems()
-}
-
-func (v *View) menuUserStatus() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuUserStatusEditor
-	v.elements.userStatusEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "User Status")
-	v.elements.userStatusEditor.FetchItems()
-}
-
-func (v *View) menuParticipantStatus() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuParticipantStatusView
-	v.elements.participantStatusReport.Display()
-	v.elements.pageTitle.Set("innerHTML", "Trip Participant Status")
-	v.elements.participantStatusReport.FetchItems()
-}
-
-func (v *View) menuResource() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuResourceEditor
-	v.elements.resourceEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Resource")
-	v.elements.resourceEditor.FetchItems()
-}
-
-func (v *View) menuAccessLevel() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuAccessLevelEditor
-	v.elements.accessLevelEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Access Level")
-	v.elements.accessLevelEditor.FetchItems()
-}
-
-func (v *View) menuAccessType() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuAccessTypeEditor
-	v.elements.accessTypeEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Access Type")
-	v.elements.accessTypeEditor.FetchItems()
-}
-
-func (v *View) menuSecurityUserGroup() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuSecurityUserGroup
-	v.elements.securityUserGroupEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "User Group")
-	v.elements.securityUserGroupEditor.FetchItems()
-}
-
-func (v *View) menuSecurityGroup() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuSecurityGroup
-	v.elements.securityGroupEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Group")
-	v.elements.securityGroupEditor.FetchItems()
-}
-
-func (v *View) menuSecurityGroupResource() {
-	v.closeSideMenu()
-	v.hideCurrentEditor()
-	v.menuChoice = menuSecurityGroupResource
-	v.elements.securityGroupResourceEditor.Display()
-	v.elements.pageTitle.Set("innerHTML", "Group Resource")
-	v.elements.securityGroupResourceEditor.FetchItems()
 }
 
 func (v *View) toggleSideMenu() {

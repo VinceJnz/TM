@@ -335,9 +335,9 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
-		localApiURL := editor.client.BaseURL + apiURL
+		localApiURL := apiURL
 		if editor.ParentData.ID != 0 {
-			localApiURL = editor.client.BaseURL + "/trips/" + strconv.Itoa(editor.ParentData.ID) + apiURL
+			localApiURL = "/trips/" + strconv.Itoa(editor.ParentData.ID) + apiURL
 		}
 		go func() {
 			var records []TableData
