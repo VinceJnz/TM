@@ -39,26 +39,6 @@ type viewElements struct {
 	mainContent  js.Value
 	statusOutput js.Value
 	pageTitle    js.Value
-	//loginEditor                 *loginView.ItemEditor
-	//userEditor                  *userView.ItemEditor
-	//bookingEditor               *bookingView.ItemEditor
-	//bookingStatusEditor         *bookingStatusView.ItemEditor
-	//gropBookingEditor           *groupBookingView.ItemEditor
-	//tripEditor                  *tripView.ItemEditor
-	//tripCostGroupEditor         *tripCostGroupView.ItemEditor
-	//tripDifficultyEditor        *tripDifficultyView.ItemEditor
-	//tripStatusEditor            *tripStatusView.ItemEditor
-	//tripTypeEditor              *tripTypeView.ItemEditor
-	//seasonEditor                *seasonView.ItemEditor
-	//userAgeGroupEditor          *userAgeGroupView.ItemEditor
-	//userStatusEditor            *userStatusView.ItemEditor
-	//participantStatusReport     *tripParticipantStatusReport.ItemEditor
-	//resourceEditor              *resourceView.ItemEditor
-	//accessLevelEditor           *accessLevelView.ItemEditor
-	//accessTypeEditor            *accessTypeView.ItemEditor
-	//securityUserGroupEditor     *securityUserGroupView.ItemEditor
-	//securityGroupEditor         *securityGroupView.ItemEditor
-	//securityGroupResourceEditor *securityGroupResourceView.ItemEditor
 }
 
 type viewElement interface {
@@ -82,7 +62,6 @@ type View struct {
 	document js.Value
 	elements viewElements
 	events   *eventProcessor.EventProcessor
-	//menuChoice MenuChoice
 	//config     AppConfig
 	menuChoice2 string
 	elements2   map[string]viewElement
@@ -119,25 +98,6 @@ func (v *View) Setup() {
 	v.elements.statusOutput = v.document.Call("createElement", "div")
 	v.elements.pageTitle = v.document.Call("createElement", "div")
 
-	// Create editor div objects
-	//v.elements.loginEditor = loginView.New(v.document, v.events, v.client)
-	//v.elements.userEditor = userView.New(v.document, v.events, v.client)
-	//v.elements.bookingEditor = bookingView.New(v.document, v.events, v.client)
-	//v.elements.bookingStatusEditor = bookingStatusView.New(v.document, v.events, v.client)
-	//v.elements.gropBookingEditor = groupBookingView.New(v.document, v.events, v.client)
-	//v.elements.tripEditor = tripView.New(v.document, v.events, v.client)
-	//v.elements.tripCostGroupEditor = tripCostGroupView.New(v.document, v.events, v.client)
-	//v.elements.tripDifficultyEditor = tripDifficultyView.New(v.document, v.events, v.client)
-	//v.elements.tripStatusEditor = tripStatusView.New(v.document, v.events, v.client)
-	//v.elements.tripTypeEditor = tripTypeView.New(v.document, v.events, v.client)
-	//v.elements.seasonEditor = seasonView.New(v.document, v.events, v.client)
-	//v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.client)
-	//v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.client)
-	//v.elements.participantStatusReport = tripParticipantStatusReport.New(v.document, v.events, v.client)
-	//v.elements.resourceEditor = resourceView.New(v.document, v.events, v.client)
-	//v.elements.accessLevelEditor = accessLevelView.New(v.document, v.events, v.client)
-	//v.elements.accessTypeEditor = accessTypeView.New(v.document, v.events, v.client)
-
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
 	newBody.Call("appendChild", v.elements.navbar)
@@ -161,73 +121,7 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Set("className", "sidemenu")
 	newBody.Call("appendChild", v.elements.sidemenu)
 
-	// Create the menu buttons
-	//loginBtn := viewHelpers.HRef(v.menuLogin, v.document, "Login", "loginBtn")
-	//xBtn := viewHelpers.HRef(v.menuX, v.document, "&times;", "xBtn")
-	//homeBtn := viewHelpers.HRef(v.menuHome, v.document, "Home", "homeBtn")
-	//aboutBtn := viewHelpers.HRef(v.menuAbout, v.document, "About", "aboutBtn")
-	//contactBtn := viewHelpers.HRef(v.menuContact, v.document, "Contact", "contactBtn")
-
-	//fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.document, "Users", "fetchUsersBtn")
-	//fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.document, "Bookings", "fetchBookingsBtn")
-	//fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.document, "BookingStatus", "fetchBookingStatusBtn")
-	//fetchGroupBookingBtn := viewHelpers.HRef(v.menuGroupBooking, v.document, "Group Booking", "fetchGroupBookingsBtn")
-	//fetchTripsBtn := viewHelpers.HRef(v.menuTrip, v.document, "Trips", "fetchTripsBtn")
-	//fetchTripCostGroupBtn := viewHelpers.HRef(v.menuTripGroupCost, v.document, "Trip Cost Group", "fetchTripCostGroupBtn")
-	//fetchTripDifficultyBtn := viewHelpers.HRef(v.menuTripDifficulty, v.document, "Trip Dificulty", "fetchTripDifficultyBtn")
-	//fetchTripStatusBtn := viewHelpers.HRef(v.menuTripStatus, v.document, "Trip Status", "fetchTripStatusBtn")
-	//fetchTripTypeBtn := viewHelpers.HRef(v.menuTripType, v.document, "Trip Type", "fetchTripTypeBtn")
-	//fetchSeasonBtn := viewHelpers.HRef(v.menuSeason, v.document, "Season", "fetchSeasonBtn")
-	//fetchUserCategoryBtn := viewHelpers.HRef(v.menuUserCategory, v.document, "User Category", "fetchUserCategoryBtn")
-	//fetchUserStatusBtn := viewHelpers.HRef(v.menuUserStatus, v.document, "User Status", "fetchUserStatusBtn")
-	//fetchTripParticipantStatusBtn := viewHelpers.HRef(v.menuParticipantStatus, v.document, "Participant Status", "fetchTripParticipantStatusBtn")
-	//fetchResourceBtn := viewHelpers.HRef(v.menuResource, v.document, "Resource", "fetchResourceBtn")
-	//fetchAccessLevelBtn := viewHelpers.HRef(v.menuAccessLevel, v.document, "Access Level", "fetchAccessLevelBtn")
-	//fetchAccessTypeBtn := viewHelpers.HRef(v.menuAccessType, v.document, "Access Type", "fetchAccessTypeBtn")
-
-	// Add menu buttons to the side menu
-	//v.elements.sidemenu.Call("appendChild", loginBtn)
-	//v.elements.sidemenu.Call("appendChild", xBtn)
-	//v.elements.sidemenu.Call("appendChild", homeBtn)
-	//v.elements.sidemenu.Call("appendChild", aboutBtn)
-	//v.elements.sidemenu.Call("appendChild", contactBtn)
-
-	//v.elements.sidemenu.Call("appendChild", fetchUsersBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchBookingsBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchBookingStatusBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchGroupBookingBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchTripsBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchTripCostGroupBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchTripDifficultyBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchTripStatusBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchTripTypeBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchSeasonBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchUserCategoryBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchUserStatusBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchTripParticipantStatusBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchResourceBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchAccessLevelBtn)
-	//v.elements.sidemenu.Call("appendChild", fetchAccessTypeBtn)
-
-	// append Editor Div's to the mainContent
-	//v.elements.mainContent.Call("appendChild", v.elements.loginEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.userEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.bookingEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.bookingStatusEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.gropBookingEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.tripEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.tripCostGroupEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.tripDifficultyEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.tripStatusEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.tripTypeEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.seasonEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.userAgeGroupEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.userStatusEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.participantStatusReport.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.resourceEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.accessLevelEditor.Div)
-	//v.elements.mainContent.Call("appendChild", v.elements.accessTypeEditor.Div)
-
+	// Add all the menu options
 	v.AddViewItem("&times;", "xBtn", nil)
 	v.AddViewItem("Home", "Home", nil)
 	v.AddViewItem("About", "About", nil)
