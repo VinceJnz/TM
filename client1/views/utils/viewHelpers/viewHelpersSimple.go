@@ -42,7 +42,7 @@ func Input(value string, doc js.Value, labelText string, inputType string, htmlI
 }
 
 // Input creates an input element with the given value, type, and ID.
-func CheckBox(value bool, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
+func InputCheckBox(value bool, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
 	// Create an input element
 	input := doc.Call("createElement", "input")
 	input.Set("id", htmlID)

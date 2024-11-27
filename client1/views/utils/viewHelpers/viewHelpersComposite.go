@@ -26,7 +26,7 @@ func StringEdit(value string, document js.Value, labelText string, inputType str
 	return fieldset, input
 }
 
-func StringEdit2(value string, document js.Value, labelText string, inputType string, htmlID string) (fieldSet, inputObj, errSpan js.Value) {
+func BooleanEdit(value bool, document js.Value, labelText string, inputType string, htmlID string) (object, inputObj js.Value) {
 	// Create a fieldset element for grouping
 	fieldset := document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
@@ -36,12 +36,12 @@ func StringEdit2(value string, document js.Value, labelText string, inputType st
 	fieldset.Call("appendChild", label)
 
 	// Create an input element
-	input := Input(value, document, labelText, inputType, htmlID)
+	input := InputCheckBox(value, document, labelText, inputType, htmlID)
 	fieldset.Call("appendChild", input)
 
 	// Create an span element of error messages
 	span := Span(document, htmlID+"-error")
 	fieldset.Call("appendChild", span)
 
-	return fieldset, input, span
+	return fieldset, input
 }

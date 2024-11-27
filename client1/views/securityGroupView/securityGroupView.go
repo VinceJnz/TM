@@ -195,16 +195,16 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
-	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
-	editor.UiComponents.Username.Call("setAttribute", "required", "true")
+	localObjs.Description, editor.UiComponents.Description = viewHelpers.StringEdit(editor.CurrentRecord.Description, editor.document, "Description", "text", "itemDescription")
+	editor.UiComponents.Description.Call("setAttribute", "required", "true")
 
-	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
-	editor.UiComponents.Email.Call("setAttribute", "required", "true")
+	localObjs.AdminFlag, editor.UiComponents.AdminFlag = viewHelpers.BooleanEdit(editor.CurrentRecord.AdminFlag, editor.document, "Admin Flag", "checkbox", "itemAdminFlag")
+	editor.UiComponents.AdminFlag.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Name)
-	form.Call("appendChild", localObjs.Username)
-	form.Call("appendChild", localObjs.Email)
+	form.Call("appendChild", localObjs.Description)
+	form.Call("appendChild", localObjs.AdminFlag)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -245,8 +245,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
+	editor.CurrentRecord.Description = editor.UiComponents.Description.Get("value").String()
+	editor.CurrentRecord.AdminFlag = editor.UiComponents.AdminFlag.Get("value").Bool()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -332,7 +332,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Name+" ("+record.Email+")")
+		itemDiv.Set("innerHTML", record.Name)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

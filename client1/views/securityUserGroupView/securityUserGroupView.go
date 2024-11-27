@@ -3,6 +3,8 @@ package securityUserGroupView
 import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/views/securityGroupView"
+	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -61,6 +63,8 @@ type UI struct {
 
 type children struct {
 	//Add child structures as necessary
+	Group *securityGroupView.ItemEditor
+	User  *userView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -160,15 +164,15 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
-	for _, item := range editor.Records {
-		optionElement := editor.document.Call("createElement", "option")
-		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Name)
-		if value == item.ID {
-			optionElement.Set("selected", true)
-		}
-		StateDropDown.Call("appendChild", optionElement)
-	}
+	//for _, item := range editor.Records {
+	//	optionElement := editor.document.Call("createElement", "option")
+	//	optionElement.Set("value", item.ID)
+	//	optionElement.Set("text", item.Name)
+	//	if value == item.ID {
+	//		optionElement.Set("selected", true)
+	//	}
+	//	StateDropDown.Call("appendChild", optionElement)
+	//}
 
 	// Create a label element
 	label := viewHelpers.Label(editor.document, labelText, htmlID)
@@ -192,19 +196,15 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
-	editor.UiComponents.Name.Call("setAttribute", "required", "true")
+	localObjs.UserID, editor.UiComponents.UserID = editor.Children.User.NewDropdown(editor.CurrentRecord.UserID, "User", "itemUser")
+	editor.UiComponents.UserID.Call("setAttribute", "required", "true")
 
-	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
-	editor.UiComponents.Username.Call("setAttribute", "required", "true")
-
-	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
-	editor.UiComponents.Email.Call("setAttribute", "required", "true")
+	localObjs.GroupID, editor.UiComponents.GroupID = editor.Children.Group.NewDropdown(editor.CurrentRecord.GroupID, "Group", "itemGroup")
+	editor.UiComponents.GroupID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", localObjs.Name)
-	form.Call("appendChild", localObjs.Username)
-	form.Call("appendChild", localObjs.Email)
+	form.Call("appendChild", localObjs.UserID)
+	form.Call("appendChild", localObjs.GroupID)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -244,9 +244,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 
 	// ********************* This needs to be changed for each api **********************
-	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
+	editor.CurrentRecord.UserID = editor.UiComponents.UserID.Get("value").Int()
+	editor.CurrentRecord.GroupID = editor.UiComponents.GroupID.Get("value").Int()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -332,7 +331,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Name+" ("+record.Email+")")
+		itemDiv.Set("innerHTML", record.User+" - "+record.Group)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

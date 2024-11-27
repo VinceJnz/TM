@@ -11,6 +11,9 @@ import (
 	"client1/v2/views/groupBookingView"
 	"client1/v2/views/resourceView"
 	"client1/v2/views/seasonView"
+	"client1/v2/views/securityGroupResourceView"
+	"client1/v2/views/securityGroupView"
+	"client1/v2/views/securityUserGroupView"
 	"client1/v2/views/tripCostGroupView"
 	"client1/v2/views/tripDifficultyView"
 	"client1/v2/views/tripParticipantStatusReport"
@@ -52,31 +55,48 @@ const (
 	menuResourceEditor
 	menuAccessLevelEditor
 	menuAccessTypeEditor
+	menuSecurityUserGroup
+	menuSecurityGroup
+	menuSecurityGroupResource
 )
 
 type viewElements struct {
-	sidemenu              js.Value
-	navbar                js.Value
-	mainContent           js.Value
-	statusOutput          js.Value
-	pageTitle             js.Value
-	loginEditor           *loginView.ItemEditor
-	userEditor            *userView.ItemEditor
-	bookingEditor         *bookingView.ItemEditor
-	bookingStatusEditor   *bookingStatusView.ItemEditor
-	gropBookingEditor     *groupBookingView.ItemEditor
-	tripEditor            *tripView.ItemEditor
-	tripCostGroupEditor   *tripCostGroupView.ItemEditor
-	tripDifficultyEditor  *tripDifficultyView.ItemEditor
-	tripStatusEditor      *tripStatusView.ItemEditor
-	tripTypeEditor        *tripTypeView.ItemEditor
-	seasonEditor          *seasonView.ItemEditor
-	userAgeGroupEditor    *userAgeGroupView.ItemEditor
-	userStatusEditor      *userStatusView.ItemEditor
-	participantStatusView *tripParticipantStatusReport.ItemEditor
-	resourceEditor        *resourceView.ItemEditor
-	accessLevelEditor     *accessLevelView.ItemEditor
-	accessTypeEditor      *accessTypeView.ItemEditor
+	sidemenu                    js.Value
+	navbar                      js.Value
+	mainContent                 js.Value
+	statusOutput                js.Value
+	pageTitle                   js.Value
+	loginEditor                 *loginView.ItemEditor
+	userEditor                  *userView.ItemEditor
+	bookingEditor               *bookingView.ItemEditor
+	bookingStatusEditor         *bookingStatusView.ItemEditor
+	gropBookingEditor           *groupBookingView.ItemEditor
+	tripEditor                  *tripView.ItemEditor
+	tripCostGroupEditor         *tripCostGroupView.ItemEditor
+	tripDifficultyEditor        *tripDifficultyView.ItemEditor
+	tripStatusEditor            *tripStatusView.ItemEditor
+	tripTypeEditor              *tripTypeView.ItemEditor
+	seasonEditor                *seasonView.ItemEditor
+	userAgeGroupEditor          *userAgeGroupView.ItemEditor
+	userStatusEditor            *userStatusView.ItemEditor
+	participantStatusReport     *tripParticipantStatusReport.ItemEditor
+	resourceEditor              *resourceView.ItemEditor
+	accessLevelEditor           *accessLevelView.ItemEditor
+	accessTypeEditor            *accessTypeView.ItemEditor
+	securityUserGroupEditor     *securityUserGroupView.ItemEditor
+	securityGroupEditor         *securityGroupView.ItemEditor
+	securityGroupResourceEditor *securityGroupResourceView.ItemEditor
+}
+
+type viewElement interface {
+	//AddItem(item loginView.TableData)
+	Display()
+	FetchItems()
+	Hide()
+	//NewItemData()
+	//SubmitItemEdit(this js.Value, p []js.Value) interface{}
+	//Toggle()
+	//UpdateItem(item loginView.TableData)
 }
 
 type ViewConfig struct {
@@ -90,6 +110,8 @@ type View struct {
 	events     *eventProcessor.EventProcessor
 	menuChoice MenuChoice
 	//config     AppConfig
+	menuChoice2 string
+	elements2   map[string]viewElement
 }
 
 func New(client *httpProcessor.Client) *View {
@@ -136,10 +158,13 @@ func (v *View) Setup() {
 	v.elements.seasonEditor = seasonView.New(v.document, v.events, v.client)
 	v.elements.userAgeGroupEditor = userAgeGroupView.New(v.document, v.events, v.client)
 	v.elements.userStatusEditor = userStatusView.New(v.document, v.events, v.client)
-	v.elements.participantStatusView = tripParticipantStatusReport.New(v.document, v.events, v.client)
+	v.elements.participantStatusReport = tripParticipantStatusReport.New(v.document, v.events, v.client)
 	v.elements.resourceEditor = resourceView.New(v.document, v.events, v.client)
 	v.elements.accessLevelEditor = accessLevelView.New(v.document, v.events, v.client)
 	v.elements.accessTypeEditor = accessTypeView.New(v.document, v.events, v.client)
+	v.elements.securityUserGroupEditor = securityUserGroupView.New(v.document, v.events, v.client)
+	v.elements.securityGroupEditor = securityGroupView.New(v.document, v.events, v.client)
+	v.elements.securityGroupResourceEditor = securityGroupResourceView.New(v.document, v.events, v.client)
 
 	// Add the navbar to the body
 	v.elements.navbar.Set("className", "navbar")
@@ -190,6 +215,9 @@ func (v *View) Setup() {
 	fetchResourceBtn := viewHelpers.HRef(v.menuResource, v.document, "Resource", "fetchResourceBtn")
 	fetchAccessLevelBtn := viewHelpers.HRef(v.menuAccessLevel, v.document, "Access Level", "fetchAccessLevelBtn")
 	fetchAccessTypeBtn := viewHelpers.HRef(v.menuAccessType, v.document, "Access Type", "fetchAccessTypeBtn")
+	fetchSecurityUserGroupBtn := viewHelpers.HRef(v.menuSecurityUserGroup, v.document, "User Group", "fetchSecurityUserGroup")
+	fetchSecurityGroupBtn := viewHelpers.HRef(v.menuSecurityGroup, v.document, "Group", "fetchSecurityGroup")
+	fetchSecurityGroupResourceBtn := viewHelpers.HRef(v.menuSecurityGroupResource, v.document, "Group Resource", "fetchSecurityGroupResource")
 
 	// Add menu buttons to the side menu
 	v.elements.sidemenu.Call("appendChild", loginBtn)
@@ -213,6 +241,9 @@ func (v *View) Setup() {
 	v.elements.sidemenu.Call("appendChild", fetchResourceBtn)
 	v.elements.sidemenu.Call("appendChild", fetchAccessLevelBtn)
 	v.elements.sidemenu.Call("appendChild", fetchAccessTypeBtn)
+	v.elements.sidemenu.Call("appendChild", fetchSecurityUserGroupBtn)
+	v.elements.sidemenu.Call("appendChild", fetchSecurityGroupBtn)
+	v.elements.sidemenu.Call("appendChild", fetchSecurityGroupResourceBtn)
 
 	// append Editor Div's to the mainContent
 	v.elements.mainContent.Call("appendChild", v.elements.loginEditor.Div)
@@ -228,10 +259,13 @@ func (v *View) Setup() {
 	v.elements.mainContent.Call("appendChild", v.elements.seasonEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.userAgeGroupEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.userStatusEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.participantStatusView.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.participantStatusReport.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.resourceEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.accessLevelEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.accessTypeEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.securityUserGroupEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.securityGroupEditor.Div)
+	v.elements.mainContent.Call("appendChild", v.elements.securityGroupResourceEditor.Div)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput.Set("id", "statusOutput")
@@ -245,6 +279,31 @@ func (v *View) Setup() {
 
 	// Replace the existing body with the new body
 	v.document.Get("documentElement").Call("replaceChild", newBody, v.document.Get("body"))
+}
+
+func (v *View) AddViewItem(displayTitle, title string, element viewElement) {
+	v.elements2[title] = element                                                                        // Store new element
+	onClickFn := v.menuOnClick(displayTitle, title, element)                                            // Set up menu onClick function
+	fetchBtn := viewHelpers.HRef(onClickFn, v.document, "Group Resource", "fetchSecurityGroupResource") // Set up menu button
+	v.elements.sidemenu.Call("appendChild", fetchBtn)                                                   // Append the button to the side menu
+	v.elements.mainContent.Call("appendChild", v.elements.securityGroupResourceEditor.Div)              // Append the new element to the main content
+}
+
+func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element viewElement) func() {
+	fn := func() { // Create a function to hide the current element and display the new element
+		v.closeSideMenu()
+		val, ok := v.elements2[v.menuChoice2]
+		if ok {
+			val.Hide() // Hide current editor
+		}
+		v.menuChoice2 = MenuChoice                          // Set new menu choice
+		v.elements.pageTitle.Set("innerHTML", DisplayTitle) // set the title for the element when it is displayed
+		if element != nil {                                 // Some menu choices do not display an element
+			element.Display()    // Display new editor
+			element.FetchItems() // Fetch new editor data
+		}
+	}
+	return fn
 }
 
 func (v *View) hideCurrentEditor() {
@@ -280,13 +339,19 @@ func (v *View) hideCurrentEditor() {
 	case menuUserStatusEditor:
 		v.elements.userStatusEditor.Hide()
 	case menuParticipantStatusView:
-		v.elements.participantStatusView.Hide()
+		v.elements.participantStatusReport.Hide()
 	case menuResourceEditor:
 		v.elements.resourceEditor.Hide()
 	case menuAccessLevelEditor:
 		v.elements.accessLevelEditor.Hide()
 	case menuAccessTypeEditor:
 		v.elements.accessTypeEditor.Hide()
+	case menuSecurityUserGroup:
+		v.elements.securityUserGroupEditor.Hide()
+	case menuSecurityGroup:
+		v.elements.securityGroupEditor.Hide()
+	case menuSecurityGroupResource:
+		v.elements.securityGroupResourceEditor.Hide()
 	default:
 	}
 }
@@ -441,9 +506,9 @@ func (v *View) menuParticipantStatus() {
 	v.closeSideMenu()
 	v.hideCurrentEditor()
 	v.menuChoice = menuParticipantStatusView
-	v.elements.participantStatusView.Display()
+	v.elements.participantStatusReport.Display()
 	v.elements.pageTitle.Set("innerHTML", "Trip Participant Status")
-	v.elements.participantStatusView.FetchItems()
+	v.elements.participantStatusReport.FetchItems()
 }
 
 func (v *View) menuResource() {
@@ -471,6 +536,33 @@ func (v *View) menuAccessType() {
 	v.elements.accessTypeEditor.Display()
 	v.elements.pageTitle.Set("innerHTML", "Access Type")
 	v.elements.accessTypeEditor.FetchItems()
+}
+
+func (v *View) menuSecurityUserGroup() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuSecurityUserGroup
+	v.elements.securityUserGroupEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "User Group")
+	v.elements.securityUserGroupEditor.FetchItems()
+}
+
+func (v *View) menuSecurityGroup() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuSecurityGroup
+	v.elements.securityGroupEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Group")
+	v.elements.securityGroupEditor.FetchItems()
+}
+
+func (v *View) menuSecurityGroupResource() {
+	v.closeSideMenu()
+	v.hideCurrentEditor()
+	v.menuChoice = menuSecurityGroupResource
+	v.elements.securityGroupResourceEditor.Display()
+	v.elements.pageTitle.Set("innerHTML", "Group Resource")
+	v.elements.securityGroupResourceEditor.FetchItems()
 }
 
 func (v *View) toggleSideMenu() {

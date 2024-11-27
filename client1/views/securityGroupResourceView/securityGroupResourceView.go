@@ -220,7 +220,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.AccessTypeID, editor.UiComponents.AccessTypeID = editor.Children.AccessType.NewDropdown(editor.CurrentRecord.AccessTypeID, "Access Type", "itemAccessType")
 	//editor.UiComponents.AccessTypeID.Call("setAttribute", "required", "true")
 
-	localObjs.AdminFlag, editor.UiComponents.AdminFlag = viewHelpers.StringEdit(editor.CurrentRecord.AdminFlag, editor.document, "Admin Flag", "checkbox", "itemAdminFlag")
+	localObjs.AdminFlag, editor.UiComponents.AdminFlag = viewHelpers.BooleanEdit(editor.CurrentRecord.AdminFlag, editor.document, "Admin Flag", "checkbox", "itemAdminFlag")
 	editor.UiComponents.AdminFlag.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
