@@ -93,6 +93,7 @@ type viewElement interface {
 	Display()
 	FetchItems()
 	Hide()
+	GetDiv() js.Value
 	//NewItemData()
 	//SubmitItemEdit(this js.Value, p []js.Value) interface{}
 	//Toggle()
@@ -116,8 +117,9 @@ type View struct {
 
 func New(client *httpProcessor.Client) *View {
 	view := &View{
-		client:   client,
-		document: js.Global().Get("document"),
+		client:    client,
+		document:  js.Global().Get("document"),
+		elements2: map[string]viewElement{},
 	}
 	window := js.Global().Get("window")
 	window.Call("addEventListener", "onbeforeunload", js.FuncOf(view.BeforeUnload))
@@ -199,6 +201,7 @@ func (v *View) Setup() {
 	homeBtn := viewHelpers.HRef(v.menuHome, v.document, "Home", "homeBtn")
 	aboutBtn := viewHelpers.HRef(v.menuAbout, v.document, "About", "aboutBtn")
 	contactBtn := viewHelpers.HRef(v.menuContact, v.document, "Contact", "contactBtn")
+
 	fetchUsersBtn := viewHelpers.HRef(v.menuUser, v.document, "Users", "fetchUsersBtn")
 	fetchBookingsBtn := viewHelpers.HRef(v.menuBooking, v.document, "Bookings", "fetchBookingsBtn")
 	fetchBookingStatusBtn := viewHelpers.HRef(v.menuBookingStatus, v.document, "BookingStatus", "fetchBookingStatusBtn")
@@ -263,9 +266,11 @@ func (v *View) Setup() {
 	v.elements.mainContent.Call("appendChild", v.elements.resourceEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.accessLevelEditor.Div)
 	v.elements.mainContent.Call("appendChild", v.elements.accessTypeEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.securityUserGroupEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.securityGroupEditor.Div)
-	v.elements.mainContent.Call("appendChild", v.elements.securityGroupResourceEditor.Div)
+
+	v.AddViewItem("Home2", "Home2", nil)
+	v.AddViewItem("User Group", "User Group", securityUserGroupView.New(v.document, v.events, v.client))
+	v.AddViewItem("Group", "Group", securityGroupView.New(v.document, v.events, v.client))
+	v.AddViewItem("Group Resource", "Group Resource", securityGroupResourceView.New(v.document, v.events, v.client))
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput.Set("id", "statusOutput")
@@ -282,19 +287,23 @@ func (v *View) Setup() {
 }
 
 func (v *View) AddViewItem(displayTitle, title string, element viewElement) {
-	v.elements2[title] = element                                                                        // Store new element
-	onClickFn := v.menuOnClick(displayTitle, title, element)                                            // Set up menu onClick function
-	fetchBtn := viewHelpers.HRef(onClickFn, v.document, "Group Resource", "fetchSecurityGroupResource") // Set up menu button
-	v.elements.sidemenu.Call("appendChild", fetchBtn)                                                   // Append the button to the side menu
-	v.elements.mainContent.Call("appendChild", v.elements.securityGroupResourceEditor.Div)              // Append the new element to the main content
+	v.elements2[title] = element                                             // Store new element
+	onClickFn := v.menuOnClick(displayTitle, title, element)                 // Set up menu onClick function
+	fetchBtn := viewHelpers.HRef(onClickFn, v.document, displayTitle, title) // Set up menu button
+	v.elements.sidemenu.Call("appendChild", fetchBtn)                        // Append the button to the side menu
+	if element != nil {
+		v.elements.mainContent.Call("appendChild", element.GetDiv()) // Append the new element to the main content
+	}
 }
 
 func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element viewElement) func() {
 	fn := func() { // Create a function to hide the current element and display the new element
 		v.closeSideMenu()
-		val, ok := v.elements2[v.menuChoice2]
+		val, ok := v.elements2[v.menuChoice2] // get current menu choice
 		if ok {
-			val.Hide() // Hide current editor
+			if val != nil { // Check the the element is not nil
+				val.Hide() // Hide current editor
+			}
 		}
 		v.menuChoice2 = MenuChoice                          // Set new menu choice
 		v.elements.pageTitle.Set("innerHTML", DisplayTitle) // set the title for the element when it is displayed

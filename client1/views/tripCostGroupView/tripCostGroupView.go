@@ -125,6 +125,10 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	return editor
 }
 
+func (editor *ItemEditor) GetDiv() js.Value {
+	return editor.Div
+}
+
 func (editor *ItemEditor) Toggle() {
 	if editor.ViewState == ViewStateNone {
 		editor.ViewState = ViewStateBlock
