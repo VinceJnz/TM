@@ -4,9 +4,18 @@ import (
 	"api-server/v2/models"
 )
 
+const (
+	GetAll = `SELECT stgr.id, group_id, resource_id, etr.name AS resource, access_level_id, etal.name AS access_level, access_type_id, etat.name AS access_type, stgr.admin_flag 
+	FROM st_group_resource stgr
+		JOIN st_group stg ON stg.id=stgr.group_id
+		JOIN et_resource etr ON etr.id=stgr.resource_id
+		JOIN et_access_level etal ON etal.id=stgr.access_level_id
+		JOIN et_access_type etat ON etat.id=stgr.access_type_id`
+)
+
 func (h *Handler) GetAllQry() ([]models.GroupResource, error) {
 	records := []models.GroupResource{}
-	err := h.appConf.Db.Select(&records, `SELECT id, group_id, resource_id, access_level_id, access_type_id, admin_flag FROM st_group_resource`)
+	err := h.appConf.Db.Select(&records, GetAll)
 	if err != nil {
 		return nil, err
 	}

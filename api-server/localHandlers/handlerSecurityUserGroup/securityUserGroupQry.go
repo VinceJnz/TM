@@ -4,9 +4,16 @@ import (
 	"api-server/v2/models"
 )
 
+const (
+	GetAll = `SELECT stug.id, stug.user_id, stu.name as user, stug.group_id, stg.name as group
+	FROM st_user_group stug
+		JOIN st_users stu ON stu.id=stug.user_id
+		JOIN st_group stg ON stg.id=stug.group_id`
+)
+
 func (h *Handler) GetAllQry() ([]models.UserGroup, error) {
 	records := []models.UserGroup{}
-	err := h.appConf.Db.Select(&records, `SELECT id, user_id, group_id FROM st_user_group`)
+	err := h.appConf.Db.Select(&records, GetAll)
 	if err != nil {
 		return nil, err
 	}
