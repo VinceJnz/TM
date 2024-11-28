@@ -138,6 +138,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	editor.RecordState = RecordStateReloadRequired
 
+	// Create child editors here
 	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor, editor.client)
 	editor.Children.Difficulty.FetchItems()
 

@@ -296,6 +296,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
+	editor.NewItemData() // The login view is different to all the other views, there is no data to fetch.
 }
 
 //func (editor *ItemEditor) deleteItem(itemID int) {

@@ -170,6 +170,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 // ?????????????????????? document ref????????????
 func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
 	// Create a div for displaying Dropdown
+	log.Printf(debugTag+"NewDropdown()1 editor = %+v", editor)
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
 

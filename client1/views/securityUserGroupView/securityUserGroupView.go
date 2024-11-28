@@ -48,9 +48,9 @@ const apiURL = "/securityUserGroup"
 type TableData struct {
 	ID       int       `json:"id"`
 	UserID   int       `json:"user_id"`
-	User     string    `json:"user_name"`
+	User     string    `json:"user"`
 	GroupID  int       `json:"group_id"`
-	Group    string    `json:"group_name"`
+	Group    string    `json:"group"`
 	Created  time.Time `json:"created"`
 	Modified time.Time `json:"modified"`
 }
@@ -120,6 +120,13 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	}
 
 	editor.RecordState = RecordStateReloadRequired
+
+	// Create child editors here
+	editor.Children.User = userView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.User.FetchItems()
+
+	editor.Children.Group = securityGroupView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.Group.FetchItems()
 
 	return editor
 }
@@ -248,8 +255,17 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 
 	// ********************* This needs to be changed for each api **********************
-	editor.CurrentRecord.UserID = editor.UiComponents.UserID.Get("value").Int()
-	editor.CurrentRecord.GroupID = editor.UiComponents.GroupID.Get("value").Int()
+	var err error
+
+	editor.CurrentRecord.UserID, err = strconv.Atoi(editor.UiComponents.UserID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing user id:", err)
+	}
+
+	editor.CurrentRecord.GroupID, err = strconv.Atoi(editor.UiComponents.GroupID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing group id:", err)
+	}
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique

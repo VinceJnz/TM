@@ -50,13 +50,13 @@ const apiURL = "/securityGroupResource"
 type TableData struct {
 	ID            int       `json:"id"`
 	GroupID       int       `json:"group_id"`
-	Group         string    `json:"group_name"`
+	Group         string    `json:"group"`
 	ResourceID    int       `json:"resource_id"`
-	Resource      string    `json:"resource_name"`
+	Resource      string    `json:"resource"`
 	AccessLevelID int       `json:"access_level_id"`
-	AccessLevel   string    `json:"access_level_name"`
+	AccessLevel   string    `json:"access_level"`
 	AccessTypeID  int       `json:"access_type_id"`
-	AccessType    string    `json:"access_type_name"`
+	AccessType    string    `json:"access_type"`
 	AdminFlag     bool      `json:"admin_flag"`
 	Created       time.Time `json:"created"`
 	Modified      time.Time `json:"modified"`
@@ -132,6 +132,19 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	}
 
 	editor.RecordState = RecordStateReloadRequired
+
+	// Create child editors here
+	editor.Children.Group = securityGroupView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.Group.FetchItems()
+
+	editor.Children.Resource = resourceView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.Resource.FetchItems()
+
+	editor.Children.AccessLevel = accessLevelView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.AccessLevel.FetchItems()
+
+	editor.Children.AccessType = accessTypeView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.AccessType.FetchItems()
 
 	return editor
 }

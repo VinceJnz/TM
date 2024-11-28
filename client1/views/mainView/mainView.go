@@ -184,6 +184,7 @@ func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element viewElement)
 		v.menuChoice2 = MenuChoice                          // Set new menu choice
 		v.elements.pageTitle.Set("innerHTML", DisplayTitle) // set the title for the element when it is displayed
 		if element != nil {                                 // Some menu choices do not display an element
+			log.Printf(debugTag+"display element title = %v, element = %+v", DisplayTitle, element)
 			element.Display()    // Display new editor
 			element.FetchItems() // Fetch new editor data
 		}
