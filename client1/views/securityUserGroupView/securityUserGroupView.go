@@ -48,9 +48,9 @@ const apiURL = "/securityUserGroup"
 type TableData struct {
 	ID       int       `json:"id"`
 	UserID   int       `json:"user_id"`
-	User     string    `json:"user"`
+	User     string    `json:"user_name"`
 	GroupID  int       `json:"group_id"`
-	Group    string    `json:"group"`
+	Group    string    `json:"group_name"`
 	Created  time.Time `json:"created"`
 	Modified time.Time `json:"modified"`
 }

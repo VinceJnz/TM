@@ -163,9 +163,11 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	label := viewHelpers.Label(editor.document, labelText, htmlID)
 	fieldset.Call("appendChild", label)
 
+	// Create a select element to put in the fieldset
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
+	// Create the elements to put in the select element
 	for _, item := range editor.Records {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)

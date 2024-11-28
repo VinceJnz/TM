@@ -122,7 +122,7 @@ func (v *View) Setup() {
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Add all the menu options
-	v.AddViewItem("&times;", "xBtn", nil)
+	v.AddViewItem("&times;", "", nil)
 	v.AddViewItem("Home", "Home", nil)
 	v.AddViewItem("About", "About", nil)
 	v.AddViewItem("Contact", "Contact", nil)
@@ -175,18 +175,20 @@ func (v *View) AddViewItem(displayTitle, title string, element viewElement) {
 func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element viewElement) func() {
 	fn := func() { // Create a function to hide the current element and display the new element
 		v.closeSideMenu()
-		val, ok := v.elements2[v.menuChoice2] // get current menu choice
-		if ok {
-			if val != nil { // Check the the element is not nil
-				val.Hide() // Hide current editor
+		if MenuChoice != "" {
+			val, ok := v.elements2[v.menuChoice2] // get current menu choice
+			if ok {
+				if val != nil { // Check the the element is not nil
+					val.Hide() // Hide current editor
+				}
 			}
-		}
-		v.menuChoice2 = MenuChoice                          // Set new menu choice
-		v.elements.pageTitle.Set("innerHTML", DisplayTitle) // set the title for the element when it is displayed
-		if element != nil {                                 // Some menu choices do not display an element
-			log.Printf(debugTag+"display element title = %v, element = %+v", DisplayTitle, element)
-			element.Display()    // Display new editor
-			element.FetchItems() // Fetch new editor data
+			v.menuChoice2 = MenuChoice                          // Set new menu choice
+			v.elements.pageTitle.Set("innerHTML", DisplayTitle) // set the title for the element when it is displayed
+			if element != nil {                                 // Some menu choices do not display an element
+				log.Printf(debugTag+"display element title = %v, element = %+v", DisplayTitle, element)
+				element.Display()    // Display new editor
+				element.FetchItems() // Fetch new editor data
+			}
 		}
 	}
 	return fn

@@ -165,6 +165,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	label := viewHelpers.Label(editor.document, labelText, htmlID)
 	fieldset.Call("appendChild", label)
 
+	// Create a select element to put in the fieldset
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
@@ -179,7 +180,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	}
 	fieldset.Call("appendChild", StateDropDown)
 
-	// Create an span element of error messages
+	// Create an span element for error messages
 	span := viewHelpers.Span(editor.document, htmlID+"-error")
 	fieldset.Call("appendChild", span)
 

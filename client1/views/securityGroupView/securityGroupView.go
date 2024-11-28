@@ -157,13 +157,19 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 // ?????????????????????? document ref????????????
 func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
-	// Create a div for displaying Dropdown
+	// Create a fieldset for displaying Dropdown
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
 
+	// Create a label element
+	label := viewHelpers.Label(editor.document, labelText, htmlID)
+	fieldset.Call("appendChild", label)
+
+	// Create a select element to put in the fieldset
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
+	// Create the elements to put in the select element
 	for _, item := range editor.Records {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
@@ -173,12 +179,11 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 		}
 		StateDropDown.Call("appendChild", optionElement)
 	}
-
-	// Create a label element
-	label := viewHelpers.Label(editor.document, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
 	fieldset.Call("appendChild", StateDropDown)
+
+	// Create an span element of error messages
+	span := viewHelpers.Span(editor.document, htmlID+"-error")
+	fieldset.Call("appendChild", span)
 
 	return fieldset, StateDropDown
 }

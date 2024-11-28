@@ -50,7 +50,7 @@ const apiURL = "/securityGroupResource"
 type TableData struct {
 	ID            int       `json:"id"`
 	GroupID       int       `json:"group_id"`
-	Group         string    `json:"group"`
+	Group         string    `json:"group_name"`
 	ResourceID    int       `json:"resource_id"`
 	Resource      string    `json:"resource"`
 	AccessLevelID int       `json:"access_level_id"`
