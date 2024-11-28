@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	GetAll = `SELECT stug.id, stug.user_id, stu.name as user, stug.group_id, stg.name as group
+	GetAll = `SELECT stug.id, stug.user_id, stu.name as user_name, stug.group_id, stg.name as group_name
 	FROM st_user_group stug
 		JOIN st_users stu ON stu.id=stug.user_id
 		JOIN st_group stg ON stg.id=stug.group_id`

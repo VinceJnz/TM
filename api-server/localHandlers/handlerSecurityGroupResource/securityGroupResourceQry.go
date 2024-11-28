@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	GetAll = `SELECT stgr.id, group_id, resource_id, etr.name AS resource, access_level_id, etal.name AS access_level, access_type_id, etat.name AS access_type, stgr.admin_flag 
+	GetAll = `SELECT stgr.id, stgr.group_id, stg.name AS group_name, resource_id, etr.name AS resource, access_level_id, etal.name AS access_level, access_type_id, etat.name AS access_type, stgr.admin_flag 
 	FROM st_group_resource stgr
 		JOIN st_group stg ON stg.id=stgr.group_id
 		JOIN et_resource etr ON etr.id=stgr.resource_id
