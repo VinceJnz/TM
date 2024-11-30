@@ -45,3 +45,68 @@ func BooleanEdit(value bool, document js.Value, labelText string, inputType stri
 
 	return fieldset, input
 }
+
+func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn func()) js.Value {
+	itemDiv := document.Call("createElement", "div")
+	itemDiv.Set("id", debugTag+"itemDiv")
+
+	itemDiv.Set("innerHTML", itemTitle)
+	itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+
+	// Create an edit button
+	editButton := document.Call("createElement", "button")
+	editButton.Set("innerHTML", "Edit")
+	editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		editFn()
+		return nil
+	}))
+
+	// Create a delete button
+	deleteButton := document.Call("createElement", "button")
+	deleteButton.Set("innerHTML", "Delete")
+	deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		deleteFn()
+		return nil
+	}))
+
+	itemDiv.Call("appendChild", editButton)
+	itemDiv.Call("appendChild", deleteButton)
+	return itemDiv
+}
+
+type ItemState int
+
+const (
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateSubmitted
+)
+
+func UpdateStateDisplay(newState ItemState, stateDiv js.Value) ItemState {
+	var stateText string
+	switch newState {
+	case ItemStateNone:
+		stateText = "Idle"
+	case ItemStateFetching:
+		stateText = "Fetching Data"
+	case ItemStateEditing:
+		stateText = "Editing Item"
+	case ItemStateAdding:
+		stateText = "Adding New Item"
+	case ItemStateSaving:
+		stateText = "Saving Item"
+	case ItemStateDeleting:
+		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
+	default:
+		stateText = "Unknown State"
+	}
+
+	stateDiv.Set("textContent", "Current State: "+stateText)
+	return newState
+}

@@ -47,7 +47,7 @@ type ItemRecord interface {
 	ItemID() int                // Returns the record ID
 }
 
-type View struct {
+type ItemEditor struct {
 	client   *httpProcessor.Client
 	document js.Value
 	events   *eventProcessor.EventProcessor
@@ -57,7 +57,7 @@ type View struct {
 	ViewState ViewState
 	ItemState ItemState
 
-	ViewDiv  js.Value // Contains all the view components
+	Div      js.Value // Contains all the view components
 	StateDiv js.Value // Contained in the ViewDiv and is used to display the state of the ViewDiv
 	EditDiv  js.Value // Contained in the ViewDiv and is used to display the Item Editor
 	ListDiv  js.Value // Contained in the ViewDiv and is used to display the Item list
@@ -89,11 +89,14 @@ type ItemEditor2 struct {
 */
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *View {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *ItemEditor {
 	return nil
 }
 
-func (v *View) Toggle() {
+func (editor *ItemEditor) GetDiv() js.Value {
+	return editor.Div
+}
+func (v *ItemEditor) Toggle() {
 	if v.ViewState == ViewStateNone {
 		v.ViewState = ViewStateBlock
 		v.Display()
@@ -103,18 +106,18 @@ func (v *View) Toggle() {
 	}
 }
 
-func (v *View) Hide() {
-	v.ViewDiv.Get("style").Call("setProperty", "display", "none")
+func (v *ItemEditor) Hide() {
+	v.Div.Get("style").Call("setProperty", "display", "none")
 	v.ViewState = ViewStateNone
 }
 
-func (v *View) Display() {
-	v.ViewDiv.Get("style").Call("setProperty", "display", "block")
+func (v *ItemEditor) Display() {
+	v.Div.Get("style").Call("setProperty", "display", "block")
 	v.ViewState = ViewStateBlock
 }
 
 // NewItemData initializes a new item for adding
-func (v *View) NewItemData(this js.Value, p []js.Value) interface{} {
+func (v *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	v.updateStateDisplay(ItemStateAdding)
 
 	v.populateEditForm(v.ItemEditor.NewItemData())
@@ -122,12 +125,12 @@ func (v *View) NewItemData(this js.Value, p []js.Value) interface{} {
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
-func (v *View) onCompletionMsg(Msg string) {
+func (v *ItemEditor) onCompletionMsg(Msg string) {
 	v.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
-func (v *View) populateEditForm(record ItemRecord) {
+func (v *ItemEditor) populateEditForm(record ItemRecord) {
 	v.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(v.SubmitItemEdit, v.document, "editForm")
 
@@ -154,12 +157,12 @@ func (v *View) populateEditForm(record ItemRecord) {
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (v *View) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (v *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
 	v.resetEditForm()
 	return nil
 }
 
-func (v *View) resetEditForm() {
+func (v *ItemEditor) resetEditForm() {
 	// Clear existing content
 	v.EditDiv.Set("innerHTML", "")
 
@@ -176,7 +179,7 @@ func (v *View) resetEditForm() {
 }
 
 // SubmitItemEdit handles the submission of the item edit form
-func (v *View) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (v *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
@@ -232,7 +235,7 @@ func (v *View) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 	return nil
 }
 
-func (v *View) FetchItems() {
+func (v *ItemEditor) FetchItems() {
 	go func() {
 		//var records []TableData
 		records := v.ItemEditor.RecordSlicePtr()
@@ -244,7 +247,7 @@ func (v *View) FetchItems() {
 	}()
 }
 
-func (v *View) deleteItem(record ItemRecord) {
+func (v *ItemEditor) deleteItem(record ItemRecord) {
 	go func() {
 		v.updateStateDisplay(ItemStateDeleting)
 		req, err := http.NewRequest("DELETE", v.Endpoint+"/"+strconv.Itoa(record.ItemID()), nil)
@@ -273,7 +276,7 @@ func (v *View) deleteItem(record ItemRecord) {
 	}()
 }
 
-func (v *View) populateItemList() {
+func (v *ItemEditor) populateItemList() {
 	v.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
@@ -317,7 +320,7 @@ func (v *View) populateItemList() {
 	}
 }
 
-func (v *View) updateStateDisplay(newState ItemState) {
+func (v *ItemEditor) updateStateDisplay(newState ItemState) {
 	v.ItemState = newState
 	var stateText string
 	switch v.ItemState {

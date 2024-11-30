@@ -13,9 +13,11 @@ import (
 
 const debugTag = "resourceView."
 
+/*
 type ItemState int
 
 const (
+
 	ItemStateNone ItemState = iota
 	ItemStateFetching
 	ItemStateEditing
@@ -23,8 +25,9 @@ const (
 	ItemStateSaving
 	ItemStateDeleting
 	ItemStateSubmitted
-)
 
+)
+*/
 type ViewState int
 
 const (
@@ -67,7 +70,7 @@ type ItemEditor struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
-	ItemState     ItemState
+	ItemState     viewHelpers.ItemState
 	Records       []TableData
 	UiComponents  UI
 	Div           js.Value
@@ -87,7 +90,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.document = document
 	editor.events = eventProcessor
 
-	editor.ItemState = ItemStateNone
+	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
@@ -144,7 +147,7 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
-	editor.updateStateDisplay(ItemStateAdding)
+	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
 	// Set default values for the new record // ********************* This needs to be changed for each api **********************
@@ -235,7 +238,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.UiComponents = UI{}
 
 	// Update state
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 }
 
 // SubmitItemEdit handles the submission of the item edit form
@@ -255,9 +258,9 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
 	switch editor.ItemState {
-	case ItemStateEditing:
+	case viewHelpers.ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
-	case ItemStateAdding:
+	case viewHelpers.ItemStateAdding:
 		go editor.AddItem(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
@@ -275,22 +278,22 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
-	editor.updateStateDisplay(ItemStateSaving)
+	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 	editor.client.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
-		editor.updateStateDisplay(ItemStateSaving)
+		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 		editor.client.NewRequest(http.MethodPost, apiURL, nil, &item)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		editor.onCompletionMsg("Item record added successfully")
 	}()
 }
@@ -300,22 +303,22 @@ func (editor *ItemEditor) FetchItems() {
 		editor.RecordState = RecordStateCurrent
 		go func() {
 			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
+			editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 			editor.client.NewRequest(http.MethodGet, apiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
+			editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		}()
 	}
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
-		editor.updateStateDisplay(ItemStateDeleting)
+		editor.updateStateDisplay(viewHelpers.ItemStateDeleting)
 		editor.client.NewRequest(http.MethodDelete, apiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()
 }
@@ -330,64 +333,49 @@ func (editor *ItemEditor) populateItemList() {
 	for _, i := range editor.Records {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
-		// Create and add child views to Item
-		//
-		//
-
-		itemDiv := editor.document.Call("createElement", "div")
-		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Name)
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
-
-		// Create an edit button
-		editButton := editor.document.Call("createElement", "button")
-		editButton.Set("innerHTML", "Edit")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentRecord = record
-			editor.updateStateDisplay(ItemStateEditing)
+		editFn := func() {
+			editor.CurrentRecord = record // When this function is called the record value is assigned to the CurrentRecord.
+			editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 			editor.populateEditForm()
-			return nil
-		}))
+		}
 
-		// Create a delete button
-		deleteButton := editor.document.Call("createElement", "button")
-		deleteButton.Set("innerHTML", "Delete")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		deleteFn := func() {
 			editor.deleteItem(record.ID)
-			return nil
-		}))
+		}
 
-		itemDiv.Call("appendChild", editButton)
-		itemDiv.Call("appendChild", deleteButton)
-
+		//itemDiv := viewHelpers.ItemList(editor.document, debugTag, record.Name, editFn, deleteFn)
+		itemDiv := viewHelpers.ItemList(editor.document, debugTag, record.Name, editFn, deleteFn)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 }
 
-func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
-	editor.ItemState = newState
-	var stateText string
-	switch editor.ItemState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
+func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
+	editor.ItemState = viewHelpers.UpdateStateDisplay(newState, editor.StateDiv)
 
-	editor.StateDiv.Set("textContent", "Current State: "+stateText)
+	/*
+		editor.ItemState = newState
+		var stateText string
+		switch editor.ItemState {
+		case ItemStateNone:
+			stateText = "Idle"
+		case ItemStateFetching:
+			stateText = "Fetching Data"
+		case ItemStateEditing:
+			stateText = "Editing Item"
+		case ItemStateAdding:
+			stateText = "Adding New Item"
+		case ItemStateSaving:
+			stateText = "Saving Item"
+		case ItemStateDeleting:
+			stateText = "Deleting Item"
+		case ItemStateSubmitted:
+			stateText = "Edit Form Submitted"
+		default:
+			stateText = "Unknown State"
+		}
+
+		editor.StateDiv.Set("textContent", "Current State: "+stateText)
+	*/
 }
 
 // Event handlers and event data types
