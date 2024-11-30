@@ -82,6 +82,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
 	id := handlerStandardTemplate.GetID(w, r)
 
+	log.Printf(debugTag+"Update()1 err=%+v", "need to add validation function in here")
 	// This validation needs to be added into the process ???????????????????????????????????????
 	//if err := h.RecordValidation(record); err != nil {
 	//	http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
