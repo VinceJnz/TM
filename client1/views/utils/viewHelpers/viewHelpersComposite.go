@@ -86,6 +86,43 @@ const (
 	ItemStateSubmitted
 )
 
+type ItemStateView struct {
+	itemState ItemState
+	stateDiv  js.Value
+}
+
+func NewItemStateView(StateDiv js.Value) ItemStateView {
+	return ItemStateView{
+		itemState: ItemStateNone,
+		stateDiv:  StateDiv,
+	}
+}
+
+func (i *ItemStateView) UpdateStateDisplay(newState ItemState) ItemState {
+	var stateText string
+	switch newState {
+	case ItemStateNone:
+		stateText = "Idle"
+	case ItemStateFetching:
+		stateText = "Fetching Data"
+	case ItemStateEditing:
+		stateText = "Editing Item"
+	case ItemStateAdding:
+		stateText = "Adding New Item"
+	case ItemStateSaving:
+		stateText = "Saving Item"
+	case ItemStateDeleting:
+		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
+	default:
+		stateText = "Unknown State"
+	}
+
+	i.stateDiv.Set("textContent", "Current State: "+stateText)
+	return newState
+}
+
 func UpdateStateDisplay(newState ItemState, stateDiv js.Value) ItemState {
 	var stateText string
 	switch newState {
