@@ -1,19 +1,29 @@
 package handlerSecurityGroupResource
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
 	"api-server/v2/app/appCore"
+	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
-
-	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerSecurityGroupResource."
+
+const (
+	qryGetAll = `SELECT stgr.id, stgr.group_id, stg.name AS group_name, resource_id, etr.name AS resource, access_level_id, etal.name AS access_level, access_type_id, etat.name AS access_type, stgr.admin_flag 
+					FROM st_group_resource stgr
+						JOIN st_group stg ON stg.id=stgr.group_id
+						JOIN et_resource etr ON etr.id=stgr.resource_id
+						JOIN et_access_level etal ON etal.id=stgr.access_level_id
+						JOIN et_access_type etat ON etat.id=stgr.access_type_id`
+	qryGet    = `SELECT id, group_id, resource_id, access_level_id, access_type_id, admin_flag FROM st_group_resource WHERE id = $1`
+	qryCreate = `INSERT INTO st_group_resource (group_id, resource_id, access_level_id, access_type_id, admin_flag) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	qryUpdate = `UPDATE st_group_resource SET group_id = $1, resource_id = $2, access_level_id = $3, access_type_id = $4, admin_flag = $5 WHERE id = $6`
+	qryDelete = `DELETE FROM st_group_resource WHERE id = $1`
+)
 
 type Handler struct {
 	appConf *appCore.Config
@@ -25,102 +35,35 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records, err := h.GetAllQry()
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf(debugTag+"GetAll()2 %v\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.GroupResource{}, qryGetAll, nil)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
-	record, err := h.GetQry(id)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.GroupResource{}, qryGet, id)
 }
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.GroupResource
-	json.NewDecoder(r.Body).Decode(&record)
-
-	err := h.CreateQry(record)
-	if err != nil {
-		log.Printf("%v.Create()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf(debugTag+"Create()2 err=%+v", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.GroupID, record.ResourceID, record.AccessLevelID, record.AccessTypeID, record.AdminFlag)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.Update()1 %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
 	var record models.GroupResource
-	json.NewDecoder(r.Body).Decode(&record)
-	record.ID = id
-
-	err = h.UpdateQry(record)
-	if err != nil {
-		log.Printf("%v.Update()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.GroupID, record.ResourceID, record.AccessLevelID, record.AccessTypeID, record.AdminFlag, id)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.Delete()1 %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
-	err = h.DeleteQry(id)
-	if err != nil {
-		log.Printf("%v.Delete()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }

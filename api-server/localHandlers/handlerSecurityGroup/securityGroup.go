@@ -1,19 +1,24 @@
 package handlerSecurityGroup
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
 	"api-server/v2/app/appCore"
+	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
-
-	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerSecurityGroup."
+
+const (
+	qryGetAll = `SELECT id, name, description, admin_flag FROM st_group`
+	qryGet    = `SELECT id, name, description, admin_flag FROM st_group WHERE id = $1`
+	qryCreate = `INSERT INTO st_group (name, description, admin_flag) VALUES ($1, $2, $3) RETURNING id`
+	qryUpdate = `UPDATE st_group SET name = $1, description = $2, admin_flag = $3 WHERE id = $4`
+	qryDelete = `DELETE FROM st_group WHERE id = $1`
+)
 
 type Handler struct {
 	appConf *appCore.Config
@@ -25,102 +30,35 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records, err := h.GetAllQry()
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf(debugTag+"GetAll()2 %v\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Group{}, qryGetAll, nil)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
-	record, err := h.GetQry(id)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Group{}, qryGet, id)
 }
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Group
-	json.NewDecoder(r.Body).Decode(&record)
-
-	err := h.CreateQry(record)
-	if err != nil {
-		log.Printf("%v.Create()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf(debugTag+"Create()2 err=%+v", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Description, record.AdminFlag)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.Update()1 %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
 	var record models.Group
-	json.NewDecoder(r.Body).Decode(&record)
-	record.ID = id
-
-	err = h.UpdateQry(record)
-	if err != nil {
-		log.Printf("%v.Update()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Name, record.Description, record.AdminFlag, id)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.Delete()1 %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
-	err = h.DeleteQry(id)
-	if err != nil {
-		log.Printf("%v.Delete()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }

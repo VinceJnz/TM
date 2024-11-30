@@ -1,6 +1,7 @@
 package handlerStandardTemplate
 
 import (
+	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -25,6 +26,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dest)
 }
@@ -41,6 +43,24 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dest)
+}
+
+// Get: retrieves and returns a list of records identified by parent id
+func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
+	err := Db.Select(dest, query, args)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Record not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("%v.GetList()2 %v\n", debugStr, err)
+		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dest)
 }
@@ -101,12 +121,28 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // Delete: removes a record identified by id
 func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
-	result, err := Db.Exec(query, args...)
+	// Begin transaction
+	tx, err := Db.Beginx()
 	if err != nil {
+		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+		return
+	}
+
+	result, err := tx.Exec(query, args...)
+	if err != nil {
+		tx.Rollback()
 		log.Printf(debugTag+debugStr+"Delete()1 result=%+v", result)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -118,4 +154,14 @@ func GetID(w http.ResponseWriter, r *http.Request) int {
 		return 0
 	}
 	return id
+}
+
+func GetSession(w http.ResponseWriter, r *http.Request, Db *sqlx.DB) models.Session {
+	//session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
+	//if !ok {
+	//	log.Printf(debugTag+"GetAll()1 UserID not available in request context. userID=%v\n", session.UserID)
+	//	http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
+	//	return models.Session{}
+	//}
+	return models.Session{} //session
 }

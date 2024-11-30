@@ -3,6 +3,7 @@ package handlerBooking
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
+	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
@@ -12,6 +13,29 @@ import (
 )
 
 const debugTag = "handlerBooking."
+
+const (
+	qryGetAll = `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
+					FROM public.at_bookings ab
+						JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id
+					WHERE ab.owner_id = $1 OR true=$2`
+	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
+					FROM at_bookings WHERE id = $1`
+	qryGetList = `SELECT atb.*, ebs.status, atbpcount.participants
+					FROM public.at_bookings atb
+					JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
+					LEFT JOIN (SELECT atbp.booking_id, COUNT(atbp.id) as participants
+						FROM public.at_booking_people atbp
+						GROUP BY atbp.booking_id) atbpcount ON atbpcount.booking_id=atb.id
+					WHERE atb.trip_id = $1`
+	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
+        			VALUES ($1, $2, $3, $4, $5, $6) 
+					RETURNING id`
+	qryUpdate = `UPDATE at_bookings 
+					SET owner_id = $1, trip_id = $2, notes = $3, from_date = $4, to_date = $5, booking_status_id = $6 
+					WHERE id = $7`
+	qryDelete = `DELETE FROM at_bookings WHERE id = $1`
+)
 
 type Handler struct {
 	appConf *appCore.Config
@@ -23,8 +47,6 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.Booking{}
-
 	session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session)
 	if !ok {
 		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
@@ -32,83 +54,26 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf(debugTag+"GetAll()1 userID %v\n", session.UserID)
 
-	err := h.appConf.Db.Select(&records, `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
-	FROM public.at_bookings ab
-	JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id`)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf(debugTag+"GetAll()2 %v\n", err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
-}
-
-// Get: retrieves and returns a list of records identified by parent id
-func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
-	parentID, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	records := []models.Booking{}
-	err = h.appConf.Db.Select(&records, `SELECT atb.*, ebs.status, atbpcount.participants
-	FROM public.at_bookings atb
-	JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
-	LEFT JOIN (SELECT atbp.booking_id, COUNT(atbp.id) as participants
-		FROM public.at_booking_people atbp
-		GROUP BY atbp.booking_id) atbpcount ON atbpcount.booking_id=atb.id
-	WHERE atb.trip_id = $1`, parentID)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.GetList()2 %v\n", debugTag, err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id)
+}
 
-	record := models.Booking{}
-	err = h.appConf.Db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
-		FROM at_bookings WHERE id = $1`, id)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debugTag, err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+// Get: retrieves and returns a list of records identified by parent id
+func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetList, id)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -118,90 +83,27 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.appConf.Db.Beginx() // Start transaction
-	if err != nil {
-		http.Error(w, debugTag+"Create()1: Could not start transaction", http.StatusInternalServerError)
-		return
-	}
-
-	err = tx.QueryRow(`
-        INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
-        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
-	).Scan(&record.ID)
-
-	if err != nil {
-		tx.Rollback() // Rollback on error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = tx.Commit() // Commit on success
-	if err != nil {
-		http.Error(w, debugTag+"Create()3: Could not commit transaction", http.StatusInternalServerError)
-		return
-	}
-
-	//w.WriteHeader(http.StatusCreated)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	var record models.Booking
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	record.ID = id
+	id := handlerStandardTemplate.GetID(w, r)
 
-	if err := h.RecordValidation(record); err != nil {
-		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
+	// Need to add this validation in ?????????????????????????????????
+	//if err := h.RecordValidation(record); err != nil {
+	//	http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+	//	return
+	//}
 
-	_, err = h.appConf.Db.Exec(`
-		UPDATE at_bookings 
-		SET owner_id = $1, trip_id = $2, notes = $3, from_date = $4, to_date = $5, booking_status_id = $6 
-		WHERE id = $7`,
-		record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID,
-		record.ID,
-	)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, id)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	_, err = h.appConf.Db.Exec("DELETE FROM at_bookings WHERE id = $1", id)
-	if err != nil {
-		http.Error(w, debugTag+"Delete() - Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }
 
 func (h *Handler) RecordValidation(record models.Booking) error {

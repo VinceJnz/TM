@@ -2,10 +2,8 @@ package handlerUserPayments
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -14,8 +12,11 @@ import (
 const debugTag = "handlerUserPayments."
 
 const (
-	qryGetAll = `SELECT * FROM at_user_payments`
-	qryGet    = `SELECT * FROM at_user_payments WHERE id = $1`
+	qryGetAll  = `SELECT * FROM at_user_payments`
+	qryGet     = `SELECT * FROM at_user_payments WHERE id = $1`
+	qryGetList = `SELECT atup.*
+					FROM public.at_user_payments atup
+					WHERE atup.booking_id = $1`
 	qryCreate = `INSERT INTO at_user_payments (user_id, booking_id, payment_date, amount, payment_method) 
         			VALUES ($1, $2, $3, $4, $5)
 					RETURNING id`
@@ -40,29 +41,8 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a list of records identified by parent id
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
-	bookingID, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	records := []models.UserPayments{}
-	err = h.appConf.Db.Select(&records, `SELECT atup.*
-	FROM public.at_user_payments atup
-	WHERE atup.booking_id = $1`, bookingID)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.GetList()2 %v\n", debugTag, err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.UserPayments{}, qryGetList, id)
 }
 
 // Get: retrieves and returns a single record identified by id

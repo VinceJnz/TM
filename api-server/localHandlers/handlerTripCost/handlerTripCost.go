@@ -2,15 +2,30 @@ package handlerTripCost
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/localHandlers/helpers"
+	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 )
 
 const debugTag = "handlerTripCost."
+
+const (
+	qryGetAll = `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
+					FROM public.at_trip_costs attc
+					LEFT JOIN et_user_status etus on etus.id = attc.user_status_id
+					JOIN et_user_age_groups etuag on etuag.id = attc.user_age_group_id
+					JOIN et_seasons ets on ets.id = attc.season_id`
+	qryGet    = `SELECT * FROM at_trip_costs WHERE id = $1`
+	qryCreate = `INSERT INTO at_trip_costs (trip_cost_group_id, user_status_id, user_age_group_id, season_id, amount) 
+			        VALUES ($1, $2, $3, $4, $5) 
+					RETURNING id`
+	qryUpdate = `UPDATE at_trip_costs 
+					SET trip_cost_group_id = $1, user_status_id = $2, user_age_group_id = $3, season_id = $4, amount = $5
+					WHERE id = $6`
+	qryDelete = `DELETE FROM at_trip_costs WHERE id = $1`
+)
 
 type Handler struct {
 	appConf *appCore.Config
@@ -22,134 +37,35 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.TripCost{}
-	err := h.appConf.Db.Select(&records, `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
-	FROM public.at_trip_costs attc
-	LEFT JOIN et_user_status etus on etus.id = attc.user_status_id
-	JOIN et_user_age_groups etuag on etuag.id = attc.user_age_group_id
-	JOIN et_seasons ets on ets.id = attc.season_id`)
-
-	if err == sql.ErrNoRows {
-		http.Error(w, "No trip costs found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%vGetAll() failed to execute query: %v\n", debugTag, err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.TripCost{}, qryGetAll, nil)
 }
 
 // Get: retrieves a single trip cost by ID
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		log.Printf("%vGet() failed to retrieve ID: %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	record := models.TripCost{}
-	err = h.appConf.Db.Get(&record, `SELECT *
-                             FROM at_trip_costs WHERE id = $1`, id)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Trip cost not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%vGet() failed to execute query: %v\n", debugTag, err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.TripCost{}, qryGet, id)
 }
 
 // Create: adds a new trip cost record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.TripCost
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-
-	tx, err := h.appConf.Db.Beginx()
-	if err != nil {
-		http.Error(w, "Could not start transaction"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = tx.QueryRow(`
-        INSERT INTO at_trip_costs (trip_cost_group_id, user_status_id, user_age_group_id, season_id, amount) 
-        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount,
-	).Scan(&record.ID)
-
-	if err != nil {
-		tx.Rollback()
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		http.Error(w, "Could not commit transaction: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount)
 }
 
 // Update: modifies the existing trip cost by ID
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		http.Error(w, "Invalid trip cost ID", http.StatusBadRequest)
-		return
-	}
-
 	var record models.TripCost
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	record.ID = id
-
-	_, err = h.appConf.Db.Exec(`
-        UPDATE at_trip_costs 
-        SET trip_cost_group_id = $1, user_status_id = $2, user_age_group_id = $3, season_id = $4, amount = $5
-        WHERE id = $6`,
-		record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount, record.ID,
-	)
-	if err != nil {
-		log.Printf("%vUpdate() failed to execute query: %v\n", debugTag, err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount, id)
 }
 
 // Delete: removes a trip cost by ID
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := helpers.GetIDFromRequest(r)
-	if err != nil {
-		http.Error(w, "Invalid trip cost ID", http.StatusBadRequest)
-		return
-	}
-
-	_, err = h.appConf.Db.Exec("DELETE FROM at_trip_costs WHERE id = $1", id)
-	if err != nil {
-		log.Printf("%vDelete() failed to execute query: %v\n", debugTag, err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }
