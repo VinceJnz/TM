@@ -2,17 +2,26 @@ package handlerAccessType
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
-
-	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerAccessType."
+
+const (
+	qryGetAll = `SELECT * FROM et_access_type`
+	qryGet    = `SELECT * FROM et_access_type WHERE id = $1`
+	qryCreate = `INSERT INTO et_access_type (name, description)
+					VALUES ($1, $2)
+					RETURNING id`
+	qryUpdate = `UPDATE et_access_type 
+					SET name = $1, description = $2
+					WHERE id = $3`
+	qryDelete = `DELETE FROM et_access_type WHERE id = $1`
+)
 
 type Handler struct {
 	appConf *appCore.Config
@@ -24,114 +33,35 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	records := []models.AccessType{}
-	err := h.appConf.Db.Select(&records, `SELECT * FROM et_access_type`)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf(debugTag+"GetAll()2 %v\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.AccessType{}, qryGetAll, nil)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.Get()1 %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
-	record := models.AccessType{}
-	err = h.appConf.Db.Get(&record, `SELECT * FROM et_access_type WHERE id = $1`, id)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.AccessType{}, qryGet, id)
 }
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.AccessType
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-
-	err := h.appConf.Db.QueryRow(`
-		INSERT INTO et_access_type (name, description)
-		VALUES ($1, $2) RETURNING id`,
-		record.Name, record.Description,
-	).Scan(&record.ID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Description)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
 	var record models.AccessType
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	record.ID = id
-
-	_, err = h.appConf.Db.Exec(`
-		UPDATE et_access_type 
-		SET name = $1, description = $2
-		WHERE id = $3`,
-		record.Name, record.Description, record.ID,
-	)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(record)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Name, record.Description, id)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
-	if err != nil {
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
-		return
-	}
-
-	_, err = h.appConf.Db.Exec("DELETE FROM et_access_type WHERE id = $1", id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	id := handlerStandardTemplate.GetID(w, r)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }

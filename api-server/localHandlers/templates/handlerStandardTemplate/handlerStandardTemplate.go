@@ -56,9 +56,22 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	//}
 	log.Printf(debugTag+debugStr+"Create()3 dest=%+v", dest)
 
-	err := Db.QueryRow(query, args...).Scan(dest)
+	tx, err := Db.Beginx() // Start transaction
 	if err != nil {
+		http.Error(w, debugTag+"Create()1: Could not start transaction", http.StatusInternalServerError)
+		return
+	}
+
+	err = tx.QueryRow(query, args...).Scan(dest)
+	if err != nil {
+		tx.Rollback() // Rollback on error
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = tx.Commit() // Commit on success
+	if err != nil {
+		http.Error(w, debugTag+"Create()3: Could not commit transaction", http.StatusInternalServerError)
 		return
 	}
 
