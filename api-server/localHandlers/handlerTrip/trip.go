@@ -49,9 +49,10 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
 		return
 	}
+	log.Printf(debugTag+"GetAll()2 session=%v\n", session)
 
 	// Includes code to check if the user has access.
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll, session.UserID, session.AdminFlag)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll, session.UserID, session.AdminFlag)
 }
 
 // Get: retrieves and returns a single record identified by id
@@ -82,12 +83,18 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
 	id := handlerStandardTemplate.GetID(w, r)
 
-	log.Printf(debugTag+"Update()1 err=%+v", "need to add validation function in here")
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf(debugTag+"Update()1 dest=%+v", record)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	record.ID = id
+
 	// This validation needs to be added into the process ???????????????????????????????????????
-	//if err := h.RecordValidation(record); err != nil {
-	//	http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
-	//	return
-	//}
+	if err := h.RecordValidation(record); err != nil {
+		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 
 	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, id)
 }

@@ -33,7 +33,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // Get: retrieves and returns a single record identified by id
 func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
-	err := Db.Get(dest, query, args)
+	err := Db.Get(dest, query, args...)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -50,7 +50,7 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 
 // Get: retrieves and returns a list of records identified by parent id
 func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
-	err := Db.Select(dest, query, args)
+	err := Db.Select(dest, query, args...)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -78,7 +78,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 	tx, err := Db.Beginx() // Start transaction
 	if err != nil {
-		http.Error(w, debugTag+"Create()1: Could not start transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Create()1: Could not start transaction", http.StatusInternalServerError)
 		return
 	}
 
@@ -91,7 +91,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 	err = tx.Commit() // Commit on success
 	if err != nil {
-		http.Error(w, debugTag+"Create()3: Could not commit transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Create()3: Could not commit transaction", http.StatusInternalServerError)
 		return
 	}
 
@@ -102,16 +102,29 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // Update: modifies the existing record identified by id and returns the updated record
 func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
-	if err := json.NewDecoder(r.Body).Decode(dest); err != nil {
-		log.Printf(debugStr+"Update()1 dest=%+v", dest)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	//if err := json.NewDecoder(r.Body).Decode(dest); err != nil {
+	//	log.Printf(debugTag+debugStr+"Update()1 err=%+v, dest=%+v", err, dest)
+	//	http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	//	return
+	//}
+
+	tx, err := Db.Beginx() // Start transaction
+	if err != nil {
+		http.Error(w, debugTag+debugStr+"Create()1: Could not start transaction", http.StatusInternalServerError)
 		return
 	}
 
-	result, err := Db.Exec(query, args...)
+	result, err := tx.Exec(query, args...)
 	if err != nil {
-		log.Printf(debugStr+"Update()2 result=%+v", result)
+		tx.Rollback() // Rollback on error
+		log.Printf(debugTag+debugStr+"Update()2 err=%+v, result=%+v", err, result)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = tx.Commit() // Commit on success
+	if err != nil {
+		http.Error(w, debugTag+debugStr+"Create()3: Could not commit transaction", http.StatusInternalServerError)
 		return
 	}
 
