@@ -54,6 +54,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Group
 	id := handlerStandardTemplate.GetID(w, r)
+
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		log.Printf(debugTag+"Update()1 dest=%+v", record)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	record.ID = id
+
 	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Name, record.Description, record.AdminFlag, id)
 }
 
