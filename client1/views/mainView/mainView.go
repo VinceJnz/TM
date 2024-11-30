@@ -123,11 +123,10 @@ func (v *View) Setup() {
 
 	// Add all the menu options
 	v.AddViewItem("&times;", "", nil)
+	v.AddViewItem("Login", "Login", loginView.New(v.document, v.events, v.client))
 	v.AddViewItem("Home", "Home", nil)
 	v.AddViewItem("About", "About", nil)
 	v.AddViewItem("Contact", "Contact", nil)
-
-	v.AddViewItem("Login", "Login", loginView.New(v.document, v.events, v.client))
 	v.AddViewItem("User", "User", userView.New(v.document, v.events, v.client))
 	v.AddViewItem("Booking", "Booking", bookingView.New(v.document, v.events, v.client))
 	v.AddViewItem("Booking Status", "Booking Status", bookingStatusView.New(v.document, v.events, v.client))
