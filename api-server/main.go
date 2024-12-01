@@ -21,6 +21,7 @@ import (
 	"api-server/v2/localHandlers/handlerTripStatus"
 	"api-server/v2/localHandlers/handlerTripType"
 	"api-server/v2/localHandlers/handlerUser"
+	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/handlerUserStatus"
@@ -61,9 +62,10 @@ func main() {
 	// Add route groups
 	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))                             // Seasons routes
 	addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
-	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserCategory routes
+	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserAgeGroup routes
 	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))                   // UserPayments routes
 	addRouteGroup(subR2, "userStatus", handlerUserStatus.New(app))                       // UserStatus routes
+	addRouteGroup(subR2, "userAccountStatus", handlerUserAccountStatus.New(app))         // UserAccountStatus routes
 	addRouteGroup(subR2, "groupBooking", handlerGroupBooking.New(app))                   // GroupBookings routes
 	addRouteGroup(subR2, "bookingStatus", handlerBookingStatus.New(app))                 // BookingStatus routes
 	addRouteGroup(subR2, "tripType", handlerTripType.New(app))                           // TripType routes
