@@ -13,12 +13,17 @@ import (
 const debugTag = "handlerUser."
 
 const (
-	qryGetAll = `SELECT id, name, username, email FROM st_users`
-	qryGet    = `SELECT id, name, username, email FROM st_users WHERE id = $1`
-	qryCreate = `INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id`
-	qryUpdate = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
+	//qryGetAll = `SELECT id, name, username, email FROM st_users`
+	qryGetAll = `SELECT id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id, created, modified FROM st_users`
+	//qryGet    = `SELECT id, name, username, email FROM st_users WHERE id = $1`
+	qryGet    = `SELECT id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id, created, modified FROM st_users WHERE id = $1`
+	qryCreate = `INSERT INTO st_users (name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	qryUpdate = `UPDATE st_users SET name = $2, username = $3, email = $4, user_address = $5, member_code = $6, user_birth_date = $7, user_age_group_id = $8, user_status_id = $9, user_account_status_id = $10, WHERE id = $1`
 	qryDelete = `DELETE FROM st_users WHERE id = $1`
 )
+
+//id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_password, salt, verifier, user_account_status_id, created, modified
+//id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id, created, modified
 
 type Handler struct {
 	appConf *appCore.Config
