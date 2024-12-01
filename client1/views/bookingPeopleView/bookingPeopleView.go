@@ -61,29 +61,29 @@ type UI struct {
 	Notes    js.Value
 }
 
-type Item struct {
-	Record TableData
+type children struct {
 	//Add child structures as necessary
+	PeopleSelector *userView.ItemEditor
 }
 
 type ItemEditor struct {
-	client         *httpProcessor.Client
-	document       js.Value
-	events         *eventProcessor.EventProcessor
-	baseURL        string
-	CurrentRecord  TableData
-	ItemState      ItemState
-	Records        []TableData
-	ItemList       []Item
-	UiComponents   UI
-	Div            js.Value
-	EditDiv        js.Value
-	ListDiv        js.Value
-	StateDiv       js.Value
-	PeopleSelector *userView.ItemEditor
-	ParentID       int
-	ViewState      ViewState
-	RecordState    RecordState
+	client        *httpProcessor.Client
+	document      js.Value
+	events        *eventProcessor.EventProcessor
+	baseURL       string
+	CurrentRecord TableData
+	ItemState     ItemState
+	Records       []TableData
+	//ItemList       []Item
+	UiComponents UI
+	Div          js.Value
+	EditDiv      js.Value
+	ListDiv      js.Value
+	StateDiv     js.Value
+	ParentID     int
+	ViewState    ViewState
+	RecordState  RecordState
+	Children     children
 	//Parent       js.Value
 }
 
@@ -122,8 +122,10 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	editor.RecordState = RecordStateReloadRequired
 
-	editor.PeopleSelector = userView.New(document, eventProcessor, editor.client)
-	editor.PeopleSelector.FetchItems()
+	// Create child editors here
+	//..........
+	editor.Children.PeopleSelector = userView.New(document, eventProcessor, editor.client)
+	//editor.Children.PeopleSelector.FetchItems()
 
 	return editor
 }
@@ -177,7 +179,7 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.PersonID, editor.UiComponents.PersonID = editor.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson")
+	localObjs.PersonID, editor.UiComponents.PersonID = editor.Children.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson")
 	editor.UiComponents.PersonID.Call("setAttribute", "required", "true")
 
 	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
@@ -278,6 +280,9 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		editor.Children.PeopleSelector.FetchItems()
+
 		localApiURL := editor.baseURL + apiURL
 		if editor.ParentID != 0 {
 			localApiURL = editor.baseURL + "/bookings/" + strconv.Itoa(editor.ParentID) + apiURL

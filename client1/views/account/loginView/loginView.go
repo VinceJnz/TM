@@ -136,6 +136,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 		editor.ParentID = idList[0]
 	}
 
+	// Create child editors here
+	//..........
 	editor.Children.SrpGroup = srp.RFC5054Group3072
 	editor.RecordState = RecordStateReloadRequired
 

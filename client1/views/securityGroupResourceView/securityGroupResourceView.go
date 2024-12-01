@@ -134,17 +134,18 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.RecordState = RecordStateReloadRequired
 
 	// Create child editors here
+	//..........
 	editor.Children.Group = securityGroupView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.Group.FetchItems()
+	//editor.Children.Group.FetchItems()
 
 	editor.Children.Resource = resourceView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.Resource.FetchItems()
+	//editor.Children.Resource.FetchItems()
 
 	editor.Children.AccessLevel = accessLevelView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.AccessLevel.FetchItems()
+	//editor.Children.AccessLevel.FetchItems()
 
 	editor.Children.AccessType = accessTypeView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.AccessType.FetchItems()
+	//editor.Children.AccessType.FetchItems()
 
 	return editor
 }
@@ -360,6 +361,11 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		editor.Children.Group.FetchItems()
+		editor.Children.Resource.FetchItems()
+		editor.Children.AccessLevel.FetchItems()
+		editor.Children.AccessType.FetchItems()
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)

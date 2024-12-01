@@ -113,6 +113,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	editor.RecordState = RecordStateReloadRequired
 
+	// Create child editors here
+	//..........
+
 	return editor
 }
 
@@ -152,6 +155,8 @@ func (editor *ItemEditor) FetchItems() {
 	*/
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		//.....
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)

@@ -77,10 +77,10 @@ type ParentData struct {
 	ToDate   time.Time `json:"to_date"`
 }
 
-type Item struct {
-	Record TableData
+type children struct {
 	//Add child structures as necessary
-	BookingPeople *bookingPeopleView.ItemEditor
+	//BookingPeople *bookingPeopleView.ItemEditor
+	BookingStatus *bookingStatusView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -91,18 +91,16 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
-	ItemList      []Item
-	UiComponents  UI
-	Div           js.Value
-	EditDiv       js.Value
-	ListDiv       js.Value
-	StateDiv      js.Value
-	BookingStatus *bookingStatusView.ItemEditor
-	PeopleEditor  *bookingPeopleView.ItemEditor
-	ParentData    ParentData
-	ViewState     ViewState
-	RecordState   RecordState
-	//Parent       js.Value
+	//ItemListXX      []Item
+	UiComponents UI
+	Div          js.Value
+	EditDiv      js.Value
+	ListDiv      js.Value
+	StateDiv     js.Value
+	ParentData   ParentData
+	ViewState    ViewState
+	RecordState  RecordState
+	Children     children
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -140,10 +138,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	editor.RecordState = RecordStateReloadRequired
 
-	editor.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, editor.client)
-	editor.BookingStatus.FetchItems()
+	// Create child editors here
+	editor.Children.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, editor.client)
+	//editor.Children.BookingStatus.FetchItems()
 
-	editor.PeopleEditor = bookingPeopleView.New(editor.document, editor.events, editor.client)
+	//editor.Children.BookingPeople = bookingPeopleView.New(editor.document, editor.events, editor.client)
+	//editor.Children.BookingPeople.FetchItems()
 
 	return editor
 }
@@ -216,7 +216,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
-	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
+	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.Children.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
@@ -335,6 +335,9 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		editor.Children.BookingStatus.FetchItems()
+
 		localApiURL := apiURL
 		if editor.ParentData.ID != 0 {
 			localApiURL = "/trips/" + strconv.Itoa(editor.ParentData.ID) + apiURL

@@ -119,8 +119,10 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	editor.RecordState = RecordStateReloadRequired
 
+	// Create child editors here
+	//..........
 	editor.Children.TripCostItem = tripCostView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.TripCostItem.FetchItems()
+	//editor.Children.TripCostItem.FetchItems()
 
 	return editor
 }
@@ -272,6 +274,9 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		editor.Children.TripCostItem.FetchItems()
+
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)

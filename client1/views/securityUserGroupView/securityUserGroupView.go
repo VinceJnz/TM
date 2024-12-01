@@ -122,11 +122,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.RecordState = RecordStateReloadRequired
 
 	// Create child editors here
+	//..........
 	editor.Children.User = userView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.User.FetchItems()
+	//editor.Children.User.FetchItems()
 
 	editor.Children.Group = securityGroupView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.Group.FetchItems()
+	//editor.Children.Group.FetchItems()
 
 	return editor
 }
@@ -312,6 +313,10 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		editor.Children.User.FetchItems()
+		editor.Children.Group.FetchItems()
+
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)

@@ -140,14 +140,15 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.RecordState = RecordStateReloadRequired
 
 	// Create child editors here
+	//..........
 	editor.Children.userAgeGroup = *userAgeGroupView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.userAgeGroup.FetchItems()
+	//editor.Children.userAgeGroup.FetchItems()
 
 	editor.Children.userStatus = *userStatusView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.userStatus.FetchItems()
+	//editor.Children.userStatus.FetchItems()
 
 	editor.Children.userAccountStatus = *userAccountStatusView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.userAccountStatus.FetchItems()
+	//editor.Children.userAccountStatus.FetchItems()
 
 	return editor
 }
@@ -378,6 +379,11 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		editor.Children.userAgeGroup.FetchItems()
+		editor.Children.userStatus.FetchItems()
+		editor.Children.userAccountStatus.FetchItems()
+
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)

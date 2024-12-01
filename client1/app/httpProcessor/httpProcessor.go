@@ -123,16 +123,16 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 	}
 
 	callBackSuccess := func(error) {
-		cookies := res.Cookies()
-		log.Printf(debugTag+"NewRequest()0a Cookies: %v", c.HTTPClient.Jar.Cookies(req.URL))
-		if len(cookies) == 0 {
-			log.Printf(debugTag + "NewRequest()0b there are no cookies")
-		} else {
-			log.Printf(debugTag + "NewRequest()0c checking cookie list...")
-			for i, v := range cookies {
-				log.Printf(debugTag+"NewRequest()0d cookie=%v, details=%+v", i, v)
-			}
-		}
+		//cookies := res.Cookies()
+		//log.Printf(debugTag+"NewRequest()0a Cookies: %v", c.HTTPClient.Jar.Cookies(req.URL))
+		//if len(cookies) == 0 {
+		//	log.Printf(debugTag + "NewRequest()0b there are no cookies")
+		//} else {
+		//	log.Printf(debugTag + "NewRequest()0c checking cookie list...")
+		//	for i, v := range cookies {
+		//		log.Printf(debugTag+"NewRequest()0d cookie=%v, details=%+v", i, v)
+		//	}
+		//}
 
 		err = fmt.Errorf(debugTag+"newRequest()2a INFORMATION: Using default success-callback: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderOk is called
@@ -142,7 +142,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 			callBackSuccess = callBacks[0]
 		}
 	} else {
-		err = fmt.Errorf(debugTag+"newRequest()2b INFORMATION: No success-callback has been provided, will use the default function: %w", err)
+		err = fmt.Errorf(debugTag+"newRequest()2b INFORMATION: No success-callback has been provided: %w", err)
 		log.Println(err, "req.URL =", req.URL)
 	}
 
@@ -206,14 +206,14 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 		log.Printf("%v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - data is nil ", "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
 	}
 
-	cookies := res.Cookies()
-	if len(cookies) == 0 {
-		log.Printf(debugTag + "NewRequest()10 there are no cookies")
-	} else {
-		for i, v := range cookies {
-			log.Printf(debugTag+"NewRequest()10 cookie=%v, details=%+v", i, v)
-		}
-	}
+	//cookies := res.Cookies()
+	//if len(cookies) == 0 {
+	//	log.Printf(debugTag + "NewRequest()10 there are no cookies")
+	//} else {
+	//	for i, v := range cookies {
+	//		log.Printf(debugTag+"NewRequest()10 cookie=%v, details=%+v", i, v)
+	//	}
+	//}
 
 	callBackSuccess(nil)
 	return req, nil

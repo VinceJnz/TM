@@ -269,6 +269,8 @@ func (editor *ItemEditor) AddItem(item TableData) {
 func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
+		// Fetch child data
+		//......
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)

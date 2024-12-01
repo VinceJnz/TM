@@ -115,6 +115,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	editor.RecordState = RecordStateReloadRequired
 
+	// Create child editors here
+	//..........
+
 	return editor
 }
 
