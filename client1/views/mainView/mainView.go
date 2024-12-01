@@ -20,6 +20,7 @@ import (
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/tripTypeView"
 	"client1/v2/views/tripView"
+	"client1/v2/views/userAccountStatusView"
 	"client1/v2/views/userAgeGroupView"
 	"client1/v2/views/userStatusView"
 	"client1/v2/views/userView"
@@ -139,6 +140,7 @@ func (v *View) Setup() {
 	v.AddViewItem("Season", "Season", seasonView.New(v.document, v.events, v.client))
 	v.AddViewItem("User Age Group", "User Age Group", userAgeGroupView.New(v.document, v.events, v.client))
 	v.AddViewItem("User Status", "User Status", userStatusView.New(v.document, v.events, v.client))
+	v.AddViewItem("User Account Status", "User Account Status", userAccountStatusView.New(v.document, v.events, v.client))
 	v.AddViewItem("Trip Participant", "Trip Participant", tripParticipantStatusReport.New(v.document, v.events, v.client))
 	v.AddViewItem("Resource", "Resource", resourceView.New(v.document, v.events, v.client))
 	v.AddViewItem("Access Level", "Access Level", accessLevelView.New(v.document, v.events, v.client))

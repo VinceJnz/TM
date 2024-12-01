@@ -1,21 +1,17 @@
-package userView
+package userAccountStatusView
 
 import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
-	"client1/v2/views/userAccountStatusView"
-	"client1/v2/views/userAgeGroupView"
-	"client1/v2/views/userStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
-	"math/big"
 	"net/http"
 	"strconv"
 	"syscall/js"
 	"time"
 )
 
-const debugTag = "userView."
+const debugTag = "userAccountStatusView."
 
 type ItemState int
 
@@ -44,45 +40,24 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "/users"
+const apiURL = "/userAccountStatus"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID                  int       `json:"id"`
-	Name                string    `json:"name"`
-	Username            string    `json:"username"`
-	Email               string    `json:"email"`
-	Address             string    `json:"user_address"`
-	MemberCode          string    `json:"member_code"`
-	BirthDate           time.Time `json:"user_birth_date"` //This can be used to calculate what age group to apply
-	UserAgeGroupID      int       `json:"user_age_group_id"`
-	UserStatusID        int       `json:"user_status_id"`
-	Password            string    `json:"user_password"` //This will probably not be used (see: salt, verifier)
-	Salt                []byte    `json:"salt"`
-	Verifier            *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-	UserAccountStatusID int       `json:"user_account_status_id"`
-	Created             time.Time `json:"created"`
-	Modified            time.Time `json:"modified"`
+	ID       int       `json:"id"`
+	Status   string    `json:"status"`
+	Created  time.Time `json:"created"`
+	Modified time.Time `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Name                js.Value
-	Username            js.Value
-	Email               js.Value
-	Address             js.Value
-	MemberCode          js.Value
-	BirthDate           js.Value
-	UserAgeGroupID      js.Value
-	UserStatusID        js.Value
-	UserAccountStatusID js.Value
+	Status js.Value
 }
 
-type children struct {
+type Item struct {
+	Record TableData
 	//Add child structures as necessary
-	userAgeGroup      userAgeGroupView.ItemEditor
-	userStatus        userStatusView.ItemEditor
-	userAccountStatus userAccountStatusView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -93,6 +68,7 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
+	ItemList      []Item
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
@@ -101,7 +77,6 @@ type ItemEditor struct {
 	ParentID      int
 	ViewState     ViewState
 	RecordState   RecordState
-	Children      children
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -117,14 +92,14 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displayingthe editor
+	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
-	editor.ListDiv.Set("id", debugTag+"itemListDiv")
+	editor.ListDiv.Set("id", debugTag+"itemList")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Create a div for displaying ItemState
@@ -138,16 +113,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	}
 
 	editor.RecordState = RecordStateReloadRequired
-
-	// Create child editors here
-	editor.Children.userAgeGroup = *userAgeGroupView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.userAgeGroup.FetchItems()
-
-	editor.Children.userStatus = *userStatusView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.userStatus.FetchItems()
-
-	editor.Children.userAccountStatus = *userAccountStatusView.New(editor.document, eventProcessor, editor.client)
-	editor.Children.userAccountStatus.FetchItems()
 
 	return editor
 }
@@ -190,9 +155,12 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 // ?????????????????????? document ref????????????
 func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
 	// Create a div for displaying Dropdown
-	log.Printf(debugTag+"NewDropdown()1 editor = %+v", editor)
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
+
+	// Create a label element
+	label := viewHelpers.Label(editor.document, labelText, htmlID)
+	fieldset.Call("appendChild", label)
 
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
@@ -200,18 +168,17 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	for _, item := range editor.Records {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Name)
+		optionElement.Set("text", item.Status)
 		if value == item.ID {
 			optionElement.Set("selected", true)
 		}
 		StateDropDown.Call("appendChild", optionElement)
 	}
-
-	// Create a label element
-	label := viewHelpers.Label(editor.document, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
 	fieldset.Call("appendChild", StateDropDown)
+
+	// Create an span element of error messages
+	span := viewHelpers.Span(editor.document, htmlID+"-error")
+	fieldset.Call("appendChild", span)
 
 	return fieldset, StateDropDown
 }
@@ -229,43 +196,11 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
-	editor.UiComponents.Name.Call("setAttribute", "required", "true")
-
-	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
-	editor.UiComponents.Username.Call("setAttribute", "required", "true")
-
-	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
-	editor.UiComponents.Email.Call("setAttribute", "required", "true")
-
-	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "itemAddress")
-	editor.UiComponents.Address.Call("setAttribute", "required", "true")
-
-	localObjs.MemberCode, editor.UiComponents.MemberCode = viewHelpers.StringEdit(editor.CurrentRecord.MemberCode, editor.document, "MemberCode", "text", "itemMemberCode")
-	editor.UiComponents.MemberCode.Call("setAttribute", "required", "true")
-
-	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate")
-	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
-
-	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup")
-	//editor.UiComponents.UserAgeGroupID.Call("setAttribute", "required", "true")
-
-	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.userStatus.NewDropdown(editor.CurrentRecord.UserStatusID, "User Status", "itemUserStatus")
-	//editor.UiComponents.UserStatusID.Call("setAttribute", "required", "true")
-
-	localObjs.UserAccountStatusID, editor.UiComponents.UserAccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.UserAccountStatusID, "Account Status", "itemAccountStatus")
-	//editor.UiComponents.AccountStatusID.Call("setAttribute", "required", "true")
+	localObjs.Status, editor.UiComponents.Status = viewHelpers.StringEdit(editor.CurrentRecord.Status, editor.document, "Status", "text", "itemStatus")
+	editor.UiComponents.Status.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", localObjs.Name)
-	form.Call("appendChild", localObjs.Username)
-	form.Call("appendChild", localObjs.Email)
-	form.Call("appendChild", localObjs.Address)
-	form.Call("appendChild", localObjs.MemberCode)
-	form.Call("appendChild", localObjs.BirthDate)
-	form.Call("appendChild", localObjs.UserAgeGroupID)
-	form.Call("appendChild", localObjs.UserStatusID)
-	form.Call("appendChild", localObjs.UserAccountStatusID)
+	form.Call("appendChild", localObjs.Status)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -299,39 +234,14 @@ func (editor *ItemEditor) resetEditForm() {
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 	if len(p) > 0 {
-		event := p[0] // Extracts the js event object
+		event := p[0]
 		event.Call("preventDefault")
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
 	// ********************* This needs to be changed for each api **********************
-	var err error
-	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
-
-	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
-	editor.CurrentRecord.MemberCode = editor.UiComponents.MemberCode.Get("value").String()
-	editor.CurrentRecord.BirthDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BirthDate.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing Birthdate:", err)
-		return nil
-	}
-	editor.CurrentRecord.UserAgeGroupID, err = strconv.Atoi(editor.UiComponents.UserAgeGroupID.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing Age Group:", err)
-		return nil
-	}
-	editor.CurrentRecord.UserStatusID, err = strconv.Atoi(editor.UiComponents.UserStatusID.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing User Status:", err)
-		return nil
-	}
-	editor.CurrentRecord.UserAccountStatusID, err = strconv.Atoi(editor.UiComponents.UserAccountStatusID.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing User Account Status:", err)
-		return nil
-	}
+	//var err error
+	editor.CurrentRecord.Status = editor.UiComponents.Status.Get("value").String()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -367,12 +277,14 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
-	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPost, apiURL, nil, &item)
-	editor.RecordState = RecordStateReloadRequired
-	editor.FetchItems() // Refresh the item list
-	editor.updateStateDisplay(ItemStateNone)
-	editor.onCompletionMsg("Item record added successfully")
+	go func() {
+		editor.updateStateDisplay(ItemStateSaving)
+		editor.client.NewRequest(http.MethodPost, apiURL, nil, &item)
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+		editor.updateStateDisplay(ItemStateNone)
+		editor.onCompletionMsg("Item record added successfully")
+	}()
 }
 
 func (editor *ItemEditor) FetchItems() {
@@ -417,7 +329,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Name+" ("+record.Email+")")
+		itemDiv.Set("innerHTML", record.Status)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
