@@ -161,4 +161,6 @@ func (editor *ItemEditor) loginComplete(username string) {
 	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"loginComplete()1 ", "username =", username, "editor.Children =", editor.Children, "editor.CurrentRecord =", editor.CurrentRecord) //Log the error in the browser
 
 	editor.onCompletionMsg(debugTag + "loginComplete()2 successfully completed login:" + username)
+
+	editor.MenuProcess()
 }

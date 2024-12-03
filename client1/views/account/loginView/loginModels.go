@@ -24,3 +24,24 @@ type ClientVerify struct {
 	Proof    []byte `json:"Proof"`
 	Token    string `json:"Token"`
 }
+
+//MenuUserItem contains the basic user info for driving the display of the client menu
+type MenuUserItem struct {
+	UserID    int  `json:"user_id"`
+	GroupID   int  `json:"group_id"`
+	AdminFlag bool `json:"admin_flag"`
+}
+
+//MenuUserItem contains a list of valid menu items to display
+type MenuListItem struct {
+	UserID     int    `json:"user_id"`
+	ResourceID int    `json:"resource_id"`
+	Name       string `json:"name"`
+}
+
+type MenuList []MenuListItem
+
+type UpdateMenu struct {
+	MenuUser MenuUserItem
+	MenuList MenuList
+}

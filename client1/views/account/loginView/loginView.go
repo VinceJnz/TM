@@ -44,20 +44,11 @@ const apiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	//ID       int    `json:"id"`
-	//Name     string `json:"name"`
 	Username string `json:"username"`
-	//Email    string `json:"email"`
-
-	//Address        string    `json:"user_address"`
-	//MemberCode     string    `json:"member_code"`
-	//BirthDate      time.Time `json:"user_birth_date"` //This can be used to calculate what age group to apply
-	//UserAgeGroupID int       `json:"user_age_group_id"`
-	//UserStatusID   int       `json:"user_status_id"`
 	Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)
 	Salt     []byte `json:"salt"`
-	//Verifier        *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-	//AccountStatusID int       `json:"user_account_status_id"`
+	MenuUser MenuUserItem
+	MenuList MenuList
 	//Created         time.Time `json:"created"`
 	//Modified        time.Time `json:"modified"`
 }

@@ -56,6 +56,8 @@ type viewElement interface {
 
 type children struct {
 	//Add child structures as necessary
+	//menuAccess     *menuAccess.ItemEditor
+	//menuAccessList *menuAccessList.ItemEditor
 }
 
 type ViewConfig struct {
@@ -93,6 +95,7 @@ func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
 func (v *View) Setup() {
 	v.events = eventProcessor.New()
 	v.events.AddEventHandler("displayStatus", v.updateStatus)
+	v.events.AddEventHandler("menuDataFetch", v.updateMenu)
 
 	// Create new body element and other page elements
 	newBody := v.document.Call("createElement", "body")
@@ -166,6 +169,9 @@ func (v *View) Setup() {
 
 	// Replace the existing body with the new body
 	v.document.Get("documentElement").Call("replaceChild", newBody, v.document.Get("body"))
+
+	// Create child editors here
+	//..........
 }
 
 func (v *View) AddViewItem(displayTitle, title string, element viewElement) {
@@ -224,7 +230,7 @@ func (v *View) openSideMenu() {
 func (v *View) updateStatus(event eventProcessor.Event) {
 	message, ok := event.Data.(string)
 	if !ok {
-		log.Println("Invalid event data")
+		log.Println(debugTag + "updateStatus() Invalid event data")
 		return
 	}
 	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
@@ -235,6 +241,17 @@ func (v *View) updateStatus(event eventProcessor.Event) {
 		time.Sleep(30 * time.Second) // Wait for the specified duration
 		msgDiv.Call("remove")
 	}()
+}
+
+// func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
+func (v *View) updateMenu(event eventProcessor.Event) {
+	menuData, ok := event.Data.(loginView.UpdateMenu)
+	if !ok {
+		log.Println(debugTag + "updateMenu() Invalid event data")
+		return
+	}
+	// Update menu display??? on fetch success????
+	log.Printf(debugTag+"updateMenu()2 menuData=%+v", menuData)
 }
 
 // Example
