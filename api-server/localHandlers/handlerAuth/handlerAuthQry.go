@@ -252,7 +252,7 @@ const (
 	WHERE stu.ID=$1 AND etr.ID=$2`
 )
 
-func (h *Handler) AccessCheck(userID int, resourceID int, accessLevelID int) error {
+func (h *Handler) AccessCheckXX(userID int, resourceID int, accessLevelID int) error {
 	var err error
 	var result int
 	err = h.appConf.Db.QueryRow(sqlAccessCheck, userID, resourceID, accessLevelID).Scan(&result)
