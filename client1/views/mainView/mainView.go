@@ -54,6 +54,10 @@ type viewElement interface {
 	//UpdateItem(item loginView.TableData)
 }
 
+type children struct {
+	//Add child structures as necessary
+}
+
 type ViewConfig struct {
 	BaseURL string
 }
@@ -66,6 +70,7 @@ type View struct {
 	//config     AppConfig
 	menuChoice2 string
 	elements2   map[string]viewElement
+	Children    children
 }
 
 func New(client *httpProcessor.Client) *View {
