@@ -27,7 +27,7 @@ const (
 )
 
 // Get: retrieves and returns a single record identified by id
-func (h *Handler) MenuGet(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	id := handlerStandardTemplate.GetID(w, r)
 	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.User{}, sqlUserMenuAccess, id)
 }

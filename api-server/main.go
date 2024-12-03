@@ -55,8 +55,8 @@ func main() {
 	subR1.HandleFunc("/auth/reset/{username}/password/", auth.AuthReset).Methods("Get")
 	subR1.HandleFunc("/auth/reset/{token}/token/", auth.AuthUpdate).Methods("Post")
 	subR1.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Post")
-	subR1.HandleFunc("/auth/userMenuAccess/", auth.MenuGet).Methods("Get")
-	subR1.HandleFunc("/auth/userMenuAccessList/", auth.MenuListGet).Methods("Get")
+	subR1.HandleFunc("/auth/menuUser/", auth.MenuUserGet).Methods("Get")
+	subR1.HandleFunc("/auth/menuList/", auth.MenuListGet).Methods("Get")
 
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	subR2.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
