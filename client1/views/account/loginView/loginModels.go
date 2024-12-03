@@ -26,22 +26,22 @@ type ClientVerify struct {
 }
 
 //MenuUserItem contains the basic user info for driving the display of the client menu
-type MenuUserItem struct {
-	UserID    int  `json:"user_id"`
-	GroupID   int  `json:"group_id"`
-	AdminFlag bool `json:"admin_flag"`
+type MenuUser struct {
+	UserID    int    `json:"user_id"`
+	Group     string `json:"group"`
+	AdminFlag bool   `json:"admin_flag"`
 }
 
 //MenuUserItem contains a list of valid menu items to display
-type MenuListItem struct {
-	UserID     int    `json:"user_id"`
-	ResourceID int    `json:"resource_id"`
-	Name       string `json:"name"`
+type MenuItem struct {
+	UserID   int    `json:"user_id"`
+	Username string `json:"username"`
+	Resource string `json:"resource"`
 }
 
-type MenuList []MenuListItem
+type MenuList []MenuItem
 
 type UpdateMenu struct {
-	MenuUser MenuUserItem
+	MenuUser MenuUser
 	MenuList MenuList
 }

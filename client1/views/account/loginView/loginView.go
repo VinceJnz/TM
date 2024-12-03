@@ -47,7 +47,7 @@ type TableData struct {
 	Username string `json:"username"`
 	Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)
 	Salt     []byte `json:"salt"`
-	MenuUser MenuUserItem
+	MenuUser MenuUser
 	MenuList MenuList
 	//Created         time.Time `json:"created"`
 	//Modified        time.Time `json:"modified"`
