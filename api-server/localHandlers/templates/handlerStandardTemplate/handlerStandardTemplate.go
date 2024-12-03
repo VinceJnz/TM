@@ -1,6 +1,7 @@
 package handlerStandardTemplate
 
 import (
+	"api-server/v2/app/appCore"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
@@ -21,7 +22,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf(debugStr+"GetAll()2 %v\n", err)
+		log.Printf(debugTag+debugStr+"GetAll()2 %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -38,10 +39,12 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.Get()2 %v\n", debugStr, err)
+		log.Printf(debugTag+debugStr+"Get()2 err=%v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	//log.Printf(debugTag+debugStr+"Get()2 dest=%+v\n", dest)
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
@@ -55,10 +58,12 @@ func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.D
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetList()2 %v\n", debugStr, err)
+		log.Printf(debugTag+debugStr+"GetList()2 err=%v\n", err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	//log.Printf(debugTag+debugStr+"GetList()2 dest=%+v\n", dest)
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
@@ -169,12 +174,13 @@ func GetID(w http.ResponseWriter, r *http.Request) int {
 	return id
 }
 
-func GetSession(w http.ResponseWriter, r *http.Request, Db *sqlx.DB) models.Session {
-	//session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
-	//if !ok {
-	//	log.Printf(debugTag+"GetAll()1 UserID not available in request context. userID=%v\n", session.UserID)
-	//	http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
-	//	return models.Session{}
-	//}
-	return models.Session{} //session
+func GetSession(w http.ResponseWriter, r *http.Request, Db *sqlx.DB, appConf *appCore.Config) models.Session {
+	session, ok := r.Context().Value(appConf.SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
+	if !ok {
+		log.Printf(debugTag+"GetSession()1 UserID not available in request context. session=%+v\n", session)
+		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
+		return models.Session{}
+	}
+	//log.Printf(debugTag+"GetSession()2 session=%+v\n", session)
+	return session
 }

@@ -63,15 +63,15 @@ type AccessCheck struct {
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed
-type MenuAccess struct {
-	UserID    int  `json:"user_id" db:"user_id"`
-	GroupID   int  `json:"group_id" db:"group_id"`
-	AdminFlag bool `json:"admin_flag" db:"admin_flag"`
+type MenuUser struct {
+	UserID    int    `json:"user_id" db:"user_id"`
+	Group     string `json:"group" db:"group"`
+	AdminFlag bool   `json:"admin_flag" db:"admin_flag"`
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed
-type MenuAccessList struct {
-	UserID     int    `json:"user_id" db:"user_id"`
-	ResourceID int    `json:"resource_id" db:"resource_id"`
-	Name       string `json:"name" db:"name"`
+type MenuItem struct {
+	UserID   int    `json:"user_id" db:"user_id"`
+	Username string `json:"username" db:"username"`
+	Name     string `json:"resource" db:"resource"`
 }
