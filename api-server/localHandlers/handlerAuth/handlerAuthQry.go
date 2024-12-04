@@ -150,13 +150,13 @@ func (h *Handler) TokenDeleteQry(recordID int) error {
 }
 
 const (
-	sqlTokenCleanOld = `DELETE FROM st_token st
-		USING st_token st1
-		WHERE st1.ID = $1
-			AND st1.User_ID = st.User_ID
-			AND st1.Name = st.Name
-			AND substring(st1.host FROM '.+]') = substring(st.host FROM '.+]')
-			AND st.id <> $1`
+	sqlTokenCleanOld = `DELETE FROM st_token
+				USING st_token st1
+				WHERE st1.id = $1
+					AND st1.user_id = st_token.user_id
+					AND st1.name = st_token.name
+					AND substring(st1.host FROM '^[^:]+') = substring(st_token.host FROM '^[^:]+')
+					AND st_token.id <> $1;`
 
 	sqlTokenCleanExpired = `DELETE FROM st_token st WHERE st.Valid_to < CURRENT_TIMESTAMP`
 )
