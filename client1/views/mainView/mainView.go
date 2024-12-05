@@ -138,15 +138,15 @@ func (v *View) Setup() {
 	v.AddViewItem("Home", "Home", nil, true)
 	v.AddViewItem("About", "About", nil, true)
 	v.AddViewItem("Contact", "Contact", nil, true)
-	v.AddViewItem("Booking", "Booking", bookingView.New(v.document, v.events, v.client), false)
-	v.AddViewItem("Booking Status", "Booking Status", bookingStatusView.New(v.document, v.events, v.client), false)
-	v.AddViewItem("Group Booking", "Group Booking", groupBookingView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Booking", bookingView.ApiURL, bookingView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, bookingStatusView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Group Booking", groupBookingView.ApiURL, groupBookingView.New(v.document, v.events, v.client), false)
 	v.AddViewItem("Trip", tripView.ApiURL, tripView.New(v.document, v.events, v.client), false)
-	v.AddViewItem("Trip Cost Group", "Trip Cost Group", tripCostGroupView.New(v.document, v.events, v.client), false)
-	v.AddViewItem("Trip Difficulty", "Trip Difficulty", tripDifficultyView.New(v.document, v.events, v.client), false)
-	v.AddViewItem("Trip Status", "Trip Status", tripStatusView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, tripCostGroupView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, tripDifficultyView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Status", tripStatusView.ApiURL, tripStatusView.New(v.document, v.events, v.client), false)
 	v.AddViewItem("Trip Type", "Trip Type", tripTypeView.New(v.document, v.events, v.client), false)
-	v.AddViewItem("Trip Participant", "Trip Participant", tripParticipantStatusReport.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Participant", tripParticipantStatusReport.ApiURL, tripParticipantStatusReport.New(v.document, v.events, v.client), false)
 	v.AddViewItem("Season", "Season", seasonView.New(v.document, v.events, v.client), false)
 	v.AddViewItem("User", "User", userView.New(v.document, v.events, v.client), false)
 	v.AddViewItem("User Age Group", "User Age Group", userAgeGroupView.New(v.document, v.events, v.client), false)
@@ -251,26 +251,29 @@ func (v *View) updateStatus(event eventProcessor.Event) {
 
 // func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
 func (v *View) updateMenu(event eventProcessor.Event) {
+	// Update menu display??? on fetch success????
 	menuData, ok := event.Data.(loginView.UpdateMenu)
 	if !ok {
 		log.Println(debugTag + "updateMenu() Invalid event data")
 		return
 	}
+	log.Printf(debugTag+"updateMenu()4 menuData=%+v, menuButtons = %+v", menuData, v.menuButtons)
 	if menuData.MenuUser.AdminFlag {
 		for i, o := range v.menuButtons {
-			log.Printf(debugTag+"updateMenu()1 element title = %v", i)
+			log.Printf(debugTag+"updateMenu()2 element title = %v", i)
 			//v.Get("style").Call("setProperty", "display", "none")
 			o.Get("style").Call("removeProperty", "display")
 		}
 	} else {
 		for i, o := range menuData.MenuList {
-			log.Printf(debugTag+"updateMenu()1 element title = %v, resource = %v", i, o)
-			v.menuButtons["/"+o.Resource].Get("style").Call("removeProperty", "display")
+			log.Printf(debugTag+"updateMenu()2 element title = %v, resource = %v", i, o)
+			//v.menuButtons["/"+o.Resource].Get("style").Call("removeProperty", "display")
+			val, ok := v.menuButtons["/"+o.Resource] // get current menu button
+			if ok {
+				val.Get("style").Call("removeProperty", "display")
+			}
 		}
 	}
-
-	// Update menu display??? on fetch success????
-	log.Printf(debugTag+"updateMenu()2 menuData=%+v", menuData)
 }
 
 // Example
