@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	sqlMenuUser = `SELECT stu.ID AS user_id, stg.name AS group, stg.admin_flag
+	sqlMenuUser = `SELECT stu.ID AS user_id, stu.name, stg.name AS group, stg.admin_flag
 		FROM st_users stu
 			JOIN st_user_group stug ON stug.User_ID=stu.ID
 			JOIN st_group stg ON stg.ID=stug.Group_ID
@@ -16,7 +16,7 @@ const (
 		ORDER BY stg.admin_flag -- This might need to change to DESC
 		LIMIT 1`
 
-	sqlMenuList = `SELECT stu.ID AS user_id, stu.username, etr.Name AS resource
+	sqlMenuList = `SELECT stu.ID AS user_id, etr.Name AS resource
 		FROM st_users stu
 			JOIN st_user_group stug ON stug.User_ID=stu.ID
 			JOIN st_group stg ON stg.ID=stug.Group_ID

@@ -65,13 +65,13 @@ type AccessCheck struct {
 // Resource is the enumeration of the url name of the Resource being accessed
 type MenuUser struct {
 	UserID    int    `json:"user_id" db:"user_id"`
+	Name      string `json:"name" db:"name"`
 	Group     string `json:"group" db:"group"`
 	AdminFlag bool   `json:"admin_flag" db:"admin_flag"`
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed
 type MenuItem struct {
-	UserID   int    `json:"user_id" db:"user_id"`
-	Username string `json:"username" db:"username"`
-	Name     string `json:"resource" db:"resource"`
+	UserID int    `json:"user_id" db:"user_id"`
+	Name   string `json:"resource" db:"resource"`
 }
