@@ -39,7 +39,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "/trips/participantStatus"
+const ApiURL = "/trips/participantStatus"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -160,7 +160,7 @@ func (editor *ItemEditor) FetchItems() {
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
-			editor.client.NewRequest(http.MethodGet, apiURL, &records, nil)
+			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
 			editor.updateStateDisplay(ItemStateNone)

@@ -40,7 +40,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "/auth"
+const ApiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -286,7 +286,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
@@ -317,7 +317,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 		return
 	}
 	go func() {
-		editor.client.NewRequest(http.MethodPost, apiURL+"/register/", nil, &item, success, fail)
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/", nil, &item, success, fail)
 		editor.RecordState = RecordStateReloadRequired
 		//editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
@@ -333,7 +333,7 @@ func (editor *ItemEditor) FetchItems() {
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
-			editor.client.NewRequest(http.MethodGet, apiURL, &records, nil)
+			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
 			editor.updateStateDisplay(ItemStateNone)
@@ -346,7 +346,7 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		editor.client.NewRequest(http.MethodDelete, apiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)

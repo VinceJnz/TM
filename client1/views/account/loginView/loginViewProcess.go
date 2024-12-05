@@ -39,11 +39,11 @@ func (editor *ItemEditor) getSalt(username string) {
 		//Display message  to user ??????????????
 		editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
-	//log.Printf(debugTag+"LogonForm.getSalt()1 CurrentRecord: %+v, url: %v", editor.CurrentRecord, apiURL+"/"+username+"/salt/")
+	//log.Printf(debugTag+"LogonForm.getSalt()1 CurrentRecord: %+v, url: %v", editor.CurrentRecord, ApiURL+"/"+username+"/salt/")
 
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		editor.client.NewRequest(http.MethodGet, apiURL+"/"+username+"/salt/", &salt, nil, success, fail)
+		editor.client.NewRequest(http.MethodGet, ApiURL+"/"+username+"/salt/", &salt, nil, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//editor.Dispatcher.Dispatch(&storeUserAuth.GetSalt{Time: time.Now(), Item: &editor.CurrentRecord, CallbackSuccess: success, CallbackFail: fail})
@@ -78,13 +78,13 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 	A = editor.Children.SrpClient.EphemeralPublic()
 	byteStrA, _ := A.MarshalText()
 
-	//log.Printf(debugTag+"LogonForm.getServerVerify()3 CurrentRecord=%+v, username=%+v, url=%v, byteStrA=%v, A=%v", editor.CurrentRecord, username, apiURL+"/"+username+"/key/"+string(byteStrA), byteStrA, A)
+	//log.Printf(debugTag+"LogonForm.getServerVerify()3 CurrentRecord=%+v, username=%+v, url=%v, byteStrA=%v, A=%v", editor.CurrentRecord, username, ApiURL+"/"+username+"/key/"+string(byteStrA), byteStrA, A)
 
 	go func() {
-		//log.Printf(debugTag+"LogonForm.getServerVerify()4 CurrentRecord=%+v, username=%+v, url=%v", editor.CurrentRecord, username, apiURL+"/"+username+"/key/"+string(byteStrA))
+		//log.Printf(debugTag+"LogonForm.getServerVerify()4 CurrentRecord=%+v, username=%+v, url=%v", editor.CurrentRecord, username, ApiURL+"/"+username+"/key/"+string(byteStrA))
 
 		editor.updateStateDisplay(ItemStateFetching)
-		editor.client.NewRequest(http.MethodGet, apiURL+"/"+username+"/key/"+string(byteStrA), &ServerVerifyRecord, nil, success, fail)
+		editor.client.NewRequest(http.MethodGet, ApiURL+"/"+username+"/key/"+string(byteStrA), &ServerVerifyRecord, nil, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//editor.Dispatcher.Dispatch(&storeUserAuth.GetServerVerify{Time: time.Now(), Item: &editor.CurrentRecord, A: A, CallbackSuccess: success, CallbackFail: fail})
@@ -150,7 +150,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 	// client sends its proof to the server. Server checks
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		editor.client.NewRequest(http.MethodPost, apiURL+"/proof/", &username, &ClientVerifyRecord, success, fail)
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/proof/", &username, &ClientVerifyRecord, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 	//editor.Dispatcher.Dispatch(&storeUserAuth.PostProof{Time: time.Now(), ClientProof: clientProof, Token: editor.Children.ServerVerifyRecord.Token, UserName: editor.CurrentRecord.Username, CallbackSuccess: success, CallbackFail: fail})

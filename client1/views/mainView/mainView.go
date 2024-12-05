@@ -70,16 +70,18 @@ type View struct {
 	elements viewElements
 	events   *eventProcessor.EventProcessor
 	//config     AppConfig
-	menuChoice2 string
-	elements2   map[string]viewElement
-	Children    children
+	menuChoice2   string
+	childElements map[string]viewElement
+	menuButtons   map[string]js.Value
+	Children      children
 }
 
 func New(client *httpProcessor.Client) *View {
 	view := &View{
-		client:    client,
-		document:  js.Global().Get("document"),
-		elements2: map[string]viewElement{},
+		client:        client,
+		document:      js.Global().Get("document"),
+		childElements: map[string]viewElement{},
+		menuButtons:   map[string]js.Value{},
 	}
 	window := js.Global().Get("window")
 	window.Call("addEventListener", "onbeforeunload", js.FuncOf(view.BeforeUnload))
@@ -131,31 +133,31 @@ func (v *View) Setup() {
 	newBody.Call("appendChild", v.elements.sidemenu)
 
 	// Add all the menu options
-	v.AddViewItem("&times;", "", nil)
-	v.AddViewItem("Login", "Login", loginView.New(v.document, v.events, v.client))
-	v.AddViewItem("Home", "Home", nil)
-	v.AddViewItem("About", "About", nil)
-	v.AddViewItem("Contact", "Contact", nil)
-	v.AddViewItem("Booking", "Booking", bookingView.New(v.document, v.events, v.client))
-	v.AddViewItem("Booking Status", "Booking Status", bookingStatusView.New(v.document, v.events, v.client))
-	v.AddViewItem("Group Booking", "Group Booking", groupBookingView.New(v.document, v.events, v.client))
-	v.AddViewItem("Trip", "Trip", tripView.New(v.document, v.events, v.client))
-	v.AddViewItem("Trip Cost Group", "Trip Cost Group", tripCostGroupView.New(v.document, v.events, v.client))
-	v.AddViewItem("Trip Difficulty", "Trip Difficulty", tripDifficultyView.New(v.document, v.events, v.client))
-	v.AddViewItem("Trip Status", "Trip Status", tripStatusView.New(v.document, v.events, v.client))
-	v.AddViewItem("Trip Type", "Trip Type", tripTypeView.New(v.document, v.events, v.client))
-	v.AddViewItem("Trip Participant", "Trip Participant", tripParticipantStatusReport.New(v.document, v.events, v.client))
-	v.AddViewItem("Season", "Season", seasonView.New(v.document, v.events, v.client))
-	v.AddViewItem("User", "User", userView.New(v.document, v.events, v.client))
-	v.AddViewItem("User Age Group", "User Age Group", userAgeGroupView.New(v.document, v.events, v.client))
-	v.AddViewItem("User Status", "User Status", userStatusView.New(v.document, v.events, v.client))
-	v.AddViewItem("User Account Status", "User Account Status", userAccountStatusView.New(v.document, v.events, v.client))
-	v.AddViewItem("Resource", "Resource", resourceView.New(v.document, v.events, v.client))
-	v.AddViewItem("Access Level", "Access Level", accessLevelView.New(v.document, v.events, v.client))
-	v.AddViewItem("Access Type", "Access Type", accessTypeView.New(v.document, v.events, v.client))
-	v.AddViewItem("User Group", "User Group", securityUserGroupView.New(v.document, v.events, v.client))
-	v.AddViewItem("Group", "Group", securityGroupView.New(v.document, v.events, v.client))
-	v.AddViewItem("Group Resource", "Group Resource", securityGroupResourceView.New(v.document, v.events, v.client))
+	v.AddViewItem("&times;", "", nil, true)
+	v.AddViewItem("Login", "Login", loginView.New(v.document, v.events, v.client), true)
+	v.AddViewItem("Home", "Home", nil, true)
+	v.AddViewItem("About", "About", nil, true)
+	v.AddViewItem("Contact", "Contact", nil, true)
+	v.AddViewItem("Booking", "Booking", bookingView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Booking Status", "Booking Status", bookingStatusView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Group Booking", "Group Booking", groupBookingView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip", tripView.ApiURL, tripView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Cost Group", "Trip Cost Group", tripCostGroupView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Difficulty", "Trip Difficulty", tripDifficultyView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Status", "Trip Status", tripStatusView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Type", "Trip Type", tripTypeView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Trip Participant", "Trip Participant", tripParticipantStatusReport.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Season", "Season", seasonView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("User", "User", userView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("User Age Group", "User Age Group", userAgeGroupView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("User Status", "User Status", userStatusView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("User Account Status", "User Account Status", userAccountStatusView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Resource", "Resource", resourceView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Access Level", "Access Level", accessLevelView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Access Type", "Access Type", accessTypeView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("User Group", "User Group", securityUserGroupView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Group", "Group", securityGroupView.New(v.document, v.events, v.client), false)
+	v.AddViewItem("Group Resource", "Group Resource", securityGroupResourceView.New(v.document, v.events, v.client), false)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput.Set("id", "statusOutput")
@@ -174,11 +176,15 @@ func (v *View) Setup() {
 	//..........
 }
 
-func (v *View) AddViewItem(displayTitle, title string, element viewElement) {
-	v.elements2[title] = element                                             // Store new element
+func (v *View) AddViewItem(displayTitle, title string, element viewElement, defaultDisplay bool) {
+	v.childElements[title] = element                                         // Store new element
 	onClickFn := v.menuOnClick(displayTitle, title, element)                 // Set up menu onClick function
 	fetchBtn := viewHelpers.HRef(onClickFn, v.document, displayTitle, title) // Set up menu button
-	v.elements.sidemenu.Call("appendChild", fetchBtn)                        // Append the button to the side menu
+	if !defaultDisplay {
+		fetchBtn.Get("style").Call("setProperty", "display", "none")
+	}
+	v.menuButtons[title] = fetchBtn
+	v.elements.sidemenu.Call("appendChild", fetchBtn) // Append the button to the side menu
 	if element != nil {
 		v.elements.mainContent.Call("appendChild", element.GetDiv()) // Append the new element to the main content
 	}
@@ -188,7 +194,7 @@ func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element viewElement)
 	fn := func() { // Create a function to hide the current element and display the new element
 		v.closeSideMenu()
 		if MenuChoice != "" {
-			val, ok := v.elements2[v.menuChoice2] // get current menu choice
+			val, ok := v.childElements[v.menuChoice2] // get current menu choice
 			if ok {
 				if val != nil { // Check the the element is not nil
 					val.Hide() // Hide current editor
@@ -250,6 +256,19 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 		log.Println(debugTag + "updateMenu() Invalid event data")
 		return
 	}
+	if menuData.MenuUser.AdminFlag {
+		for i, o := range v.menuButtons {
+			log.Printf(debugTag+"updateMenu()1 element title = %v", i)
+			//v.Get("style").Call("setProperty", "display", "none")
+			o.Get("style").Call("removeProperty", "display")
+		}
+	} else {
+		for i, o := range menuData.MenuList {
+			log.Printf(debugTag+"updateMenu()1 element title = %v, resource = %v", i, o)
+			v.menuButtons["/"+o.Resource].Get("style").Call("removeProperty", "display")
+		}
+	}
+
 	// Update menu display??? on fetch success????
 	log.Printf(debugTag+"updateMenu()2 menuData=%+v", menuData)
 }

@@ -1,6 +1,7 @@
 package loginView
 
 import (
+	"client1/v2/app/eventProcessor"
 	"log"
 	"net/http"
 )
@@ -34,7 +35,7 @@ func (editor *ItemEditor) getMenuUser() {
 
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		editor.client.NewRequest(http.MethodGet, apiURL+"/menuUser/", &menuUser, nil, success, fail)
+		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 }
@@ -63,14 +64,18 @@ func (editor *ItemEditor) getMenuList() {
 
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		editor.client.NewRequest(http.MethodGet, apiURL+"/menuList/", &menuList, nil, success, fail)
+		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuList/", &menuList, nil, success, fail)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 }
 
 func (editor *ItemEditor) menuComplete() {
 	// Need to do something here to signify the menu data fetch being successful!!!!
-	log.Printf("%v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser) //Log the error in the browser
+	log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
 	editor.onCompletionMsg(debugTag + "menuComplete()2 successfully completed menu fetch:")
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "menuDataFetch", Data: UpdateMenu{
+		MenuUser: editor.CurrentRecord.MenuUser,
+		MenuList: editor.CurrentRecord.MenuList,
+	}})
 }

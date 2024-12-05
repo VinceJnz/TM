@@ -36,7 +36,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-//const apiURL = "/auth"
+//const ApiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {

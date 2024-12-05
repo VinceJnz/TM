@@ -41,7 +41,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const apiURL = "/bookingPeople"
+const ApiURL = "/bookingPeople"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -260,7 +260,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPut, apiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
@@ -270,7 +270,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPost, apiURL, nil, &item)
+	editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
@@ -283,9 +283,9 @@ func (editor *ItemEditor) FetchItems() {
 		// Fetch child data
 		editor.Children.PeopleSelector.FetchItems()
 
-		localApiURL := editor.baseURL + apiURL
+		localApiURL := editor.baseURL + ApiURL
 		if editor.ParentID != 0 {
-			localApiURL = editor.baseURL + "/bookings/" + strconv.Itoa(editor.ParentID) + apiURL
+			localApiURL = editor.baseURL + "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL
 		}
 		go func() {
 			var records []TableData
@@ -301,7 +301,7 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		editor.client.NewRequest(http.MethodDelete, apiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
