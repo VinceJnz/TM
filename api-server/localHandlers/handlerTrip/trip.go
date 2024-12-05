@@ -52,7 +52,8 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	log.Printf(debugTag+"GetAll()2 session=%v\n", session)
 
 	// Includes code to check if the user has access.
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll, session.UserID, session.AdminFlag)
+	//handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll, session.UserID, session.AdminFlag)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll)
 }
 
 // Get: retrieves and returns a single record identified by id
