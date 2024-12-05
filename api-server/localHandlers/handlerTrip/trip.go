@@ -22,7 +22,7 @@ const (
 						FROM public.at_bookings atb
 						JOIN public.at_booking_people atbp ON atbp.booking_id=atb.id
 						GROUP BY atb.id) atbcount ON atbcount.trip_id=att.id
-					WHERE att.owner_id = $1 OR true=$2
+					--WHERE att.owner_id = $1 OR true=$2
 					GROUP BY att.id, ettd.level, etts.status`
 	qryGet = `SELECT att.*, etts.status as trip_status
 					FROM public.at_trips att

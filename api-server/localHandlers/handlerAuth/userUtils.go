@@ -35,7 +35,7 @@ WHERE su.user_status_is=1 AND sug.group_id=$1`
 
 // CheckPassword checks that the users Auth info matches the Auth info stored in the DB
 // Need to depreciate this ??????????????? why??????????????? it is currently used by ctrlMainLogin
-func (h *Handler) CheckUserAuth(username, password string) (models.User, error) {
+func (h *Handler) CheckUserAuthXX(username, password string) (models.User, error) {
 	var err error
 	var result models.User
 

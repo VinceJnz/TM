@@ -52,10 +52,11 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
 		return
 	}
-	log.Printf(debugTag+"GetAll()1 userID %v\n", session.UserID)
+	log.Printf(debugTag+"GetAll()1 userID=%v, adminFlag=%v\n", session.UserID, session.AdminFlag)
 
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
+	//handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
 }
 
 // Get: retrieves and returns a single record identified by id
