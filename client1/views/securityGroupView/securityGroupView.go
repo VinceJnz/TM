@@ -210,7 +210,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.Description, editor.UiComponents.Description = viewHelpers.StringEdit(editor.CurrentRecord.Description, editor.document, "Description", "text", "itemDescription")
 	editor.UiComponents.Description.Call("setAttribute", "required", "true")
 
-	localObjs.AdminFlag, editor.UiComponents.AdminFlag = viewHelpers.BooleanEdit(editor.CurrentRecord.AdminFlag, editor.document, "Admin Flag", "checkbox", "itemAdminFlag")
+	localObjs.AdminFlag, editor.UiComponents.AdminFlag = viewHelpers.BooleanEdit(editor.CurrentRecord.AdminFlag, editor.document, "Sys Admin Flag", "checkbox", "itemAdminFlag")
 	//editor.UiComponents.AdminFlag.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
