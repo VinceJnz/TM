@@ -32,17 +32,21 @@ import (
 
 const debugTag = "mainView."
 
+type ItemState int
+
+const (
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateSubmitted
+)
+
 type MenuChoice int
 
-type viewElements struct {
-	sidemenu     js.Value
-	navbar       js.Value
-	mainContent  js.Value
-	statusOutput js.Value
-	pageTitle    js.Value
-}
-
-type viewElement interface {
+type editorElement interface {
 	//AddItem(item loginView.TableData)
 	Display()
 	FetchItems()
@@ -52,6 +56,19 @@ type viewElement interface {
 	//SubmitItemEdit(this js.Value, p []js.Value) interface{}
 	//Toggle()
 	//UpdateItem(item loginView.TableData)
+}
+
+type TableData struct {
+	MenuUser MenuUser
+	MenuList MenuList
+}
+
+type viewElements struct {
+	sidemenu     js.Value
+	navbar       js.Value
+	mainContent  js.Value
+	statusOutput js.Value
+	pageTitle    js.Value
 }
 
 type children struct {
@@ -68,10 +85,13 @@ type View struct {
 	client   *httpProcessor.Client
 	document js.Value
 	elements viewElements
-	events   *eventProcessor.EventProcessor
+
+	events        *eventProcessor.EventProcessor
+	CurrentRecord TableData
+	ItemState     ItemState
 	//config     AppConfig
 	menuChoice2   string
-	childElements map[string]viewElement
+	childElements map[string]editorElement
 	menuButtons   map[string]js.Value
 	Children      children
 }
@@ -80,7 +100,7 @@ func New(client *httpProcessor.Client) *View {
 	view := &View{
 		client:        client,
 		document:      js.Global().Get("document"),
-		childElements: map[string]viewElement{},
+		childElements: map[string]editorElement{},
 		menuButtons:   map[string]js.Value{},
 	}
 	window := js.Global().Get("window")
@@ -97,7 +117,8 @@ func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
 func (v *View) Setup() {
 	v.events = eventProcessor.New()
 	v.events.AddEventHandler("displayStatus", v.updateStatus)
-	v.events.AddEventHandler("menuDataFetch", v.updateMenu)
+	v.events.AddEventHandler("updateMenu", v.updateMenu)
+	v.events.AddEventHandler("loginComplete", v.loginComplete)
 
 	// Create new body element and other page elements
 	newBody := v.document.Call("createElement", "body")
@@ -174,9 +195,17 @@ func (v *View) Setup() {
 
 	// Create child editors here
 	//..........
+
+	// Check if the menu items can be loaded, i.e. is the user authenticated?
+	v.MenuProcess() // Load the menu
 }
 
-func (v *View) AddViewItem(displayTitle, title string, element viewElement, defaultDisplay bool) {
+// onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
+func (editor *View) onCompletionMsg(Msg string) {
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
+}
+
+func (v *View) AddViewItem(displayTitle, title string, element editorElement, defaultDisplay bool) {
 	v.childElements[title] = element                                         // Store new element
 	onClickFn := v.menuOnClick(displayTitle, title, element)                 // Set up menu onClick function
 	fetchBtn := viewHelpers.HRef(onClickFn, v.document, displayTitle, title) // Set up menu button
@@ -190,7 +219,7 @@ func (v *View) AddViewItem(displayTitle, title string, element viewElement, defa
 	}
 }
 
-func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element viewElement) func() {
+func (v *View) menuOnClick(DisplayTitle, MenuChoice string, element editorElement) func() {
 	fn := func() { // Create a function to hide the current element and display the new element
 		v.closeSideMenu()
 		if MenuChoice != "" {
@@ -230,7 +259,34 @@ func (v *View) openSideMenu() {
 	v.elements.mainContent.Get("style").Set("marginLeft", "250px")
 }
 
+func (editor *View) updateStateDisplay(newState ItemState) {
+	editor.ItemState = newState
+	var stateText string
+	switch editor.ItemState {
+	case ItemStateNone:
+		stateText = "Idle"
+	case ItemStateFetching:
+		stateText = "Fetching Data"
+	case ItemStateEditing:
+		stateText = "Editing Item"
+	case ItemStateAdding:
+		stateText = "Adding New Item"
+	case ItemStateSaving:
+		stateText = "Saving Item"
+	case ItemStateDeleting:
+		stateText = "Deleting Item"
+	case ItemStateSubmitted:
+		stateText = "Edit Form Submitted"
+	default:
+		stateText = "Unknown State"
+	}
+
+	editor.elements.statusOutput.Set("textContent", "Current State: "+stateText)
+}
+
+// *****************************************************************************
 // Event handlers and event data types
+// *****************************************************************************
 
 // func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
 func (v *View) updateStatus(event eventProcessor.Event) {
@@ -250,9 +306,15 @@ func (v *View) updateStatus(event eventProcessor.Event) {
 }
 
 // func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
+func (v *View) loginComplete(event eventProcessor.Event) {
+	// Update menu display??? on fetch success????
+	v.MenuProcess()
+}
+
+// func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
 func (v *View) updateMenu(event eventProcessor.Event) {
 	// Update menu display??? on fetch success????
-	menuData, ok := event.Data.(loginView.UpdateMenu)
+	menuData, ok := event.Data.(UpdateMenu)
 	if !ok {
 		log.Println(debugTag + "updateMenu() Invalid event data")
 		return

@@ -66,6 +66,13 @@ type ParentData struct {
 	ToDate   time.Time `json:"to_date"`
 }
 
+type viewElements struct {
+	Div      js.Value
+	EditDiv  js.Value
+	ListDiv  js.Value
+	StateDiv js.Value
+}
+
 type children struct {
 	//Add child structures as necessary
 	SrpClient *srp.SRP
@@ -75,16 +82,13 @@ type children struct {
 type ItemEditor struct {
 	client   *httpProcessor.Client
 	document js.Value
+	elements viewElements
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
 	UiComponents  UI
-	Div           js.Value
-	EditDiv       js.Value
-	ListDiv       js.Value
-	StateDiv      js.Value
 	ParentID      int
 	ViewState     ViewState
 	RecordState   RecordState
@@ -104,23 +108,23 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.ItemState = ItemStateNone
 
 	// Create a div for the item editor
-	editor.Div = editor.document.Call("createElement", "div")
-	editor.Div.Set("id", debugTag+"Div")
+	editor.elements.Div = editor.document.Call("createElement", "div")
+	editor.elements.Div.Set("id", debugTag+"Div")
 
 	// Create a div for displayingthe editor
-	editor.EditDiv = editor.document.Call("createElement", "div")
-	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
+	editor.elements.EditDiv = editor.document.Call("createElement", "div")
+	editor.elements.EditDiv.Set("id", debugTag+"itemEditDiv")
+	editor.elements.Div.Call("appendChild", editor.elements.EditDiv)
 
 	// Create a div for displaying the list
-	editor.ListDiv = editor.document.Call("createElement", "div")
-	editor.ListDiv.Set("id", debugTag+"itemListDiv")
-	editor.Div.Call("appendChild", editor.ListDiv)
+	editor.elements.ListDiv = editor.document.Call("createElement", "div")
+	editor.elements.ListDiv.Set("id", debugTag+"itemListDiv")
+	editor.elements.Div.Call("appendChild", editor.elements.ListDiv)
 
 	// Create a div for displaying ItemState
-	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
+	editor.elements.StateDiv = editor.document.Call("createElement", "div")
+	editor.elements.StateDiv.Set("id", debugTag+"ItemStateDiv")
+	editor.elements.Div.Call("appendChild", editor.elements.StateDiv)
 
 	// Store supplied parent value
 	if len(idList) == 1 {
@@ -136,7 +140,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 }
 
 func (editor *ItemEditor) GetDiv() js.Value {
-	return editor.Div
+	return editor.elements.Div
 }
 
 func (editor *ItemEditor) Toggle() {
@@ -150,12 +154,12 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
-	editor.Div.Get("style").Call("setProperty", "display", "none")
+	editor.elements.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
 
 func (editor *ItemEditor) Display() {
-	editor.Div.Get("style").Call("setProperty", "display", "block")
+	editor.elements.Div.Get("style").Call("setProperty", "display", "block")
 	editor.ViewState = ViewStateBlock
 }
 
@@ -181,7 +185,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
-	editor.EditDiv.Set("innerHTML", "") // Clear existing content
+	editor.elements.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
@@ -219,19 +223,19 @@ func (editor *ItemEditor) populateEditForm() {
 	}))
 
 	// Append child components to editor div
-	editor.EditDiv.Call("appendChild", registerButton)
-	editor.EditDiv.Call("appendChild", register.Div)
+	editor.elements.EditDiv.Call("appendChild", registerButton)
+	editor.elements.EditDiv.Call("appendChild", register.Div)
 
 	// Append form to editor div
-	editor.EditDiv.Call("appendChild", form)
+	editor.elements.EditDiv.Call("appendChild", form)
 
 	// Make sure the form is visible
-	editor.EditDiv.Get("style").Set("display", "block")
+	editor.elements.EditDiv.Get("style").Set("display", "block")
 }
 
 func (editor *ItemEditor) resetEditForm() {
 	// Clear existing content
-	editor.EditDiv.Set("innerHTML", "")
+	editor.elements.EditDiv.Set("innerHTML", "")
 
 	// Reset CurrentItem
 	//editor.CurrentRecord = TableData{}
@@ -320,7 +324,7 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 		stateText = "Unknown State"
 	}
 
-	editor.StateDiv.Set("textContent", "Current State: "+stateText)
+	editor.elements.StateDiv.Set("textContent", "Current State: "+stateText)
 }
 
 // Event handlers and event data types

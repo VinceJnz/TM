@@ -1,19 +1,21 @@
-package loginView
+package mainView
 
-/*
 import (
 	"client1/v2/app/eventProcessor"
 	"log"
 	"net/http"
 )
 
-func (editor *ItemEditor) MenuProcess() {
+// ********************* This needs to be changed for each api **********************
+const ApiURL = "/auth"
+
+func (editor *View) MenuProcess() {
 	// Next process step
 	editor.getMenuUser()
 }
 
 // getMenuUser gets the menu user from the server (step 1)
-func (editor *ItemEditor) getMenuUser() {
+func (editor *View) getMenuUser() {
 	//Get Menu User from server
 	var menuUser MenuUser
 
@@ -42,7 +44,7 @@ func (editor *ItemEditor) getMenuUser() {
 }
 
 // getMenuList gets the menu list from the server (step 2)
-func (editor *ItemEditor) getMenuList() {
+func (editor *View) getMenuList() {
 	//Get Menu List from server
 	var menuList MenuList
 
@@ -70,7 +72,7 @@ func (editor *ItemEditor) getMenuList() {
 	}()
 }
 
-func (editor *ItemEditor) menuComplete() {
+func (editor *View) menuComplete() {
 	// Need to do something here to signify the menu data fetch being successful!!!!
 	log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
@@ -80,4 +82,3 @@ func (editor *ItemEditor) menuComplete() {
 		MenuList: editor.CurrentRecord.MenuList,
 	}})
 }
-*/
