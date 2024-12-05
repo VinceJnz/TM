@@ -28,6 +28,7 @@ type ClientVerify struct {
 //MenuUserItem contains the basic user info for driving the display of the client menu
 type MenuUser struct {
 	UserID    int    `json:"user_id"`
+	Name      string `json:"name"`
 	Group     string `json:"group"`
 	AdminFlag bool   `json:"admin_flag"`
 }
@@ -35,7 +36,6 @@ type MenuUser struct {
 //MenuUserItem contains a list of valid menu items to display
 type MenuItem struct {
 	UserID   int    `json:"user_id"`
-	Username string `json:"username"`
 	Resource string `json:"resource"`
 }
 
