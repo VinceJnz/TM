@@ -3,7 +3,9 @@ package logoutView
 import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/views/utils/viewHelpers"
 	"log"
+	"net/http"
 	"syscall/js"
 )
 
@@ -36,11 +38,11 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-//const ApiURL = "/auth"
+const ApiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID int `json:"id"`
+	Message string `json:"id"`
 }
 
 // ********************* This needs to be changed for each api **********************
@@ -51,6 +53,13 @@ type UI struct {
 type ParentData struct {
 }
 
+type viewElements struct {
+	Div     js.Value
+	EditDiv js.Value
+	//ListDiv  js.Value
+	StateDiv js.Value
+}
+
 type children struct {
 	//Add child structures as necessary
 }
@@ -58,6 +67,7 @@ type children struct {
 type ItemEditor struct {
 	client   *httpProcessor.Client
 	document js.Value
+	elements viewElements
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
@@ -153,17 +163,32 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	editor.elements.EditDiv.Set("innerHTML", "") // Clear existing content
+	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
+
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
+	//var localObjs UI
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 
-	// Create submit button
+	// Create form buttons
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
+	form.Call("appendChild", submitBtn)
+	form.Call("appendChild", cancelBtn)
+
+	// ********************* This needs to be changed for each api **********************
+	// Create and add child views and buttons to Item
+
+	// Append child components to editor div
 
 	// Append form to editor div
+	editor.elements.EditDiv.Call("appendChild", form)
 
 	// Make sure the form is visible
+	editor.elements.EditDiv.Get("style").Set("display", "block")
 }
 
 func (editor *ItemEditor) resetEditForm() {
@@ -200,16 +225,15 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//Add something to do the logout ????????????????????
 
 	editor.resetEditForm()
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", Data: nil})
 	return nil
 }
 
-/*
 // cancelItemEdit handles the cancelling of the item edit form
 func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
 	editor.resetEditForm()
 	return nil
 }
-*/
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
@@ -220,6 +244,13 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
+	go func() {
+		var records []TableData
+		editor.updateStateDisplay(ItemStateFetching)
+		editor.client.NewRequest(http.MethodGet, ApiURL+"/logout/", &records, nil)
+		log.Printf(debugTag+"FetchItems()2 records=%+v", records)
+		editor.updateStateDisplay(ItemStateNone)
+	}()
 }
 
 //func (editor *ItemEditor) deleteItem(itemID int) {
