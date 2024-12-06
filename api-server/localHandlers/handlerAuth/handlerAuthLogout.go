@@ -9,17 +9,26 @@ import (
 func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 	session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	// Need to check that the user is authorised to logout from the session provided (prevents anyone loging out anyone????
-	log.Printf("%v %v %+v", debugTag+"Handler.AuthLogout()1 ", "userID =", session.UserID)
+	log.Printf(debugTag+"Handler.AuthLogout()1 userID=%v", session.UserID)
 
 	if ok {
 		sessionToken, err := r.Cookie("session")
 		if err != nil {
+			log.Printf(debugTag+"AuthLogout()2 session not open. userID=%v\n", session.UserID)
+			http.Error(w, "session not open", http.StatusInternalServerError)
 			return
 		}
 		h.removeSessionToken(sessionToken.Value)
+	} else {
+		log.Printf(debugTag+"AuthLogout()3 UserID not available in request context. userID=%v\n", session.UserID)
+		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
+		return
 	}
-	w.WriteHeader(http.StatusNotImplemented)
-	w.Write([]byte("Not implemented"))
+	//w.WriteHeader(http.StatusNotImplemented)
+	//w.Write([]byte("Not implemented"))
+
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("User logged out."))
 }
 
 func (h *Handler) removeSessionToken(tokenStr string) error {

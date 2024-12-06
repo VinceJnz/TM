@@ -145,7 +145,7 @@ func (h *Handler) TokenWriteQry(record models.Token) (int, error) {
 }
 
 func (h *Handler) TokenDeleteQry(recordID int) error {
-	_, err := h.appConf.Db.Exec("DELETE FROM st_users WHERE id = $1 AND ", recordID)
+	_, err := h.appConf.Db.Exec(sqlTokenDelete, recordID)
 	return err
 }
 
