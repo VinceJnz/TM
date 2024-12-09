@@ -1,0 +1,108 @@
+body {
+    font-family: "Lato", sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    width: 100%;
+    box-sizing: border-box; /* Ensures padding is included in the width */
+    margin: 0; /* Removes any unintended margin */
+    background-color: #333;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+}
+
+.navbar #pageTitle {
+    font-size: 30px;
+    cursor: pointer;
+    color: #818181;
+    margin-right: 20px;
+}
+
+.navbar #userDisplay {
+    font-size: 30px;
+    cursor: pointer;
+    color: #818181;
+    margin-right: 20px;
+}
+
+.navbar #menuIcon {
+    font-size: 30px;
+    cursor: pointer;
+    color: white;
+    margin-right: 20px;
+}
+
+.navbar button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    background-color: #555;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.navbar button:hover {
+    background-color: #777;
+}
+
+.navbar a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+}
+
+.navbar a:hover {
+    color: #f1f1f1;
+}
+
+.right-align {
+    margin-left: auto; /* Push the div to the right */
+    margin-right: 0; /* Ensures no extra margin on the right */
+    padding-right: 0; /* Ensures no extra padding on the right */
+    display: flex; /* Optional: Use flex if you want to align content inside the div */
+    align-items: center; /* Align items vertically in the div */
+}
+
+.sidemenu {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #111;
+    overflow-x: hidden;
+    transition: 0.5s;
+    padding-top: 60px;
+}
+
+.sidemenu a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+}
+
+.sidemenu a:hover {
+    color: #f1f1f1;
+}
+
+.main {
+    transition: margin-left .5s;
+    padding: 16px;
+    margin-top: 80px; /* Adjust for the fixed navbar */
+}
