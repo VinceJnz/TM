@@ -256,14 +256,9 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 
 	// ********************* This needs to be changed for each api **********************
-	var err error
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Description = editor.UiComponents.Description.Get("value").String()
-	editor.CurrentRecord.AdminFlag, err = strconv.ParseBool(editor.UiComponents.AdminFlag.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing admin flag:", err)
-		return nil
-	}
+	editor.CurrentRecord.AdminFlag = editor.UiComponents.AdminFlag.Get("checked").Bool()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique

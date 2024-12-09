@@ -328,7 +328,6 @@ func (v *View) updateStatus(event eventProcessor.Event) {
 
 // func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
 func (v *View) logoutComplete(event eventProcessor.Event) {
-	log.Println(debugTag + "logoutComplete() started")
 	v.elements.userDisplay.Set("innerHTML", "")
 	v.resetMenu(event)
 }
@@ -348,7 +347,6 @@ func (v *View) loginComplete(event eventProcessor.Event) {
 // resetMenu is an event handler resets the menu to display only the default menu items.
 func (v *View) resetMenu(event eventProcessor.Event) {
 	for _, o := range v.menuButtons {
-		//log.Printf(debugTag+"resetMenu()2 element title = %v", i)
 		if !o.defaultDisplay {
 			o.button.Get("style").Call("setProperty", "display", "none") // Hide menu item
 		}
@@ -363,15 +361,12 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 		log.Println(debugTag + "updateMenu() Invalid event data")
 		return
 	}
-	log.Printf(debugTag+"updateMenu()4 menuData=%+v, menuButtons = %+v", menuData, v.menuButtons)
 	if menuData.MenuUser.AdminFlag {
 		for _, o := range v.menuButtons {
-			//log.Printf(debugTag+"updateMenu()2 element title = %v", i)
 			o.button.Get("style").Call("removeProperty", "display")
 		}
 	} else {
 		for _, o := range menuData.MenuList {
-			//log.Printf(debugTag+"updateMenu()2 element title = %v, resource = %v", i, o)
 			val, ok := v.menuButtons["/"+o.Resource] // get current menu button
 			if ok {
 				val.button.Get("style").Call("removeProperty", "display")

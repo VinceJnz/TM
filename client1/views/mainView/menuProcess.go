@@ -74,7 +74,7 @@ func (editor *View) getMenuList() {
 
 func (editor *View) menuComplete() {
 	// Need to do something here to signify the menu data fetch being successful!!!!
-	log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
+	//log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
 	editor.onCompletionMsg(debugTag + "menuComplete()2 successfully completed menu fetch:")
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateMenu", Data: UpdateMenu{

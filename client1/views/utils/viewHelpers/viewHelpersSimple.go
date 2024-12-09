@@ -48,10 +48,10 @@ func InputCheckBox(value bool, doc js.Value, labelText string, inputType string,
 	input.Set("id", htmlID)
 	input.Set("name", labelText)
 	input.Set("type", inputType)
-	input.Set("value", true) // This is the return value
-	if value {
-		input.Set("checked", true)
-	}
+	//input.Set("value", true) // This is the return value
+	//if value {
+	input.Set("checked", value)
+	//}
 	return input
 }
 
