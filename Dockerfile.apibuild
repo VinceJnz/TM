@@ -41,9 +41,10 @@ COPY --from=wasmbuilder /app/wasm_exec.js ./static/
 
 # Copy the static files from the builder stage to the static folder
 COPY --from=apibuilder /app/static/*.html ./static/
+COPY --from=apibuilder /app/static/*.css ./static/
+COPY --from=apibuilder /app/static/*.txt ./static/
 COPY --from=apibuilder /app/static/favicon.ico ./static/
-#COPY --from=apibuilder /app/static/*.html .
-#COPY --from=apibuilder /app/static/favicon.ico .
+COPY --from=apibuilder /app/static/favicon.png ./static/
 
 # Copy the compiled webserver binary from the builder stage
 COPY --from=apibuilder /app/apiserver .
