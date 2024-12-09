@@ -169,6 +169,5 @@ func (editor *ItemEditor) loginComplete(username string) {
 	//log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
 	//editor.onCompletionMsg(debugTag + "menuComplete()2 successfully completed menu fetch:")
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete"})
-
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", Data: username})
 }

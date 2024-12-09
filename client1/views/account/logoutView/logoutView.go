@@ -244,11 +244,19 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
+	success := func(err error) {
+		if err != nil {
+			log.Printf("%v %v %v", debugTag+"FetchItems()1 success: ", "err =", err) //Log the error in the browser
+		}
+		log.Printf("%v", debugTag+"FetchItems()2 success") //Log the error in the browser
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", Data: nil})
+	}
+
 	go func() {
-		var records []TableData
 		editor.updateStateDisplay(ItemStateFetching)
-		editor.client.NewRequest(http.MethodGet, ApiURL+"/logout/", &records, nil)
-		log.Printf(debugTag+"FetchItems()2 records=%+v", records)
+		editor.client.NewRequest(http.MethodGet, ApiURL+"/logout/", nil, nil, success)
+		//log.Printf(debugTag+"FetchItems()2 records=%+v", records)
+		log.Printf(debugTag + "FetchItems()2 done")
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 }
