@@ -340,7 +340,11 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
-	editor.ItemState = viewHelpers.UpdateStateDisplay(newState, editor.StateDiv)
+	editor.events.ProcessEvent(eventProcessor.Event{
+		Type: "updateState",
+		Data: newState,
+	})
+	editor.ItemState = newState
 }
 
 // Event handlers and event data types

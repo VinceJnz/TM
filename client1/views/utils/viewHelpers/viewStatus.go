@@ -67,28 +67,3 @@ func (i *ItemStateView) DisplayMessage(message string) {
 		msgDiv.Call("remove")
 	}()
 }
-
-func UpdateStateDisplay(newState ItemState, stateDiv js.Value) ItemState {
-	var stateText string
-	switch newState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
-
-	stateDiv.Set("textContent", "Current State: "+stateText)
-	return newState
-}

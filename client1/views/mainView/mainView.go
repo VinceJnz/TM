@@ -28,7 +28,6 @@ import (
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
-	"time"
 )
 
 const debugTag = "mainView."
@@ -282,84 +281,4 @@ func (v *View) closeSideMenu() {
 func (v *View) openSideMenu() {
 	v.elements.sidemenu.Get("style").Set("width", "250px")
 	v.elements.mainContent.Get("style").Set("marginLeft", "250px")
-}
-
-// *****************************************************************************
-// Event handlers and event data types
-// *****************************************************************************
-
-// displayMessage is an event handler the updates the page status on the main page.
-func (editor *View) updateState(event eventProcessor.Event) {
-	state, ok := event.Data.(viewHelpers.ItemState)
-	if !ok {
-		log.Println(debugTag + "updateState() Invalid event data")
-		return
-	}
-	editor.ItemState.UpdateState(state)
-}
-
-// displayMessage is an event handler the displays a message on the main page.
-func (v *View) displayMessage(event eventProcessor.Event) {
-	message, ok := event.Data.(string)
-	if !ok {
-		log.Println(debugTag + "displayMessage() Invalid event data")
-		return
-	}
-	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
-	v.ItemState.DisplayMessage(message)
-}
-
-// logoutComplete is an event handler the updates the logout status in the Navbar on the main page.
-func (v *View) logoutComplete(event eventProcessor.Event) {
-	v.elements.userDisplay.Set("innerHTML", "")
-	v.resetMenu(event)
-}
-
-// loginComplete is an event handler the updates the login status in the Navbar on the main page.
-func (v *View) loginComplete(event eventProcessor.Event) {
-	// Update menu display??? on fetch success????
-	username, ok := event.Data.(string)
-	if !ok {
-		log.Println(debugTag + "loginComplete() Invalid event data")
-		return
-	}
-	v.elements.userDisplay.Set("innerHTML", username)
-	v.MenuProcess()
-}
-
-// resetMenu is an event handler resets the menu to display only the default menu items.
-func (v *View) resetMenu(event eventProcessor.Event) {
-	for _, o := range v.menuButtons {
-		if !o.defaultDisplay {
-			o.button.Get("style").Call("setProperty", "display", "none") // Hide menu item
-		}
-	}
-}
-
-// updateStatus is an event handler the updates the menu in the sidebar on the main page.
-func (v *View) updateMenu(event eventProcessor.Event) {
-	// Update menu display??? on fetch success????
-	menuData, ok := event.Data.(UpdateMenu)
-	if !ok {
-		log.Println(debugTag + "updateMenu() Invalid event data")
-		return
-	}
-	if menuData.MenuUser.AdminFlag {
-		for _, o := range v.menuButtons {
-			o.button.Get("style").Call("removeProperty", "display")
-		}
-	} else {
-		for _, o := range menuData.MenuList {
-			val, ok := v.menuButtons["/"+o.Resource] // get current menu button
-			if ok {
-				val.button.Get("style").Call("removeProperty", "display")
-			}
-		}
-	}
-}
-
-// Example
-// DisplayStatus provides an object to send data to the even handler. This is an examle, it is not used.
-type DisplayStatus struct {
-	Message string
 }

@@ -16,18 +16,6 @@ import (
 
 const debugTag = "tripView."
 
-type ItemState int
-
-const (
-	ItemStateNone ItemState = iota
-	ItemStateFetching
-	ItemStateEditing
-	ItemStateAdding
-	ItemStateSaving
-	ItemStateDeleting
-	ItemStateSubmitted
-)
-
 type ViewState int
 
 const (
@@ -86,17 +74,17 @@ type ItemEditor struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
-	ItemState     ItemState
+	ItemState     viewHelpers.ItemState
 	Records       []TableData
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
 	ListDiv       js.Value
-	StateDiv      js.Value
-	ParentID      int
-	ViewState     ViewState
-	RecordState   RecordState
-	Children      children
+	//StateDiv      js.Value
+	ParentID    int
+	ViewState   ViewState
+	RecordState RecordState
+	Children    children
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -106,7 +94,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.document = document
 	editor.events = eventProcessor
 
-	editor.ItemState = ItemStateNone
+	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
@@ -123,9 +111,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Create a div for displaying ItemState
-	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
+	//editor.StateDiv = editor.document.Call("createElement", "div")
+	//editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
+	//editor.Div.Call("appendChild", editor.StateDiv)
 
 	//editor.Hide()
 	//form := viewHelpers.Form(js.Global().Get("document"), "editForm")
@@ -188,7 +176,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -311,9 +299,9 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
 	switch editor.ItemState {
-	case ItemStateEditing:
+	case viewHelpers.ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
-	case ItemStateAdding:
+	case viewHelpers.ItemStateAdding:
 		go editor.AddItem(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
@@ -442,30 +430,7 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
-	/*
-		editor.ItemState = newState
-		var stateText string
-		switch editor.ItemState {
-		case ItemStateNone:
-			stateText = "Idle"
-		case ItemStateFetching:
-			stateText = "Fetching Data"
-		case ItemStateEditing:
-			stateText = "Editing Item"
-		case ItemStateAdding:
-			stateText = "Adding New Item"
-		case ItemStateSaving:
-			stateText = "Saving Item"
-		case ItemStateDeleting:
-			stateText = "Deleting Item"
-		case ItemStateSubmitted:
-			stateText = "Edit Form Submitted"
-		default:
-			stateText = "Unknown State"
-		}
-
-		editor.StateDiv.Set("textContent", "Current State: "+stateText)
-	*/
+	editor.ItemState = newState
 	editor.events.ProcessEvent(eventProcessor.Event{
 		Type: "updateStatus",
 		Data: newState,
