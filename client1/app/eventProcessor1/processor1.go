@@ -1,4 +1,4 @@
-package eventProcessor
+package eventProcessor1
 
 import (
 	"encoding/json"
