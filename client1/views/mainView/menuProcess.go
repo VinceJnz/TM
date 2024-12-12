@@ -2,6 +2,7 @@ package mainView
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
 )
@@ -25,6 +26,7 @@ func (editor *View) getMenuUser() {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()3 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
 		}
 		editor.CurrentRecord.MenuUser = menuUser // Save the menuUser to the current record
+		editor.elements.userDisplay.Set("innerHTML", editor.CurrentRecord.MenuUser.Name)
 
 		// Next process step
 		editor.getMenuList()
@@ -37,9 +39,9 @@ func (editor *View) getMenuUser() {
 	}
 
 	go func() {
-		editor.updateStateDisplay(ItemStateFetching)
+		editor.ItemState.UpdateState(viewHelpers.ItemStateFetching)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil, success, fail)
-		editor.updateStateDisplay(ItemStateNone)
+		editor.ItemState.UpdateState(viewHelpers.ItemStateNone)
 	}()
 }
 
@@ -66,9 +68,9 @@ func (editor *View) getMenuList() {
 	}
 
 	go func() {
-		editor.updateStateDisplay(ItemStateFetching)
+		editor.ItemState.UpdateState(viewHelpers.ItemStateFetching)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuList/", &menuList, nil, success, fail)
-		editor.updateStateDisplay(ItemStateNone)
+		editor.ItemState.UpdateState(viewHelpers.ItemStateNone)
 	}()
 }
 

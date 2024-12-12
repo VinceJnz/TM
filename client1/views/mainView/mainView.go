@@ -33,17 +33,17 @@ import (
 
 const debugTag = "mainView."
 
-type ItemState int
+//type ItemState int
 
-const (
-	ItemStateNone ItemState = iota
-	ItemStateFetching
-	ItemStateEditing
-	ItemStateAdding
-	ItemStateSaving
-	ItemStateDeleting
-	ItemStateSubmitted
-)
+//const (
+//	ItemStateNone ItemState = iota
+//	ItemStateFetching
+//	ItemStateEditing
+//	ItemStateAdding
+//	ItemStateSaving
+//	ItemStateDeleting
+//	ItemStateSubmitted
+//)
 
 type MenuChoice int
 
@@ -95,7 +95,7 @@ type View struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
-	ItemState     ItemState
+	ItemState     viewHelpers.ItemStateView //viewHelpers.ItemState
 	menuChoice2   string
 	childElements map[string]editorElement
 	menuButtons   map[string]buttonElement
@@ -122,7 +122,8 @@ func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
 
 func (v *View) Setup() {
 	v.events = eventProcessor.New()
-	v.events.AddEventHandler("displayStatus", v.updateStatus)
+	v.events.AddEventHandler("updateStatus", v.updateState)
+	v.events.AddEventHandler("displayMessage", v.displayMessage)
 	v.events.AddEventHandler("resetMenu", v.resetMenu)
 	v.events.AddEventHandler("updateMenu", v.updateMenu)
 	v.events.AddEventHandler("loginComplete", v.loginComplete)
@@ -211,12 +212,15 @@ func (v *View) Setup() {
 	v.elements.statusOutput.Set("id", "statusOutput")
 	v.elements.statusOutput.Set("className", "statusOutput")
 	v.elements.mainContent.Call("appendChild", v.elements.statusOutput)
+	v.ItemState = viewHelpers.NewItemStateView(v.document, v.elements.statusOutput)
 
 	// Replace the existing body with the new body
 	v.document.Get("documentElement").Call("replaceChild", newBody, v.document.Get("body"))
 
 	// Create child editors here
 	//..........
+
+	//v.childElements["Login"].
 
 	// Check if the menu items can be loaded, i.e. is the user authenticated?
 	v.MenuProcess() // Load the menu
@@ -280,59 +284,38 @@ func (v *View) openSideMenu() {
 	v.elements.mainContent.Get("style").Set("marginLeft", "250px")
 }
 
-func (editor *View) updateStateDisplay(newState ItemState) {
-	editor.ItemState = newState
-	var stateText string
-	switch editor.ItemState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
-
-	editor.elements.statusOutput.Set("textContent", "Current State: "+stateText)
-}
-
 // *****************************************************************************
 // Event handlers and event data types
 // *****************************************************************************
 
-// func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
-func (v *View) updateStatus(event eventProcessor.Event) {
+// displayMessage is an event handler the updates the page status on the main page.
+func (editor *View) updateState(event eventProcessor.Event) {
+	state, ok := event.Data.(viewHelpers.ItemState)
+	if !ok {
+		log.Println(debugTag + "updateState() Invalid event data")
+		return
+	}
+	editor.ItemState.UpdateState(state)
+}
+
+// displayMessage is an event handler the displays a message on the main page.
+func (v *View) displayMessage(event eventProcessor.Event) {
 	message, ok := event.Data.(string)
 	if !ok {
-		log.Println(debugTag + "updateStatus() Invalid event data")
+		log.Println(debugTag + "displayMessage() Invalid event data")
 		return
 	}
 	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
-	msgDiv := v.document.Call("createElement", "div")
-	msgDiv.Set("innerHTML", message)
-	v.elements.statusOutput.Call("appendChild", msgDiv)
-	go func() {
-		time.Sleep(30 * time.Second) // Wait for the specified duration
-		msgDiv.Call("remove")
-	}()
+	v.ItemState.DisplayMessage(message)
 }
 
-// func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
+// logoutComplete is an event handler the updates the logout status in the Navbar on the main page.
 func (v *View) logoutComplete(event eventProcessor.Event) {
 	v.elements.userDisplay.Set("innerHTML", "")
 	v.resetMenu(event)
 }
 
-// func (v *View) updateStatus is an event handler the updates the title in the Navbar on the main page.
+// loginComplete is an event handler the updates the login status in the Navbar on the main page.
 func (v *View) loginComplete(event eventProcessor.Event) {
 	// Update menu display??? on fetch success????
 	username, ok := event.Data.(string)
@@ -353,7 +336,7 @@ func (v *View) resetMenu(event eventProcessor.Event) {
 	}
 }
 
-// updateStatus is an event handler the updates the title in the Navbar on the main page.
+// updateStatus is an event handler the updates the menu in the sidebar on the main page.
 func (v *View) updateMenu(event eventProcessor.Event) {
 	// Update menu display??? on fetch success????
 	menuData, ok := event.Data.(UpdateMenu)

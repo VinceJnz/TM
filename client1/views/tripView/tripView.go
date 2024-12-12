@@ -175,7 +175,7 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
-	editor.updateStateDisplay(ItemStateAdding)
+	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
 	// Set default values for the new record // ********************* This needs to be changed for each api **********************
@@ -256,7 +256,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.UiComponents = UI{}
 
 	// Update state
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 }
 
 func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
@@ -332,11 +332,11 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	go func() {
-		editor.updateStateDisplay(ItemStateSaving)
+		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 		editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems() // Refresh the item list
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		editor.onCompletionMsg("Item record updated successfully")
 	}()
 }
@@ -344,11 +344,11 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
-		editor.updateStateDisplay(ItemStateSaving)
+		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 		editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		editor.onCompletionMsg("Item record added successfully")
 	}()
 }
@@ -362,22 +362,22 @@ func (editor *ItemEditor) FetchItems() {
 
 		go func() {
 			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
+			editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
+			editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		}()
 	}
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
-		editor.updateStateDisplay(ItemStateDeleting)
+		editor.updateStateDisplay(viewHelpers.ItemStateDeleting)
 		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()
 }
@@ -403,7 +403,7 @@ func (editor *ItemEditor) populateItemList() {
 		editButton.Set("innerHTML", "Edit")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			editor.CurrentRecord = record
-			editor.updateStateDisplay(ItemStateEditing)
+			editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 			editor.populateEditForm()
 			return nil
 		}))
@@ -441,29 +441,35 @@ func (editor *ItemEditor) populateItemList() {
 	}
 }
 
-func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
-	editor.ItemState = newState
-	var stateText string
-	switch editor.ItemState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
+func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
+	/*
+		editor.ItemState = newState
+		var stateText string
+		switch editor.ItemState {
+		case ItemStateNone:
+			stateText = "Idle"
+		case ItemStateFetching:
+			stateText = "Fetching Data"
+		case ItemStateEditing:
+			stateText = "Editing Item"
+		case ItemStateAdding:
+			stateText = "Adding New Item"
+		case ItemStateSaving:
+			stateText = "Saving Item"
+		case ItemStateDeleting:
+			stateText = "Deleting Item"
+		case ItemStateSubmitted:
+			stateText = "Edit Form Submitted"
+		default:
+			stateText = "Unknown State"
+		}
 
-	editor.StateDiv.Set("textContent", "Current State: "+stateText)
+		editor.StateDiv.Set("textContent", "Current State: "+stateText)
+	*/
+	editor.events.ProcessEvent(eventProcessor.Event{
+		Type: "updateStatus",
+		Data: newState,
+	})
 }
 
 // Event handlers and event data types
