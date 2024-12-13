@@ -76,7 +76,7 @@ func (v *View) loginComplete(event eventProcessor.Event) {
 func (v *View) resetMenu(event eventProcessor.Event) {
 	for _, o := range v.menuButtons {
 		if !o.defaultDisplay {
-			o.button.Get("style").Call("setProperty", "display", "none") // Hide menu item
+			o.button.Get("style").Call("setProperty", "display", "none") // Hide menu item - set property "display: none;"
 		}
 	}
 }
@@ -90,14 +90,14 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 	}
 	if menuData.MenuUser.AdminFlag {
 		for _, o := range v.menuButtons {
-			o.button.Get("style").Call("removeProperty", "display")
+			o.button.Get("style").Call("removeProperty", "display") // Remove property "display: none;" causes the menu button to be displayed
 		}
 	} else {
-		for _, o := range menuData.MenuList {
-			val, ok := v.menuButtons[strings.ToLower(o.Resource)] // get current menu button
+		for _, o := range menuData.MenuList { // Iterate through the menu list from the server and hide/display buttons as necessary.
+			val, ok := v.menuButtons[strings.ToLower(o.Resource)]
 			log.Printf(debugTag+"updateMenu()2 Menu val=%+v, MenuItem=%+v,okay=%v\n", val, o, ok)
 			if ok {
-				val.button.Get("style").Call("removeProperty", "display")
+				val.button.Get("style").Call("removeProperty", "display") // Remove property "display: none;" causes the menu button to be displayed
 			}
 		}
 	}

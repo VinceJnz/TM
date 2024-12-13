@@ -310,11 +310,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		return nil
 	}
 
-	editor.CurrentRecord.AdminFlag, err = strconv.ParseBool(editor.UiComponents.AdminFlag.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing admin_flag:", err)
-		return nil
-	}
+	editor.CurrentRecord.AdminFlag = editor.UiComponents.AdminFlag.Get("checked").Bool()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique

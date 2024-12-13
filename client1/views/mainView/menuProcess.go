@@ -46,7 +46,7 @@ func (editor *View) getMenuUser() {
 	}()
 }
 
-// getMenuList gets the menu list from the server (step 2)
+// getMenuList gets the menu list from the server (step 2) - This is used to disply or hide the menu button depending on the users level of access to the url
 func (editor *View) getMenuList() {
 	//Get Menu List from server
 	var menuList MenuList
