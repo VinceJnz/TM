@@ -27,6 +27,7 @@ import (
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
+	"strings"
 	"syscall/js"
 )
 
@@ -185,10 +186,10 @@ func (v *View) Setup() {
 	v.AddViewItem("Home", true, nil, true, v.elements.sidemenu)
 	v.AddViewItem("About", true, nil, true, v.elements.sidemenu)
 	v.AddViewItem("Contact", true, nil, true, v.elements.sidemenu)
-	v.AddViewItem("Booking", true, bookingView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
+	v.AddViewItem("Bookings", true, bookingView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
 	v.AddViewItem("Booking Status", true, bookingStatusView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
 	v.AddViewItem("Group Booking", true, groupBookingView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Trip", true, tripView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
+	v.AddViewItem("Trips", true, tripView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
 	v.AddViewItem("Trip Cost Group", true, tripCostGroupView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
 	v.AddViewItem("Trip Difficulty", true, tripDifficultyView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
 	v.AddViewItem("Trip Status", true, tripStatusView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
@@ -227,7 +228,8 @@ func (v *View) Setup() {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *View) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
+	//editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", Data: Msg})
 }
 
 func (v *View) AddViewItem(title string, menuAction bool, element editorElement, defaultDisplay bool, menu js.Value) {
@@ -237,7 +239,7 @@ func (v *View) AddViewItem(title string, menuAction bool, element editorElement,
 	if !defaultDisplay {
 		fetchBtn.Get("style").Call("setProperty", "display", "none")
 	}
-	v.menuButtons[title] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay}
+	v.menuButtons[strings.ToLower(title)] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay}
 	menu.Call("appendChild", fetchBtn) // Append the button to the side menu
 	if element != nil {
 		v.elements.mainContent.Call("appendChild", element.GetDiv()) // Append the new element div to the main content

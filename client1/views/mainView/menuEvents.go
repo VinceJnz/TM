@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -84,7 +85,7 @@ func (v *View) resetMenu(event eventProcessor.Event) {
 func (v *View) updateMenu(event eventProcessor.Event) {
 	menuData, ok := event.Data.(UpdateMenu)
 	if !ok {
-		log.Printf(debugTag+"Invalid data for event type: %s\n", event.Type)
+		log.Printf(debugTag+"updateMenu()1 Invalid data for event type: %s\n", event.Type)
 		return
 	}
 	if menuData.MenuUser.AdminFlag {
@@ -93,7 +94,8 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 		}
 	} else {
 		for _, o := range menuData.MenuList {
-			val, ok := v.menuButtons["/"+o.Resource] // get current menu button
+			val, ok := v.menuButtons[strings.ToLower(o.Resource)] // get current menu button
+			log.Printf(debugTag+"updateMenu()2 Menu val=%+v, MenuItem=%+v,okay=%v\n", val, o, ok)
 			if ok {
 				val.button.Get("style").Call("removeProperty", "display")
 			}

@@ -188,7 +188,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data

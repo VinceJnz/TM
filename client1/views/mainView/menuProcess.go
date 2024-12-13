@@ -23,10 +23,11 @@ func (editor *View) getMenuUser() {
 	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()3 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
+			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()2 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
 		}
 		editor.CurrentRecord.MenuUser = menuUser // Save the menuUser to the current record
 		editor.elements.userDisplay.Set("innerHTML", editor.CurrentRecord.MenuUser.Name)
+		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()3 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
 
 		// Next process step
 		editor.getMenuList()
@@ -53,9 +54,10 @@ func (editor *View) getMenuList() {
 	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()3 success: ", "err =", err, "MenuUser =", editor.CurrentRecord.MenuUser) //Log the error in the browser
+			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()2 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		}
-		editor.CurrentRecord.MenuList = menuList // Save the salt to the current record
+		editor.CurrentRecord.MenuList = menuList                                                                                                // Save the salt to the current record
+		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()3 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
 		// Next process step
 		editor.menuComplete()
