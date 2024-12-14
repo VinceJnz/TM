@@ -92,9 +92,9 @@ func main() {
 	addRouteGroup(subR2, "bookingPeople", bookingPeople)                                          // BookingPeople routes
 	subR2.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET") // BookingPeople routes
 
-	trip := handlerTrip.New(app)                                                           // Trip routes
-	addRouteGroup(subR2, "trips", trip)                                                    // Trip routes
-	subR2.HandleFunc("/trips/participantStatus", trip.GetParticipantStatus).Methods("GET") // Trip routes
+	trip := handlerTrip.New(app)                                               // Trip routes
+	addRouteGroup(subR2, "trips", trip)                                        // Trip routes
+	subR2.HandleFunc("/tripsReport", trip.GetParticipantStatus).Methods("GET") // Trip routes
 
 	// For debugging: Log all registered routes
 	//subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
@@ -217,11 +217,11 @@ type genericHandler interface {
 	Delete(w http.ResponseWriter, r *http.Request)
 }
 
-func addRouteGroup(r *mux.Router, u string, h genericHandler) {
-	r.HandleFunc("/"+u, h.GetAll).Methods("GET")
-	r.HandleFunc("/"+u+"/{id:[0-9]+}", h.Get).Methods("GET")
-	r.HandleFunc("/"+u, h.Create).Methods("POST")
-	r.HandleFunc("/"+u+"/{id:[0-9]+}", h.Update).Methods("PUT")
-	r.HandleFunc("/"+u+"/{id:[0-9]+}", h.Delete).Methods("DELETE")
+func addRouteGroup(r *mux.Router, resourcePath string, handler genericHandler) {
+	r.HandleFunc("/"+resourcePath, handler.GetAll).Methods("GET")
+	r.HandleFunc("/"+resourcePath+"/{id:[0-9]+}", handler.Get).Methods("GET")
+	r.HandleFunc("/"+resourcePath, handler.Create).Methods("POST")
+	r.HandleFunc("/"+resourcePath+"/{id:[0-9]+}", handler.Update).Methods("PUT")
+	r.HandleFunc("/"+resourcePath+"/{id:[0-9]+}", handler.Delete).Methods("DELETE")
 	// Add some code to register the route resource for managing security access
 }

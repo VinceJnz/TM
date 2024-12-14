@@ -84,6 +84,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//log.Printf(debugTag+"Create()3 record = %+v, query = %+v", record, qryCreate)
+
 	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 }
 
@@ -124,16 +126,21 @@ func (h *Handler) RecordValidation(record models.Booking) error {
 	return nil
 }
 
+const (
+	//sqlBookingParentRecordValidation = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_trips WHERE id = $1`
+	//sqlBookingParentRecordValidation = `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_trips WHERE id = $1`
+	sqlBookingParentRecordValidation = `SELECT * FROM at_trips WHERE id = $1`
+)
+
 func (h *Handler) ParentRecordValidation(record models.Booking) error {
 	parentID := record.TripID
 
 	validationRecord := models.Trip{}
-	err := h.appConf.Db.Get(&record, `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
-	FROM at_trips WHERE id = $1`, parentID)
+	err := h.appConf.Db.Get(&validationRecord, sqlBookingParentRecordValidation, parentID)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf(debugTag + "RecordValidationDates()1 - Record not found" + err.Error())
+		return fmt.Errorf(debugTag + "ParentRecordValidation()1 - Record not found" + err.Error())
 	} else if err != nil {
-		return fmt.Errorf(debugTag + "RecordValidationDates()2 - Internal Server Error: " + err.Error())
+		return fmt.Errorf(debugTag + "ParentRecordValidation()2 - Internal Server Error: " + err.Error())
 	}
 
 	if record.FromDate.Before(validationRecord.FromDate) {
