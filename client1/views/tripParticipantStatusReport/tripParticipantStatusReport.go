@@ -172,7 +172,9 @@ func (editor *ItemEditor) FetchItems() {
 
 func (editor *ItemEditor) populateItemList() {
 	var tripID int
-	var itemGropuDiv js.Value
+	var bookingID int
+	var tripDiv js.Value
+	var bookingDiv js.Value
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	for _, i := range editor.Records {
@@ -181,29 +183,52 @@ func (editor *ItemEditor) populateItemList() {
 		// Create and add child views to Item
 		//
 		//
-		//Add headding (Assumes records are sorted by trip)
+		//Add trip headding (Assumes records are sorted by trip)
 		if tripID != record.TripID {
 			tripID = record.TripID
-			itemGropuDiv = editor.document.Call("createElement", "div")
-			itemGropuDiv.Set("id", debugTag+"itemDivHeadding")
-			// ********************* This needs to be changed for each api **********************
-			itemGropuDiv.Set("innerHTML", "Trip: "+strconv.Itoa(record.TripID)+" Name:"+record.TripName+" (From:"+record.FromDate.Format(viewHelpers.Layout)+", To:"+record.ToDate.Format(viewHelpers.Layout)+")")
-			itemGropuDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+			tripDiv = editor.document.Call("createElement", "div")
+			tripDiv.Set("id", debugTag+"tripDiv")
 
-			editor.ListDiv.Call("appendChild", itemGropuDiv)
+			tripDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+			tripDiv.Set("innerHTML", "Trip: "+strconv.Itoa(record.TripID)+" Name:"+record.TripName+" (From:"+record.FromDate.Format(viewHelpers.Layout)+", To:"+record.ToDate.Format(viewHelpers.Layout)+")")
+
+			editor.ListDiv.Call("appendChild", tripDiv)
 		}
 
-		itemDiv := editor.document.Call("createElement", "div")
-		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
+		//Add booking headding (Assumes records are sorted by trip and booking)
+		if bookingID != record.BookingID || record.Name == "" {
+			bookingID = record.BookingID
+			bookingDiv = editor.document.Call("createElement", "div")
+			bookingDiv.Set("id", debugTag+"bookingDiv")
+
+			bookingDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+			if record.Name != "" {
+				bookingDiv.Set("innerHTML", " Booking:"+strconv.Itoa(record.BookingID))
+			} else {
+				bookingDiv.Set("innerHTML", " Nil Bookings")
+			}
+
+			tripDiv.Call("appendChild", bookingDiv)
+		}
+
+		//Add people rows (Assumes records are sorted by trip and booking)
 		if record.Name != "" {
-			itemDiv.Set("innerHTML", " Booking:"+strconv.Itoa(record.BookingID)+" (Participant:"+record.Name+", Status:"+record.BookingStatus+")")
-		} else {
-			itemDiv.Set("innerHTML", " Nil Bookings")
-		}
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+			itemDiv := editor.document.Call("createElement", "div")
+			itemDiv.Set("id", debugTag+"itemDiv")
+			itemDiv.Set("innerHTML", " Participant:"+record.Name+", Status:"+record.BookingStatus)
+			itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+			switch record.BookingStatus {
+			case "before_threshold_paid":
+				itemDiv.Set("style", "background-color: #ccffcc;")
+			case "before_threshold":
+				itemDiv.Set("style", "background-color: #ffd280;")
+			case "after_threshold":
+				itemDiv.Set("style", "background-color: #ffbbbb;")
+			default:
+			}
 
-		itemGropuDiv.Call("appendChild", itemDiv)
+			bookingDiv.Call("appendChild", itemDiv)
+		}
 		//editor.ListDiv.Call("appendChild", itemDiv)
 	}
 }
