@@ -262,7 +262,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
-		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
+		//log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
 	// ********************* This needs to be changed for each api **********************

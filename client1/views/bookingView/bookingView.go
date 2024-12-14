@@ -188,7 +188,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -269,7 +269,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
-		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
+		//log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
 	// ********************* This needs to be changed for each api **********************
@@ -324,8 +324,9 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
+	var id int
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
+	editor.client.NewRequest(http.MethodPost, ApiURL, id, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)

@@ -201,9 +201,10 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 	} else {
 		//Data struct is nil - this is not necesssarily an error, e.g. we might be deleting an item?????
 		//Should the deleted item ID be returned???
-		//log.Printf("%v %v %v %v %p %+v", debugTag+"Client.SendRequest()8c ", "req.URL =", req.URL, "dataStru =", dataStru, dataStru)
 		resBody, err := io.ReadAll(res.Body)
-		log.Printf("%v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - data is nil ", "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
+		if len(resBody) != 0 { // if the resBody in not empty then we should log it because there was no rxDataStru provided for the data in resBody
+			log.Printf("%v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - rx data structure is nil ", "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
+		}
 	}
 
 	//cookies := res.Cookies()

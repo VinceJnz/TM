@@ -67,6 +67,7 @@ type TableData struct {
 type buttonElement struct {
 	button         js.Value
 	defaultDisplay bool
+	adminOnly      bool
 }
 
 type viewElements struct {
@@ -178,34 +179,34 @@ func (v *View) Setup() {
 	v.elements.navbar.Call("appendChild", v.elements.userDisplay)
 
 	// Add the logout button to the navbar
-	v.AddViewItem("Logout", "", true, logoutView.New(v.document, v.events, v.client), true, v.elements.topmenu)
+	v.AddViewItem("Logout", "", true, logoutView.New(v.document, v.events, v.client), true, false, v.elements.topmenu)
 
 	// Add all the menu options to the sidemenu
-	v.AddViewItem("&times;", "", false, nil, true, v.elements.sidemenu)
-	v.AddViewItem("Login", "", true, loginView.New(v.document, v.events, v.client), true, v.elements.sidemenu)
-	v.AddViewItem("Home", "", true, nil, true, v.elements.sidemenu)
-	v.AddViewItem("About", "", true, nil, true, v.elements.sidemenu)
-	v.AddViewItem("Contact", "", true, nil, true, v.elements.sidemenu)
-	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Trip Status", tripStatusView.ApiURL, true, tripStatusView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Trip Type", tripTypeView.ApiURL, true, tripTypeView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Trip Participant", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Season", seasonView.ApiURL, true, seasonView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("User Status", userStatusView.ApiURL, true, userStatusView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
-	v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.client), false, v.elements.sidemenu)
+	v.AddViewItem("&times;", "", false, nil, true, false, v.elements.sidemenu)
+	v.AddViewItem("Login", "", true, loginView.New(v.document, v.events, v.client), true, false, v.elements.sidemenu)
+	v.AddViewItem("Home", "", true, nil, true, false, v.elements.sidemenu)
+	v.AddViewItem("About", "", true, nil, true, false, v.elements.sidemenu)
+	v.AddViewItem("Contact", "", true, nil, true, false, v.elements.sidemenu)
+	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.client), false, false, v.elements.sidemenu)
+	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Trip Status", tripStatusView.ApiURL, true, tripStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Trip Type", tripTypeView.ApiURL, true, tripTypeView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Trip Participant", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.client), false, false, v.elements.sidemenu)
+	v.AddViewItem("Season", seasonView.ApiURL, true, seasonView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("User Status", userStatusView.ApiURL, true, userStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput = v.document.Call("createElement", "div")
@@ -232,7 +233,7 @@ func (editor *View) onCompletionMsg(Msg string) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", Data: Msg})
 }
 
-func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editorElement, defaultDisplay bool, menu js.Value) {
+func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editorElement, defaultDisplay, adminOnly bool, menu js.Value) {
 	var buttonName string
 	v.childElements[title] = element // Store new element in map
 
@@ -250,7 +251,7 @@ func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editor
 		fetchBtn.Get("style").Call("setProperty", "display", "none")
 	}
 
-	v.menuButtons[buttonName] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay}
+	v.menuButtons[buttonName] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay, adminOnly: adminOnly}
 	menu.Call("appendChild", fetchBtn) // Append the button to the side menu
 	if element != nil {
 		v.elements.mainContent.Call("appendChild", element.GetDiv()) // Append the new element div to the main content

@@ -39,7 +39,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/trips/participantStatus"
+const ApiURL = "/tripsReport"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {

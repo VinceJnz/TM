@@ -97,7 +97,9 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 			val, ok := v.menuButtons[strings.ToLower(o.Resource)]
 			log.Printf(debugTag+"updateMenu()2 Menu val=%+v, MenuItem=%+v,okay=%v\n", val, o, ok)
 			if ok {
-				val.button.Get("style").Call("removeProperty", "display") // Remove property "display: none;" causes the menu button to be displayed
+				if !val.adminOnly {
+					val.button.Get("style").Call("removeProperty", "display") // Remove property "display: none;" causes the menu button to be displayed
+				}
 			}
 		}
 	}
