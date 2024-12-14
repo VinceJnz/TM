@@ -43,15 +43,17 @@ const ApiURL = "/tripsReport"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	TripID        int       `json:"trip_id"`
-	TripName      string    `json:"trip_name"`
-	FromDate      time.Time `json:"from_date"`
-	ToDate        time.Time `json:"to_date"`
-	BookingID     int       `json:"booking_id"`
-	ParticipantID int       `json:"participant_id"`
-	PersonID      int       `json:"person_id"`
-	Name          string    `json:"person_name"`
-	BookingStatus string    `json:"booking_status"`
+	TripID          int       `json:"trip_id"`
+	TripName        string    `json:"trip_name"`
+	FromDate        time.Time `json:"from_date"`
+	ToDate          time.Time `json:"to_date"`
+	MaxParticipants int       `json:"max_participants"`
+	BookingID       int       `json:"booking_id"`
+	ParticipantID   int       `json:"participant_id"`
+	PersonID        int       `json:"person_id"`
+	Name            string    `json:"person_name"`
+	BookingPosition int       `json:"booking_position"`
+	BookingStatus   string    `json:"booking_status"`
 }
 
 // ********************* This needs to be changed for each api **********************
@@ -194,7 +196,11 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", " Booking:"+strconv.Itoa(record.BookingID)+" (Participant:"+record.Name+", Status:"+record.BookingStatus+")")
+		if record.Name != "" {
+			itemDiv.Set("innerHTML", " Booking:"+strconv.Itoa(record.BookingID)+" (Participant:"+record.Name+", Status:"+record.BookingStatus+")")
+		} else {
+			itemDiv.Set("innerHTML", " Nil Bookings")
+		}
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		itemGropuDiv.Call("appendChild", itemDiv)
