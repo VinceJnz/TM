@@ -50,15 +50,17 @@ type TripType struct {
 
 // trip participant status list
 type TripParticipantStatus struct {
-	TripID        int         `json:"trip_id" db:"trip_id"`
-	TripName      string      `json:"trip_name" db:"trip_name"`
-	TripFrom      time.Time   `json:"from_date" db:"from_date"`
-	TripTo        time.Time   `json:"to_date" db:"to_date"`
-	BookingID     int         `json:"booking_id" db:"booking_id"`
-	ParticipantID int         `json:"participant_id" db:"participant_id"`
-	PersonID      int         `json:"person_id" db:"person_id"`
-	PersonName    string      `json:"person_name" db:"person_name"`
-	BookingStatus zero.String `json:"booking_status" db:"booking_status"`
+	TripID          int         `json:"trip_id" db:"trip_id"`
+	TripName        string      `json:"trip_name" db:"trip_name"`
+	TripFrom        time.Time   `json:"from_date" db:"from_date"`
+	TripTo          time.Time   `json:"to_date" db:"to_date"`
+	MaxParticipants int         `json:"max_participants" db:"max_participants"`
+	BookingID       zero.Int    `json:"booking_id" db:"booking_id"`
+	ParticipantID   zero.Int    `json:"participant_id" db:"participant_id"`
+	PersonID        zero.Int    `json:"person_id" db:"person_id"`
+	PersonName      zero.String `json:"person_name" db:"person_name"`
+	BookingPosition zero.Int    `json:"booking_position" db:"booking_position"`
+	BookingStatus   zero.String `json:"booking_status" db:"booking_status"`
 }
 
 // TripCost represents the at_trip_costs table
