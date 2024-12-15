@@ -1,6 +1,6 @@
 ############################################################
 # STAGE1: Use a lightweight Go image to build the WASM binary
-FROM golang:1.21.10-alpine AS wasmbuilder
+FROM golang:1.23.4-alpine AS wasmbuilder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -19,7 +19,7 @@ RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
 
 ############################################################
 # STAGE2: Use a lightweight Go image to build the webserver
-FROM golang:1.21.10-alpine AS webserverbuilder
+FROM golang:1.23.4-alpine AS webserverbuilder
 
 # Set working directory in the container
 WORKDIR /app
