@@ -69,7 +69,9 @@ CREATE TABLE IF NOT EXISTS at_bookings (
     to_date TIMESTAMP DEFAULT NULL,
     group_booking_id INTEGER, -- Is this booking for a group??
     booking_status_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    booking_date DATE NOT NULL,
+    booking_date DATE NOT NULL, -- The date the booking was made
+    payment_date DATE NOT NULL, -- The date the booking was paid for
+    booking_price NUMERIC(8,2), -- Use NUMERIC for string MONEY values.
     Created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (trip_id) REFERENCES at_trips(id),
