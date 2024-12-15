@@ -95,3 +95,15 @@ JOIN public.at_trips att ON att.id=booking_order.trip_id
 JOIN public.st_users stu ON stu.id=booking_order.person_id
 ORDER BY trip_id, booking_position;
 ```
+
+## Money
+
+Packages that support money in the database
+
+<https://pkg.go.dev/github.com/anz-bank/decimal>
+
+<https://pkg.go.dev/github.com/shopspring/decimal#NullDecimal>
+
+Use postgress numeric type to store money.
+
+<https://www.postgresql.org/docs/current/datatype-numeric.html>

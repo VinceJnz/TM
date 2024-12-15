@@ -62,9 +62,7 @@ func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.D
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	//log.Printf(debugTag+debugStr+"GetList()2 dest=%+v\n", dest)
-
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dest)

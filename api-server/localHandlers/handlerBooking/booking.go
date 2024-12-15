@@ -15,11 +15,11 @@ import (
 const debugTag = "handlerBooking."
 
 const (
-	qryGetAll = `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.created, ab.modified
+	qryGetAll = `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, ab.created, ab.modified
 					FROM public.at_bookings ab
 						JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id
 					WHERE ab.owner_id = $1 OR true=$2`
-	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified 
+	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, created, modified 
 					FROM at_bookings WHERE id = $1`
 	qryGetList = `SELECT atb.*, ebs.status, atbpcount.participants
 					FROM public.at_bookings atb
