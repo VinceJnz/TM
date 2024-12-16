@@ -261,6 +261,68 @@ CREATE TABLE IF NOT EXISTS st_users (
     --FOREIGN KEY (user_status_id) REFERENCES et_user_status(id)
 );
 
+CREATE TABLE st_user_group (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    group_id INTEGER NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (user_id) REFERENCES st_users(id)
+    --FOREIGN KEY (group_id) REFERENCES st_group(id)
+);
+
+CREATE TABLE st_group (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'SysAdmin', 'Admin', 'User'
+    description VARCHAR(45) DEFAULT NULL,
+    admin_flag BOOLEAN DEFAULT FALSE,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE st_group_resource (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL,
+    resource_id INTEGER NOT NULL, -- ID for the url to to access the resource
+    access_level_id INTEGER NOT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete' (OR: 'none', 'select', 'insert', 'update', 'delete')
+    access_type_id INTEGER NOT NULL, -- Example: 'admin', 'owner', 'user' ????? don't know if this is useful
+    admin_flag BOOLEAN DEFAULT FALSE,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (group_id) REFERENCES st_group(id)
+    --FOREIGN KEY (resource_id) REFERENCES st_resource(id)
+    --FOREIGN KEY (access_level_id) REFERENCES et_access_level(id)
+    --FOREIGN KEY (access_type_id) REFERENCES et_access_type(id)
+);
+
+-- Looking at how to deal with column restrictions
+-- One option is to store sql code in the db for each group resource. This could get messy.
+CREATE TABLE st_resource_column (
+    id SERIAL PRIMARY KEY,
+    resource_id INTEGER NOT NULL, -- ID for the url to to access the resource
+    access_level_id INTEGER NOT NULL,
+    access_type_id INTEGER NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (resource_id) REFERENCES st_resource(id)
+);
+
+CREATE TABLE et_resource (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'trips', 'users', 'bookings', 'user_status' (the url to to access the resource)
+    description VARCHAR(45) DEFAULT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for user status group
+CREATE TABLE et_user_account_status (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(255) NOT NULL, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE et_access_level (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'none', 'get', 'post', 'put', 'delete' (OR: 'none', 'select', 'insert', 'update', 'delete')
@@ -278,60 +340,9 @@ CREATE TABLE et_access_type (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE et_resource (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL, -- Example: 'trips', 'users', 'bookings', 'user_status' (the url to to access the resource)
-    description VARCHAR(45) DEFAULT NULL,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE et_token_valid (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'No', 'Yes'
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE TABLE st_group (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL, -- Example: 'SysAdmin', 'Admin', 'User'
-    description VARCHAR(45) DEFAULT NULL,
-    admin_flag BOOLEAN DEFAULT FALSE,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE st_group_resource (
-    id SERIAL PRIMARY KEY,
-    group_id INTEGER NOT NULL,
-    resource_id INTEGER NOT NULL, -- ID for the url to to access the resource
-    access_level_id INTEGER NOT NULL,
-    access_type_id INTEGER NOT NULL,
-    admin_flag BOOLEAN DEFAULT FALSE,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (group_id) REFERENCES st_group(id)
-    --FOREIGN KEY (resource_id) REFERENCES st_resource(id)
-    --FOREIGN KEY (access_level_id) REFERENCES et_access_level(id)
-    --FOREIGN KEY (access_type_id) REFERENCES et_access_type(id)
-);
-
-CREATE TABLE st_user_group (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    group_id INTEGER NOT NULL,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (user_id) REFERENCES st_users(id)
-    --FOREIGN KEY (group_id) REFERENCES st_group(id)
-);
-
--- Table for user status group
-CREATE TABLE et_user_account_status (
-    id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
