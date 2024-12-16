@@ -73,6 +73,7 @@ type UI struct {
 	FromDate        js.Value
 	ToDate          js.Value
 	BookingStatusID js.Value
+	BookingDate     js.Value
 	PaymentDate     js.Value
 	BookingPrice    js.Value
 }
@@ -225,7 +226,13 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.Children.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
+	localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
+	//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
 	localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.Layout), editor.document, "Payment", "date", "itemPaymentDate")
+	//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
+	localObjs.BookingPrice, editor.UiComponents.BookingPrice = viewHelpers.StringEdit(editor.CurrentRecord.BookingPrice.Decimal.String(), editor.document, "Booking Price", "number", "itemBookingPrice")
 	//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
@@ -233,7 +240,9 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.FromDate)
 	form.Call("appendChild", localObjs.ToDate)
 	form.Call("appendChild", localObjs.BookingStatusID)
+	form.Call("appendChild", localObjs.BookingDate)
 	form.Call("appendChild", localObjs.PaymentDate)
+	form.Call("appendChild", localObjs.BookingPrice)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -288,17 +297,29 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
 	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing from date:", err)
+		log.Println("Error parsing value:", err)
 	}
 	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing to date:", err)
+		log.Println("Error parsing value:", err)
 	}
 	//editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
 	editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing booking id:", err)
+		log.Println("Error parsing value:", err)
 	}
+
+	editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BookingDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing value:", err)
+	}
+
+	editor.CurrentRecord.PaymentDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.PaymentDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing value:", err)
+	}
+
+	editor.CurrentRecord.BookingPrice.UnmarshalText([]byte(editor.UiComponents.BookingPrice.Get("value").String()))
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
