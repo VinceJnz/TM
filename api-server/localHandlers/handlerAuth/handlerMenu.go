@@ -29,14 +29,14 @@ const (
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.Db, h.appConf)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuUserGet()1 session=%+v", session)
 	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &models.MenuUser{}, sqlMenuUser, session.UserID)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.Db, h.appConf)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuListGet()1 session=%+v", session)
 	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID)
 }

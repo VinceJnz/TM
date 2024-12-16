@@ -31,9 +31,12 @@ const (
 	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
         			VALUES ($1, $2, $3, $4, $5, $6) 
 					RETURNING id`
+	qryUpdateAdmin = `UPDATE at_bookings 
+					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_date, payment_date, booking_price) = ($2, $3, $4, $5, $6, %7, %8, $9)
+					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
-					SET owner_id = $1, trip_id = $2, notes = $3, from_date = $4, to_date = $5, booking_status_id = $6 
-					WHERE id = $7`
+					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id) = ($2, $3, $4, $5, $6, $7)
+					WHERE id = $1`
 	qryDelete = `DELETE FROM at_bookings WHERE id = $1`
 )
 
@@ -47,12 +50,8 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session)
-	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
-		return
-	}
-	log.Printf(debugTag+"GetAll()1 userID=%v, adminFlag=%v\n", session.UserID, session.AdminFlag)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	//log.Printf(debugTag+"GetAll()1 userID=%v, adminFlag=%v\n", session.UserID, session.AdminFlag)
 
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
 	//handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
@@ -92,7 +91,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
+	var columns []interface{}
+	var sqlQry string
+
 	id := handlerStandardTemplate.GetID(w, r)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
@@ -107,7 +110,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, id)
+	if session.AdminFlag {
+		columns = append(columns, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
+		sqlQry = qryUpdateAdmin
+	} else {
+		columns = append(columns, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+		sqlQry = qryUpdate
+	}
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, sqlQry, columns)
 }
 
 // Delete: removes a record identified by id

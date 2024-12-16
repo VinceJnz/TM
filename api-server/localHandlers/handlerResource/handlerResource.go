@@ -18,7 +18,7 @@ const (
 					VALUES ($1, $2)
 					RETURNING id`
 	qryUpdate = `UPDATE et_resource 
-					SET name = $1, description = $2
+					SET (name, description) = ($1, $2)
 					WHERE id = $3`
 	qryDelete = `DELETE FROM et_resource WHERE id = $1`
 )
