@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"syscall/js"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 const debugTag = "bookingView."
@@ -46,21 +48,23 @@ const ApiURL = "/bookings"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID              int       `json:"id"`
-	OwnerID         int       `json:"owner_id"`
-	TripID          int       `json:"trip_id"`
-	PersonID        int       `json:"person_id"`
-	Notes           string    `json:"notes"`
-	FromDate        time.Time `json:"from_date"`
-	ToDate          time.Time `json:"to_date"`
-	Participants    int       `json:"participants"` // Report generated field
-	GroupBookingID  int       `json:"group_booking_id"`
-	GroupBooking    string    `json:"group_booking"` // Report generated field
-	BookingStatusID int       `json:"booking_status_id"`
-	BookingStatus   string    `json:"booking_status"` // Report generated field
-	BookingDate     time.Time `json:"booking_date"`
-	Created         time.Time `json:"created"`
-	Modified        time.Time `json:"modified"`
+	ID              int                 `json:"id"`
+	OwnerID         int                 `json:"owner_id"`
+	TripID          int                 `json:"trip_id"`
+	PersonID        int                 `json:"person_id"`
+	Notes           string              `json:"notes"`
+	FromDate        time.Time           `json:"from_date"`
+	ToDate          time.Time           `json:"to_date"`
+	Participants    int                 `json:"participants"` // Report generated field
+	GroupBookingID  int                 `json:"group_booking_id"`
+	GroupBooking    string              `json:"group_booking"` // Report generated field
+	BookingStatusID int                 `json:"booking_status_id"`
+	BookingStatus   string              `json:"booking_status"` // Report generated field
+	BookingDate     time.Time           `json:"booking_date"`
+	PaymentDate     time.Time           `json:"payment_date"`
+	BookingPrice    decimal.NullDecimal `json:"booking_price"`
+	Created         time.Time           `json:"created"`
+	Modified        time.Time           `json:"modified"`
 }
 
 // ********************* This needs to be changed for each api **********************
@@ -69,6 +73,8 @@ type UI struct {
 	FromDate        js.Value
 	ToDate          js.Value
 	BookingStatusID js.Value
+	PaymentDate     js.Value
+	BookingPrice    js.Value
 }
 
 type ParentData struct {
@@ -219,11 +225,15 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.Children.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
+	localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.Layout), editor.document, "Payment", "date", "itemPaymentDate")
+	//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Notes)
 	form.Call("appendChild", localObjs.FromDate)
 	form.Call("appendChild", localObjs.ToDate)
 	form.Call("appendChild", localObjs.BookingStatusID)
+	form.Call("appendChild", localObjs.PaymentDate)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
