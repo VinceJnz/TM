@@ -198,7 +198,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.AuthCheckClientProof()11: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", *sessionToken)
+	//log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.AuthCheckClientProof()11: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", *sessionToken)
 
 	// If all okay we can set the sessionCookie and let the user know
 	http.SetCookie(w, sessionToken)

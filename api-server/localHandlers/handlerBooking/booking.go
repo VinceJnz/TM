@@ -138,9 +138,9 @@ func (h *Handler) ParentRecordValidation(record models.Booking) error {
 	validationRecord := models.Trip{}
 	err := h.appConf.Db.Get(&validationRecord, sqlBookingParentRecordValidation, parentID)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf(debugTag + "ParentRecordValidation()1 - Record not found" + err.Error())
+		return fmt.Errorf(debugTag+"ParentRecordValidation()1 - Record not found: error message = %s", err.Error())
 	} else if err != nil {
-		return fmt.Errorf(debugTag + "ParentRecordValidation()2 - Internal Server Error: " + err.Error())
+		return fmt.Errorf(debugTag+"ParentRecordValidation()2 - Internal Server Error:  error message = %s", err.Error())
 	}
 
 	if record.FromDate.Before(validationRecord.FromDate) {
