@@ -73,10 +73,10 @@ type ItemEditor struct {
 	Div           js.Value
 	EditDiv       js.Value
 	ListDiv       js.Value
-	StateDiv      js.Value
-	ParentID      int
-	ViewState     ViewState
-	RecordState   RecordState
+	//StateDiv      js.Value
+	ParentID    int
+	ViewState   ViewState
+	RecordState RecordState
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -103,9 +103,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Create a div for displaying ItemState
-	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
+	//editor.StateDiv = editor.document.Call("createElement", "div")
+	//editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
+	//editor.Div.Call("appendChild", editor.StateDiv)
 
 	// Store supplied parent value
 	if len(idList) == 1 {
@@ -361,6 +361,12 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: viewHelpers.ItemState(newState)})
+	editor.ItemState = newState
+}
+
+/*
+func (editor *ItemEditor) XXupdateStateDisplay(newState ItemState) {
 	editor.ItemState = newState
 	var stateText string
 	switch editor.ItemState {
@@ -384,5 +390,6 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 
 	editor.StateDiv.Set("textContent", "Current State: "+stateText)
 }
+*/
 
 // Event handlers and event data types

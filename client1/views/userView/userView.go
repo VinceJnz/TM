@@ -452,28 +452,8 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: viewHelpers.ItemState(newState)})
 	editor.ItemState = newState
-	var stateText string
-	switch editor.ItemState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
-
-	editor.StateDiv.Set("textContent", "Current State: "+stateText)
 }
 
 // Event handlers and event data types

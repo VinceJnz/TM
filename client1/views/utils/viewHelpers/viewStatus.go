@@ -31,7 +31,7 @@ func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
 	}
 }
 
-func (i *ItemStateView) UpdateStatus(newState ItemState) ItemState {
+func (i *ItemStateView) UpdateStatus(newState ItemState) {
 	var stateText string
 	switch newState {
 	case ItemStateNone:
@@ -52,8 +52,15 @@ func (i *ItemStateView) UpdateStatus(newState ItemState) ItemState {
 		stateText = "Unknown State"
 	}
 
-	i.stateDiv.Set("textContent", "Current State: "+stateText)
-	return newState
+	message := time.Now().Local().Format("15.04.05 02-01-2006") + `  State="` + stateText + `"`
+	msgDiv := i.document.Call("createElement", "div")
+	msgDiv.Set("innerHTML", message)
+	i.stateDiv.Call("appendChild", msgDiv)
+	go func() {
+		time.Sleep(30 * time.Second) // Wait for the specified duration
+		msgDiv.Call("remove")
+	}()
+	//i.stateDiv.Set("textContent", "Current State: "+stateText)
 }
 
 // updateStatus is an event handler the updates the status on the main page.
