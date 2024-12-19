@@ -41,7 +41,7 @@ func (editor *View) updateStatus(event eventProcessor.Event) {
 		log.Printf(debugTag+"updateStatus()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
 		return
 	}
-	editor.ItemState.UpdateStatus(state)
+	editor.ItemState.UpdateStatus(state, event.DebugTag)
 }
 
 // displayMessage is an event handler the displays a message on the main page.

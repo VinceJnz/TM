@@ -40,9 +40,9 @@ func (editor *View) getMenuUser() {
 	}
 
 	go func() {
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching, debugTag)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil, success, fail)
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 	}()
 }
 
@@ -70,9 +70,9 @@ func (editor *View) getMenuList() {
 	}
 
 	go func() {
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching, debugTag)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuList/", &menuList, nil, success, fail)
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 	}()
 }
 

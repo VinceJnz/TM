@@ -60,7 +60,7 @@ func (editor *View) OnAction(action interface{}) {
 	switch a := action.(type) {
 	case *SetStatus:
 		//log.Printf("%v %v %+v %v %+v", debugTag+"Store.OnAction()a.ReadList", "a =", a, "s.Items =", s.Items)
-		editor.ItemState.UpdateStatus(a.ItemState)
+		editor.ItemState.UpdateStatus(a.ItemState, a.DebugTag)
 	case *DisplayMessage:
 		//log.Printf("%v %v %+v %v %+v", debugTag+"Store.OnAction()a.ReadList", "a =", a, "s.Items =", s.Items)
 		editor.ItemState.DisplayMessage(a.Message)
@@ -86,6 +86,7 @@ func (editor *View) OnAction(action interface{}) {
 // Actions
 // SetStatus is an event handler the updates the page status on the main page.
 type SetStatus struct {
+	DebugTag  string
 	Time      time.Time
 	ItemState viewHelpers.ItemState
 	//CallbackSuccess func(error)
@@ -94,22 +95,25 @@ type SetStatus struct {
 
 // SetStatus is an event handler the updates the page status on the main page.
 type DisplayMessage struct {
-	Time    time.Time
-	Message string
+	DebugTag string
+	Time     time.Time
+	Message  string
 	//CallbackSuccess func(error)
 	//CallbackFail    func(error)
 }
 
 // SetStatus is an event handler the updates the page status on the main page.
 type ResetMenu struct {
-	Time    time.Time
-	Message string
+	DebugTag string
+	Time     time.Time
+	Message  string
 	//CallbackSuccess func(error)
 	//CallbackFail    func(error)
 }
 
 // SetStatus is an event handler the updates the page status on the main page.
 type SetMenu struct {
+	DebugTag string
 	Time     time.Time
 	MenuData UpdateMenu
 	//CallbackSuccess func(error)
@@ -118,6 +122,7 @@ type SetMenu struct {
 
 // SetStatus is an event handler the updates the page status on the main page.
 type LoginComplete struct {
+	DebugTag string
 	Time     time.Time
 	Username string
 	//CallbackSuccess func(error)
@@ -126,8 +131,9 @@ type LoginComplete struct {
 
 // SetStatus is an event handler the updates the page status on the main page.
 type LogoutComplete struct {
-	Time    time.Time
-	Message string
+	DebugTag string
+	Time     time.Time
+	Message  string
 	//CallbackSuccess func(error)
 	//CallbackFail    func(error)
 }

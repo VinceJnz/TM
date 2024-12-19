@@ -31,7 +31,7 @@ func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
 	}
 }
 
-func (i *ItemStateView) UpdateStatus(newState ItemState) {
+func (i *ItemStateView) UpdateStatus(newState ItemState, debugTag string) {
 	var stateText string
 	switch newState {
 	case ItemStateNone:
