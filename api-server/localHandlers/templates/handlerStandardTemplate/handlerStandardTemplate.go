@@ -16,7 +16,7 @@ import (
 const debugTag = "handlerStandardTemplate."
 
 // GetAll: retrieves and returns all records
-func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
+func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string) {
 	err := Db.Select(dest, query)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)

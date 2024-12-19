@@ -41,7 +41,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll, nil)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll)
 
 	records := []models.BookingPeople{}
 	err := h.appConf.Db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified

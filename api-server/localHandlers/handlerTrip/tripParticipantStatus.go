@@ -1,9 +1,8 @@
 package handlerTrip
 
 import (
+	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
-	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 )
@@ -31,7 +30,11 @@ const (
 				booking_order.booking_id,
 				participant_id,
 				booking_order.person_id,
-				stu.name as person_name,
+				--stu.name as person_name,
+				CASE
+                    WHEN stu.user_account_hidden AND $1=false THEN 'name hidden'
+                    ELSE stu.name
+                END as person_name,
 				--booking_order.booking_status_id,
 				booking_position,
 				CASE
@@ -48,19 +51,23 @@ const (
 
 // GetBookingStatus: retrieves and returns all records with the status of each users booking (trip participant booking status list)
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
-	records := []models.TripParticipantStatus{}
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	log.Printf("%vGetParticipantStatus()1 session=%+v\n", debugTag, session)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.TripParticipantStatus{}, sqlGetParticipantStatus, session.AdminFlag)
+	/*
+		records := []models.TripParticipantStatus{}
+		err := h.appConf.Db.Select(&records, sqlGetParticipantStatus)
 
-	err := h.appConf.Db.Select(&records, sqlGetParticipantStatus)
+		if err == sql.ErrNoRows {
+			http.Error(w, "Record not found", http.StatusNotFound)
+			return
+		} else if err != nil {
+			log.Printf("%v.GetBookingStatus()2 %v\n", debugTag, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.GetBookingStatus()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(records)
+	*/
 }

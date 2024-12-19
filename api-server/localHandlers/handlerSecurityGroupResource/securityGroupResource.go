@@ -35,7 +35,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.GroupResource{}, qryGetAll, nil)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.GroupResource{}, qryGetAll)
 }
 
 // Get: retrieves and returns a single record identified by id

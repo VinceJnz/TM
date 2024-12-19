@@ -37,7 +37,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.TripCost{}, qryGetAll, nil)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.TripCost{}, qryGetAll)
 }
 
 // Get: retrieves a single trip cost by ID

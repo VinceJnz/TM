@@ -29,7 +29,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all group bookings
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.GroupBooking{}, qryGetAll, nil)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.GroupBooking{}, qryGetAll)
 }
 
 // Get: retrieves and returns a single group booking identified by id

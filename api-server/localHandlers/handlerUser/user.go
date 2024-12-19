@@ -30,7 +30,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.User{}, qryGetAll, nil)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.User{}, qryGetAll)
 }
 
 // Get: retrieves and returns a single record identified by id
@@ -47,7 +47,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.UserStatusID, record.AccountStatusID)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.UserStatusID, record.AccountStatusID, record.AccountHidden)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
@@ -62,7 +62,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.UserStatusID, record.AccountStatusID)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.UserStatusID, record.AccountStatusID, record.AccountHidden)
 }
 
 // Delete: removes a record identified by id

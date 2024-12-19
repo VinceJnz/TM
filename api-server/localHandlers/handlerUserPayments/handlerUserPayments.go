@@ -36,7 +36,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.UserPayments{}, qryGetAll, nil)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.UserPayments{}, qryGetAll)
 }
 
 // Get: retrieves and returns a list of records identified by parent id
