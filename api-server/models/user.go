@@ -31,6 +31,7 @@ type User struct {
 	Salt            []byte      `json:"salt" db:"salt"`
 	Verifier        *big.Int    `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
 	AccountStatusID zero.Int    `json:"user_account_status_id" db:"user_account_status_id"`
+	AccountHidden   zero.Bool   `json:"user_account_hidden" db:"user_account_hidden"`
 	Created         time.Time   `json:"created" db:"created"`
 	Modified        time.Time   `json:"modified" db:"modified"`
 }

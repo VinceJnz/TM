@@ -29,7 +29,7 @@ const (
 					LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`
 	qryCreate = `INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
-	qryUpdate = `UPDATE at_trips SET trip_name = $1, location = $2, from_date = $3, to_date = $4, max_participants = $5, trip_status_id = $6 WHERE id = $7`
+	qryUpdate = `UPDATE at_trips SET (trip_name, location, from_date, to_date, max_participants, trip_status_id) = ($2, $3, $4, $5, $6, $7)	WHERE id = $1`
 	qryDelete = `DELETE FROM at_trips WHERE id = $1`
 )
 
@@ -97,7 +97,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, id)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID)
 }
 
 // Delete: removes a record identified by id

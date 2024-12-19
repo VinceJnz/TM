@@ -9,40 +9,6 @@ import (
 )
 
 const (
-	OLD2sqlGetParticipantStatus = `WITH booking_order AS (
-			SELECT 
-				atb.trip_id,
-				atb.booking_status_id,
-				atb.id as booking_id,
-				atbp.id as participant_id,
-				atbp.person_id as person_id,
-				ROW_NUMBER() OVER (PARTITION BY atb.trip_id ORDER BY atb.booking_status_id DESC, atbp.id ASC) AS booking_position
-			FROM public.at_booking_people atbp
-			JOIN public.at_bookings atb ON atb.id=atbp.booking_id
-			)
-			SELECT 
-				att.id AS trip_id,
-				att.trip_name,
-				att.from_date,
-				att.to_date,
-				att.max_participants,
-				booking_order.booking_id,
-				participant_id,
-				booking_order.person_id,
-				stu.name as person_name,
-				--booking_order.booking_status_id,
-				booking_position,
-				CASE
-					WHEN (booking_position <= att.max_participants AND booking_status_id = 3)  THEN 'before_threshold_paid' 
-					WHEN (booking_position <= att.max_participants AND booking_status_id = 1)  THEN 'before_threshold' 
-					WHEN (booking_position > att.max_participants) THEN 'after_threshold'
-					ELSE 'n/a'
-				END AS booking_status
-			FROM public.at_trips att
-			LEFT JOIN booking_order ON att.id=booking_order.trip_id
-			LEFT JOIN public.st_users stu ON stu.id=booking_order.person_id
-			ORDER BY trip_id, booking_position;`
-
 	sqlGetParticipantStatus = `WITH booking_order AS (
 			SELECT 
 				atb.trip_id,
