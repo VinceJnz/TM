@@ -211,7 +211,7 @@ CREATE TABLE et_user_age_groups (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for user status group
+-- Table for user status
 CREATE TABLE et_user_status (
     id SERIAL PRIMARY KEY,
     status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
@@ -249,11 +249,12 @@ CREATE TABLE IF NOT EXISTS st_users (
     member_code VARCHAR(20),
     user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
     user_age_group_id INTEGER NOT NULL DEFAULT 0,
-    user_status_id INTEGER NOT NULL DEFAULT 0,  -- Default value set to 0
+    user_status_id INTEGER NOT NULL DEFAULT 0, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
     user_password VARCHAR(45) DEFAULT NULL, -- This will probably not be used (see: salt, verifier)
     salt BYTEA DEFAULT NULL, -- varbinary(30)
     verifier BYTEA DEFAULT NULL, -- varbinary(500)
-    user_account_status_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
+    user_account_status_id INT NOT NULL DEFAULT 0, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
+    user_account_hidden BOOLEAN, -- Hide the user account from the public, Admins can still see it
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
