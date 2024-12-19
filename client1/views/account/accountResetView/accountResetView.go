@@ -145,6 +145,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	return editor
 }
 
+func (editor *ItemEditor) ResetView() {
+	editor.RecordState = RecordStateReloadRequired
+	editor.EditDiv.Set("innerHTML", "")
+	//editor.ListDiv.Set("innerHTML", "")
+}
+
 func (editor *ItemEditor) GetDiv() js.Value {
 	return editor.Div
 }

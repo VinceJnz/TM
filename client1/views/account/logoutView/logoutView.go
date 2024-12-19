@@ -115,6 +115,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	return editor
 }
 
+func (editor *ItemEditor) ResetView() {
+	editor.RecordState = RecordStateReloadRequired
+	//editor.EditDiv.Set("innerHTML", "")
+	//editor.ListDiv.Set("innerHTML", "")
+}
+
 func (editor *ItemEditor) GetDiv() js.Value {
 	return editor.Div
 }
@@ -247,16 +253,14 @@ func (editor *ItemEditor) FetchItems() {
 	success := func(err error) {
 		if err != nil {
 			log.Printf("%v %v %v", debugTag+"FetchItems()1 success: ", "err =", err) //Log the error in the browser
+			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Logout failed, error: " + err.Error()})
 		}
-		log.Printf("%v", debugTag+"FetchItems()2 success") //Log the error in the browser
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", DebugTag: debugTag, Data: nil})
 	}
 
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/logout/", nil, nil, success)
-		//log.Printf(debugTag+"FetchItems()2 records=%+v", records)
-		log.Printf(debugTag + "FetchItems()2 done")
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 }

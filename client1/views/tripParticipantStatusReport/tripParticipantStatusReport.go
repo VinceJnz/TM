@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
+	"log"
 	"net/http"
 	"strconv"
 	"syscall/js"
@@ -77,12 +78,11 @@ type ItemEditor struct {
 	ItemList      []Item
 	UiComponents  UI
 	Div           js.Value
-	EditDiv       js.Value
-	ListDiv       js.Value
-	StateDiv      js.Value
-	ParentID      int
-	ViewState     ViewState
-	RecordState   RecordState
+	//EditDiv       js.Value
+	ListDiv     js.Value
+	ParentID    int
+	ViewState   ViewState
+	RecordState RecordState
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -103,11 +103,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.ListDiv.Set("id", debugTag+"itemList")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
-	// Create a div for displaying ItemState
-	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
-
 	// Store supplied parent value
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
@@ -119,6 +114,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	//..........
 
 	return editor
+}
+
+func (editor *ItemEditor) ResetView() {
+	editor.RecordState = RecordStateReloadRequired
+	//editor.EditDiv.Set("innerHTML", "")
+	editor.ListDiv.Set("innerHTML", "")
 }
 
 func (editor *ItemEditor) GetDiv() js.Value {
@@ -146,26 +147,25 @@ func (editor *ItemEditor) Display() {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	/*
-		successCallBack := func(err error) {
-			log.Printf(debugTag+"FetchItems()1 success msg: %v", err)
-		}
+	var records []TableData
 
-		failureCallBack := func(err error) {
-			log.Printf(debugTag+"FetchItems()1 failure err: %v", err)
-		}
-	*/
+	success := func(err error) {
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
+	}
+
+	failure := func(err error) {
+		log.Printf(debugTag+"FetchItems()1 failure err: %v", err)
+	}
+
 	if editor.RecordState == RecordStateReloadRequired {
+		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
 		//.....
 		go func() {
-			var records []TableData
-			editor.updateStateDisplay(viewHelpers.ItemStateFetching)
-			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(viewHelpers.ItemStateNone)
+			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil, success, failure)
 		}()
 	}
 }

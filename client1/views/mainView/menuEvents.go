@@ -58,6 +58,7 @@ func (v *View) displayMessage(event eventProcessor.Event) {
 func (v *View) logoutComplete(event eventProcessor.Event) {
 	v.elements.userDisplay.Set("innerHTML", "")
 	v.resetMenu(event)
+	v.ResetViewItems()
 }
 
 // loginComplete is an event handler the updates the login status in the Navbar on the main page.

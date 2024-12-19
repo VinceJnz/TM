@@ -80,11 +80,10 @@ type ItemEditor struct {
 	Div           js.Value
 	EditDiv       js.Value
 	ListDiv       js.Value
-	//StateDiv      js.Value
-	ParentID    int
-	ViewState   ViewState
-	RecordState RecordState
-	Children    children
+	ParentID      int
+	ViewState     ViewState
+	RecordState   RecordState
+	Children      children
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -110,15 +109,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.ListDiv.Set("id", debugTag+"itemListDiv")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
-	// Create a div for displaying ItemState
-	//editor.StateDiv = editor.document.Call("createElement", "div")
-	//editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	//editor.Div.Call("appendChild", editor.StateDiv)
-
-	//editor.Hide()
-	//form := viewHelpers.Form(js.Global().Get("document"), "editForm")
-	//editor.Div.Call("appendChild", form)
-
 	// Store supplied parent value
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
@@ -135,6 +125,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	//editor.Children.TripStatus.FetchItems()
 
 	return editor
+}
+
+func (editor *ItemEditor) ResetView() {
+	editor.RecordState = RecordStateReloadRequired
+	editor.EditDiv.Set("innerHTML", "")
+	editor.ListDiv.Set("innerHTML", "")
 }
 
 func (editor *ItemEditor) GetDiv() js.Value {

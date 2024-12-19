@@ -61,6 +61,7 @@ type TableData struct {
 	Salt                []byte    `json:"salt"`
 	Verifier            *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
 	UserAccountStatusID int       `json:"user_account_status_id"`
+	UserAccountHidden   bool      `json:"user_account_hidden"`
 	Created             time.Time `json:"created"`
 	Modified            time.Time `json:"modified"`
 }
@@ -76,6 +77,7 @@ type UI struct {
 	UserAgeGroupID      js.Value
 	UserStatusID        js.Value
 	UserAccountStatusID js.Value
+	UserAccountHidden   js.Value
 }
 
 type children struct {
@@ -97,7 +99,6 @@ type ItemEditor struct {
 	Div           js.Value
 	EditDiv       js.Value
 	ListDiv       js.Value
-	StateDiv      js.Value
 	ParentID      int
 	ViewState     ViewState
 	RecordState   RecordState
@@ -127,11 +128,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.ListDiv.Set("id", debugTag+"itemListDiv")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
-	// Create a div for displaying ItemState
-	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
-
 	// Store supplied parent value
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
@@ -151,6 +147,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	//editor.Children.userAccountStatus.FetchItems()
 
 	return editor
+}
+
+func (editor *ItemEditor) ResetView() {
+	editor.RecordState = RecordStateReloadRequired
+	editor.EditDiv.Set("innerHTML", "")
+	editor.ListDiv.Set("innerHTML", "")
 }
 
 func (editor *ItemEditor) GetDiv() js.Value {
@@ -257,6 +259,9 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.UserAccountStatusID, editor.UiComponents.UserAccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.UserAccountStatusID, "Account Status", "itemAccountStatus")
 	//editor.UiComponents.AccountStatusID.Call("setAttribute", "required", "true")
 
+	localObjs.UserAccountHidden, editor.UiComponents.UserAccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.UserAccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
+	//editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
+
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
@@ -267,6 +272,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.UserAgeGroupID)
 	form.Call("appendChild", localObjs.UserStatusID)
 	form.Call("appendChild", localObjs.UserAccountStatusID)
+	form.Call("appendChild", localObjs.UserAccountHidden)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -306,6 +312,17 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 
 	// ********************* This needs to be changed for each api **********************
+	//form.Call("appendChild", localObjs.Name)
+	//form.Call("appendChild", localObjs.Username)
+	//form.Call("appendChild", localObjs.Email)
+	//form.Call("appendChild", localObjs.Address)
+	//form.Call("appendChild", localObjs.MemberCode)
+	//form.Call("appendChild", localObjs.BirthDate)
+	//form.Call("appendChild", localObjs.UserAgeGroupID)
+	//form.Call("appendChild", localObjs.UserStatusID)
+	//form.Call("appendChild", localObjs.UserAccountStatusID)
+	//form.Call("appendChild", localObjs.UserAccountHidden)
+
 	var err error
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
@@ -333,6 +350,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing User Account Status:", err)
 		return nil
 	}
+	editor.CurrentRecord.UserAccountHidden = editor.UiComponents.UserAccountHidden.Get("checked").Bool()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique

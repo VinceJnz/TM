@@ -53,6 +53,7 @@ type editorElement interface {
 	FetchItems()
 	Hide()
 	GetDiv() js.Value
+	ResetView()
 	//NewItemData()
 	//SubmitItemEdit(this js.Value, p []js.Value) interface{}
 	//Toggle()
@@ -104,16 +105,23 @@ type View struct {
 }
 
 func New(client *httpProcessor.Client) *View {
-	view := &View{
+	v := &View{
 		client:        client,
 		document:      js.Global().Get("document"),
 		childElements: map[string]editorElement{},
 		menuButtons:   map[string]buttonElement{},
 	}
 	window := js.Global().Get("window")
-	window.Call("addEventListener", "onbeforeunload", js.FuncOf(view.BeforeUnload))
+	window.Call("addEventListener", "onbeforeunload", js.FuncOf(v.BeforeUnload))
 
-	return view
+	v.events = eventProcessor.New()
+	v.events.AddEventHandler("updateStatus", v.updateStatus)
+	v.events.AddEventHandler("displayMessage", v.displayMessage)
+	v.events.AddEventHandler("resetMenu", v.resetMenu)
+	v.events.AddEventHandler("updateMenu", v.updateMenu)
+	v.events.AddEventHandler("loginComplete", v.loginComplete)
+	v.events.AddEventHandler("logoutComplete", v.logoutComplete)
+	return v
 }
 
 func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
@@ -122,13 +130,13 @@ func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
 }
 
 func (v *View) Setup() {
-	v.events = eventProcessor.New()
-	v.events.AddEventHandler("updateStatus", v.updateStatus)
-	v.events.AddEventHandler("displayMessage", v.displayMessage)
-	v.events.AddEventHandler("resetMenu", v.resetMenu)
-	v.events.AddEventHandler("updateMenu", v.updateMenu)
-	v.events.AddEventHandler("loginComplete", v.loginComplete)
-	v.events.AddEventHandler("logoutComplete", v.logoutComplete)
+	//v.events = eventProcessor.New()
+	//v.events.AddEventHandler("updateStatus", v.updateStatus)
+	//v.events.AddEventHandler("displayMessage", v.displayMessage)
+	//v.events.AddEventHandler("resetMenu", v.resetMenu)
+	//v.events.AddEventHandler("updateMenu", v.updateMenu)
+	//v.events.AddEventHandler("loginComplete", v.loginComplete)
+	//v.events.AddEventHandler("logoutComplete", v.logoutComplete)
 
 	// Create new body element and other page elements
 	newBody := v.document.Call("createElement", "body")
@@ -230,6 +238,14 @@ func (v *View) Setup() {
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *View) onCompletionMsg(Msg string) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+}
+
+func (v *View) ResetViewItems() {
+	for _, element := range v.childElements {
+		if element != nil {
+			element.ResetView()
+		}
+	}
 }
 
 func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editorElement, defaultDisplay, adminOnly bool, menu js.Value) {
