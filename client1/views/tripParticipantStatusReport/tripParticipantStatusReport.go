@@ -72,7 +72,7 @@ type ItemEditor struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
-	ItemState     ItemState
+	ItemState     viewHelpers.ItemState
 	Records       []TableData
 	ItemList      []Item
 	UiComponents  UI
@@ -92,7 +92,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.document = document
 	editor.events = eventProcessor
 
-	editor.ItemState = ItemStateNone
+	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
@@ -161,11 +161,11 @@ func (editor *ItemEditor) FetchItems() {
 		//.....
 		go func() {
 			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
+			editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
+			editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		}()
 	}
 }
@@ -233,29 +233,9 @@ func (editor *ItemEditor) populateItemList() {
 	}
 }
 
-func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
 	editor.ItemState = newState
-	var stateText string
-	switch editor.ItemState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
-
-	editor.StateDiv.Set("textContent", "Current State: "+stateText)
 }
 
 // Event handlers and event data types

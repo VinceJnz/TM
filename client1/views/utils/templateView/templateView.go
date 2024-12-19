@@ -126,7 +126,7 @@ func (v *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (v *ItemEditor) onCompletionMsg(Msg string) {
-	v.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", Data: Msg})
+	v.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data

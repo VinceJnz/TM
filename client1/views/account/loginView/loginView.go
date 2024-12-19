@@ -84,7 +84,7 @@ type ItemEditor struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
-	ItemState     ItemState
+	ItemState     viewHelpers.ItemState
 	Records       []TableData
 	UiComponents  UI
 	ParentID      int
@@ -103,7 +103,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.document = document
 	editor.events = eventProcessor
 
-	editor.ItemState = ItemStateNone
+	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor
 	editor.elements.Div = editor.document.Call("createElement", "div")
@@ -163,7 +163,7 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData() {
-	editor.updateStateDisplay(ItemStateAdding)
+	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
 	// Set default values for the new record // ********************* This needs to be changed for each api **********************
@@ -178,7 +178,7 @@ func (editor *ItemEditor) NewItemData() {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -242,7 +242,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.UiComponents = UI{}
 
 	// Update state
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 }
 
 // SubmitItemEdit handles the submission of the item edit form
@@ -300,29 +300,9 @@ func (editor *ItemEditor) FetchItems() {
 //func (editor *ItemEditor) populateItemList() {
 //}
 
-func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
 	editor.ItemState = newState
-	var stateText string
-	switch editor.ItemState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
-
-	editor.elements.StateDiv.Set("textContent", "Current State: "+stateText)
 }
 
 // Event handlers and event data types

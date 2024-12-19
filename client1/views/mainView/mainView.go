@@ -123,7 +123,7 @@ func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
 
 func (v *View) Setup() {
 	v.events = eventProcessor.New()
-	v.events.AddEventHandler("updateStatus", v.updateState)
+	v.events.AddEventHandler("updateStatus", v.updateStatus)
 	v.events.AddEventHandler("displayMessage", v.displayMessage)
 	v.events.AddEventHandler("resetMenu", v.resetMenu)
 	v.events.AddEventHandler("updateMenu", v.updateMenu)
@@ -229,8 +229,7 @@ func (v *View) Setup() {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *View) onCompletionMsg(Msg string) {
-	//editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", Data: Msg})
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
 }
 
 func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editorElement, defaultDisplay, adminOnly bool, menu js.Value) {

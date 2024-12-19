@@ -60,7 +60,7 @@ func (editor *View) OnAction(action interface{}) {
 	switch a := action.(type) {
 	case *SetStatus:
 		//log.Printf("%v %v %+v %v %+v", debugTag+"Store.OnAction()a.ReadList", "a =", a, "s.Items =", s.Items)
-		editor.ItemState.UpdateState(a.ItemState)
+		editor.ItemState.UpdateStatus(a.ItemState)
 	case *DisplayMessage:
 		//log.Printf("%v %v %+v %v %+v", debugTag+"Store.OnAction()a.ReadList", "a =", a, "s.Items =", s.Items)
 		editor.ItemState.DisplayMessage(a.Message)

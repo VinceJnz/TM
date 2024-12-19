@@ -13,8 +13,9 @@ const debugTag = "eventProcessor."
 
 // Event represents a message with a type and data
 type Event struct {
-	Type string
-	Data interface{}
+	Type     string
+	DebugTag string
+	Data     interface{}
 }
 
 // EventHandler is a function that processes events

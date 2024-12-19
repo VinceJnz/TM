@@ -40,9 +40,9 @@ func (editor *View) getMenuUser() {
 	}
 
 	go func() {
-		editor.ItemState.UpdateState(viewHelpers.ItemStateFetching)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil, success, fail)
-		editor.ItemState.UpdateState(viewHelpers.ItemStateNone)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone)
 	}()
 }
 
@@ -70,9 +70,9 @@ func (editor *View) getMenuList() {
 	}
 
 	go func() {
-		editor.ItemState.UpdateState(viewHelpers.ItemStateFetching)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuList/", &menuList, nil, success, fail)
-		editor.ItemState.UpdateState(viewHelpers.ItemStateNone)
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone)
 	}()
 }
 
@@ -81,7 +81,7 @@ func (editor *View) menuComplete() {
 	//log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
 	editor.onCompletionMsg(debugTag + "menuComplete()2 successfully completed menu fetch:")
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateMenu", Data: UpdateMenu{
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateMenu", DebugTag: debugTag, Data: UpdateMenu{
 		MenuUser: editor.CurrentRecord.MenuUser,
 		MenuList: editor.CurrentRecord.MenuList,
 	}})

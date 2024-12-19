@@ -157,7 +157,7 @@ func (editor *ItemEditor) NewItemData() {
 /*
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
 }
 */
 
@@ -225,7 +225,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//Add something to do the logout ????????????????????
 
 	editor.resetEditForm()
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", Data: nil})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", DebugTag: debugTag, Data: nil})
 	return nil
 }
 
@@ -249,7 +249,7 @@ func (editor *ItemEditor) FetchItems() {
 			log.Printf("%v %v %v", debugTag+"FetchItems()1 success: ", "err =", err) //Log the error in the browser
 		}
 		log.Printf("%v", debugTag+"FetchItems()2 success") //Log the error in the browser
-		editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", Data: nil})
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", DebugTag: debugTag, Data: nil})
 	}
 
 	go func() {

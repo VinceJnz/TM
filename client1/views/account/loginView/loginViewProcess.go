@@ -2,6 +2,7 @@ package loginView
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"math/big"
 	"net/http"
@@ -43,9 +44,9 @@ func (editor *ItemEditor) getSalt(username string) {
 	//log.Printf(debugTag+"LogonForm.getSalt()1 CurrentRecord: %+v, url: %v", editor.CurrentRecord, ApiURL+"/"+username+"/salt/")
 
 	go func() {
-		editor.updateStateDisplay(ItemStateFetching)
+		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/"+username+"/salt/", &salt, nil, success, fail)
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}()
 	//editor.Dispatcher.Dispatch(&storeUserAuth.GetSalt{Time: time.Now(), Item: &editor.CurrentRecord, CallbackSuccess: success, CallbackFail: fail})
 }
@@ -84,9 +85,9 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 	go func() {
 		//log.Printf(debugTag+"LogonForm.getServerVerify()4 CurrentRecord=%+v, username=%+v, url=%v", editor.CurrentRecord, username, ApiURL+"/"+username+"/key/"+string(byteStrA))
 
-		editor.updateStateDisplay(ItemStateFetching)
+		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/"+username+"/key/"+string(byteStrA), &ServerVerifyRecord, nil, success, fail)
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}()
 	//editor.Dispatcher.Dispatch(&storeUserAuth.GetServerVerify{Time: time.Now(), Item: &editor.CurrentRecord, A: A, CallbackSuccess: success, CallbackFail: fail})
 }
@@ -150,9 +151,9 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 
 	// client sends its proof to the server. Server checks
 	go func() {
-		editor.updateStateDisplay(ItemStateFetching)
+		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.client.NewRequest(http.MethodPost, ApiURL+"/proof/", &username, &ClientVerifyRecord, success, fail)
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}()
 	//editor.Dispatcher.Dispatch(&storeUserAuth.PostProof{Time: time.Now(), ClientProof: clientProof, Token: editor.Children.ServerVerifyRecord.Token, UserName: editor.CurrentRecord.Username, CallbackSuccess: success, CallbackFail: fail})
 }
@@ -169,5 +170,5 @@ func (editor *ItemEditor) loginComplete(username string) {
 	//log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
 	//editor.onCompletionMsg(debugTag + "menuComplete()2 successfully completed menu fetch:")
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", Data: username})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: username})
 }

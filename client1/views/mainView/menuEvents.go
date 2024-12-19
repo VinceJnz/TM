@@ -35,20 +35,20 @@ type UpdateMenu struct {
 // *****************************************************************************
 
 // updateState is an event handler the updates the page status on the main page.
-func (editor *View) updateState(event eventProcessor.Event) {
+func (editor *View) updateStatus(event eventProcessor.Event) {
 	state, ok := event.Data.(viewHelpers.ItemState)
 	if !ok {
-		log.Printf(debugTag+"Invalid data for event type: %s\n", event.Type)
+		log.Printf(debugTag+"updateStatus()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
 		return
 	}
-	editor.ItemState.UpdateState(state)
+	editor.ItemState.UpdateStatus(state)
 }
 
 // displayMessage is an event handler the displays a message on the main page.
 func (v *View) displayMessage(event eventProcessor.Event) {
 	message, ok := event.Data.(string)
 	if !ok {
-		log.Printf(debugTag+"Invalid data for event type: %s\n", event.Type)
+		log.Printf(debugTag+"displayMessage()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
 		return
 	}
 	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
@@ -65,7 +65,7 @@ func (v *View) logoutComplete(event eventProcessor.Event) {
 func (v *View) loginComplete(event eventProcessor.Event) {
 	username, ok := event.Data.(string)
 	if !ok {
-		log.Printf(debugTag+"Invalid data for event type: %s\n", event.Type)
+		log.Printf(debugTag+"loginComplete()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
 		return
 	}
 	v.elements.userDisplay.Set("innerHTML", username)
@@ -85,7 +85,7 @@ func (v *View) resetMenu(event eventProcessor.Event) {
 func (v *View) updateMenu(event eventProcessor.Event) {
 	menuData, ok := event.Data.(UpdateMenu)
 	if !ok {
-		log.Printf(debugTag+"updateMenu()1 Invalid data for event type: %s\n", event.Type)
+		log.Printf(debugTag+"updateMenu()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
 		return
 	}
 	if menuData.MenuUser.AdminFlag {
