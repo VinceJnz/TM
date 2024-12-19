@@ -161,14 +161,6 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 func (editor *ItemEditor) loginComplete(username string) {
 	// Need to do something here to signify the login being successful!!!!
 	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"loginComplete()1 ", "username =", username, "editor.Children =", editor.Children, "editor.CurrentRecord =", editor.CurrentRecord) //Log the error in the browser
-
 	editor.onCompletionMsg(debugTag + "Login successfully completed: " + username)
-
-	//editor.MenuProcess()
-
-	// Need to do something here to signify the menu data fetch being successful!!!!
-	//log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
-
-	//editor.onCompletionMsg(debugTag + "menuComplete()2 successfully completed menu fetch:")
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: username})
 }

@@ -65,7 +65,7 @@ func (i *ItemStateView) UpdateStatus(newState ItemState, debugTag string) {
 
 // updateStatus is an event handler the updates the status on the main page.
 func (i *ItemStateView) DisplayMessage(message string) {
-	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
+	message = time.Now().Local().Format("15.04.05 02-01-2006") + ` ` + message
 	msgDiv := i.document.Call("createElement", "div")
 	msgDiv.Set("innerHTML", message)
 	i.stateDiv.Call("appendChild", msgDiv)
