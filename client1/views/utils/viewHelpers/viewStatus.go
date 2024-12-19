@@ -52,7 +52,7 @@ func (i *ItemStateView) UpdateStatus(newState ItemState, debugTag string) {
 		stateText = "Unknown State"
 	}
 
-	message := time.Now().Local().Format("15.04.05 02-01-2006") + `  State="` + stateText + `"`
+	message := time.Now().Local().Format("15.04.05 02-01-2006") + ` ` + debugTag + `  State="` + stateText + `"`
 	msgDiv := i.document.Call("createElement", "div")
 	msgDiv.Set("innerHTML", message)
 	i.stateDiv.Call("appendChild", msgDiv)
