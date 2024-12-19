@@ -29,6 +29,7 @@ func (editor *ItemEditor) getSalt(username string) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v %v %v", debugTag+"LogonForm.getSalt()3 success: ", "err =", err, "username =", username, "salt =", salt) //Log the error in the browser
+			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 		}
 		editor.CurrentRecord.Salt = salt // Save the salt to the current record
 
@@ -38,8 +39,9 @@ func (editor *ItemEditor) getSalt(username string) {
 
 	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getSalt()4 fail: ", "err =", err, "username =", username) //Log the error in the browser
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 		//Display message  to user ??????????????
-		editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
+		//editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
 	//log.Printf(debugTag+"LogonForm.getSalt()1 CurrentRecord: %+v, url: %v", editor.CurrentRecord, ApiURL+"/"+username+"/salt/")
 
@@ -60,14 +62,15 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v %v %v", debugTag+"LogonForm.getServerVerify()1 success: ", "err =", err, "editor.Children =", editor.Children, "A =", A) //Log the error in the browser
+			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 		}
-		//log.Printf("%v %v %v %v %+v %v %v", debugTag+"LogonForm.getServerVerify()0 success: ", "err =", err, "editor.Children =", editor.Children, "A =", A) //Log the error in the browser
 		// Next process step
 		editor.checkServerKey(username, ServerVerifyRecord)
 	}
 
 	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v %v %v", debugTag+"LogonForm.getServerVerify()2 fail: ", "err =", err, "editor.Children =", editor.Children, "A =", A) //Log the error in the browser
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 		//editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
 
@@ -113,6 +116,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 
 	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()3 fail: ", "err=", err, "editor.Children=", editor.Children) //Log the error in the browser
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 		//editor.onCompletionMsg(debugTag + "getSalt()1 " + err.Error())
 	}
 
@@ -121,20 +125,26 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 	// a malicious B sent from server
 	if err = editor.Children.SrpClient.SetOthersPublic(serverVerifyRecord.B); err != nil {
 		// The process has failed
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()4 fail: ", "err=", err, "editor.Children=", editor.Children) //Log the error in the browser
 		//log.Fatalf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()4 fail: ", "err =", err, "s.Item =", s.Item)
+		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()4 fail: ", "err=", err, "editor.Children=", editor.Children) //Log the error in the browser
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
+		return
 	}
 
 	// client can now make the session key
 	clientKey, err := editor.Children.SrpClient.Key()
 	if err != nil || clientKey == nil {
 		log.Printf(debugTag+"LogonForm.checkServerKey()6 Fatal: something went wrong making client session key: %s", err)
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
+		return
 	}
 
 	// client tests tests that the server sent a good proof
 	if !editor.Children.SrpClient.GoodServerProof(editor.CurrentRecord.Salt, editor.CurrentRecord.Username, serverVerifyRecord.Proof) {
 		// Client must bail and not send a its own proof back to the server
-		log.Fatalf(debugTag+"LogonForm.checkServerKey()7 Fatal: bad proof from server: CurrentRecord=%+v, serverVerifyRecord=%+v", editor.CurrentRecord, serverVerifyRecord)
+		//log.Fatalf(debugTag+"LogonForm.checkServerKey()7 Fatal: bad proof from server: CurrentRecord=%+v, serverVerifyRecord=%+v", editor.CurrentRecord, serverVerifyRecord)
+		log.Printf(debugTag+"LogonForm.checkServerKey()7 Fatal: bad proof from server: CurrentRecord=%+v, serverVerifyRecord=%+v", editor.CurrentRecord, serverVerifyRecord)
+		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 		return
 	}
 
@@ -147,7 +157,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 	ClientVerifyRecord.UserName = username
 	ClientVerifyRecord.Proof = clientProof
 	ClientVerifyRecord.Token = serverVerifyRecord.Token
-	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()9 ", "err =", err, "editor.Children =", editor.Children, "editor.CurrentRecord=", editor.CurrentRecord) //Log the error in the browser
+	//log.Printf("%v %v %v %v %+v %v %+v", debugTag+"LogonForm.checkServerKey()9 ", "err =", err, "editor.Children =", editor.Children, "editor.CurrentRecord=", editor.CurrentRecord) //Log the error in the browser
 
 	// client sends its proof to the server. Server checks
 	go func() {
@@ -160,7 +170,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 
 func (editor *ItemEditor) loginComplete(username string) {
 	// Need to do something here to signify the login being successful!!!!
-	log.Printf("%v %v %v %v %+v %v %+v", debugTag+"loginComplete()1 ", "username =", username, "editor.Children =", editor.Children, "editor.CurrentRecord =", editor.CurrentRecord) //Log the error in the browser
+	//log.Printf("%v %v %v %v %+v %v %+v", debugTag+"loginComplete()1 ", "username =", username, "editor.Children =", editor.Children, "editor.CurrentRecord =", editor.CurrentRecord) //Log the error in the browser
 	editor.onCompletionMsg(debugTag + "Login successfully completed: " + username)
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: username})
 }

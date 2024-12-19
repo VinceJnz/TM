@@ -35,8 +35,7 @@ func (editor *View) getMenuUser() {
 
 	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
-		//Display message  to user ??????????????
-		editor.onCompletionMsg(debugTag + "getMenuUser()1 " + err.Error())
+		//Don't display message to user
 	}
 
 	go func() {
