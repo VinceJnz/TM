@@ -5,7 +5,6 @@ import (
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"strings"
-	"time"
 )
 
 // MenuUserItem contains the basic user info for driving the display of the client menu
@@ -51,7 +50,7 @@ func (v *View) displayMessage(event eventProcessor.Event) {
 		log.Printf(debugTag+"displayMessage()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
 		return
 	}
-	message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
+	//message = time.Now().Local().Format("15.04.05 02-01-2006") + `  "` + message + `"`
 	v.ItemState.DisplayMessage(message)
 }
 
