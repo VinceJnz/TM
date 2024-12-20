@@ -28,7 +28,7 @@ const (
 					FROM public.at_trips att
 					LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`
-	qryCreate = `INSERT INTO at_trips (trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 	qryUpdate = `UPDATE at_trips SET (trip_name, location, from_date, to_date, max_participants, trip_status_id) = ($2, $3, $4, $5, $6, $7)	WHERE id = $1`
 	qryDelete = `DELETE FROM at_trips WHERE id = $1`
 )
@@ -65,6 +65,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -76,7 +77,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record

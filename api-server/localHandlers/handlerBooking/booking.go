@@ -72,6 +72,8 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -85,7 +87,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	//log.Printf(debugTag+"Create()3 record = %+v, query = %+v", record, qryCreate)
 
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
