@@ -3,6 +3,7 @@ package handlerBookingPeople
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -98,31 +99,85 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
+
+	if err := h.RecordValidation(&session, record); err != nil {
+		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
 	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.OwnerID, record.BookingID, record.PersonID, record.Notes)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
-	id := handlerStandardTemplate.GetID(w, r)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
+
+	id := handlerStandardTemplate.GetID(w, r)
 	record.ID = id
+
+	if err := h.RecordValidation(&session, record); err != nil {
+		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 
 	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.OwnerID, record.BookingID, record.PersonID, record.Notes, id)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var record models.BookingPeople
+
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	id := handlerStandardTemplate.GetID(w, r)
+
+	// Validation stuff
+	record.ID = id
+	err = h.appConf.Db.Get(&record, qryGet, record.ID)
+	if err != nil {
+		http.Error(w, debugTag+"Delete - Record not found: ", http.StatusUnprocessableEntity)
+		return
+	}
+
+	if err := h.RecordValidation(&session, record); err != nil {
+		http.Error(w, debugTag+"Delete: "+err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
 	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+}
+
+const (
+	qryParentRecordValidation = `SELECT * FROM at_bookings WHERE id = $1`
+)
+
+func (h *Handler) RecordValidation(session *models.Session, record models.BookingPeople) error {
+	var err error
+
+	parentID := record.BookingID
+	validationRecord := models.Booking{}
+	err = h.appConf.Db.Get(&validationRecord, qryParentRecordValidation, parentID)
+	switch {
+	case err == sql.ErrNoRows:
+		return fmt.Errorf(debugTag+"ParentRecordValidation()1 - Record not found: error message = %s", err.Error())
+	case err != nil:
+		return fmt.Errorf(debugTag+"ParentRecordValidation()2 - Internal Server Error:  error message = %s", err.Error())
+	case validationRecord.OwnerID != session.UserID:
+		return fmt.Errorf(debugTag+"ParentRecordValidation()3 - Access denied: Requested resource = %s", session.ResourceName)
+	default:
+		return nil
+	}
 }

@@ -137,8 +137,6 @@ func (h *Handler) RecordValidation(record models.Booking) error {
 }
 
 const (
-	//sqlBookingParentRecordValidation = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_trips WHERE id = $1`
-	//sqlBookingParentRecordValidation = `SELECT id, owner_id, notes, from_date, to_date, booking_status_id, created, modified FROM at_trips WHERE id = $1`
 	sqlBookingParentRecordValidation = `SELECT * FROM at_trips WHERE id = $1`
 )
 
