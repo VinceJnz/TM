@@ -335,7 +335,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("innerHTML", record.Person+" (Notes: "+record.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		if record.OwnerID == editor.appCore.User.UserID || editor.appCore.User.AdminFlag {
+		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.User.AdminFlag {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
