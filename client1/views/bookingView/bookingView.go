@@ -416,7 +416,7 @@ func (editor *ItemEditor) populateItemList() {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
 
 		// Create and add child views to Item
-		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.client, record.ID)
+		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.appCore, record.ID)
 		//editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
 
 		itemDiv := editor.document.Call("createElement", "div")

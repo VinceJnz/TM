@@ -1,6 +1,7 @@
 package bookingPeopleView
 
 import (
+	appcore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/userView"
@@ -67,6 +68,7 @@ type children struct {
 }
 
 type ItemEditor struct {
+	appCore       *appcore.AppCore
 	client        *httpProcessor.Client
 	document      js.Value
 	events        *eventProcessor.EventProcessor
@@ -88,9 +90,10 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appcore *appcore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
-	editor.client = client
+	editor.appCore = appcore
+	editor.client = appcore.HttpClient
 	editor.document = document
 	editor.events = eventProcessor
 
@@ -332,26 +335,27 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("innerHTML", record.Person+" (Notes: "+record.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		// Create an edit button
-		editButton := editor.document.Call("createElement", "button")
-		editButton.Set("innerHTML", "Edit")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentRecord = record
-			editor.updateStateDisplay(ItemStateEditing)
-			editor.populateEditForm()
-			return nil
-		}))
+		if record.OwnerID == editor.appCore.User.UserID {
+			// Create an edit button
+			editButton := editor.document.Call("createElement", "button")
+			editButton.Set("innerHTML", "Edit")
+			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				editor.CurrentRecord = record
+				editor.updateStateDisplay(ItemStateEditing)
+				editor.populateEditForm()
+				return nil
+			}))
+			itemDiv.Call("appendChild", editButton)
 
-		// Create a delete button
-		deleteButton := editor.document.Call("createElement", "button")
-		deleteButton.Set("innerHTML", "Delete")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.deleteItem(record.ID)
-			return nil
-		}))
-
-		itemDiv.Call("appendChild", editButton)
-		itemDiv.Call("appendChild", deleteButton)
+			// Create a delete button
+			deleteButton := editor.document.Call("createElement", "button")
+			deleteButton.Set("innerHTML", "Delete")
+			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				editor.deleteItem(record.ID)
+				return nil
+			}))
+			itemDiv.Call("appendChild", deleteButton)
+		}
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
