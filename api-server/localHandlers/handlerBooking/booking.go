@@ -35,9 +35,9 @@ const (
 					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_date, payment_date, booking_price) = ($2, $3, $4, $5, $6, %7, %8, $9)
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
-					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id) = ($2, $3, $4, $5, $6, $7)
-					WHERE id = $1`
-	qryDelete = `DELETE FROM at_bookings WHERE id = $1`
+					SET (notes, from_date, to_date, booking_status_id) = ($3, $4, $5, $6)
+					WHERE id = $1, owner_id = $2`
+	qryDelete = `DELETE FROM at_bookings WHERE id = $1, owner_id = $2 OR true=$3`
 )
 
 type Handler struct {
@@ -93,8 +93,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
-	var columns []interface{}
-	var sqlQry string
 
 	id := handlerStandardTemplate.GetID(w, r)
 	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
@@ -113,19 +111,17 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.AdminFlag {
-		columns = append(columns, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
-		sqlQry = qryUpdateAdmin
+		handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
 	} else {
-		columns = append(columns, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
-		sqlQry = qryUpdate
+		handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 	}
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, sqlQry, columns)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
 }
 
 func (h *Handler) RecordValidation(record models.Booking) error {

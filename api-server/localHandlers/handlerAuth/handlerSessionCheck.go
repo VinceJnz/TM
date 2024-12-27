@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-// SessionCheck is used by the client to see if the token it is useing is still valid, if it is valid the the client is still logged in.
+// SessionCheck is used by the client to see if the token it is using is still valid, if it is valid the the client is still logged in.
 func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var token models.Token
