@@ -1,19 +1,12 @@
 package mainView
 
 import (
+	appcore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"strings"
 )
-
-// MenuUserItem contains the basic user info for driving the display of the client menu
-type MenuUser struct {
-	UserID    int    `json:"user_id"`
-	Name      string `json:"name"`
-	Group     string `json:"group"`
-	AdminFlag bool   `json:"admin_flag"`
-}
 
 // MenuItem contains data for a menu item
 type MenuItem struct {
@@ -25,7 +18,7 @@ type MenuItem struct {
 type MenuList []MenuItem
 
 type UpdateMenu struct {
-	MenuUser MenuUser
+	MenuUser appcore.User
 	MenuList MenuList
 }
 

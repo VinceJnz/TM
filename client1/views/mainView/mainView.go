@@ -33,18 +33,6 @@ import (
 
 const debugTag = "mainView."
 
-//type ItemState int
-
-//const (
-//	ItemStateNone ItemState = iota
-//	ItemStateFetching
-//	ItemStateEditing
-//	ItemStateAdding
-//	ItemStateSaving
-//	ItemStateDeleting
-//	ItemStateSubmitted
-//)
-
 type MenuChoice int
 
 type editorElement interface {
@@ -61,7 +49,6 @@ type editorElement interface {
 }
 
 type TableData struct {
-	MenuUser MenuUser
 	MenuList MenuList
 }
 
@@ -182,10 +169,10 @@ func (v *View) Setup() {
 	v.AddViewItem("Home", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("About", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("Contact", "", true, nil, true, false, v.elements.sidemenu)
-	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
-	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.client), false, false, v.elements.sidemenu)
+	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
 	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Trip Status", tripStatusView.ApiURL, true, tripStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)

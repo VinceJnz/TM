@@ -1,6 +1,7 @@
 package mainView
 
 import (
+	appcore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
@@ -18,15 +19,16 @@ func (editor *View) MenuProcess() {
 // getMenuUser gets the menu user from the server (step 1) - The user needs to be logged on.
 func (editor *View) getMenuUser() {
 	//Get Menu User from server
-	var menuUser MenuUser
+	var menuUser appcore.User
 
 	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()2 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
+			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()2 success: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		}
-		editor.CurrentRecord.MenuUser = menuUser // Save the menuUser to the current record
-		editor.elements.userDisplay.Set("innerHTML", editor.CurrentRecord.MenuUser.Name)
+		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
+		//editor.CurrentRecord.MenuUser = menuUser // Save the menuUser to the current record
+		editor.elements.userDisplay.Set("innerHTML", editor.appCore.User.Name)
 		//log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()3 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
 
 		// Next process step
@@ -34,7 +36,7 @@ func (editor *View) getMenuUser() {
 	}
 
 	fail := func(err error) {
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		//Don't display message to user
 	}
 
@@ -81,7 +83,7 @@ func (editor *View) menuComplete() {
 
 	editor.onCompletionMsg(debugTag + "Menu fetch complete")
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateMenu", DebugTag: debugTag, Data: UpdateMenu{
-		MenuUser: editor.CurrentRecord.MenuUser,
+		MenuUser: editor.appCore.User,
 		MenuList: editor.CurrentRecord.MenuList,
 	}})
 }

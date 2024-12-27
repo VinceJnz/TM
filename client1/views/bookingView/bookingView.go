@@ -92,7 +92,7 @@ type children struct {
 }
 
 type ItemEditor struct {
-	appcore  *appcore.AppCore
+	appCore  *appcore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 
@@ -113,11 +113,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, parentData ...ParentData) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appcore *appcore.AppCore, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
-	editor.client = client
+	editor.appCore = appcore
 	editor.document = document
 	editor.events = eventProcessor
+	editor.client = appcore.HttpClient //????????????????? to be removed ??????????????????
 
 	editor.ItemState = ItemStateNone
 
@@ -424,7 +425,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("innerHTML", record.Notes+" (Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		if record.OwnerID == editor.appcore.MenuData.MenuUser.UserID {
+		if record.OwnerID == editor.appCore.GetUser().UserID {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")

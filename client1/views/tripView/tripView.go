@@ -1,6 +1,7 @@
 package tripView
 
 import (
+	appcore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingView"
@@ -69,6 +70,7 @@ type children struct {
 }
 
 type ItemEditor struct {
+	appCore  *appcore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 
@@ -87,11 +89,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appcore *appcore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
-	editor.client = client
+	editor.appCore = appcore
 	editor.document = document
 	editor.events = eventProcessor
+	editor.client = appcore.HttpClient
 
 	editor.ItemState = viewHelpers.ItemStateNone
 
@@ -406,7 +409,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		// ********************* This needs to be changed for each api **********************
 		// Create and add child views and buttons to Item
-		booking := bookingView.New(editor.document, editor.events, editor.client, bookingView.ParentData{ID: record.ID, FromDate: record.FromDate, ToDate: record.ToDate})
+		booking := bookingView.New(editor.document, editor.events, editor.appCore, bookingView.ParentData{ID: record.ID, FromDate: record.FromDate, ToDate: record.ToDate})
 
 		// Create a toggle child list button
 		bookingButton := editor.document.Call("createElement", "button")
