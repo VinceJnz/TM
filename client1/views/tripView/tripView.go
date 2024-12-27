@@ -385,27 +385,27 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("innerHTML", record.Name+" (Status:"+record.TripStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		// Create an edit button
-		editButton := editor.document.Call("createElement", "button")
-		editButton.Set("innerHTML", "Edit")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentRecord = record
-			editor.updateStateDisplay(viewHelpers.ItemStateEditing)
-			editor.populateEditForm()
-			return nil
-		}))
+		if record.OwnerID == editor.appCore.User.UserID || editor.appCore.User.AdminFlag {
+			// Create an edit button
+			editButton := editor.document.Call("createElement", "button")
+			editButton.Set("innerHTML", "Edit")
+			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				editor.CurrentRecord = record
+				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
+				editor.populateEditForm()
+				return nil
+			}))
+			itemDiv.Call("appendChild", editButton)
 
-		// Create a delete button
-		deleteButton := editor.document.Call("createElement", "button")
-		deleteButton.Set("innerHTML", "Delete")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.deleteItem(record.ID)
-			return nil
-		}))
-
-		// Append buttons to item
-		itemDiv.Call("appendChild", editButton)
-		itemDiv.Call("appendChild", deleteButton)
+			// Create a delete button
+			deleteButton := editor.document.Call("createElement", "button")
+			deleteButton.Set("innerHTML", "Delete")
+			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				editor.deleteItem(record.ID)
+				return nil
+			}))
+			itemDiv.Call("appendChild", deleteButton)
+		}
 
 		// ********************* This needs to be changed for each api **********************
 		// Create and add child views and buttons to Item
