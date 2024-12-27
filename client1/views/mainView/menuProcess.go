@@ -15,7 +15,7 @@ func (editor *View) MenuProcess() {
 	editor.getMenuUser()
 }
 
-// getMenuUser gets the menu user from the server (step 1)
+// getMenuUser gets the menu user from the server (step 1) - The user needs to be logged on.
 func (editor *View) getMenuUser() {
 	//Get Menu User from server
 	var menuUser MenuUser
@@ -45,7 +45,7 @@ func (editor *View) getMenuUser() {
 	}()
 }
 
-// getMenuList gets the menu list from the server (step 2) - This is used to disply or hide the menu button depending on the users level of access to the url
+// getMenuList gets the menu list from the server (step 2) - This is used to display or hide the menu buttons depending on the users level of access.
 func (editor *View) getMenuList() {
 	//Get Menu List from server
 	var menuList MenuList

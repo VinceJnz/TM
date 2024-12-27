@@ -72,7 +72,7 @@ func (v *View) loginComplete(event eventProcessor.Event) {
 	v.MenuProcess()
 }
 
-// resetMenu is an event handler resets the menu to display only the default menu items.
+// resetMenu is an event handler that resets the menu to display only the default menu items.
 func (v *View) resetMenu(event eventProcessor.Event) {
 	for _, o := range v.menuButtons {
 		if !o.defaultDisplay {
@@ -81,7 +81,7 @@ func (v *View) resetMenu(event eventProcessor.Event) {
 	}
 }
 
-// updateMenu is an event handler the updates the menu in the sidebar on the main page.
+// updateMenu is an event handler that updates the menu in the sidebar on the main page.
 func (v *View) updateMenu(event eventProcessor.Event) {
 	menuData, ok := event.Data.(UpdateMenu)
 	if !ok {

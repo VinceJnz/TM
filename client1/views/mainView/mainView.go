@@ -1,6 +1,7 @@
 package mainView
 
 import (
+	appcore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/accessLevelView"
@@ -26,7 +27,6 @@ import (
 	"client1/v2/views/userStatusView"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
-	"log"
 	"strings"
 	"syscall/js"
 )
@@ -91,6 +91,7 @@ type ViewConfig struct {
 }
 
 type View struct {
+	appCore  *appcore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 	elements viewElements
@@ -104,15 +105,14 @@ type View struct {
 	Children      children
 }
 
-func New(client *httpProcessor.Client) *View {
+func New(appcore *appcore.AppCore) *View {
 	v := &View{
-		client:        client,
+		appCore:       appcore,
+		client:        appcore.HttpClient,
 		document:      js.Global().Get("document"),
 		childElements: map[string]editorElement{},
 		menuButtons:   map[string]buttonElement{},
 	}
-	window := js.Global().Get("window")
-	window.Call("addEventListener", "onbeforeunload", js.FuncOf(v.BeforeUnload))
 
 	v.events = eventProcessor.New()
 	v.events.AddEventHandler("updateStatus", v.updateStatus)
@@ -124,20 +124,7 @@ func New(client *httpProcessor.Client) *View {
 	return v
 }
 
-func (v *View) BeforeUnload(this js.Value, args []js.Value) interface{} {
-	log.Printf(debugTag + "New()1 onbeforeunload")
-	return nil
-}
-
 func (v *View) Setup() {
-	//v.events = eventProcessor.New()
-	//v.events.AddEventHandler("updateStatus", v.updateStatus)
-	//v.events.AddEventHandler("displayMessage", v.displayMessage)
-	//v.events.AddEventHandler("resetMenu", v.resetMenu)
-	//v.events.AddEventHandler("updateMenu", v.updateMenu)
-	//v.events.AddEventHandler("loginComplete", v.loginComplete)
-	//v.events.AddEventHandler("logoutComplete", v.logoutComplete)
-
 	// Create new body element and other page elements
 	newBody := v.document.Call("createElement", "body")
 	newBody.Set("id", debugTag+"body")
