@@ -25,11 +25,15 @@ const (
 				FROM at_booking_people bp
 					JOIN st_users p ON p.id=bp.person_id
 				WHERE bp.id = $1`
+	qryGetList = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+				FROM at_booking_people bp
+					JOIN st_users p ON p.id=bp.person_id
+				WHERE bp.booking_id = $1`
 	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) VALUES ($1, $2, $3, $4) RETURNING id`
 	qryUpdate = `UPDATE at_booking_people
-					SET owner_id = $1, booking_id = $2, person_id = $3, notes = $4
-					WHERE id = $5`
-	qryDelete = `DELETE FROM at_booking_people WHERE id = $1`
+					SET (person_id, notes) = ($4, $5)
+					WHERE id = $1, owner_id = $2 OR true=$3`
+	qryDelete = `DELETE FROM at_booking_people WHERE id = $1, owner_id = $2 OR true=$3`
 )
 
 type Handler struct {
@@ -45,9 +49,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll)
 
 	records := []models.BookingPeople{}
-	err := h.appConf.Db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
-	FROM at_booking_people bp
-		JOIN st_users p ON p.id=bp.person_id`)
+	err := h.appConf.Db.Select(&records, qryGetAll)
 	if err == sql.ErrNoRows {
 		log.Printf("%v.GetAll()1 %v\n", debugTag, err)
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -73,10 +75,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	records := []models.BookingPeople{}
-	err = h.appConf.Db.Select(&records, `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
-	FROM at_booking_people bp
-		JOIN st_users p ON p.id=bp.person_id
-	WHERE bp.booking_id = $1`, parentID)
+	err = h.appConf.Db.Select(&records, qryGetList, parentID)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -118,6 +117,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
+	id := handlerStandardTemplate.GetID(w, r)
 	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
@@ -126,7 +126,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := handlerStandardTemplate.GetID(w, r)
 	record.ID = id
 
 	if err := h.RecordValidation(&session, record); err != nil {
@@ -134,16 +133,15 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.OwnerID, record.BookingID, record.PersonID, record.Notes, id)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.PersonID, record.Notes)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var record models.BookingPeople
-
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	id := handlerStandardTemplate.GetID(w, r)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	// Validation stuff
 	record.ID = id
@@ -158,7 +156,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
 }
 
 const (

@@ -29,8 +29,8 @@ const (
 					LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`
 	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	qryUpdate = `UPDATE at_trips SET (trip_name, location, from_date, to_date, max_participants, trip_status_id) = ($2, $3, $4, $5, $6, $7)	WHERE id = $1`
-	qryDelete = `DELETE FROM at_trips WHERE id = $1`
+	qryUpdate = `UPDATE at_trips SET (trip_name, location, from_date, to_date, max_participants, trip_status_id) = ($4, $5, $6, $7, $8, $9)	WHERE id = $1, owner_id = $2 OR true=$3`
+	qryDelete = `DELETE FROM at_trips WHERE id = $1, owner_id = $2 OR true=$3`
 )
 
 type Handler struct {
@@ -84,6 +84,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
 	id := handlerStandardTemplate.GetID(w, r)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
@@ -98,13 +99,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
 }
 
 func (h *Handler) RecordValidation(record models.Trip) error {

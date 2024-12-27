@@ -72,6 +72,7 @@ type MenuUser struct {
 
 // Resource is the enumeration of the url name of the Resource being accessed
 type MenuItem struct {
-	UserID int    `json:"user_id" db:"user_id"`
-	Name   string `json:"resource" db:"resource"`
+	UserID    int    `json:"user_id" db:"user_id"`
+	Name      string `json:"resource" db:"resource"`
+	AdminFlag bool   `json:"admin_flag" db:"admin_flag"`
 }

@@ -16,7 +16,7 @@ const (
 		ORDER BY stg.admin_flag -- This might need to change to DESC
 		LIMIT 1`
 
-	sqlMenuList = `SELECT stu.ID AS user_id, etr.Name AS resource
+	sqlMenuList = `SELECT stu.ID AS user_id, etr.Name AS resource, stgr.admin_flag
 		FROM st_users stu
 			JOIN st_user_group stug ON stug.User_ID=stu.ID
 			JOIN st_group stg ON stg.ID=stug.Group_ID
@@ -24,7 +24,8 @@ const (
 			JOIN et_resource etr ON etr.ID=stgr.Resource_ID
 		WHERE stu.ID=$1
 			AND stu.User_status_ID=1
-		GROUP BY stu.ID, etr.Name`
+		--ORDER BY stgr.admin_flag -- This might need to change to DESC
+		GROUP BY stu.ID, etr.Name, stgr.admin_flag`
 )
 
 // Get: retrieves and returns a single record identified by id
