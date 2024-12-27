@@ -10,8 +10,9 @@ import (
 
 // MenuItem contains data for a menu item
 type MenuItem struct {
-	UserID   int    `json:"user_id"`
-	Resource string `json:"resource"`
+	UserID    int    `json:"user_id"`
+	Resource  string `json:"resource"`
+	AdminFlag bool   `json:"admin_flag"`
 }
 
 // MenuItem contains a list of valid menu items to display
