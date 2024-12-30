@@ -5,8 +5,10 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingView"
+	"client1/v2/views/tripCostGroupView"
 	"client1/v2/views/tripDifficultyView"
 	"client1/v2/views/tripStatusView"
+	"client1/v2/views/tripTypeView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -49,6 +51,10 @@ type TableData struct {
 	Participants    int       `json:"participants"`
 	TripStatusID    int       `json:"trip_status_id"`
 	TripStatus      string    `json:"trip_status"`
+	TripTypeID      int       `json:"trip_type_id"`
+	TripType        string    `json:"trip_type"`
+	TripCostGroupID int       `json:"trip_cost_group_id"`
+	TripCostGroup   string    `json:"trip_cost_group"`
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`
 }
@@ -61,12 +67,16 @@ type UI struct {
 	DifficultyID    js.Value
 	MaxParticipants js.Value
 	TripStatusID    js.Value
+	TripTypeID      js.Value
+	TripCostGroupID js.Value
 }
 
 type children struct {
 	//Add child structures as necessary
-	Difficulty *tripDifficultyView.ItemEditor
-	TripStatus *tripStatusView.ItemEditor
+	Difficulty    *tripDifficultyView.ItemEditor
+	TripStatus    *tripStatusView.ItemEditor
+	TripType      *tripTypeView.ItemEditor
+	TripCostGroup *tripCostGroupView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -209,6 +219,12 @@ func (editor *ItemEditor) populateEditForm() {
 	uiObjs.TripStatusID, editor.UiComponents.TripStatusID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
 	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
+	uiObjs.TripTypeID, editor.UiComponents.TripTypeID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripTypeID, "Status", "itemTripStatusID")
+	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+
+	uiObjs.TripCostGroupID, editor.UiComponents.TripCostGroupID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripCostGroupID, "Status", "itemTripStatusID")
+	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", uiObjs.Name)
 	form.Call("appendChild", uiObjs.FromDate)
@@ -216,6 +232,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", uiObjs.DifficultyID)
 	form.Call("appendChild", uiObjs.MaxParticipants)
 	form.Call("appendChild", uiObjs.TripStatusID)
+	form.Call("appendChild", uiObjs.TripTypeID)
+	form.Call("appendChild", uiObjs.TripCostGroupID)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -291,6 +309,16 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	editor.CurrentRecord.TripStatusID, err = strconv.Atoi(editor.UiComponents.TripStatusID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing booking_id:", err)
+		return nil
+	}
+	editor.CurrentRecord.TripTypeID, err = strconv.Atoi(editor.UiComponents.TripTypeID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing trip_type_id:", err)
+		return nil
+	}
+	editor.CurrentRecord.TripCostGroupID, err = strconv.Atoi(editor.UiComponents.TripCostGroupID.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing trip_cost_group_id:", err)
 		return nil
 	}
 
