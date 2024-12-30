@@ -30,7 +30,8 @@ type AppCore struct {
 
 func New(httpClient *httpProcessor.Client) *AppCore {
 	ac := &AppCore{}
-	ac.HttpClient = httpProcessor.New("https://localhost:8086/api/v1")
+	//ac.HttpClient = httpProcessor.New("https://localhost:8086/api/v1")
+	ac.HttpClient = httpClient
 	ac.Events = eventProcessor.New()
 	ac.Document = js.Global().Get("document")
 

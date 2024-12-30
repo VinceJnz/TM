@@ -51,7 +51,10 @@ func New(baseURL string) *Client {
 }
 
 func (c *Client) NewRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) {
-	c.newRequest(method, url, rxDataStru, txDataStru, callBacks...)
+	_, err := c.newRequest(method, url, rxDataStru, txDataStru, callBacks...)
+	if err != nil {
+		log.Printf(debugTag+"NewRequest()1 err = %v", err)
+	}
 }
 
 func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface{}, callBacks ...func(error)) (*http.Request, error) {
@@ -159,7 +162,8 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 	//req.Header.Set("Authorization", "Bearer your_token_here")
 	req.Header.Set("Access-Control-Allow-Credentials", "true")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Origin", "http://localhost:8081") // Set the Origin header
+	//req.Header.Set("Origin", "http://localhost:8081") // Set the Origin header
+	req.Header.Set("Origin", "https://localhost:8081") // Set the Origin header
 
 	res, err = c.HTTPClient.Do(req) // This is the call to send the https request and receive the response
 	if err != nil {
@@ -168,6 +172,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 		return nil, err
 	}
 	defer res.Body.Close()
+	log.Printf("%v %v %v %v %v %v %v", debugTag+"NewRequest()4a ", "err =", err, "res.StatusCode =", res.StatusCode, "req.URL =", req.URL)
 
 	//The following deals with http error responses
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
@@ -203,7 +208,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 		//Should the deleted item ID be returned???
 		resBody, err := io.ReadAll(res.Body)
 		if len(resBody) != 0 { // if the resBody in not empty then we should log it because there was no rxDataStru provided for the data in resBody
-			log.Printf("%v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - rx data structure is nil ", "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
+			log.Printf("%v %v %v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - rx data structure is nil but the response body contains data ", "res.StatusCode =", res.StatusCode, "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
 		}
 	}
 

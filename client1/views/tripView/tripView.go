@@ -64,6 +64,7 @@ type UI struct {
 	Name            js.Value
 	FromDate        js.Value
 	ToDate          js.Value
+	Location        js.Value
 	DifficultyID    js.Value
 	MaxParticipants js.Value
 	TripStatusID    js.Value
@@ -137,6 +138,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appco
 	editor.Children.TripStatus = tripStatusView.New(editor.document, eventProcessor, editor.client)
 	//editor.Children.TripStatus.FetchItems()
 
+	editor.Children.TripType = tripTypeView.New(editor.document, eventProcessor, editor.client)
+	//editor.Children.TripType.FetchItems()
+
+	editor.Children.TripCostGroup = tripCostGroupView.New(editor.document, eventProcessor, editor.client)
+	//editor.Children.TripCostGroup.FetchItems()
+
 	return editor
 }
 
@@ -196,7 +203,7 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create ui objects and input fields with html validation as necessary // ********************* This needs to be changed for each api **********************
 	var uiObjs UI
 
-	uiObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemNotes")
+	uiObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
 	uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
@@ -208,6 +215,9 @@ func (editor *ItemEditor) populateEditForm() {
 	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
+	uiObjs.Location, editor.UiComponents.Location = viewHelpers.StringEdit(editor.CurrentRecord.Location, editor.document, "Location", "text", "itemLocation")
+	//editor.UiComponents.Location.Call("setAttribute", "required", "false")
 
 	uiObjs.DifficultyID, editor.UiComponents.DifficultyID = editor.Children.Difficulty.NewDropdown(editor.CurrentRecord.DifficultyID, "Difficulty", "itemDifficultyID")
 	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
@@ -229,6 +239,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", uiObjs.Name)
 	form.Call("appendChild", uiObjs.FromDate)
 	form.Call("appendChild", uiObjs.ToDate)
+	form.Call("appendChild", uiObjs.Location)
 	form.Call("appendChild", uiObjs.DifficultyID)
 	form.Call("appendChild", uiObjs.MaxParticipants)
 	form.Call("appendChild", uiObjs.TripStatusID)
@@ -296,6 +307,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing to_date:", err)
 		return nil
 	}
+	editor.CurrentRecord.Location = editor.UiComponents.Location.Get("value").String()
 	editor.CurrentRecord.DifficultyID, err = strconv.Atoi(editor.UiComponents.DifficultyID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing difficulty_id:", err)
@@ -374,6 +386,8 @@ func (editor *ItemEditor) FetchItems() {
 		// Fetch child data
 		editor.Children.Difficulty.FetchItems()
 		editor.Children.TripStatus.FetchItems()
+		editor.Children.TripType.FetchItems()
+		editor.Children.TripCostGroup.FetchItems()
 
 		go func() {
 			var records []TableData
