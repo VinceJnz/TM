@@ -219,10 +219,10 @@ func (editor *ItemEditor) populateEditForm() {
 	uiObjs.TripStatusID, editor.UiComponents.TripStatusID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
 	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
-	uiObjs.TripTypeID, editor.UiComponents.TripTypeID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripTypeID, "Status", "itemTripStatusID")
+	uiObjs.TripTypeID, editor.UiComponents.TripTypeID = editor.Children.TripType.NewDropdown(editor.CurrentRecord.TripTypeID, "Type", "itemTripTypeID")
 	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
-	uiObjs.TripCostGroupID, editor.UiComponents.TripCostGroupID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripCostGroupID, "Status", "itemTripStatusID")
+	uiObjs.TripCostGroupID, editor.UiComponents.TripCostGroupID = editor.Children.TripCostGroup.NewDropdown(editor.CurrentRecord.TripCostGroupID, "Cost Group", "itemTripCostGroupID")
 	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************

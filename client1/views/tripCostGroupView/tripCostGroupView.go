@@ -169,6 +169,37 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	return nil
 }
 
+// ?????????????????????? document ref????????????
+func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
+	// Create a div for displaying Dropdown
+	fieldset := editor.document.Call("createElement", "fieldset")
+	fieldset.Set("className", "input-group")
+
+	// Create a label element
+	label := viewHelpers.Label(editor.document, labelText, htmlID)
+	fieldset.Call("appendChild", label)
+
+	StateDropDown := editor.document.Call("createElement", "select")
+	StateDropDown.Set("id", htmlID)
+
+	for _, item := range editor.Records {
+		optionElement := editor.document.Call("createElement", "option")
+		optionElement.Set("value", item.ID)
+		optionElement.Set("text", item.Description)
+		if value == item.ID {
+			optionElement.Set("selected", true)
+		}
+		StateDropDown.Call("appendChild", optionElement)
+	}
+	fieldset.Call("appendChild", StateDropDown)
+
+	// Create an span element of error messages
+	span := viewHelpers.Span(editor.document, htmlID+"-error")
+	fieldset.Call("appendChild", span)
+
+	return fieldset, StateDropDown
+}
+
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
