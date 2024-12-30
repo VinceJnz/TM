@@ -131,8 +131,9 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dest)
+	json.NewEncoder(w).Encode(dest) // Not sure why this is returning a copy of the record (dest) that was sent in.
 }
 
 // Delete: removes a record identified by id
@@ -181,4 +182,10 @@ func GetSession(w http.ResponseWriter, r *http.Request, SessionIDKey appCore.Con
 	}
 	//log.Printf(debugTag+"GetSession()2 session=%+v\n", session)
 	return session
+}
+
+func ReturnError(w http.ResponseWriter, r *http.Request, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnprocessableEntity)
+	json.NewEncoder(w).Encode(map[string]string{"error": debugTag + "Update: " + err.Error()})
 }

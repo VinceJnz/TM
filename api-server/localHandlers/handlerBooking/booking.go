@@ -36,8 +36,8 @@ const (
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
 					SET (notes, from_date, to_date, booking_status_id) = ($3, $4, $5, $6)
-					WHERE id = $1, owner_id = $2`
-	qryDelete = `DELETE FROM at_bookings WHERE id = $1, owner_id = $2 OR true=$3`
+					WHERE id = $1 AND (owner_id = $2 OR true=$3)`
+	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR true=$3)`
 )
 
 type Handler struct {

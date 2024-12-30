@@ -32,8 +32,8 @@ const (
 	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) VALUES ($1, $2, $3, $4) RETURNING id`
 	qryUpdate = `UPDATE at_booking_people
 					SET (person_id, notes) = ($4, $5)
-					WHERE id = $1, owner_id = $2 OR true=$3`
-	qryDelete = `DELETE FROM at_booking_people WHERE id = $1, owner_id = $2 OR true=$3`
+					WHERE id = $1 AND (owner_id = $2 OR true=$3)`
+	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND (owner_id = $2 OR true=$3)`
 )
 
 type Handler struct {

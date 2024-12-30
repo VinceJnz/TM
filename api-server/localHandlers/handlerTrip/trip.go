@@ -28,9 +28,9 @@ const (
 					FROM public.at_trips att
 					LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`
-	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
-	qryUpdate = `UPDATE at_trips SET (trip_name, location, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) = ($4, $5, $6, $7, $8, $9, $10, $11)	WHERE id = $1, owner_id = $2 OR true=$3`
-	qryDelete = `DELETE FROM at_trips WHERE id = $1, owner_id = $2 OR true=$3`
+	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	qryUpdate = `UPDATE at_trips SET (trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) = ($4, $5, $6, $7, $8, $9, $10, $11, $12) WHERE id = $1 AND (owner_id = $2 OR true=$3)`
+	qryDelete = `DELETE FROM at_trips WHERE id = $1 AND (owner_id = $2 OR true=$3)`
 )
 
 type Handler struct {
@@ -77,7 +77,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
@@ -95,11 +95,16 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	// This validation needs to be added into the process ???????????????????????????????????????
 	if err := h.RecordValidation(record); err != nil {
-		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		log.Printf(debugTag+"Update()2 validation error: %v", err)
+		//http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(w).Encode(map[string]string{"error": debugTag + "Update: " + err.Error()})
 		return
 	}
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
+	log.Printf(debugTag + "Update()3 processing the update")
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Delete: removes a record identified by id

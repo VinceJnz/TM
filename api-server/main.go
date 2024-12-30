@@ -107,6 +107,22 @@ func main() {
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
+	// Define CORS options
+	corsOpts := handlers.CORS(
+		handlers.AllowedOrigins([]string{"http://localhost:8081", "https://localhost:8081"}),                   // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // "http://localhost:8081" // or "*" if you want to test without restrictions
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),                           // Allowed HTTP methods
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}), // Allowed headers
+		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
+	)
+
+	corsMuxHandler := corsOpts(r)
+	loggedHandler := helpers.LogRequest(corsMuxHandler)
+	//corsMuxHandler := corsOpts(r)
+
+	// Paths to certificate and key files
+	crtFile := "/etc/ssl/certs/localhost.crt" // "../certs/api-server/cert.pem"
+	keyFile := "/etc/ssl/certs/localhost.key" // "../certs/api-server/key.pem"
+
 	// For debugging: Log all registered routes
 	//r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 	//	path, _ := route.GetPathTemplate()
@@ -115,30 +131,16 @@ func main() {
 	//	return nil
 	//})
 
-	// Define CORS options
-	corsOpts := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:8081"}),                                             // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // "http://localhost:8081" // or "*" if you want to test without restrictions
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),                           // Allowed HTTP methods
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}), // Allowed headers
-		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
-	)
-
-	corsMuxHandler := helpers.LogRequest(corsOpts(r))
-
-	// Paths to certificate and key files
-	crtFile := "/etc/ssl/certs/localhost.crt" // "../certs/api-server/cert.pem"
-	keyFile := "/etc/ssl/certs/localhost.key" // "../certs/api-server/key.pem"
-
 	go func() {
 		log.Println(debugTag + "HTTP server running on http://localhost:8085")
-		if err := http.ListenAndServe(":8085", corsMuxHandler); err != nil {
+		if err := http.ListenAndServe(":8085", loggedHandler); err != nil {
 			log.Fatalf("HTTP server error: %v", err)
 		}
 	}()
 
 	go func() {
 		log.Println(debugTag + "HTTPS server running on https://localhost:8086")
-		if err := http.ListenAndServeTLS(":8086", crtFile, keyFile, corsMuxHandler); err != nil {
+		if err := http.ListenAndServeTLS(":8086", crtFile, keyFile, loggedHandler); err != nil {
 			log.Fatalf("HTTPS server error: %v", err)
 		}
 	}()

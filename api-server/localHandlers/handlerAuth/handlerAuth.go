@@ -89,10 +89,9 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 			AdminFlag:      accessCheck.AdminFlag,
 		}
 
-		w.WriteHeader(http.StatusOK)
+		//w.WriteHeader(http.StatusOK) // If this get called first, subsequent calls to w.WriteHeader are ignored. So it should not be called here.
 		ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session) // Store userID in the context. This can be used to filter rows in subsequent handlers
-		//log.Printf("%v %v %v %v %+v %v %+v %v %+v %v %+v\n", debugTag+"RequireRestAuth()5", "err =", err, "session =", session, "sessionCookie =", sessionCookie, "token =", token, "r =", r)
-		next.ServeHTTP(w, r.WithContext(ctx)) // Access is correct so the request is passed to the next handler
+		next.ServeHTTP(w, r.WithContext(ctx))                                  // Access is correct so the request is passed to the next handler
 	})
 }
 

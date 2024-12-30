@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -17,15 +18,15 @@ type HTTPInfo struct {
 	Referer       string        `json:"Referer"`
 	Protocol      string        `json:"Protocol"`
 	RemoteAddress string        `json:"RemoteAddress"`
-	Size          int64         `json:"Size"` // number of bytes of the response sent
-	Code          int           `json:"Code"` // response code e.g. 200, 404, etc.
+	Size          int64         `json:"Size"`       // number of bytes of the response sent
+	StatusCode    int           `json:"StatusCode"` // response code e.g. 200, 404, etc.
 	UserAgent     string        `json:"UserAgent"`
 	UserID        int64         `json:"UserID"`
 	TLSProtocol   string        `json:"TLSProtocol"`
 }
 
 // LogRequest This is a MiddleWare handler that logs all request to the console
-func LogRequest(wr http.Handler) http.Handler {
+func LogRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		info := &HTTPInfo{
 			Duration:      0,
@@ -38,13 +39,22 @@ func LogRequest(wr http.Handler) http.Handler {
 			Protocol:      "",
 			RemoteAddress: r.RemoteAddr,
 			Size:          0,
-			Code:          0,
+			StatusCode:    0,
 			UserAgent:     r.Header.Get("User-Agent"),
 			UserID:        0,
 		}
 		start := time.Now()
 
-		wr.ServeHTTP(w, r)
+		// Create a response writer that captures the status code and body
+		lrw := &loggingResponseWriter{ResponseWriter: w, body: bytes.NewBuffer(nil)}
+		//next.ServeHTTP(w, r)
+		next.ServeHTTP(lrw, r)
+
+		// Log the response status code and body
+		log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
+		if lrw.statusCode != 0 && lrw.statusCode != 200 {
+			log.Printf(debugTag+`LogRequest()2 Response body: %s`, lrw.body.String())
+		}
 
 		cookie, err := r.Cookie("session")
 		if err == nil {
@@ -54,9 +64,7 @@ func LogRequest(wr http.Handler) http.Handler {
 			//	info.UserID = token.UserID
 			//}
 		}
-		if r.Response != nil {
-			info.Code = r.Response.StatusCode
-		}
+		info.StatusCode = lrw.statusCode
 		info.Protocol = r.Proto
 		info.Size = r.ContentLength
 		if r.TLS != nil {
@@ -66,12 +74,28 @@ func LogRequest(wr http.Handler) http.Handler {
 
 		infoJSON, err := json.Marshal(info)
 		if err != nil {
-			log.Println(debugTag+`Handler.LogRequest()1`, "err =", err)
+			log.Println(debugTag+`Handler.LogRequest()5`, "err =", err)
 			return
 		}
 
 		log.Printf(debugTag+`LogRequest {"HTTPinfo":%v}`, string(infoJSON))
 	})
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	body       *bytes.Buffer
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
+func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
+	lrw.body.Write(b)
+	return lrw.ResponseWriter.Write(b)
 }
 
 type Stats struct {

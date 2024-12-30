@@ -10,7 +10,7 @@ type Trip struct {
 	ID              int         `json:"id" db:"id"`
 	OwnerID         int         `json:"owner_id" db:"owner_id"`
 	Name            string      `json:"trip_name" db:"trip_name"`
-	Location        string      `json:"location" db:"location"`
+	Location        zero.String `json:"location" db:"location"`
 	DifficultyID    zero.Int    `json:"difficulty_level_id" db:"difficulty_level_id"`
 	Difficulty      zero.String `json:"difficulty_level" db:"difficulty_level"`
 	FromDate        time.Time   `json:"from_date" db:"from_date"`
