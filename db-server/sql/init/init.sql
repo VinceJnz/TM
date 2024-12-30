@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS at_trips (
     max_participants INTEGER NOT NULL DEFAULT 0,
     trip_status_id INT NOT NULL DEFAULT 0,
     trip_type_id INTEGER NOT NULL DEFAULT 0,
-    at_trip_cost_group_id INTEGER NOT NULL DEFAULT 0,
+    trip_cost_group_id INTEGER NOT NULL DEFAULT 0,
     created TIMESTAMP DEFAULT NOW(),
     modified TIMESTAMP DEFAULT NOW()
     --FOREIGN KEY (trip_type_id) REFERENCES trip_types(trip_type_id)
