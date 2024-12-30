@@ -20,7 +20,9 @@ type Trip struct {
 	TripStatusID    zero.Int    `json:"trip_status_id" db:"trip_status_id"`
 	TripStatus      zero.String `json:"trip_status" db:"trip_status"`
 	TripTypeID      zero.Int    `json:"trip_type_id" db:"trip_type_id"`
-	TripType        string      `json:"trip_type" db:"trip_type"`
+	TripType        zero.String `json:"trip_type" db:"trip_type"`
+	TripCostGroupID zero.Int    `json:"trip_cost_group_id" db:"trip_cost_group_id"`
+	TripCostGroup   zero.String `json:"trip_cost_group" db:"trip_cost_group"`
 	Created         time.Time   `json:"created" db:"created"`
 	Modified        time.Time   `json:"modified" db:"modified"`
 }

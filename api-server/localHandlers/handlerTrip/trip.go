@@ -28,8 +28,8 @@ const (
 					FROM public.at_trips att
 					LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`
-	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, from_date, to_date, max_participants, trip_status_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	qryUpdate = `UPDATE at_trips SET (trip_name, location, from_date, to_date, max_participants, trip_status_id) = ($4, $5, $6, $7, $8, $9)	WHERE id = $1, owner_id = $2 OR true=$3`
+	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	qryUpdate = `UPDATE at_trips SET (trip_name, location, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) = ($4, $5, $6, $7, $8, $9, $10, $11)	WHERE id = $1, owner_id = $2 OR true=$3`
 	qryDelete = `DELETE FROM at_trips WHERE id = $1, owner_id = $2 OR true=$3`
 )
 
@@ -77,7 +77,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
@@ -99,7 +99,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Delete: removes a record identified by id
