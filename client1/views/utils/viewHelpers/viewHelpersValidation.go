@@ -37,7 +37,7 @@ func ValidateDatesFromLtTo(fromDateObj, toDateObj, msgObj js.Value, warningMsg s
 	log.Printf(debugTag+"ValidateDatesFromLtTo()1 fromDateObj=%v, toDateObj=%v, msgObj=%v, warningMsg=%v", fromDateObj.Get("id"), toDateObj.Get("id"), msgObj.Get("id"), warningMsg)
 	fromDateObj.Call("setCustomValidity", "")
 	toDateObj.Call("setCustomValidity", "")
-	if !FromDate.Before(ToDate) {
+	if FromDate.Compare(ToDate) > 0 { //!FromDate.Before(ToDate) {
 		msgObj.Call("setCustomValidity", warningMsg)
 		log.Printf(debugTag+"ValidateDatesFromLtTo()2 fromDateObj=%v, toDateObj=%v, msgObj=%v, warningMsg=%v", fromDateObj.Get("id"), toDateObj.Get("id"), msgObj.Get("id"), warningMsg)
 		return errors.New(warningMsg)
