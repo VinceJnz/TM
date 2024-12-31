@@ -126,27 +126,13 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 	}
 
 	callBackSuccess := func(error) {
-		//cookies := res.Cookies()
-		//log.Printf(debugTag+"NewRequest()0a Cookies: %v", c.HTTPClient.Jar.Cookies(req.URL))
-		//if len(cookies) == 0 {
-		//	log.Printf(debugTag + "NewRequest()0b there are no cookies")
-		//} else {
-		//	log.Printf(debugTag + "NewRequest()0c checking cookie list...")
-		//	for i, v := range cookies {
-		//		log.Printf(debugTag+"NewRequest()0d cookie=%v, details=%+v", i, v)
-		//	}
-		//}
-
-		err = fmt.Errorf(debugTag+"newRequest()2a INFORMATION: Using default success-callback: %w", err)
+		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: No success-callback has been provided: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderOk is called
 	} //The function to be called to render the request results
 	if len(callBacks) > 0 {
 		if callBacks[0] != nil {
 			callBackSuccess = callBacks[0]
 		}
-	} else {
-		err = fmt.Errorf(debugTag+"newRequest()2b INFORMATION: No success-callback has been provided: %w", err)
-		log.Println(err, "req.URL =", req.URL)
 	}
 
 	callBackFail := func(error) {

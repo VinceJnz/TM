@@ -208,6 +208,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
+	//editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
@@ -247,7 +248,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", uiObjs.TripCostGroupID)
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitValidateButton(editor.ValidateDates, editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
@@ -275,13 +276,18 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 }
 
+func (editor *ItemEditor) ValidateDates() {
+	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be before To-date")
+	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be after From-date")
+}
+
 func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
-	viewHelpers.ValidateDatesFromLtTo(viewHelpers.DateNameFrom, editor.UiComponents.FromDate, editor.UiComponents.ToDate)
+	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be before To-date")
 	return nil
 }
 
 func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
-	viewHelpers.ValidateDatesFromLtTo(viewHelpers.DateNameTo, editor.UiComponents.FromDate, editor.UiComponents.ToDate)
+	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be after From-date")
 	return nil
 }
 

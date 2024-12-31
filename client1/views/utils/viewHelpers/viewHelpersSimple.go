@@ -4,7 +4,7 @@ import (
 	"syscall/js"
 )
 
-//const debugTag = "viewHelpers"
+const debugTag = "viewHelpers"
 
 // These are simple view helpers that are used to create UI components. They don't add themselves to the DOM.
 // They are used to create more complex UI components, or to create a single UI component.
@@ -93,6 +93,22 @@ func SubmitButton(doc js.Value, displayText, htmlID string) js.Value {
 	button.Set("id", htmlID)
 	button.Set("type", "submit")
 	button.Set("innerHTML", displayText)
+	return button
+}
+
+// func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+func SubmitValidateButton(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
+	button := doc.Call("createElement", "button")
+	button.Set("id", htmlID)
+	button.Set("type", "submit")
+	button.Set("innerHTML", displayText)
+	if onClick != nil {
+		f := func(this js.Value, args []js.Value) interface{} {
+			onClick()
+			return nil
+		}
+		button.Call("addEventListener", "click", js.FuncOf(f))
+	}
 	return button
 }
 

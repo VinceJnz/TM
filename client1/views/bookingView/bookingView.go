@@ -254,7 +254,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.BookingPrice)
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitValidateButton(editor.ValidateDates, editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
@@ -282,14 +282,17 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.updateStateDisplay(ItemStateNone)
 }
 
+func (editor *ItemEditor) ValidateDates() {
+	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be before To-date")
+	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be after From-date")
+}
+
 func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
-	viewHelpers.ValidateDatesFromLtTo(viewHelpers.DateNameFrom, editor.UiComponents.FromDate, editor.UiComponents.ToDate)
-	return nil
+	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be before To-date")
 }
 
 func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
-	viewHelpers.ValidateDatesFromLtTo(viewHelpers.DateNameTo, editor.UiComponents.FromDate, editor.UiComponents.ToDate)
-	return nil
+	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be after From-date")
 }
 
 // SubmitItemEdit handles the submission of the item edit form
