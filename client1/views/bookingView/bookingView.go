@@ -18,18 +18,6 @@ import (
 
 const debugTag = "bookingView."
 
-type ItemState int
-
-const (
-	ItemStateNone     ItemState = iota
-	ItemStateFetching           //ItemState = 1
-	ItemStateEditing            //ItemState = 2
-	ItemStateAdding             //ItemState = 3
-	ItemStateSaving             //ItemState = 4
-	ItemStateDeleting           //ItemState = 5
-	ItemStateSubmitted
-)
-
 type ViewState int
 
 const (
@@ -98,7 +86,7 @@ type ItemEditor struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
-	ItemState     ItemState
+	ItemState     viewHelpers.ItemState
 	Records       []TableData
 	//ItemListXX      []Item
 	UiComponents UI
@@ -110,6 +98,7 @@ type ItemEditor struct {
 	ViewState    ViewState
 	RecordState  RecordState
 	Children     children
+	FieldNames   httpProcessor.FieldNames
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -120,7 +109,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appco
 	editor.events = eventProcessor
 	editor.client = appcore.HttpClient //????????????????? to be removed ??????????????????
 
-	editor.ItemState = ItemStateNone
+	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
@@ -190,7 +179,7 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
-	editor.updateStateDisplay(ItemStateAdding)
+	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
 	// Set default values for the new record // ********************* This needs to be changed for each api **********************
@@ -235,23 +224,25 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.Children.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
-	localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
-	//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
-
-	localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.Layout), editor.document, "Payment", "date", "itemPaymentDate")
-	//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
-
-	localObjs.BookingPrice, editor.UiComponents.BookingPrice = viewHelpers.StringEdit(editor.CurrentRecord.BookingPrice.Decimal.String(), editor.document, "Booking Price", "number", "itemBookingPrice")
-	//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
-
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Notes)
 	form.Call("appendChild", localObjs.FromDate)
 	form.Call("appendChild", localObjs.ToDate)
 	form.Call("appendChild", localObjs.BookingStatusID)
-	form.Call("appendChild", localObjs.BookingDate)
-	form.Call("appendChild", localObjs.PaymentDate)
-	form.Call("appendChild", localObjs.BookingPrice)
+
+	if editor.appCore.User.AdminFlag {
+		localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
+		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
+		localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.Layout), editor.document, "Payment", "date", "itemPaymentDate")
+		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
+		localObjs.BookingPrice, editor.UiComponents.BookingPrice = viewHelpers.StringEdit(editor.CurrentRecord.BookingPrice.Decimal.String(), editor.document, "Booking Price", "number", "itemBookingPrice")
+		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+
+		form.Call("appendChild", localObjs.BookingDate)
+		form.Call("appendChild", localObjs.PaymentDate)
+		form.Call("appendChild", localObjs.BookingPrice)
+	}
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitValidateButton(editor.ValidateDates, editor.document, "Submit", "submitEditBtn")
@@ -279,7 +270,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.UiComponents = UI{}
 
 	// Update state
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 }
 
 func (editor *ItemEditor) ValidateDates() {
@@ -321,25 +312,27 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing value:", err)
 	}
 
-	editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BookingDate.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing value:", err)
-	}
+	if editor.appCore.User.AdminFlag {
+		editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BookingDate.Get("value").String())
+		if err != nil {
+			log.Println("Error parsing value:", err)
+		}
 
-	editor.CurrentRecord.PaymentDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.PaymentDate.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing value:", err)
-	}
+		editor.CurrentRecord.PaymentDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.PaymentDate.Get("value").String())
+		if err != nil {
+			log.Println("Error parsing value:", err)
+		}
 
-	editor.CurrentRecord.BookingPrice.UnmarshalText([]byte(editor.UiComponents.BookingPrice.Get("value").String()))
+		editor.CurrentRecord.BookingPrice.UnmarshalText([]byte(editor.UiComponents.BookingPrice.Get("value").String()))
+	}
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
 	switch editor.ItemState {
-	case ItemStateEditing:
+	case viewHelpers.ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
-	case ItemStateAdding:
+	case viewHelpers.ItemStateAdding:
 		go editor.AddItem(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
@@ -357,53 +350,59 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
-	editor.updateStateDisplay(ItemStateSaving)
+	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	var id int
-	editor.updateStateDisplay(ItemStateSaving)
+	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 	editor.client.NewRequest(http.MethodPost, ApiURL, id, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	editor.onCompletionMsg("Item record added successfully")
 }
 
 func (editor *ItemEditor) FetchItems() {
+	var records []TableData
+	success := func(err error, data *httpProcessor.ReturnData) {
+		if data != nil {
+			editor.FieldNames = data.FieldNames // Might be able to use this to filter the fields displayed on the form
+		}
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
+	}
+
 	if editor.RecordState == RecordStateReloadRequired {
+		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
 		editor.Children.BookingStatus.FetchItems()
 
 		localApiURL := ApiURL
-		if editor.ParentData.ID != 0 {
+		if editor.ParentData.ID != 0 { // This creates a ULR the gets the items for a specific parent record
 			localApiURL = "/trips/" + strconv.Itoa(editor.ParentData.ID) + ApiURL
 		}
 		go func() {
-			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
-			editor.client.NewRequest(http.MethodGet, localApiURL, &records, nil)
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
+			editor.client.NewRequest(http.MethodGet, localApiURL, &records, nil, success)
 		}()
 	}
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
-		editor.updateStateDisplay(ItemStateDeleting)
+		editor.updateStateDisplay(viewHelpers.ItemStateDeleting)
 		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()
 }
@@ -434,7 +433,7 @@ func (editor *ItemEditor) populateItemList() {
 			editButton.Set("innerHTML", "Edit")
 			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 				editor.CurrentRecord = record
-				editor.updateStateDisplay(ItemStateEditing)
+				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 				editor.populateEditForm()
 				return nil
 			}))
@@ -466,7 +465,7 @@ func (editor *ItemEditor) populateItemList() {
 	}
 }
 
-func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
 	editor.ItemState = newState
 }

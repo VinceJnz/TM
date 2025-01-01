@@ -1,4 +1,4 @@
-package tripView
+//package tripView
 
 import (
 	appcore "client1/v2/app/appCore"
@@ -97,7 +97,7 @@ type ItemEditor struct {
 	ViewState     ViewState
 	RecordState   RecordState
 	Children      children
-	FieldNames    httpProcessor.FieldNames
+	FieldNames    viewHelpers.FieldNames
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -204,49 +204,65 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create ui objects and input fields with html validation as necessary // ********************* This needs to be changed for each api **********************
 	var uiObjs UI
 
-	uiObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
-	editor.UiComponents.Name.Call("setAttribute", "required", "true")
+	if _, ok := editor.FieldNames["trip_name"]; ok {
+		uiObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
+		editor.UiComponents.Name.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.Name)
+	}
 
-	uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
-	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
-	//editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
-	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
-	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
+	if _, ok := editor.FieldNames["from_date"]; ok {
+		uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
+		//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
+		//editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
+		editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
+		editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.FromDate)
+	}
 
-	uiObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
-	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
-	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
-	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+	if _, ok := editor.FieldNames["to_date"]; ok {
+		uiObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
+		//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
+		editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
+		editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.ToDate)
+	}
 
-	uiObjs.Location, editor.UiComponents.Location = viewHelpers.StringEdit(editor.CurrentRecord.Location, editor.document, "Location", "text", "itemLocation")
-	//editor.UiComponents.Location.Call("setAttribute", "required", "false")
+	if _, ok := editor.FieldNames["location"]; ok {
+		uiObjs.Location, editor.UiComponents.Location = viewHelpers.StringEdit(editor.CurrentRecord.Location, editor.document, "Location", "text", "itemLocation")
+		//editor.UiComponents.Location.Call("setAttribute", "required", "false")
+		form.Call("appendChild", uiObjs.Location)
+	}
 
-	uiObjs.DifficultyID, editor.UiComponents.DifficultyID = editor.Children.Difficulty.NewDropdown(editor.CurrentRecord.DifficultyID, "Difficulty", "itemDifficultyID")
-	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+	if _, ok := editor.FieldNames["difficulty_level_id"]; ok {
+		uiObjs.DifficultyID, editor.UiComponents.DifficultyID = editor.Children.Difficulty.NewDropdown(editor.CurrentRecord.DifficultyID, "Difficulty", "itemDifficultyID")
+		//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.DifficultyID)
+	}
 
-	uiObjs.MaxParticipants, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
-	editor.UiComponents.MaxParticipants.Set("min", 1)
-	editor.UiComponents.MaxParticipants.Call("setAttribute", "required", "true")
+	if _, ok := editor.FieldNames["max_participants"]; ok {
+		uiObjs.MaxParticipants, editor.UiComponents.MaxParticipants = viewHelpers.StringEdit(strconv.Itoa(editor.CurrentRecord.MaxParticipants), editor.document, "Max Participants", "number", "itemMaxParticipants")
+		editor.UiComponents.MaxParticipants.Set("min", 1)
+		editor.UiComponents.MaxParticipants.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.MaxParticipants)
+	}
 
-	uiObjs.TripStatusID, editor.UiComponents.TripStatusID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
-	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+	if _, ok := editor.FieldNames["trip_status_id"]; ok {
+		uiObjs.TripStatusID, editor.UiComponents.TripStatusID = editor.Children.TripStatus.NewDropdown(editor.CurrentRecord.TripStatusID, "Status", "itemTripStatusID")
+		//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.TripStatusID)
+	}
 
-	uiObjs.TripTypeID, editor.UiComponents.TripTypeID = editor.Children.TripType.NewDropdown(editor.CurrentRecord.TripTypeID, "Type", "itemTripTypeID")
-	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+	if _, ok := editor.FieldNames["trip_type_id"]; ok {
+		uiObjs.TripTypeID, editor.UiComponents.TripTypeID = editor.Children.TripType.NewDropdown(editor.CurrentRecord.TripTypeID, "Type", "itemTripTypeID")
+		//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.TripTypeID)
+	}
 
-	uiObjs.TripCostGroupID, editor.UiComponents.TripCostGroupID = editor.Children.TripCostGroup.NewDropdown(editor.CurrentRecord.TripCostGroupID, "Cost Group", "itemTripCostGroupID")
-	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
-
-	// Append fields to form // ********************* This needs to be changed for each api **********************
-	form.Call("appendChild", uiObjs.Name)
-	form.Call("appendChild", uiObjs.FromDate)
-	form.Call("appendChild", uiObjs.ToDate)
-	form.Call("appendChild", uiObjs.Location)
-	form.Call("appendChild", uiObjs.DifficultyID)
-	form.Call("appendChild", uiObjs.MaxParticipants)
-	form.Call("appendChild", uiObjs.TripStatusID)
-	form.Call("appendChild", uiObjs.TripTypeID)
-	form.Call("appendChild", uiObjs.TripCostGroupID)
+	if _, ok := editor.FieldNames["trip_cost_group_id"]; ok {
+		uiObjs.TripCostGroupID, editor.UiComponents.TripCostGroupID = editor.Children.TripCostGroup.NewDropdown(editor.CurrentRecord.TripCostGroupID, "Cost Group", "itemTripCostGroupID")
+		//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
+		form.Call("appendChild", uiObjs.TripCostGroupID)
+	}
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitValidateButton(editor.ValidateDates, editor.document, "Submit", "submitEditBtn")
@@ -389,9 +405,13 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems() {
 	var records []TableData
-	success := func(err error, data *httpProcessor.ReturnData) {
-		if data != nil {
-			editor.FieldNames = data.FieldNames // Might be able to use this to filter the fields displayed on the form
+	success := func(err error, data ...any) {
+		for _, v := range data {
+			switch x := v.(type) {
+			case viewHelpers.FieldNames: // Field names
+				log.Printf(debugTag+"FetchItems()1 fieldNames=%+v", x)
+				editor.FieldNames = x
+			}
 		}
 		editor.Records = records
 		editor.populateItemList()

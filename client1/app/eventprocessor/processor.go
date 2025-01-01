@@ -15,7 +15,7 @@ const debugTag = "eventProcessor."
 type Event struct {
 	Type     string
 	DebugTag string
-	Data     interface{}
+	Data     any
 }
 
 // EventHandler is a function that processes events
@@ -36,6 +36,11 @@ func New() *EventProcessor {
 // AddEventHandler registers a new event handler. Note: and eventType can have one or more associated events
 func (ep *EventProcessor) AddEventHandler(eventType string, handler EventHandler) {
 	ep.eventHandlers[eventType] = append(ep.eventHandlers[eventType], handler)
+}
+
+// DelEventHandler removes all the eventy handlers of eventType. Note: and eventType can have one or more associated events
+func (ep *EventProcessor) DelEventHandler(eventType string) {
+	delete(ep.eventHandlers, eventType)
 }
 
 // ProcessEvent call the appropriate event type and its related event handlers

@@ -302,7 +302,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
-	success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
 			log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()4 success error: ", "err =", err, "item =", item) //Log the error in the browser
 		}
@@ -311,7 +311,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 		editor.onCompletionMsg("Account successfully created???")
 	}
 
-	fail := func(err error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
 		log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()6 fail: ", "err =", err, "item =", item) //Log the error in the browser
 		editor.onCompletionMsg("Account creation failed???")
 	}

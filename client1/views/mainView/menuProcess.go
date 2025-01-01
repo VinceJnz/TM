@@ -3,6 +3,7 @@ package mainView
 import (
 	appcore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -21,7 +22,7 @@ func (editor *View) getMenuUser() {
 	//Get Menu User from server
 	var menuUser appcore.User
 
-	success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()2 success: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
@@ -31,19 +32,19 @@ func (editor *View) getMenuUser() {
 		editor.elements.userDisplay.Set("innerHTML", editor.appCore.User.Name)
 		//log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()3 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
 
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 		// Next process step
 		editor.getMenuList()
 	}
 
-	fail := func(err error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		//Don't display message to user
 	}
 
+	editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching, debugTag)
 	go func() {
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching, debugTag)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil, success, fail)
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 	}()
 }
 
@@ -52,7 +53,7 @@ func (editor *View) getMenuList() {
 	//Get Menu List from server
 	var menuList MenuList
 
-	success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()2 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
@@ -60,20 +61,20 @@ func (editor *View) getMenuList() {
 		editor.CurrentRecord.MenuList = menuList // Save the salt to the current record
 		//log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()3 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 
+		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 		// Next process step
 		editor.menuComplete()
 	}
 
-	fail := func(err error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()4 fail: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		//Display message  to user ??????????????
 		editor.onCompletionMsg(debugTag + "getMenuList()1 " + err.Error())
 	}
 
+	editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching, debugTag)
 	go func() {
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching, debugTag)
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuList/", &menuList, nil, success, fail)
-		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 	}()
 }
 

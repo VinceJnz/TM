@@ -2,6 +2,7 @@ package loginView
 
 import (
 	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"math/big"
@@ -25,7 +26,7 @@ func (editor *ItemEditor) getSalt(username string) {
 	//Get salt from server
 	var salt []byte
 
-	success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v %v %v", debugTag+"LogonForm.getSalt()3 success: ", "err =", err, "username =", username, "salt =", salt) //Log the error in the browser
@@ -37,7 +38,7 @@ func (editor *ItemEditor) getSalt(username string) {
 		editor.getServerVerify(username, editor.CurrentRecord.Password, salt)
 	}
 
-	fail := func(err error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getSalt()4 fail: ", "err =", err, "username =", username) //Log the error in the browser
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 	}
@@ -54,7 +55,7 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 	var A *big.Int
 	var ServerVerifyRecord ServerVerify
 
-	success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v %v %v", debugTag+"LogonForm.getServerVerify()1 success: ", "err =", err, "editor.Children =", editor.Children, "A =", A) //Log the error in the browser
@@ -64,7 +65,7 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 		editor.checkServerKey(username, ServerVerifyRecord)
 	}
 
-	fail := func(err error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
 		log.Printf("%v %v %v %v %+v %v %v", debugTag+"LogonForm.getServerVerify()2 fail: ", "err =", err, "editor.Children =", editor.Children, "A =", A) //Log the error in the browser
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 	}
@@ -90,7 +91,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 	var err error
 	var ClientVerifyRecord ClientVerify
 
-	success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()2 success: ", "err=", err, "s.Item=", editor.CurrentRecord) //Log the error in the browser
@@ -100,7 +101,7 @@ func (editor *ItemEditor) checkServerKey(username string, serverVerifyRecord Ser
 		editor.loginComplete(username)
 	}
 
-	fail := func(err error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.checkServerKey()3 fail: ", "err=", err, "editor.Children=", editor.Children) //Log the error in the browser
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 	}

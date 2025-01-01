@@ -149,13 +149,13 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) FetchItems() {
 	var records []TableData
 
-	success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
 		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}
 
-	failure := func(err error) {
+	failure := func(err error, data *httpProcessor.ReturnData) {
 		log.Printf(debugTag+"FetchItems()1 failure err: %v", err)
 	}
 
