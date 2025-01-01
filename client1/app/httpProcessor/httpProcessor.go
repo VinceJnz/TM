@@ -182,7 +182,15 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 	}
 
 	if rxDataStru != nil {
-		if err = json.NewDecoder(res.Body).Decode(&rxDataStru); err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
+		//if err = json.NewDecoder(res.Body).Decode(&rxDataStru); err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
+		//	resBody, _ := io.ReadAll(res.Body)
+		//	log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8a ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
+		//	err = fmt.Errorf(debugTag+"newRequest()8b failed to decode JSON data: %w", err)
+		//	callBackFail(err)
+		//	return nil, err
+		//}
+		_, err := decodeJSON(res, &rxDataStru)
+		if err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
 			resBody, _ := io.ReadAll(res.Body)
 			log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8a ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
 			err = fmt.Errorf(debugTag+"newRequest()8b failed to decode JSON data: %w", err)
@@ -209,4 +217,41 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru interface
 
 	callBackSuccess(nil)
 	return req, nil
+}
+
+func decodeJSON(res *http.Response, rxDataStru interface{}) ([]string, error) {
+	// Read the body into a byte slice
+	var fieldNames []string
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf(debugTag+"decodeJSON()1 bodyBytes=%v", bodyBytes)
+
+	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&rxDataStru)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return nil, err
+	}
+
+	log.Printf(debugTag+"decodeJSON()2 rxDataStru=%+v", rxDataStru)
+
+	// Decode the body into a map to get field names
+	var result []map[string]interface{}
+	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&result)
+	if err != nil {
+		log.Println(debugTag+"decodeJSON()3 failed to get field names, Error:", err)
+	} else {
+		log.Printf(debugTag+"decodeJSON()4 result=%+v", result)
+		record := result[0]
+		//for _, record := range result {
+		for key := range record {
+			fieldNames = append(fieldNames, key)
+		}
+		//}
+		log.Printf(debugTag+"decodeJSON()5 fieldNames=%+v", fieldNames)
+	}
+
+	return fieldNames, nil
 }
