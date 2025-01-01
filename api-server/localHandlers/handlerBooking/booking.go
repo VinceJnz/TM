@@ -35,7 +35,7 @@ const (
 					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_date, payment_date, booking_price) = ($2, $3, $4, $5, $6, %7, %8, $9)
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
-					SET (notes, from_date, to_date, booking_status_id) = ($3, $4, $5, $6)
+					SET (notes, from_date, to_date, booking_status_id) = ($4, $5, $6, $7)
 					WHERE id = $1 AND (owner_id = $2 OR true=$3)`
 	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR true=$3)`
 )
@@ -113,7 +113,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if session.AdminFlag {
 		handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
 	} else {
-		handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.OwnerID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+		handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 	}
 }
 
