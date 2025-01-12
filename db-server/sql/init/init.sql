@@ -159,7 +159,8 @@ CREATE TABLE IF NOT EXISTS et_booking_status (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for user age group
+-- To be changed to just a flag ?????????????????
+-- Table for user membership status
 CREATE TABLE et_member_status (
     id SERIAL PRIMARY KEY,
     status VARCHAR(255) NOT NULL, -- Example: 'member', 'non-member' ??????????
@@ -206,11 +207,12 @@ CREATE TABLE et_trip_type (
 -- Table for user age group
 CREATE TABLE et_user_age_groups (
     id SERIAL PRIMARY KEY,
-    age_group VARCHAR(255) NOT NULL, -- Example: 'infant', 'child', 'youth', 'adult'
+    age_group VARCHAR(255) NOT NULL, -- Example: 'infant', 'child', 'youth', 'adult', 'senior', 'life'
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- To be removed. This is superceeded by et_user_account_status
 -- Table for user status
 CREATE TABLE et_user_status (
     id SERIAL PRIMARY KEY,
@@ -253,7 +255,7 @@ CREATE TABLE IF NOT EXISTS st_users (
     user_password VARCHAR(45) DEFAULT NULL, -- This will probably not be used (see: salt, verifier)
     salt BYTEA DEFAULT NULL, -- varbinary(30)
     verifier BYTEA DEFAULT NULL, -- varbinary(500)
-    user_account_status_id INT NOT NULL DEFAULT 0, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
+    user_account_status_id INT NOT NULL DEFAULT 1, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
     user_account_hidden BOOLEAN, -- Hide the user account from the public, Admins can still see it
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -320,6 +322,7 @@ CREATE TABLE et_resource (
 CREATE TABLE et_user_account_status (
     id SERIAL PRIMARY KEY,
     status VARCHAR(255) NOT NULL, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
+    description VARCHAR(255), 
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
