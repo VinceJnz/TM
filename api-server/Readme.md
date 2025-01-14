@@ -99,8 +99,10 @@ ORDER BY trip_id, booking_position;
 
 ## Query to get the total costs of a booking
 
+Generic booking list
+
 ```sql
-SELECT att.id AS trip_id, att.trip_name, atb.id AS booking_id, atb.notes AS booking_notes, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as person_count
+SELECT att.id AS trip_id, att.trip_name, atb.id AS booking_id, atb.notes AS booking_notes, atb.owner_id, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as person_count
 FROM at_trips att
 LEFT JOIN at_bookings atb ON atb.trip_id=att.id
 LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
@@ -112,6 +114,25 @@ LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
 GROUP BY att.id, att.trip_name, atb.id
 ORDER BY att.trip_name, atb.id
 ```
+
+My Booking list
+
+```sql
+SELECT att.trip_name, atb.*, ebs.status, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as participants
+FROM at_trips att
+LEFT JOIN at_bookings atb ON atb.trip_id=att.id
+LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
+	 JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
+LEFT JOIN st_users stu ON stu.id=atbp.person_id
+LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
+LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
+						AND attc.member_status_id=stu.member_status_id
+						AND attc.user_age_group_id=stu.user_age_group_id
+WHERE atb.owner_id = $1 OR true=$2
+GROUP BY att.id, att.trip_name, atb.id, ebs.status
+ORDER BY att.trip_name, atb.id
+```
+
 
 
 ## Money
