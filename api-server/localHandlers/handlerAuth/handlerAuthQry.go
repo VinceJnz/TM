@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"errors"
 	"log"
@@ -96,7 +97,7 @@ const (
 )
 
 // SetStatusID sets the users account status
-func (h *Handler) UserSetStatusID(userID int, status models.AccountStatus) error {
+func (h *Handler) UserSetStatusID(userID int, status handlerUserAccountStatus.AccountStatus) error {
 	var err error
 
 	result, err := h.appConf.Db.Exec(sqlSetStatus, status, userID)

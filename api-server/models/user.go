@@ -7,16 +7,6 @@ import (
 	"github.com/guregu/null/v5/zero"
 )
 
-type AccountStatus int64
-
-const (
-	AccountCurrent AccountStatus = iota + 1
-	AccountDisabled
-	AccountNew
-	AccountVerified
-	AccountResetRequired
-)
-
 type User struct {
 	ID              int         `json:"id" db:"id"`
 	Name            string      `json:"name" db:"name"`
@@ -36,13 +26,6 @@ type User struct {
 	Modified        time.Time   `json:"modified" db:"modified"`
 }
 
-type UserStatus struct {
-	ID       int       `json:"id" db:"id"`
-	Status   string    `json:"status" db:"status"`
-	Created  time.Time `json:"created" db:"created"`
-	Modified time.Time `json:"modified" db:"modified"`
-}
-
 type UserAgeGroups struct {
 	ID       int       `json:"id" db:"id"`
 	AgeGroup string    `json:"age_group" db:"age_group"`
@@ -51,10 +34,11 @@ type UserAgeGroups struct {
 }
 
 type UserAccountStatus struct {
-	ID       int       `json:"id" db:"id"`
-	Status   string    `json:"status" db:"status"`
-	Created  time.Time `json:"created" db:"created"`
-	Modified time.Time `json:"modified" db:"modified"`
+	ID          int       `json:"id" db:"id"`
+	Status      string    `json:"status" db:"status"`
+	Description string    `json:"description" db:"description"`
+	Created     time.Time `json:"created" db:"created"`
+	Modified    time.Time `json:"modified" db:"modified"`
 }
 
 type UserPayments struct {

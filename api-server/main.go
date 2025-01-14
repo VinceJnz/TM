@@ -9,6 +9,7 @@ import (
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
 	"api-server/v2/localHandlers/handlerGroupBooking"
+	"api-server/v2/localHandlers/handlerMemberStatus"
 	"api-server/v2/localHandlers/handlerResource"
 	"api-server/v2/localHandlers/handlerSeasons"
 	"api-server/v2/localHandlers/handlerSecurityGroup"
@@ -24,7 +25,6 @@ import (
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
-	"api-server/v2/localHandlers/handlerUserStatus"
 	"api-server/v2/localHandlers/helpers"
 	"log"
 	"net/http"
@@ -68,7 +68,7 @@ func main() {
 	addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
 	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserAgeGroup routes
 	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))                   // UserPayments routes
-	addRouteGroup(subR2, "userStatus", handlerUserStatus.New(app))                       // UserStatus routes
+	addRouteGroup(subR2, "userStatus", handlerMemberStatus.New(app))                     // UserStatus routes
 	addRouteGroup(subR2, "userAccountStatus", handlerUserAccountStatus.New(app))         // UserAccountStatus routes
 	addRouteGroup(subR2, "groupBooking", handlerGroupBooking.New(app))                   // GroupBookings routes
 	addRouteGroup(subR2, "bookingStatus", handlerBookingStatus.New(app))                 // BookingStatus routes

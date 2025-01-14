@@ -1,4 +1,4 @@
-package handlerUserStatus
+package handlerMemberStatus
 
 import (
 	"encoding/json"
@@ -34,18 +34,18 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.UserStatus{}, qryGetAll)
+	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.MemberStatus{}, qryGetAll)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.UserStatus{}, qryGet, id)
+	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.MemberStatus{}, qryGet, id)
 }
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.UserStatus
+	var record models.MemberStatus
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -56,7 +56,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var record models.UserStatus
+	var record models.MemberStatus
 	id := handlerStandardTemplate.GetID(w, r)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {

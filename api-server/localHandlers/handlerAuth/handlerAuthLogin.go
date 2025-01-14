@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"encoding/json"
@@ -38,11 +39,11 @@ func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch models.AccountStatus(user.AccountStatusID.ValueOrZero()) {
-	case models.AccountCurrent:
+	switch handlerUserAccountStatus.AccountStatus(user.AccountStatusID.ValueOrZero()) {
+	case handlerUserAccountStatus.AccountActive:
 		//salt stored by the server is sent to the client
 		json.NewEncoder(w).Encode(user.Salt)
-	case models.AccountResetRequired:
+	case handlerUserAccountStatus.AccountResetRequired:
 		//Send message requiring the user to reset the password
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Password reset required."))

@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"encoding/json"
@@ -37,7 +38,7 @@ func (h *Handler) AuthReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((models.AccountStatus(user.AccountStatusID.Int64) == models.AccountCurrent) || (models.AccountStatus(user.AccountStatusID.Int64) == models.AccountResetRequired)) {
+	if !((handlerUserAccountStatus.AccountStatus(user.AccountStatusID.Int64) == handlerUserAccountStatus.AccountActive) || (handlerUserAccountStatus.AccountStatus(user.AccountStatusID.Int64) == handlerUserAccountStatus.AccountResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "username =", username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))
@@ -102,7 +103,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((models.AccountStatus(userS.UserStatusID.Int64) == models.AccountCurrent) || (models.AccountStatus(userS.UserStatusID.Int64) == models.AccountResetRequired)) {
+	if !((handlerUserAccountStatus.AccountStatus(userS.UserStatusID.Int64) == handlerUserAccountStatus.AccountActive) || (handlerUserAccountStatus.AccountStatus(userS.UserStatusID.Int64) == handlerUserAccountStatus.AccountResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "userS.UserName =", userS.Username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))
@@ -130,8 +131,8 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if models.AccountStatus(userS.UserStatusID.ValueOrZero()) == models.AccountResetRequired {
-		err = h.UserSetStatusID(userS.ID, models.AccountCurrent)
+	if handlerUserAccountStatus.AccountStatus(userS.UserStatusID.ValueOrZero()) == handlerUserAccountStatus.AccountResetRequired {
+		err = h.UserSetStatusID(userS.ID, handlerUserAccountStatus.AccountActive)
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()10 ", "err =", err, "userS =", userS)
 		}
