@@ -27,3 +27,7 @@ Age group
 * 'senior' - Based on age
 * 'life' - Based on committiee decision
 **Table name: et_user_age_groups**
+
+
+## Querying trip costs
+

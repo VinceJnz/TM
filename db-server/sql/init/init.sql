@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS et_booking_status (
 -- Table for user membership status
 CREATE TABLE et_member_status (
     id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'member', 'non-member' ??????????
+    status VARCHAR(255) NOT NULL, -- Example: 'yes', 'no' ??????????
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -214,12 +214,12 @@ CREATE TABLE et_user_age_groups (
 
 -- To be removed. This is superceeded by et_user_account_status
 -- Table for user status
-CREATE TABLE et_user_status (
-    id SERIAL PRIMARY KEY,
-    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+--CREATE TABLE et_user_status (
+--  id SERIAL PRIMARY KEY,
+--    status VARCHAR(255) NOT NULL, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
+--    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+--);
 
 
 ----------------------------------------------
@@ -310,6 +310,7 @@ CREATE TABLE st_resource_column (
     --FOREIGN KEY (resource_id) REFERENCES st_resource(id)
 );
 
+-- Table stores resource names, used in security access selection in groups etc.
 CREATE TABLE et_resource (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'trips', 'users', 'bookings', 'user_status' (the url to to access the resource)
@@ -318,7 +319,7 @@ CREATE TABLE et_resource (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for user status group
+-- Table for user account status
 CREATE TABLE et_user_account_status (
     id SERIAL PRIMARY KEY,
     status VARCHAR(255) NOT NULL, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
@@ -326,6 +327,15 @@ CREATE TABLE et_user_account_status (
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO et_user_account_status (status, description)
+VALUES 
+('Account New', 'A new account that has just been created by a user. It is not yet verified or activated. Needs to be activated by an admin.'),
+('Account Verified', 'The email address has been verified. An Admin now needs to activate the account.'),
+('Account Active', 'An account that has been activated, and is currently active.'),
+('Account Disabled', 'An account that has been disabled.'),
+('Account Reset Required', 'The account is flagged for a password reset. The user will be informed at the next login.');
+
 
 CREATE TABLE et_access_level (
     id SERIAL PRIMARY KEY,
@@ -335,7 +345,7 @@ CREATE TABLE et_access_level (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- I think this can be removed and replaced with an admin flag
+-- I think this can be removed and replaced with an admin flag, or just remove altogether?????
 CREATE TABLE et_access_type (
     id SERIAL PRIMARY KEY,
     name VARCHAR(45) DEFAULT NULL, -- Example: 'admin', 'owner', 'user' ????? don't know if this is useful
