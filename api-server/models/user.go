@@ -17,6 +17,7 @@ type User struct {
 	BirthDate       zero.Time   `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
 	UserAgeGroupID  zero.Int    `json:"user_age_group_id" db:"user_age_group_id"`
 	MemberStatusID  zero.Int    `json:"member_status_id" db:"member_status_id"`
+	MemberStatus    zero.String `json:"member_status" db:"member_status"`
 	Password        zero.String `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
 	Salt            []byte      `json:"salt" db:"salt"`
 	Verifier        *big.Int    `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
