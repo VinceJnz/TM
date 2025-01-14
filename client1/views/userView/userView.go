@@ -5,7 +5,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/userAccountStatusView"
 	"client1/v2/views/userAgeGroupView"
-	"client1/v2/views/userStatusView"
+	"client1/v2/views/userMemberStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"math/big"
@@ -56,7 +56,7 @@ type TableData struct {
 	MemberCode          string    `json:"member_code"`
 	BirthDate           time.Time `json:"user_birth_date"` //This can be used to calculate what age group to apply
 	UserAgeGroupID      int       `json:"user_age_group_id"`
-	UserStatusID        int       `json:"user_status_id"`
+	MemberStatusID      int       `json:"member_status_id"`
 	Password            string    `json:"user_password"` //This will probably not be used (see: salt, verifier)
 	Salt                []byte    `json:"salt"`
 	Verifier            *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
@@ -75,7 +75,7 @@ type UI struct {
 	MemberCode          js.Value
 	BirthDate           js.Value
 	UserAgeGroupID      js.Value
-	UserStatusID        js.Value
+	MemberStatusID      js.Value
 	UserAccountStatusID js.Value
 	UserAccountHidden   js.Value
 }
@@ -83,7 +83,7 @@ type UI struct {
 type children struct {
 	//Add child structures as necessary
 	userAgeGroup      userAgeGroupView.ItemEditor
-	userStatus        userStatusView.ItemEditor
+	userMemberStatus  userMemberStatusView.ItemEditor
 	userAccountStatus userAccountStatusView.ItemEditor
 }
 
@@ -140,7 +140,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 	editor.Children.userAgeGroup = *userAgeGroupView.New(editor.document, eventProcessor, editor.client)
 	//editor.Children.userAgeGroup.FetchItems()
 
-	editor.Children.userStatus = *userStatusView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.userMemberStatus = *userMemberStatusView.New(editor.document, eventProcessor, editor.client)
 	//editor.Children.userStatus.FetchItems()
 
 	editor.Children.userAccountStatus = *userAccountStatusView.New(editor.document, eventProcessor, editor.client)
@@ -253,7 +253,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup")
 	//editor.UiComponents.UserAgeGroupID.Call("setAttribute", "required", "true")
 
-	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.userStatus.NewDropdown(editor.CurrentRecord.UserStatusID, "User Status", "itemUserStatus")
+	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus")
 	//editor.UiComponents.UserStatusID.Call("setAttribute", "required", "true")
 
 	localObjs.UserAccountStatusID, editor.UiComponents.UserAccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.UserAccountStatusID, "Account Status", "itemAccountStatus")
@@ -270,7 +270,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.MemberCode)
 	form.Call("appendChild", localObjs.BirthDate)
 	form.Call("appendChild", localObjs.UserAgeGroupID)
-	form.Call("appendChild", localObjs.UserStatusID)
+	form.Call("appendChild", localObjs.MemberStatusID)
 	form.Call("appendChild", localObjs.UserAccountStatusID)
 	form.Call("appendChild", localObjs.UserAccountHidden)
 
@@ -340,7 +340,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing Age Group:", err)
 		return nil
 	}
-	editor.CurrentRecord.UserStatusID, err = strconv.Atoi(editor.UiComponents.UserStatusID.Get("value").String())
+	editor.CurrentRecord.MemberStatusID, err = strconv.Atoi(editor.UiComponents.MemberStatusID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing User Status:", err)
 		return nil
@@ -399,7 +399,7 @@ func (editor *ItemEditor) FetchItems() {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
 		editor.Children.userAgeGroup.FetchItems()
-		editor.Children.userStatus.FetchItems()
+		editor.Children.userMemberStatus.FetchItems()
 		editor.Children.userAccountStatus.FetchItems()
 
 		go func() {

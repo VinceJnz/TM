@@ -22,9 +22,8 @@ import (
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/tripTypeView"
 	"client1/v2/views/tripView"
-	"client1/v2/views/userAccountStatusView"
 	"client1/v2/views/userAgeGroupView"
-	"client1/v2/views/userStatusView"
+	"client1/v2/views/userMemberStatusView"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
 	"strings"
@@ -181,8 +180,8 @@ func (v *View) Setup() {
 	v.AddViewItem("Season", seasonView.ApiURL, true, seasonView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
-	v.AddViewItem("User Status", userStatusView.ApiURL, true, userStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
-	v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("User Member Status", userMemberStatusView.ApiURL, true, userMemberStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	//v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)

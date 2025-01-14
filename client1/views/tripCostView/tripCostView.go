@@ -5,7 +5,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/userAgeGroupView"
-	"client1/v2/views/userStatusView"
+	"client1/v2/views/userMemberStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -74,9 +74,9 @@ type ParentData struct {
 
 type children struct {
 	//Add child structures as necessary
-	UserStatus   *userStatusView.ItemEditor
-	UserAgeGroup *userAgeGroupView.ItemEditor
-	Season       *seasonView.ItemEditor
+	UserMemberStatus *userMemberStatusView.ItemEditor
+	UserAgeGroup     *userAgeGroupView.ItemEditor
+	Season           *seasonView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -135,7 +135,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	// Create child editors here
 	//..........
-	editor.Children.UserStatus = userStatusView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.UserMemberStatus = userMemberStatusView.New(editor.document, eventProcessor, editor.client)
 	//editor.Children.UserStatus.FetchItems()
 
 	editor.Children.UserAgeGroup = userAgeGroupView.New(editor.document, eventProcessor, editor.client)
@@ -202,7 +202,7 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserStatus.NewDropdown(editor.CurrentRecord.UserStatusID, "User Status", "itemUserStatusID")
+	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserMemberStatus.NewDropdown(editor.CurrentRecord.UserStatusID, "User Status", "itemUserStatusID")
 	//editor.UiComponents.UserCategoryID.Call("setAttribute", "required", "true")
 
 	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.UserAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemUserAgeGroupID")
@@ -333,7 +333,7 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
-		editor.Children.UserStatus.FetchItems()
+		editor.Children.UserMemberStatus.FetchItems()
 		editor.Children.UserAgeGroup.FetchItems()
 		editor.Children.Season.FetchItems()
 

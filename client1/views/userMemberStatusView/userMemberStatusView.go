@@ -1,4 +1,4 @@
-package userStatusView
+package userMemberStatusView
 
 import (
 	"client1/v2/app/eventProcessor"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const debugTag = "userStatusView."
+const debugTag = "userMemberStatusView."
 
 type ItemState int
 
@@ -40,7 +40,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/userStatus"
+const ApiURL = "/userMemberStatus"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
