@@ -92,7 +92,13 @@ type ItemEditor2 struct {
 
 // NewItemEditor creates a new ItemEditor instance
 func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
-	return nil
+	editor := new(ItemEditor)
+	editor.appCore = appCore
+	editor.document = document
+	editor.events = eventProcessor
+	editor.client = appCore.HttpClient
+
+	return editor
 }
 
 func (editor *ItemEditor) GetDiv() js.Value {
