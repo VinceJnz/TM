@@ -103,8 +103,8 @@ CREATE TABLE at_trip_cost_groups (
 CREATE TABLE at_trip_costs (
     id SERIAL PRIMARY KEY,
     at_trip_cost_group_id INTEGER NOT NULL,
-    description VARCHAR(50) NOT NULL, --This could be derived from user_status, user_age_group, season
-    user_status_id INTEGER NOT NULL,
+    description VARCHAR(50) NOT NULL, --This could be derived from member_status, user_age_group, season
+    member_status_id INTEGER NOT NULL,
     user_age_group_id INTEGER NOT NULL,
     season_id INTEGER NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
@@ -233,7 +233,7 @@ CREATE TABLE st_token (
     name VARCHAR(45) NOT NULL,
     host VARCHAR(45) DEFAULT NULL,
     token VARCHAR(45) DEFAULT NULL,
-    token_valid_id INT NOT NULL,
+    token_valid BOOLEAN NOT NULL DEFAULT FALSE,
     valid_from TIMESTAMP with time zone,
     valid_to TIMESTAMP with time zone,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS st_users (
     member_code VARCHAR(20),
     user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
     user_age_group_id INTEGER NOT NULL DEFAULT 0,
-    user_status_id INTEGER NOT NULL DEFAULT 0, -- Example: 'current', 'expired', 'cancelled', 'non-member' ??????????
+    member_status_id INTEGER NOT NULL DEFAULT 0, -- Example: 'yes', 'no'
     user_password VARCHAR(45) DEFAULT NULL, -- This will probably not be used (see: salt, verifier)
     salt BYTEA DEFAULT NULL, -- varbinary(30)
     verifier BYTEA DEFAULT NULL, -- varbinary(500)
@@ -261,7 +261,7 @@ CREATE TABLE IF NOT EXISTS st_users (
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
     --FOREIGN KEY (user_account_status_id) REFERENCES et_user_account_status(id)
-    --FOREIGN KEY (user_status_id) REFERENCES et_user_status(id)
+    --FOREIGN KEY (member_status_id) REFERENCES et_member_status(id)
 );
 
 CREATE TABLE st_user_group (
@@ -313,7 +313,7 @@ CREATE TABLE st_resource_column (
 -- Table stores resource names, used in security access selection in groups etc.
 CREATE TABLE et_resource (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(45) DEFAULT NULL, -- Example: 'trips', 'users', 'bookings', 'user_status' (the url to to access the resource)
+    name VARCHAR(45) DEFAULT NULL, -- Example: 'trips', 'users', 'bookings', 'member_status' (the url to to access the resource)
     description VARCHAR(45) DEFAULT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
