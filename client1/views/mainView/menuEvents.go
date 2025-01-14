@@ -1,7 +1,7 @@
 package mainView
 
 import (
-	appCore "client1/v2/app/appCore"
+	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"

@@ -1,7 +1,7 @@
 package bookingPeopleView
 
 import (
-	appCore "client1/v2/app/appCore"
+	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/userView"
