@@ -132,7 +132,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.RecordState = RecordStateReloadRequired
 
 	// Create child editors here
-	editor.Children.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.BookingStatus.FetchItems()
 
 	//editor.Children.BookingPeople = bookingPeopleView.New(editor.document, editor.events, editor.client)

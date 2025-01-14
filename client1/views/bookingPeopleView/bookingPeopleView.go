@@ -127,7 +127,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 	// Create child editors here
 	//..........
-	editor.Children.PeopleSelector = userView.New(document, eventProcessor, editor.client)
+	editor.Children.PeopleSelector = userView.New(document, eventProcessor, editor.appCore)
 	//editor.Children.PeopleSelector.FetchItems()
 
 	return editor

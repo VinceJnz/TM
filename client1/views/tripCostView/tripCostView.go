@@ -1,6 +1,7 @@
 package tripCostView
 
 import (
+	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/seasonView"
@@ -80,6 +81,7 @@ type children struct {
 }
 
 type ItemEditor struct {
+	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 
@@ -99,11 +101,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, parentData ...ParentData) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
-	editor.client = client
+	editor.appCore = appCore
 	editor.document = document
 	editor.events = eventProcessor
+	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
 
 	editor.ItemState = ItemStateNone
 
@@ -135,13 +138,13 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, clien
 
 	// Create child editors here
 	//..........
-	editor.Children.UserMemberStatus = userMemberStatusView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.UserMemberStatus = userMemberStatusView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.UserStatus.FetchItems()
 
-	editor.Children.UserAgeGroup = userAgeGroupView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.UserAgeGroup = userAgeGroupView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.UserAgeGroup.FetchItems()
 
-	editor.Children.Season = seasonView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.Season = seasonView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.Season.FetchItems()
 
 	return editor

@@ -1,6 +1,7 @@
 package tripTypeView
 
 import (
+	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -61,6 +62,7 @@ type Item struct {
 }
 
 type ItemEditor struct {
+	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 
@@ -80,11 +82,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
-	editor.client = client
+	editor.appCore = appCore
 	editor.document = document
 	editor.events = eventProcessor
+	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
 
 	editor.ItemState = ItemStateNone
 

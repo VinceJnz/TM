@@ -133,16 +133,16 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 	// Create child editors here
 	//..........
-	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.Difficulty.FetchItems()
 
-	editor.Children.TripStatus = tripStatusView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.TripStatus = tripStatusView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.TripStatus.FetchItems()
 
-	editor.Children.TripType = tripTypeView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.TripType = tripTypeView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.TripType.FetchItems()
 
-	editor.Children.TripCostGroup = tripCostGroupView.New(editor.document, eventProcessor, editor.client)
+	editor.Children.TripCostGroup = tripCostGroupView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.TripCostGroup.FetchItems()
 
 	return editor

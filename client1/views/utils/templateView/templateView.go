@@ -1,6 +1,7 @@
 package templateView
 
 import (
+	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -48,6 +49,7 @@ type ItemRecord interface {
 }
 
 type ItemEditor struct {
+	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 	events   *eventProcessor.EventProcessor
@@ -89,7 +91,7 @@ type ItemEditor2 struct {
 */
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, client *httpProcessor.Client, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	return nil
 }
 
