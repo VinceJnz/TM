@@ -49,8 +49,8 @@ const ApiURL = "/tripCosts"
 type TableData struct {
 	ID              int       `json:"id"`
 	TripCostGroupID int       `json:"trip_cost_group_id"`
-	UserStatusID    int       `json:"user_status_id"`
-	UserStatus      string    `json:"user_status"`
+	MemberStatusID  int       `json:"member_status_id"`
+	MemberStatus    string    `json:"member_status"`
 	UserAgeGroupID  int       `json:"user_age_group_id"`
 	UserAgeGroup    string    `json:"user_age_group"`
 	SeasonID        int       `json:"season_id"`
@@ -202,7 +202,7 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserMemberStatus.NewDropdown(editor.CurrentRecord.UserStatusID, "User Status", "itemUserStatusID")
+	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member", "itemUserStatusID")
 	//editor.UiComponents.UserCategoryID.Call("setAttribute", "required", "true")
 
 	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.UserAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemUserAgeGroupID")
@@ -261,7 +261,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// ********************* This needs to be changed for each api **********************
 	var err error
 
-	editor.CurrentRecord.UserStatusID, err = strconv.Atoi(editor.UiComponents.UserStatusID.Get("value").String())
+	editor.CurrentRecord.MemberStatusID, err = strconv.Atoi(editor.UiComponents.UserStatusID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing UserStatusID:", err)
 		return nil
@@ -376,7 +376,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", "Cost category: "+record.Season+", "+record.UserStatus+", "+record.UserAgeGroup+", $"+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" ")
+		itemDiv.Set("innerHTML", "Cost category: "+record.Season+", "+record.MemberStatus+", "+record.UserAgeGroup+", $"+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" ")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
