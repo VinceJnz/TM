@@ -12,17 +12,17 @@ import (
 const debugTag = "handlerTripCost."
 
 const (
-	qryGetAll = `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.user_status_id, etus.status as user_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
+	qryGetAll = `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.member_status_id, etms.status as member_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
 					FROM public.at_trip_costs attc
-					LEFT JOIN et_user_status etus on etus.id = attc.user_status_id
+					LEFT JOIN et_member_status etms on etms.id = attc.member_status_id
 					JOIN et_user_age_groups etuag on etuag.id = attc.user_age_group_id
 					JOIN et_seasons ets on ets.id = attc.season_id`
 	qryGet    = `SELECT * FROM at_trip_costs WHERE id = $1`
-	qryCreate = `INSERT INTO at_trip_costs (trip_cost_group_id, user_status_id, user_age_group_id, season_id, amount) 
+	qryCreate = `INSERT INTO at_trip_costs (trip_cost_group_id, member_status_id, user_age_group_id, season_id, amount) 
 			        VALUES ($1, $2, $3, $4, $5) 
 					RETURNING id`
 	qryUpdate = `UPDATE at_trip_costs 
-					SET trip_cost_group_id = $1, user_status_id = $2, user_age_group_id = $3, season_id = $4, amount = $5
+					SET trip_cost_group_id = $1, member_status_id = $2, user_age_group_id = $3, season_id = $4, amount = $5
 					WHERE id = $6`
 	qryDelete = `DELETE FROM at_trip_costs WHERE id = $1`
 )
@@ -54,7 +54,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.TripCostGroupID, record.MemberStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount)
 }
 
 // Update: modifies the existing trip cost by ID
@@ -69,7 +69,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.TripCostGroupID, record.UserStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount, id)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.TripCostGroupID, record.MemberStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount, id)
 }
 
 // Delete: removes a trip cost by ID

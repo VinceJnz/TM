@@ -68,7 +68,7 @@ func main() {
 	addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
 	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserAgeGroup routes
 	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))                   // UserPayments routes
-	addRouteGroup(subR2, "userStatus", handlerMemberStatus.New(app))                     // UserStatus routes
+	addRouteGroup(subR2, "userMemberStatus", handlerMemberStatus.New(app))               // UserMemberStatus routes
 	addRouteGroup(subR2, "userAccountStatus", handlerUserAccountStatus.New(app))         // UserAccountStatus routes
 	addRouteGroup(subR2, "groupBooking", handlerGroupBooking.New(app))                   // GroupBookings routes
 	addRouteGroup(subR2, "bookingStatus", handlerBookingStatus.New(app))                 // BookingStatus routes

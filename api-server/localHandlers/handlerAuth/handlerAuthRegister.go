@@ -154,7 +154,7 @@ func (h *Handler) createToken(userID int, host, tokenName string, duration strin
 	token.Name.SetValid(tokenName)
 	token.Host.SetValid(host)
 	token.TokenStr.SetValid(value)
-	token.ValidID.SetValid(1)
+	token.Valid.SetValid(true)
 	token.ValidFrom.SetValid(validFrom)
 	token.ValidTo.SetValid(validTo)
 

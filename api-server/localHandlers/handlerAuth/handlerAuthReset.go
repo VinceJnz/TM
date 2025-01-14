@@ -103,7 +103,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((handlerUserAccountStatus.AccountStatus(userS.UserStatusID.Int64) == handlerUserAccountStatus.AccountActive) || (handlerUserAccountStatus.AccountStatus(userS.UserStatusID.Int64) == handlerUserAccountStatus.AccountResetRequired)) {
+	if !((handlerUserAccountStatus.AccountStatus(userS.AccountStatusID.Int64) == handlerUserAccountStatus.AccountActive) || (handlerUserAccountStatus.AccountStatus(userS.AccountStatusID.Int64) == handlerUserAccountStatus.AccountResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "userS.UserName =", userS.Username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))
@@ -131,7 +131,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if handlerUserAccountStatus.AccountStatus(userS.UserStatusID.ValueOrZero()) == handlerUserAccountStatus.AccountResetRequired {
+	if handlerUserAccountStatus.AccountStatus(userS.AccountStatusID.ValueOrZero()) == handlerUserAccountStatus.AccountResetRequired {
 		err = h.UserSetStatusID(userS.ID, handlerUserAccountStatus.AccountActive)
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()10 ", "err =", err, "userS =", userS)

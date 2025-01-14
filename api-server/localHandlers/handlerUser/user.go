@@ -13,10 +13,10 @@ import (
 const debugTag = "handlerUser."
 
 const (
-	qryGetAll = `SELECT id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id, user_account_hidden, created, modified FROM st_users`
-	qryGet    = `SELECT id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id, user_account_hidden, created, modified FROM st_users WHERE id = $1`
-	qryCreate = `INSERT INTO st_users (name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id, user_account_hidden) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
-	qryUpdate = `UPDATE st_users SET (name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_status_id, user_account_status_id, user_account_hidden) = ($2, $3, $4, $5, $6, $7, $8, $9, $10, $11) WHERE id = $1`
+	qryGetAll = `SELECT id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, member_status_id, user_account_status_id, user_account_hidden, created, modified FROM st_users`
+	qryGet    = `SELECT id, name, username, email, user_address, member_code, user_birth_date, user_age_group_id, member_status_id, user_account_status_id, user_account_hidden, created, modified FROM st_users WHERE id = $1`
+	qryCreate = `INSERT INTO st_users (name, username, email, user_address, member_code, user_birth_date, user_age_group_id, member_status_id, user_account_status_id, user_account_hidden) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	qryUpdate = `UPDATE st_users SET (name, username, email, user_address, member_code, user_birth_date, user_age_group_id, member_status_id, user_account_status_id, user_account_hidden) = ($2, $3, $4, $5, $6, $7, $8, $9, $10, $11) WHERE id = $1`
 	qryDelete = `DELETE FROM st_users WHERE id = $1`
 )
 
@@ -47,7 +47,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.UserStatusID, record.AccountStatusID, record.AccountHidden)
+	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.MemberStatusID, record.AccountStatusID, record.AccountHidden)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
@@ -62,7 +62,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.UserStatusID, record.AccountStatusID, record.AccountHidden)
+	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.MemberStatusID, record.AccountStatusID, record.AccountHidden)
 }
 
 // Delete: removes a record identified by id

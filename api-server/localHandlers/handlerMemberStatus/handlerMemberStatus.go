@@ -10,18 +10,18 @@ import (
 	"api-server/v2/models"
 )
 
-const debugTag = "handlerUserStatus."
+const debugTag = "handlerMemberStatus."
 
 const (
-	qryGetAll = `SELECT * FROM et_user_status`
-	qryGet    = `SELECT * FROM et_user_status WHERE id = $1`
-	qryCreate = `INSERT INTO et_user_status (status)
+	qryGetAll = `SELECT * FROM et_member_status`
+	qryGet    = `SELECT * FROM et_member_status WHERE id = $1`
+	qryCreate = `INSERT INTO et_member_status (status)
 					VALUES ($1)
 					RETURNING id`
-	qryUpdate = `UPDATE et_user_status 
+	qryUpdate = `UPDATE et_member_status 
 					SET status = $1 
 					WHERE id = $2`
-	qryDelete = `DELETE FROM et_user_status WHERE id = $1`
+	qryDelete = `DELETE FROM et_member_status WHERE id = $1`
 )
 
 type Handler struct {

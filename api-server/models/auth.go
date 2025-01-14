@@ -6,6 +6,13 @@ import (
 	"github.com/guregu/null/v5/zero"
 )
 
+type TokenValid int
+
+const (
+	TokenFalse TokenValid = iota + 1
+	TokenTrue
+)
+
 // Token stores cookies for user sessions
 type Token struct {
 	ID        int
@@ -13,8 +20,7 @@ type Token struct {
 	Name      zero.String
 	Host      zero.String
 	TokenStr  zero.String
-	Valid     string   //Text representation of the validID state
-	ValidID   zero.Int //A flag for the application to know if the cookie is valid or not
+	Valid     zero.Bool //A flag for the application to know if the cookie is valid or not
 	ValidFrom zero.Time
 	ValidTo   zero.Time
 }
@@ -48,7 +54,7 @@ type AccessType struct { //-- Example: 'admin', 'owner', 'user' ????? don't know
 	Modified    time.Time   `json:"modified" db:"modified"`
 }
 
-type Resource struct { //-- Example: 'trips', 'users', 'bookings', 'user_status' (the url to to access the resource)
+type Resource struct { //-- Example: 'trips', 'users', 'bookings', 'member_status' (the url to to access the resource)
 	ID          int         `json:"id" db:"id"`
 	Name        string      `json:"name" db:"name"`
 	Description zero.String `json:"description" db:"description"`

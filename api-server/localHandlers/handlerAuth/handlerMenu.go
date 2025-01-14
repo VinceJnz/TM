@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
 	"net/http"
@@ -12,7 +13,7 @@ const (
 			JOIN st_user_group stug ON stug.User_ID=stu.ID
 			JOIN st_group stg ON stg.ID=stug.Group_ID
 		WHERE stu.ID=$1
-			AND stu.User_status_ID=1
+			AND stu.user_account_status_id=$2
 		ORDER BY stg.admin_flag -- This might need to change to DESC
 		LIMIT 1`
 
@@ -23,7 +24,7 @@ const (
 			JOIN st_group_resource stgr ON stgr.Group_ID=stg.ID
 			JOIN et_resource etr ON etr.ID=stgr.Resource_ID
 		WHERE stu.ID=$1
-			AND stu.User_status_ID=1
+			AND stu.user_account_status_id=$2
 		--ORDER BY stgr.admin_flag -- This might need to change to DESC
 		GROUP BY stu.ID, etr.Name, stgr.admin_flag`
 )
@@ -32,12 +33,12 @@ const (
 func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuUserGet()1 session=%+v", session)
-	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &models.MenuUser{}, sqlMenuUser, session.UserID)
+	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &models.MenuUser{}, sqlMenuUser, session.UserID, handlerUserAccountStatus.AccountActive)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
 	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuListGet()1 session=%+v", session)
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, handlerUserAccountStatus.AccountActive)
 }

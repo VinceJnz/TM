@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"errors"
 	"log"
@@ -20,17 +21,17 @@ import (
 
 const (
 	//Returns a result if the username/password combination is correct and the user account is current.
-	//sqlGetUserSalt   = `SELECT ID, User_name, Salt FROM st_user WHERE User_name=? and User_status_ID=1`
-	sqlGetUserSalt = `SELECT ID, username, user_account_status_id, salt FROM st_users WHERE username=$1` //The controller needs to check the User_status_ID to make sure the auth process should proceed.
-	//sqlCheckUserAuth = `SELECT ID, User_name, Salt FROM st_user WHERE User_name=? and Password=? and User_status_ID=1`
-	sqlCheckUserAuth = `SELECT ID, username, Salt FROM st_users WHERE username=$1 and user_status_id=1`
+	//sqlGetUserSalt   = `SELECT ID, User_name, Salt FROM st_user WHERE User_name=? and user_account_status_id=1`
+	sqlGetUserSalt = `SELECT ID, username, user_account_status_id, salt FROM st_users WHERE username=$1` //The controller needs to check the user_account_status_id to make sure the auth process should proceed.
+	//sqlCheckUserAuth = `SELECT ID, User_name, Salt FROM st_user WHERE User_name=? and Password=? and user_account_status_id=1`
+	sqlCheckUserAuth = `SELECT ID, username, Salt FROM st_users WHERE username=$1 and user_account_status_id=$2`
 	//sqlPutUserAuth   = `UPDATE st_user SET Password=?, Salt=?, Verifier=? WHERE ID=?`
 	sqlUserAuthUpdate = `UPDATE st_users SET salt=$1, verifier=$2 WHERE id=$3`
-	//sqlGetUserAuth   = `SELECT ID, User_name, Email, Salt, Verifier FROM st_user WHERE User_name=? and User_status_ID=1`
-	sqlGetUserAuth  = `SELECT ID, username, name, email, user_status_id, salt, verifier FROM st_users WHERE username=$1` //The controller needs to check the User_status_ID to make sure the auth process should proceed.
+	//sqlGetUserAuth   = `SELECT ID, User_name, Email, Salt, Verifier FROM st_user WHERE User_name=? and user_account_status_id=1`
+	sqlGetUserAuth  = `SELECT ID, username, name, email, user_account_status_id, salt, verifier FROM st_users WHERE username=$1` //The controller needs to check the user_account_status_id to make sure the auth process should proceed.
 	sqlGetAdminList = `SELECT su.ID, su.username, su.name, su.email
-FROM st_users su JOIN st_user_group sug ON sug.user_id = su.id
-WHERE su.user_status_is=1 AND sug.group_id=$1`
+		FROM st_users su JOIN st_user_group sug ON sug.user_id = su.id
+		WHERE su.user_account_status_id=$2 AND sug.group_id=$1`
 )
 
 // CheckPassword checks that the users Auth info matches the Auth info stored in the DB
@@ -40,7 +41,7 @@ func (h *Handler) CheckUserAuthXX(username, password string) (models.User, error
 	var result models.User
 
 	//err = r.DBConn.QueryRow(sqlCheckUserAuth, username, password).Scan(&result.ID, &result.UserName, &result.Salt)
-	err = h.appConf.Db.QueryRow(sqlCheckUserAuth, username).Scan(&result.ID, &result.Username, &result.Salt)
+	err = h.appConf.Db.QueryRow(sqlCheckUserAuth, username, handlerUserAccountStatus.AccountActive).Scan(&result.ID, &result.Username, &result.Salt)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"CheckPassword()2 ", "err =", err, "result =", result, "r.DBConn.DB =", h.appConf.Db.DB)
 		return models.User{}, err //password check failed
@@ -112,7 +113,7 @@ func (h *Handler) GetAdminList(groupID int64) ([]models.User, error) {
 	var result models.User
 	var list []models.User
 
-	rows, err := h.appConf.Db.Query(sqlGetAdminList, groupID)
+	rows, err := h.appConf.Db.Query(sqlGetAdminList, groupID, handlerUserAccountStatus.AccountActive)
 	if err != nil {
 		log.Println(debugTag+"GetAdminList()1 - ", "groupID =", groupID, "sqlGetAdminList =", sqlGetAdminList, "err =", err)
 		//log.Fatal(err)

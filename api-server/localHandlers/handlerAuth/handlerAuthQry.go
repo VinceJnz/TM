@@ -19,7 +19,7 @@ const (
 		JOIN et_access_level etal ON etal.ID=stgr.Access_level_ID
 		JOIN et_access_type etat ON etat.ID=stgr.Access_type_ID
 	WHERE stu.ID=$1
-		AND stu.User_status_ID=1
+		AND stu.user_account_status_id=$4
 		AND ((UPPER(etr.Name)=UPPER($2)
 		AND UPPER(etal.Name)=UPPER($3))
 			 OR stg.admin_flag)
@@ -46,7 +46,7 @@ func (h *Handler) UserCheckAccess(UserID int, ResourceName, ActionName string) (
 	var err error
 	var access models.AccessCheck
 
-	err = h.appConf.Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName).Scan(&access.AccessTypeID, &access.AdminFlag)
+	err = h.appConf.Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, handlerUserAccountStatus.AccountActive).Scan(&access.AccessTypeID, &access.AdminFlag)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
 		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"CheckAccess()3 Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
 		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
@@ -93,7 +93,7 @@ func (h *Handler) UserWriteQry(record models.User) (int, error) {
 
 const (
 	//Sets the user status
-	sqlSetStatus = `UPDATE st_users SET User_status_ID=$1 WHERE ID=$2`
+	sqlSetStatus = `UPDATE st_users SET user_account_status_id=$1 WHERE ID=$2`
 )
 
 // SetStatusID sets the users account status
@@ -113,20 +113,20 @@ func (h *Handler) UserSetStatusID(userID int, status handlerUserAccountStatus.Ac
 const (
 	sqlTokenDelete = `DELETE FROM st_token WHERE ID=$1`
 	sqlTokenFind   = `SELECT ID FROM st_token WHERE ID=$1`
-	sqlTokenInsert = `INSERT INTO st_token (user_iD, name, host, token, token_valid_id, valid_from, valid_to) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	sqlTokenRead   = `SELECT c.id, c.user_id, c.name, c.host, c.token, sv.name AS valid, c.token_valid_ID, c.valid_from, c.valid_to FROM st_token c LEFT JOIN se_token_valid sv ON sv.ID=c.token_valid_ID WHERE c.ID=$1`
-	sqlTokenUpdate = `UPDATE st_token SET user_id=$1, name=$2, host=$3, token=$4, token_valid_ID=$5, valid_from=$6, valid_to=$7 WHERE id=$8`
+	sqlTokenInsert = `INSERT INTO st_token (user_iD, name, host, token, token_valid, valid_from, valid_to) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	sqlTokenRead   = `SELECT c.id, c.user_id, c.name, c.host, c.token, c.token_valid, c.valid_from, c.valid_to FROM st_token c WHERE c.ID=$1`
+	sqlTokenUpdate = `UPDATE st_token SET (user_id, name, host, token, token_valid, valid_from, valid_to) = ($2, $3, $4, $5, $6, $7, $8) WHERE id=$1`
 )
 
 func (h *Handler) TokenInsertQry(record models.Token) (int, error) {
 	err := h.appConf.Db.QueryRow(sqlTokenInsert,
-		record.UserID, record.Name, record.Host, record.TokenStr, record.ValidID, record.ValidFrom, record.ValidTo).Scan(&record.ID)
+		record.UserID, record.Name, record.Host, record.TokenStr, record.Valid, record.ValidFrom, record.ValidTo).Scan(&record.ID)
 	return record.ID, err
 }
 
 func (h *Handler) TokenUpdateQry(record models.Token) error {
 	err := h.appConf.Db.QueryRow(sqlTokenUpdate,
-		record.UserID, record.Name, record.Host, record.TokenStr, record.ValidID, record.ValidFrom, record.ValidTo).Scan(&record.ID)
+		record.ID, record.UserID, record.Name, record.Host, record.TokenStr, record.Valid, record.ValidFrom, record.ValidTo).Scan(&record.ID)
 	return err
 }
 
@@ -197,18 +197,16 @@ const (
 	//Finds only valid cookies where the user account is current
 	//if the user account is disabled or set to new it will not return the cookie
 	//if the cookie is not valid it will not return the cookie.
-	sqlFindSessionToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid_ID, stt.Valid_From, stt.Valid_To
+	sqlFindSessionToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
-		LEFT JOIN et_token_valid ettv ON ettv.ID=stt.token_valid_ID
-	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid_ID=1 AND (stu.User_status_ID=1 OR stu.User_status_ID=0)`
+	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2`
 
 	//Finds valid tokens where user account exists and the token name is the same as the name passed in
-	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid_ID, stt.Valid_From, stt.Valid_To
+	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
-		LEFT JOIN et_token_valid ettv ON ettv.ID=stt.token_valid_ID
-	WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid_ID=1`
+	WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid`
 )
 
 // FindSessionToken using the session cookie string find session cookie data in the DB and return the token item
@@ -218,7 +216,7 @@ func (h *Handler) FindSessionToken(cookieStr string) (models.Token, error) {
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
-	err = h.appConf.Db.QueryRow(sqlFindSessionToken, result.TokenStr).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
+	err = h.appConf.Db.QueryRow(sqlFindSessionToken, result.TokenStr, handlerUserAccountStatus.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
@@ -232,7 +230,7 @@ func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
 	result.Name.SetValid(name)
-	err = h.appConf.Db.QueryRow(sqlFindToken, result.TokenStr, result.Name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.ValidID, &result.ValidFrom, &result.ValidTo)
+	err = h.appConf.Db.QueryRow(sqlFindToken, result.TokenStr, result.Name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return result, err

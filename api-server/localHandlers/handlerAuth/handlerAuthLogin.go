@@ -245,7 +245,7 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 	tokenItem.Name.SetValid(sessionToken.Name)
 	tokenItem.Host.SetValid(host)
 	tokenItem.TokenStr.SetValid(sessionToken.Value)
-	tokenItem.ValidID.SetValid(1)
+	tokenItem.Valid.SetValid(true)
 	tokenItem.ValidFrom.SetValid(time.Now())
 	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
 

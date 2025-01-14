@@ -96,6 +96,14 @@ JOIN public.st_users stu ON stu.id=booking_order.person_id
 ORDER BY trip_id, booking_position;
 ```
 
+
+## Query to get the total costs of a booking
+
+
+
+
+
+
 ## Money
 
 Packages that support money in the database
@@ -107,3 +115,5 @@ Packages that support money in the database
 Use postgress numeric type to store money.
 
 <https://www.postgresql.org/docs/current/datatype-numeric.html>
+
+
