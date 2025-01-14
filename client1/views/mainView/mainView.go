@@ -1,7 +1,7 @@
 package mainView
 
 import (
-	appcore "client1/v2/app/appCore"
+	appCore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/accessLevelView"
@@ -77,7 +77,7 @@ type ViewConfig struct {
 }
 
 type View struct {
-	appCore  *appcore.AppCore
+	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 	elements viewElements
@@ -91,10 +91,10 @@ type View struct {
 	Children      children
 }
 
-func New(appcore *appcore.AppCore) *View {
+func New(appCore *appCore.AppCore) *View {
 	v := &View{
-		appCore:       appcore,
-		client:        appcore.HttpClient,
+		appCore:       appCore,
+		client:        appCore.HttpClient,
 		document:      js.Global().Get("document"),
 		childElements: map[string]editorElement{},
 		menuButtons:   map[string]buttonElement{},
@@ -168,7 +168,7 @@ func (v *View) Setup() {
 	v.AddViewItem("Home", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("About", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("Contact", "", true, nil, true, false, v.elements.sidemenu)
-	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
 	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)

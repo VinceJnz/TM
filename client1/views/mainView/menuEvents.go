@@ -1,7 +1,7 @@
 package mainView
 
 import (
-	appcore "client1/v2/app/appCore"
+	appCore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
@@ -19,7 +19,7 @@ type MenuItem struct {
 type MenuList []MenuItem
 
 type UpdateMenu struct {
-	MenuUser appcore.User
+	MenuUser appCore.User
 	MenuList MenuList
 }
 

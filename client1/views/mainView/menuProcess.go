@@ -1,7 +1,7 @@
 package mainView
 
 import (
-	appcore "client1/v2/app/appCore"
+	appCore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -20,7 +20,7 @@ func (editor *View) MenuProcess() {
 // getMenuUser gets the menu user from the server (step 1) - The user needs to be logged on.
 func (editor *View) getMenuUser() {
 	//Get Menu User from server
-	var menuUser appcore.User
+	var menuUser appCore.User
 
 	success := func(err error, data *httpProcessor.ReturnData) {
 		//Call the next step in the Auth process

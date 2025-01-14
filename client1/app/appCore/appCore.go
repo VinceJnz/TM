@@ -1,4 +1,4 @@
-package appcore
+package appCore
 
 import (
 	"client1/v2/app/eventProcessor"

@@ -1,7 +1,7 @@
 package bookingView
 
 import (
-	appcore "client1/v2/app/appCore"
+	appCore "client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingPeopleView"
@@ -52,6 +52,7 @@ type TableData struct {
 	BookingDate     time.Time           `json:"booking_date"`
 	PaymentDate     time.Time           `json:"payment_date"`
 	BookingPrice    decimal.NullDecimal `json:"booking_price"`
+	BookingCost     decimal.NullDecimal `json:"booking_cost"`
 	Created         time.Time           `json:"created"`
 	Modified        time.Time           `json:"modified"`
 }
@@ -80,7 +81,7 @@ type children struct {
 }
 
 type ItemEditor struct {
-	appCore  *appcore.AppCore
+	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
 
@@ -88,26 +89,24 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     viewHelpers.ItemState
 	Records       []TableData
-	//ItemListXX      []Item
-	UiComponents UI
-	Div          js.Value
-	EditDiv      js.Value
-	ListDiv      js.Value
-	StateDiv     js.Value
-	ParentData   ParentData
-	ViewState    ViewState
-	RecordState  RecordState
-	Children     children
-	FieldNames   httpProcessor.FieldNames
+	UiComponents  UI
+	Div           js.Value
+	EditDiv       js.Value
+	ListDiv       js.Value
+	ParentData    ParentData
+	ViewState     ViewState
+	RecordState   RecordState
+	Children      children
+	FieldNames    httpProcessor.FieldNames
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appcore *appcore.AppCore, parentData ...ParentData) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
-	editor.appCore = appcore
+	editor.appCore = appCore
 	editor.document = document
 	editor.events = eventProcessor
-	editor.client = appcore.HttpClient //????????????????? to be removed ??????????????????
+	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
 
 	editor.ItemState = viewHelpers.ItemStateNone
 
@@ -124,11 +123,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appco
 	editor.ListDiv = editor.document.Call("createElement", "div")
 	editor.ListDiv.Set("id", debugTag+"itemListDiv")
 	editor.Div.Call("appendChild", editor.ListDiv)
-
-	// Create a div for displaying ItemState
-	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
 
 	// Store supplied parent value
 	if len(parentData) != 0 {
