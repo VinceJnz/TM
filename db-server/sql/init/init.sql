@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS at_bookings (
     id SERIAL PRIMARY KEY,
     owner_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
     trip_id INT NOT NULL DEFAULT 0,  -- Default value set to 0
-    person_id INTEGER NOT NULL DEFAULT 0, -- This field is only used for the group_bookings functionality. It is not needed for the booking_people functionality.
+    --person_id INTEGER NOT NULL DEFAULT 0, -- Removed, not used. This field is only used for the group_bookings functionality. It is not needed for the booking_people functionality.
     notes TEXT,
     from_date TIMESTAMP DEFAULT NULL,
     to_date TIMESTAMP DEFAULT NULL,
