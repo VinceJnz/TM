@@ -37,13 +37,30 @@ const (
 
 	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, created, modified 
 					FROM at_bookings WHERE id = $1`
-	qryGetList = `SELECT atb.*, ebs.status, atbpcount.participants
+
+	X1_qryGetList = `SELECT atb.*, ebs.status, atbpcount.participants
 					FROM public.at_bookings atb
 					JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
 					LEFT JOIN (SELECT atbp.booking_id, COUNT(atbp.id) as participants
 						FROM public.at_booking_people atbp
 						GROUP BY atbp.booking_id) atbpcount ON atbpcount.booking_id=atb.id
 					WHERE atb.trip_id = $1`
+
+	qryGetList = `SELECT atb.*,
+					ebs.status, COUNT(stu.name) as participants, SUM(attc.amount) AS booking_cost, att.trip_name
+				FROM at_trips att
+				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
+				LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
+					 JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
+				LEFT JOIN st_users stu ON stu.id=atbp.person_id
+				LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
+				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
+										AND attc.member_status_id=stu.member_status_id
+										AND attc.user_age_group_id=stu.user_age_group_id
+				WHERE atb.trip_id = $1
+				GROUP BY att.id, att.trip_name, atb.id, ebs.status
+				ORDER BY att.trip_name, atb.id`
+
 	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
         			VALUES ($1, $2, $3, $4, $5, $6) 
 					RETURNING id`
