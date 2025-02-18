@@ -7,7 +7,7 @@ CREATE USER api_user WITH PASSWORD 'api_password';
 
 -- Step 2: Grant necessary privileges
 -- Connect to your database
-\c mydatabase;
+--\c mydatabase;
 
 -- Grant all privileges on the database to the new user
 GRANT ALL PRIVILEGES ON DATABASE mydatabase TO api_user;

@@ -218,6 +218,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 	return nil
 }
 
+// decodeJSON decodes the JSON data in the body and puts it in the supplied structure, and returns the field names.
 func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) {
 	// Read the body into a byte slice
 	//fieldNames := make(viewHelpers.FieldNames)
@@ -235,11 +236,12 @@ func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) 
 		return fieldNames, err
 	}
 
+	//*
 	// Decode the body into a map to get field names
 	var result []map[string]interface{}
 	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&result)
 	if err != nil {
-		log.Println(debugTag+"decodeJSON()3 failed to get field names, Error:", err)
+		log.Println(debugTag+"decodeJSON()3 Warning: failed to get field names, probably because there are none to retreive, Error:", err) // Don't return an error here. Just log it. The error is not fatal. The data has already been decoded and the field names are not critical.
 	} else {
 		record := result[0]
 		for key := range record {
