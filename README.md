@@ -13,6 +13,8 @@ An app to allow people to create trips for club members (for a club such as a hi
 * WASM client
 * Docker config for the build and running of the app
 
+This app is JS free (more or less).
+
 ## App trip info
 
 * Name
