@@ -11,6 +11,7 @@ import (
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/groupBookingView"
+	"client1/v2/views/myBookingsView"
 	"client1/v2/views/resourceView"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/securityGroupResourceView"
@@ -188,6 +189,7 @@ func (v *View) Setup() {
 	v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput = v.document.Call("createElement", "div")
