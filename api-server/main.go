@@ -10,6 +10,7 @@ import (
 	"api-server/v2/localHandlers/handlerBookingStatus"
 	"api-server/v2/localHandlers/handlerGroupBooking"
 	"api-server/v2/localHandlers/handlerMemberStatus"
+	"api-server/v2/localHandlers/handlerMyBookings"
 	"api-server/v2/localHandlers/handlerResource"
 	"api-server/v2/localHandlers/handlerSeasons"
 	"api-server/v2/localHandlers/handlerSecurityGroup"
@@ -83,6 +84,7 @@ func main() {
 	addRouteGroup(subR2, "securityAccessLevel", handlerAccessLevel.New(app))             // AccessLevel routes
 	addRouteGroup(subR2, "securityAccessType", handlerAccessType.New(app))               // AccessType routes
 	addRouteGroup(subR2, "securityResource", handlerResource.New(app))                   // Resource routes
+	addRouteGroup(subR2, "myBookings", handlerMyBookings.New(app))                       // Resource routes
 
 	booking := handlerBooking.New(app)                                              // Booking routes
 	addRouteGroup(subR2, "bookings", booking)                                       // Booking routes

@@ -15,15 +15,15 @@ type Booking struct {
 	Notes           string              `json:"notes" db:"notes"`
 	FromDate        time.Time           `json:"from_date" db:"from_date"`
 	ToDate          time.Time           `json:"to_date" db:"to_date"`
-	Participants    zero.Int            `json:"participants" db:"participants"` // Calculated
+	Participants    zero.Int            `json:"participants" db:"participants"`
 	GroupBookingID  zero.Int            `json:"group_booking_id" db:"group_booking_id"`
-	GroupBooking    zero.String         `json:"group_booking" db:"group_booking"` // Calculated
+	GroupBooking    zero.String         `json:"group_booking" db:"group_booking"`
 	BookingStatusID int                 `json:"booking_status_id" db:"booking_status_id"`
-	BookingStatus   string              `json:"booking_status" db:"status"` // Calculated
+	BookingStatus   string              `json:"booking_status" db:"status"`
 	BookingDate     zero.Time           `json:"booking_date" db:"booking_date"`
 	PaymentDate     zero.Time           `json:"payment_date" db:"payment_date"`
 	BookingPrice    decimal.NullDecimal `json:"booking_price" db:"booking_price"`
-	TripName        string              `json:"trip_name" db:"trip_name"`       // Calculated
+	TripName        string              `json:"trip_name" db:"trip_name"`
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
@@ -53,4 +53,27 @@ type GroupBooking struct {
 	OwnerID   int    `db:"owner_id" json:"owner_id"`
 	Created   string `db:"created" json:"created"`
 	Modified  string `db:"modified" json:"modified"`
+}
+
+type MyBooking struct {
+	ID              int                 `json:"id" db:"id"`
+	OwnerID         int                 `json:"owner_id" db:"owner_id"`
+	TripID          zero.Int            `json:"trip_id" db:"trip_id"`
+	Notes           string              `json:"notes" db:"notes"`
+	FromDate        time.Time           `json:"from_date" db:"from_date"`
+	ToDate          time.Time           `json:"to_date" db:"to_date"`
+	Participants    zero.Int            `json:"participants" db:"participants"`
+	GroupBookingID  zero.Int            `json:"group_booking_id" db:"group_booking_id"`
+	GroupBooking    zero.String         `json:"group_booking" db:"group_booking"`
+	BookingStatusID int                 `json:"booking_status_id" db:"booking_status_id"`
+	BookingStatus   string              `json:"booking_status" db:"status"`
+	BookingDate     zero.Time           `json:"booking_date" db:"booking_date"`
+	PaymentDate     zero.Time           `json:"payment_date" db:"payment_date"`
+	BookingPrice    decimal.NullDecimal `json:"booking_price" db:"booking_price"`
+	TripName        string              `json:"trip_name" db:"trip_name"`
+	TripFromDate    time.Time           `json:"trip_from_date" db:"trip_from_date"`
+	TripToDate      time.Time           `json:"trip_to_date" db:"trip_to_date"`
+	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
+	Created         time.Time           `json:"created" db:"created"`
+	Modified        time.Time           `json:"modified" db:"modified"`
 }
