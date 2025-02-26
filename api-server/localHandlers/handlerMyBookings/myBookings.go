@@ -75,7 +75,8 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
 	//handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
+	//handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID)
 }
 
 // Get: retrieves and returns a single record identified by id
