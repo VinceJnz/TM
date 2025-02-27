@@ -540,3 +540,38 @@ CREATE VIEW "vt_trips" AS SELECT at_trips.id,
    FROM at_trips;
 
 -- 2025-02-18 08:21:25.996253+00
+
+
+
+-- User the following to reset the sequences to the highest id in the table.
+
+--SELECT nextval('et_resource_id_seq'::regclass);
+--SELECT setval('et_resource_id_seq'::regclass, (SELECT MAX(id) FROM et_resource));
+
+
+CREATE OR REPLACE FUNCTION vj_execute_multiple_queries(queries text[])
+RETURNS void AS $$
+DECLARE
+    query text;
+BEGIN
+    FOREACH query IN ARRAY queries
+    LOOP
+        EXECUTE query;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+WITH query_list AS (
+	SELECT array_agg(format('SELECT setval(' || substring(column_default, 'nextval\((.*)\)') || ', (SELECT MAX(' || quote_ident(column_name) || ') FROM ' || quote_ident(table_name) || '));')) as queries
+	--SELECT format('SELECT setval(' || substring(column_default, 'nextval\((.*)\)') || ', (SELECT MAX(' || quote_ident(column_name) || ') FROM ' || quote_ident(table_name) || '));') as queries
+	FROM information_schema.columns
+	WHERE column_default LIKE 'nextval%'
+
+	--SELECT array_agg(format('SELECT ' || column_default || ', (SELECT MAX(' || quote_ident(column_name) || ') FROM ' || quote_ident(table_name) || ');')) as queries
+	--SELECT format('SELECT ' || column_default || ', (SELECT MAX(' || quote_ident(column_name) || ') FROM ' || quote_ident(table_name) || ');') as queries
+	--FROM information_schema.columns
+	--WHERE column_default LIKE 'nextval%'
+)
+--SELECT vj_execute_multiple_queries(queries)
+SELECT queries
+FROM query_list;
