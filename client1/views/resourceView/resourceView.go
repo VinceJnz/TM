@@ -254,7 +254,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
-	log.Println(debugTag+"SubmitItemEdit()3", "editor.ItemState =", editor.ItemState)
 	switch editor.ItemState {
 	case viewHelpers.ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
