@@ -16,7 +16,7 @@ const debugTag = "handlerBookings."
 
 const (
 	qryGetAll = `SELECT atb.id, atb.owner_id, atb.trip_id, atb.notes, atb.from_date, atb.to_date, atb.booking_status_id, ebs.status, atb.booking_date, atb.payment_date, atb.booking_price, atb.created, atb.modified,
-						att.trip_name, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as participants, att.from_date, att.to_date
+						att.trip_name, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as participants, att.from_date as trip_from_date, att.to_date as trip_to_date
 				FROM at_trips att
 				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
 				LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
@@ -76,7 +76,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
 	//handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
 	//handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID)
+	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MyBooking{}, qryGetAll, session.UserID)
 }
 
 // Get: retrieves and returns a single record identified by id
