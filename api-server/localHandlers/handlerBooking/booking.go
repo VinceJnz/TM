@@ -20,7 +20,7 @@ const (
 						JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id
 					WHERE ab.owner_id = $1 OR true=$2`
 
-	X1_tst = `SELECT atb.*,
+	qryGetAll = `SELECT atb.*,
 				ebs.status, COUNT(stu.name) as participants,
 				SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
 				--SUM(attc.amount) AS booking_cost,
@@ -34,11 +34,11 @@ const (
 				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
 										AND attc.member_status_id=stu.member_status_id
 										AND attc.user_age_group_id=stu.user_age_group_id
-				WHERE atb.trip_id = 1
+				WHERE atb.owner_id = $1 OR true=$2
 				GROUP BY att.id, att.trip_name, atb.id, ebs.status
 				ORDER BY att.trip_name, atb.id`
 
-	qryGetAll = `SELECT atb.id, atb.owner_id, atb.trip_id, atb.notes, atb.from_date, atb.to_date, atb.booking_status_id, ebs.status, atb.booking_date, atb.payment_date, atb.booking_price, atb.created, atb.modified,
+	X2_qryGetAll = `SELECT atb.id, atb.owner_id, atb.trip_id, atb.notes, atb.from_date, atb.to_date, atb.booking_status_id, ebs.status, atb.booking_date, atb.payment_date, atb.booking_price, atb.created, atb.modified,
 						att.trip_name, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as participants
 				FROM at_trips att
 				LEFT JOIN at_bookings atb ON atb.trip_id=att.id

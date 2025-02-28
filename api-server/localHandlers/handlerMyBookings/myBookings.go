@@ -15,7 +15,25 @@ import (
 const debugTag = "handlerBookings."
 
 const (
-	qryGetAll = `SELECT atb.id, atb.owner_id, atb.trip_id, atb.notes, atb.from_date, atb.to_date, atb.booking_status_id, ebs.status, atb.booking_date, atb.payment_date, atb.booking_price, atb.created, atb.modified,
+	qryGetAll = `SELECT atb.*,
+				ebs.status, COUNT(stu.name) as participants,
+				SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
+				--SUM(attc.amount) AS booking_cost,
+				att.trip_name
+				FROM at_trips att
+				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
+				LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
+					 JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
+				LEFT JOIN st_users stu ON stu.id=atbp.person_id
+				LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
+				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
+										AND attc.member_status_id=stu.member_status_id
+										AND attc.user_age_group_id=stu.user_age_group_id
+				WHERE atb.owner_id = $1 --OR true=$2
+				GROUP BY att.id, att.trip_name, atb.id, ebs.status
+				ORDER BY att.trip_name, atb.id`
+
+	X2_qryGetAll = `SELECT atb.id, atb.owner_id, atb.trip_id, atb.notes, atb.from_date, atb.to_date, atb.booking_status_id, ebs.status, atb.booking_date, atb.payment_date, atb.booking_price, atb.created, atb.modified,
 						att.trip_name, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as participants, att.from_date as trip_from_date, att.to_date as trip_to_date
 				FROM at_trips att
 				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
