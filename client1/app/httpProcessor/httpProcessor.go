@@ -236,17 +236,18 @@ func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) 
 		return fieldNames, err
 	}
 
-	//*
 	// Decode the body into a map to get field names
 	var result []map[string]interface{}
 	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&result)
 	if err != nil {
 		log.Println(debugTag+"decodeJSON()3 Warning: failed to get field names, probably because there are none to retreive, Error:", err) // Don't return an error here. Just log it. The error is not fatal. The data has already been decoded and the field names are not critical.
-	} else {
+	} else if len(result) > 0 {
 		record := result[0]
 		for key := range record {
 			fieldNames[key] = key
 		}
+	} else {
+		log.Println(debugTag+"decodeJSON()4 Warning: failed to get field names, probably because there is no data, Error:", err) // Don't return an error here. Just log it. The error is not fatal. The data has already been decoded and the field names are not critical.
 	}
 
 	return fieldNames, nil

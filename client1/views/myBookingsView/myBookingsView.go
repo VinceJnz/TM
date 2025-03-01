@@ -371,7 +371,13 @@ func (editor *ItemEditor) FetchItems() {
 		if data != nil {
 			editor.FieldNames = data.FieldNames // Might be able to use this to filter the fields displayed on the form
 		}
-		editor.Records = records
+
+		if records != nil {
+			editor.Records = records
+		} else {
+			editor.Records = []TableData{}
+			log.Println(debugTag + "FetchItems()1 records == nil")
+		}
 		editor.populateItemList()
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}
