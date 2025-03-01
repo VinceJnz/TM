@@ -65,7 +65,10 @@ const (
 					WHERE atb.trip_id = $1`
 
 	qryGetList = `SELECT atb.*,
-					ebs.status, COUNT(stu.name) as participants, SUM(attc.amount) AS booking_cost, att.trip_name
+					ebs.status, COUNT(stu.name) as participants,
+					--SUM(attc.amount) AS booking_cost,
+					SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
+					att.trip_name
 				FROM at_trips att
 				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
 				LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id

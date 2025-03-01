@@ -58,6 +58,7 @@ type GroupBooking struct {
 type MyBooking struct {
 	ID              int                 `json:"id" db:"id"`
 	OwnerID         int                 `json:"owner_id" db:"owner_id"`
+	Owner           zero.String         `json:"owner_name" db:"owner_name"`
 	TripID          zero.Int            `json:"trip_id" db:"trip_id"`
 	Notes           string              `json:"notes" db:"notes"`
 	FromDate        time.Time           `json:"from_date" db:"from_date"`
