@@ -46,15 +46,18 @@ func ValidateDatesFromLtTo(fromDateObj, toDateObj, msgObj js.Value, warningMsg s
 		log.Println("warning message not set")
 		return errors.New("warning message not set")
 	}
-
-	//log.Printf(debugTag+"ValidateDatesFromLtTo()1 fromDateObj=%v, toDateObj=%v, msgObj=%v, warningMsg=%v", fromDateObj.Get("id"), toDateObj.Get("id"), msgObj.Get("id"), warningMsg)
+	//log.Printf(debugTag+"ValidateDatesFromLtTo()1 from=%v, to=%v, FromDate=%v, ToDate=%v, compare=%v", from, to, FromDate, ToDate, FromDate.Compare(ToDate))
+	//log.Printf(debugTag+"ValidateDatesFromLtTo()2 fromDateObj=%v, toDateObj=%v, msgObj=%v, warningMsg=%v", fromDateObj.Get("id"), toDateObj.Get("id"), msgObj.Get("id"), warningMsg)
 	fromDateObj.Call("setCustomValidity", "")
 	toDateObj.Call("setCustomValidity", "")
 	if FromDate.Compare(ToDate) > 0 { //!FromDate.Before(ToDate) {
+		log.Printf(debugTag+"ValidateDatesFromLtTo()3 fromDateObj=%v, toDateObj=%v, msgObj=%v, warningMsg=%v", fromDateObj.Get("id"), toDateObj.Get("id"), msgObj.Get("id"), warningMsg)
 		msgObj.Call("setCustomValidity", warningMsg)
-		log.Printf(debugTag+"ValidateDatesFromLtTo()2 fromDateObj=%v, toDateObj=%v, msgObj=%v, warningMsg=%v", fromDateObj.Get("id"), toDateObj.Get("id"), msgObj.Get("id"), warningMsg)
-		return errors.New(warningMsg)
+		//return errors.New(warningMsg) // This seems to cause the js to hang
+	} else {
+		msgObj.Call("setCustomValidity", "") // Not sure if this is needed????
 	}
+
 	return nil
 }
 

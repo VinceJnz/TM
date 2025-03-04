@@ -4,7 +4,7 @@ import (
 	"syscall/js"
 )
 
-const debugTag = "viewHelpers"
+const debugTag = "viewHelpers."
 
 // These are simple view helpers that are used to create UI components. They don't add themselves to the DOM.
 // They are used to create more complex UI components, or to create a single UI component.
@@ -128,7 +128,7 @@ func HRef(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 	link.Set("id", htmlID)
 	//link.Set("type", "button")
 	//link.Set("innerHTML", displayText)
-	f := func(this js.Value, args []js.Value) interface{} {
+	f := func(this js.Value, args []js.Value) any {
 		onClick()
 		return nil
 	}

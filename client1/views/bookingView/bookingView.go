@@ -172,7 +172,7 @@ func (editor *ItemEditor) Display() {
 }
 
 // NewItemData initializes a new item for adding
-func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -272,16 +272,18 @@ func (editor *ItemEditor) ValidateDates() {
 	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
 }
 
-func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) any {
+	log.Println(debugTag+"ValidateFromDate()", editor.UiComponents.FromDate.Get("value").String(), editor.UiComponents.ToDate.Get("value").String())
 	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be equal to or before To-date")
 }
 
-func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) any {
+	log.Println(debugTag+"ValidateToDate()", editor.UiComponents.FromDate.Get("value").String(), editor.UiComponents.ToDate.Get("value").String())
 	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
 }
 
 // SubmitItemEdit handles the submission of the item edit form
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
@@ -337,7 +339,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	editor.resetEditForm()
 	return nil
 }
@@ -425,7 +427,7 @@ func (editor *ItemEditor) populateItemList() {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
-			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 				editor.populateEditForm()
@@ -436,7 +438,7 @@ func (editor *ItemEditor) populateItemList() {
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 				editor.deleteItem(record.ID)
 				return nil
 			}))
@@ -446,7 +448,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create a toggle modify-people-list button
 		peopleButton := editor.document.Call("createElement", "button")
 		peopleButton.Set("innerHTML", "People")
-		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			bookingPeople.FetchItems()
 			bookingPeople.Toggle()
 			return nil
