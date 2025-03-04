@@ -6,6 +6,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingPeopleView"
 	"client1/v2/views/bookingStatusView"
+	"client1/v2/views/tripView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -62,6 +63,7 @@ type TableData struct {
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
+	TripID          js.Value
 	Notes           js.Value
 	FromDate        js.Value
 	ToDate          js.Value
@@ -81,6 +83,7 @@ type children struct {
 	//Add child structures as necessary
 	//BookingPeople *bookingPeopleView.ItemEditor
 	BookingStatus *bookingStatusView.ItemEditor
+	TripChooser   *tripView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -137,6 +140,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	// Create child editors here
 	editor.Children.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.BookingStatus.FetchItems()
+	editor.Children.TripChooser = tripView.New(editor.document, eventProcessor, editor.appCore)
 
 	//editor.Children.BookingPeople = bookingPeopleView.New(editor.document, editor.events, editor.client)
 	//editor.Children.BookingPeople.FetchItems()
@@ -175,7 +179,7 @@ func (editor *ItemEditor) Display() {
 }
 
 // NewItemData initializes a new item for adding
-func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -202,6 +206,10 @@ func (editor *ItemEditor) populateEditForm() {
 	//var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
 	var localObjs UI
 
+	localObjs.TripID, editor.UiComponents.TripID = editor.Children.TripChooser.NewDropdown(editor.CurrentRecord.TripID, "Trip", "itemTripID")
+	editor.UiComponents.TripID.Call("setAttribute", "required", "true")
+	editor.UiComponents.TripID.Call("addEventListener", "change", js.FuncOf(editor.updateEditForm))
+
 	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
 	editor.UiComponents.Notes.Set("minlength", 10)
 	editor.UiComponents.Notes.Call("setAttribute", "required", "true")
@@ -221,6 +229,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.Children.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
+	form.Call("appendChild", localObjs.TripID)
 	form.Call("appendChild", localObjs.Notes)
 	form.Call("appendChild", localObjs.FromDate)
 	form.Call("appendChild", localObjs.ToDate)
@@ -270,21 +279,41 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 }
 
+// updateEditForm updates the edit form when the parent record is changed
+func (editor *ItemEditor) updateEditForm(this js.Value, p []js.Value) any {
+	editor.CurrentRecord.TripID = editor.Children.TripChooser.CurrentRecord.ID
+	editor.CurrentRecord.TripName = editor.Children.TripChooser.CurrentRecord.Name
+	editor.CurrentRecord.TripFromDate = editor.Children.TripChooser.CurrentRecord.FromDate
+	editor.CurrentRecord.TripToDate = editor.Children.TripChooser.CurrentRecord.ToDate
+
+	log.Printf(debugTag+"ValidateTrip()1 TripID=%v, TripName=%v, TripFromDate=%v, TripToDate=%v", editor.CurrentRecord.TripID, editor.CurrentRecord.TripName, editor.CurrentRecord.TripFromDate, editor.CurrentRecord.TripToDate)
+	editor.UiComponents.FromDate.Set("value", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
+	editor.UiComponents.ToDate.Set("value", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+
+	editor.UiComponents.FromDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
+	editor.UiComponents.FromDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+
+	editor.UiComponents.ToDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
+	editor.UiComponents.ToDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+
+	return nil
+}
+
 func (editor *ItemEditor) ValidateDates() {
 	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be equal to or before To-date")
 	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
 }
 
-func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) any {
 	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be equal to or before To-date")
 }
 
-func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) any {
 	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
 }
 
 // SubmitItemEdit handles the submission of the item edit form
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
@@ -294,6 +323,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// ********************* This needs to be changed for each api **********************
 	var err error
 
+	editor.CurrentRecord.TripID = editor.Children.TripChooser.CurrentRecord.ID
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
 	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
@@ -303,7 +333,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	if err != nil {
 		log.Println("Error parsing value:", err)
 	}
-	//editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
 	editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing value:", err)
@@ -323,6 +352,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		editor.CurrentRecord.BookingPrice.UnmarshalText([]byte(editor.UiComponents.BookingPrice.Get("value").String()))
 	}
 
+	if editor.CurrentRecord.TripID == 0 {
+		editor.onCompletionMsg("Invalid Trip ID")
+		log.Printf(debugTag+"SubmitItemEdit()1 Invalid Trip ID, current record = %+v", editor.CurrentRecord)
+		return nil
+	}
+
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
@@ -340,7 +375,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	editor.resetEditForm()
 	return nil
 }
@@ -388,6 +423,7 @@ func (editor *ItemEditor) FetchItems() {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
 		editor.Children.BookingStatus.FetchItems()
+		editor.Children.TripChooser.FetchItems()
 
 		localApiURL := ApiURL
 		//if editor.ParentData.ID != 0 { // This creates a URL that gets the items for a specific parent record

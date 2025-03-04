@@ -191,6 +191,48 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	return nil
 }
 
+// NewDropdown creates a dropdown list for selecting a value from a list of items
+// Note: The returned value is the index of the selected item in the list (slice)
+func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
+	// Create a div for displaying Dropdown
+	fieldset := editor.document.Call("createElement", "fieldset")
+	fieldset.Set("className", "input-group")
+
+	// Create a label element
+	label := viewHelpers.Label(editor.document, labelText, htmlID)
+	fieldset.Call("appendChild", label)
+
+	StateDropDown := editor.document.Call("createElement", "select")
+	StateDropDown.Set("id", htmlID)
+
+	for index, item := range editor.Records {
+		optionElement := editor.document.Call("createElement", "option")
+		//optionElement.Set("value", item.ID)
+		optionElement.Set("value", index) // The index is used as it allows the current record to be updated when the dropdown is changed. This allows the app to use the current record to update UI values.
+		optionElement.Set("text", item.Name+" (From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
+		if value == item.ID {
+			optionElement.Set("selected", true)
+		}
+		StateDropDown.Call("appendChild", optionElement)
+	}
+	fieldset.Call("appendChild", StateDropDown)
+
+	// Create an span element of error messages
+	span := viewHelpers.Span(editor.document, htmlID+"-error")
+	fieldset.Call("appendChild", span)
+
+	// Add event listener to update CurrentRecord based on selected option
+	StateDropDown.Call("addEventListener", "change", js.FuncOf(func(this js.Value, p []js.Value) interface{} {
+		selectedIndex, _ := strconv.Atoi(StateDropDown.Get("value").String())
+		if selectedIndex >= 0 && selectedIndex < len(editor.Records) {
+			editor.CurrentRecord = editor.Records[selectedIndex] // Update the current record with the selected item. This allows the app to use the current record to update UI values.
+		}
+		return nil
+	}))
+
+	return fieldset, StateDropDown
+}
+
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
