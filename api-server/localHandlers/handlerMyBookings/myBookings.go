@@ -71,7 +71,7 @@ const (
         			VALUES ($1, $2, $3, $4, $5, $6) 
 					RETURNING id`
 	qryUpdateAdmin = `UPDATE at_bookings 
-					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_date, payment_date, booking_price) = ($2, $3, $4, $5, $6, %7, %8, $9)
+					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_date, payment_date, booking_price) = ($2, $3, $4, $5, $6, $7, $8, $9, $10)
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
 					SET (notes, from_date, to_date, booking_status_id) = ($4, $5, $6, $7)
