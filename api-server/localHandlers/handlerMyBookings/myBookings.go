@@ -12,7 +12,7 @@ import (
 	"net/http"
 )
 
-const debugTag = "handlerBookings."
+const debugTag = "handlerMyBookings."
 
 const (
 	qryGetAll = `SELECT atb.*,
@@ -184,9 +184,9 @@ func (h *Handler) ParentRecordValidation(record models.Booking) error {
 	validationRecord := models.Trip{}
 	err := h.appConf.Db.Get(&validationRecord, sqlBookingParentRecordValidation, parentID)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf(debugTag+"ParentRecordValidation()1 - Record not found: error message = %s", err.Error())
+		return fmt.Errorf(debugTag+"ParentRecordValidation()1 - Record not found: error message = %s, parentID = %v", err.Error(), parentID)
 	} else if err != nil {
-		return fmt.Errorf(debugTag+"ParentRecordValidation()2 - Internal Server Error:  error message = %s", err.Error())
+		return fmt.Errorf(debugTag+"ParentRecordValidation()2 - Internal Server Error:  error message = %s, parentID = %v", err.Error(), parentID)
 	}
 
 	if record.FromDate.Before(validationRecord.FromDate) {
