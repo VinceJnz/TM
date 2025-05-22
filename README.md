@@ -38,3 +38,9 @@ This app is JS free (more or less).
 * Account status
 
 Note: Passwords are not stored in the database. It uses "Secure Remote Password" <https://pkg.go.dev/github.com/1Password/srp@v0.2.0#section-readme>
+
+
+## To Do
+
+* Add Rust builder - done
+* Create rust wasm code
