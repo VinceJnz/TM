@@ -32,6 +32,27 @@ RUN go mod download
 RUN go build -o webserver .
 
 ############################################################
+# STAGE: Build Rust WASM client
+FROM rust:1.76 AS rustwasmbuilder
+
+WORKDIR /app
+
+# Install wasm target
+RUN rustup target add wasm32-unknown-unknown
+
+# Optionally install wasm-bindgen-cli if you're using it
+RUN cargo install wasm-bindgen-cli
+
+# Copy your Rust project source
+COPY ./rust-client/ .
+
+# Build your Rust WASM app
+RUN cargo build --release --target wasm32-unknown-unknown
+
+# (Optional) If you're using wasm-bindgen for bindings
+RUN wasm-bindgen --out-dir ./out --target web ./target/wasm32-unknown-unknown/release/rust_client.wasm
+
+############################################################
 # STAGE 3: Create a clean image for the final output
 FROM alpine:latest AS final
 
@@ -43,6 +64,13 @@ COPY --from=wasmbuilder /app/wasm_exec.js .
 COPY --from=webserverbuilder /app/webserver .
 COPY --from=webserverbuilder /app/*.html .
 COPY --from=webserverbuilder /app/favicon.ico .
+
+# Copy Rust WASM output
+COPY --from=rustwasmbuilder /app/out/*.wasm ./
+COPY --from=rustwasmbuilder /app/out/*.js ./
+
+# If not using wasm-bindgen, and only using raw .wasm, then:
+# COPY --from=rustwasmbuilder /app/target/wasm32-unknown-unknown/release/*.wasm ./
 
 # Expose the port the web server listens on
 EXPOSE 8081
