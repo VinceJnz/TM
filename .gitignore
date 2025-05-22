@@ -11,3 +11,6 @@ logs
 Server*
 log*.txt
 .env
+*.zip
+*.tar
+*.gz
