@@ -16,23 +16,8 @@ RUN GOOS=js GOARCH=wasm go build -o ./main.wasm
 #COPY /usr/local/go/misc/wasm/wasm_exec.js ./out/
 RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
 
-
 ############################################################
-# STAGE2: Use a lightweight Go image to build the webserver
-FROM golang:1.23.4-alpine AS webserverbuilder
-
-# Set working directory in the container
-WORKDIR /app
-
-# Copy the Go web server source code to the container
-COPY ./web-server/ .
-
-# Build the Go web server
-RUN go mod download
-RUN go build -o webserver .
-
-############################################################
-# STAGE: Build Rust WASM client
+# STAGE2: Build Rust WASM client
 FROM rust:1.76 AS rustwasmbuilder
 
 WORKDIR /app
@@ -53,7 +38,21 @@ RUN cargo build --release --target wasm32-unknown-unknown
 RUN wasm-bindgen --out-dir ./out --target web ./target/wasm32-unknown-unknown/release/rust_client.wasm
 
 ############################################################
-# STAGE 3: Create a clean image for the final output
+# STAGE3: Use a lightweight Go image to build the webserver
+FROM golang:1.23.4-alpine AS webserverbuilder
+
+# Set working directory in the container
+WORKDIR /app
+
+# Copy the Go web server source code to the container
+COPY ./web-server/ .
+
+# Build the Go web server
+RUN go mod download
+RUN go build -o webserver .
+
+############################################################
+# STAGE4: Create a clean image for the final output
 FROM alpine:latest AS final
 
 # Copy the compiled wasm binary from the builder stage
