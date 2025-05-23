@@ -1,6 +1,9 @@
 ############################################################
 # STAGE1: Use a lightweight Go image to build the WASM binary
-FROM golang:1.23.4-alpine AS wasmbuilder
+FROM golang:alpine AS wasmbuilder
+
+# Update package index to ensure latest security patches
+RUN apk update && apk upgrade
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -18,9 +21,12 @@ RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
 
 ############################################################
 # STAGE2: Build Rust WASM client
-FROM rust:1.76 AS rustwasmbuilder
+FROM rust:alpine AS rustwasmbuilder
 
 WORKDIR /app
+
+# Update package index and upgrade packages to reduce vulnerabilities
+RUN apk update && apk upgrade
 
 # Install wasm target
 RUN rustup target add wasm32-unknown-unknown
@@ -39,7 +45,10 @@ RUN wasm-bindgen --out-dir ./out --target web ./target/wasm32-unknown-unknown/re
 
 ############################################################
 # STAGE3: Use a lightweight Go image to build the webserver
-FROM golang:1.23.4-alpine AS webserverbuilder
+FROM golang:alpine AS webserverbuilder
+
+# Update package index and upgrade packages to reduce vulnerabilities
+RUN apk update && apk upgrade
 
 # Set working directory in the container
 WORKDIR /app
