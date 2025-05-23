@@ -21,7 +21,8 @@ RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
 
 ############################################################
 # STAGE2: Build Rust WASM client
-FROM rust:alpine AS rustwasmbuilder
+#FROM rust:alpine AS rustwasmbuilder
+FROM rust:1.82.0 AS rustwasmbuilder
 
 WORKDIR /app
 
