@@ -1,5 +1,6 @@
 ############################################################
 # STAGE1: Use a lightweight Go image to build the WASM binary
+#FROM golang:1.23.4-alpine AS wasmbuilder
 FROM golang:alpine AS wasmbuilder
 
 # Update package index to ensure latest security patches
@@ -17,17 +18,18 @@ RUN GOOS=js GOARCH=wasm go build -o ./main.wasm
 #ENV GOROOT=/usr/local/go
 #COPY $GOROOT/misc/wasm/wasm_exec.js ./out/
 #COPY /usr/local/go/misc/wasm/wasm_exec.js ./out/
-RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
+#RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
+RUN cp /usr/local/go/lib/wasm/wasm_exec.js .
 
 ############################################################
 # STAGE2: Build Rust WASM client
-#FROM rust:alpine AS rustwasmbuilder
-FROM rust:1.82.0 AS rustwasmbuilder
+FROM rust:alpine AS rustwasmbuilder
+#FROM rust:1.82.0 AS rustwasmbuilder
 
 WORKDIR /app
 
 # Update package index and upgrade packages to reduce vulnerabilities
-RUN apk update && apk upgrade
+#RUN apk update && apk upgrade
 
 # Install wasm target
 RUN rustup target add wasm32-unknown-unknown
@@ -36,7 +38,7 @@ RUN rustup target add wasm32-unknown-unknown
 RUN cargo install wasm-bindgen-cli
 
 # Copy your Rust project source
-COPY ./rust-client/ .
+COPY ./client1_rust/ .
 
 # Build your Rust WASM app
 RUN cargo build --release --target wasm32-unknown-unknown
@@ -46,10 +48,11 @@ RUN wasm-bindgen --out-dir ./out --target web ./target/wasm32-unknown-unknown/re
 
 ############################################################
 # STAGE3: Use a lightweight Go image to build the webserver
-FROM golang:alpine AS webserverbuilder
+FROM golang:1.23.4-alpine AS webserverbuilder
+#FROM golang:alpine AS webserverbuilder
 
 # Update package index and upgrade packages to reduce vulnerabilities
-RUN apk update && apk upgrade
+#RUN apk update && apk upgrade
 
 # Set working directory in the container
 WORKDIR /app
@@ -74,9 +77,9 @@ COPY --from=webserverbuilder /app/webserver .
 COPY --from=webserverbuilder /app/*.html .
 COPY --from=webserverbuilder /app/favicon.ico .
 
-# Copy Rust WASM output
-COPY --from=rustwasmbuilder /app/out/*.wasm ./
-COPY --from=rustwasmbuilder /app/out/*.js ./
+# Copy Rust WASM output # Comment out the lines below to stop the build of the rust client
+#COPY --from=rustwasmbuilder /app/out/*.wasm ./
+#COPY --from=rustwasmbuilder /app/out/*.js ./
 
 # If not using wasm-bindgen, and only using raw .wasm, then:
 # COPY --from=rustwasmbuilder /app/target/wasm32-unknown-unknown/release/*.wasm ./
