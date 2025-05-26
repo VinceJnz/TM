@@ -44,3 +44,53 @@ Note: Passwords are not stored in the database. It uses "Secure Remote Password"
 
 * Add Rust builder - done
 * Create rust wasm code
+
+
+## Google Jules
+
+I want to create a rust version of the Go wasm clinet in the folder "client1". Put the rust client into a new folder "client1_rust".
+Before you start I need to configure the environment.
+
+###  Configuration
+
+```bash
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+export PATH="$HOME/.cargo/bin:$PATH"
+source "$HOME/.cargo/env"
+
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+rustup install 1.82.0
+rustup default 1.82.0
+rustup toolchain add 1.82.0
+
+cargo install wasm-pack --version 0.12.1
+
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+rustc --version
+wasm-pack --version
+```
+
+
+```bash
+# Install Rust non-interactively
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+
+# Load Rust into current shell session
+source "$HOME/.cargo/env"
+
+# Ensure correct Rust version is installed and set as default
+rustup install 1.82.0
+rustup default 1.82.0
+
+# Install wasm-pack v0.12.1
+cargo install wasm-pack --version 0.12.1
+
+# Show installed versions
+rustc --version
+wasm-pack --version
+```
+
