@@ -11,8 +11,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const debugTag = "app"
-
 /*
 set DB_USER api_user
 set DB_PASSWORD api_password
