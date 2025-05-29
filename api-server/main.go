@@ -148,7 +148,7 @@ func main() {
 	}()
 
 	/* Seup helpers to start the servers with basic and TLS configuration.
-	appCore.StartServer(":8085", crtFile, keyFile, loggedHandler, true, debugTag, tlsConfig)
+	appCore.StartServerHTTP(":8086", loggedHandler, debugTag)
 
 	// ...set up caCertPool, etc...
 	tlsConfig := &tls.Config{
@@ -156,8 +156,7 @@ func main() {
 		ClientCAs:  caCertPool,
 		MinVersion: tls.VersionTLS12,
 	}
-
-	appCore.StartServer(":8086", crtFile, keyFile, loggedHandler, true, debugTag, tlsConfig)
+	appCore.StartServerHTTPS(":8085", crtFile, keyFile, loggedHandler, debugTag, tlsConfig)
 	*/
 
 	// Block the main goroutine to keep the servers running

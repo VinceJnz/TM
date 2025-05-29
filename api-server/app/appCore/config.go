@@ -6,6 +6,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const debugTag = "appCore."
+
 type ContextKey string
 
 func GenerateSessionIDContextKey() ContextKey { // User for generating the context key for passing values via the context (ctx)

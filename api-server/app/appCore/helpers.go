@@ -22,14 +22,13 @@ func (d DebugWriter) Write(p []byte) (int, error) {
 //}
 
 // func startServer(addr, crtFile, keyFile string, handler http.Handler, isTLS bool, debugTag string) {
-func StartServerHTTP(addr, crtFile, keyFile string, handler http.Handler, isTLS bool, debugTag string, tlsConfig *tls.Config) {
+func StartServerHTTP(addr string, handler http.Handler, debugTag string) {
 	go func() {
 		protocol := "HTTP"
 		scheme := "http"
 		log.Printf("%s%s server running on %s://localhost%s", debugTag, protocol, scheme, addr)
-		var err error
 
-		err = http.ListenAndServe(addr, handler)
+		err := http.ListenAndServe(addr, handler)
 
 		if err != nil {
 			log.Fatalf("%s%s server error: %v", debugTag, protocol, err)
