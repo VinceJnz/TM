@@ -10,6 +10,7 @@ import (
 )
 
 type settings struct {
+	AppTitle     string `json:"AppTitle"`
 	Host         string `json:"Host"`
 	PortHttp     string `json:"PortHttp"`
 	PortHttps    string `json:"PortHttps"`
