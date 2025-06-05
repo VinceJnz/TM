@@ -94,3 +94,13 @@ rustc --version
 wasm-pack --version
 ```
 
+
+
+## WebAuthn
+
+Will now use this to authenticate clients.
+
+<https://webauthn.io/>
+
+<https://github.com/go-webauthn/webauthn>
+
