@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/guregu/null/v5/zero"
 )
 
 const debugTag = "handlerWebAuthn."
@@ -115,27 +114,19 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 
 // getUserFromRegistrationRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
 func (h *Handler) getUserFromRegistrationRequest(r *http.Request) (*models.User, error) {
-	//Read the data from the web form and write it to the DB
+	//Read the data from the web form or JSON body
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		return nil, err // handle error appropriately
 	}
 
-	//Read the data from the web form and write it to the DB
-	//err := json.Unmarshal(r.Body, &user)
-	//if err != nil {
-	//	log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()4 ", "err =", err, "body =", string(body))
-	//	http.Error(w, err.Error(), http.StatusNotAcceptable)
-	//	return nil
-	//}
-
-	//return &user
-	return &models.User{
-		ID:       1,
-		Username: "testuser",
-		Name:     "Test User",
-		Email:    zero.NewString("testuser@example.com", true),
-	}, nil
+	return &user, nil
+	//return &models.User{
+	//	ID:       1,
+	//	Username: "testuser",
+	//	Name:     "Test User",
+	//	Email:    zero.NewString("testuser@example.com", true),
+	//}, nil
 }
 
 // getUserFromRegistrationRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
@@ -175,6 +166,7 @@ func (h *Handler) saveUser(record *models.User) {
 	h.UserWriteQry(*record) // Assuming UserWriteQry is implemented to save the user
 }
 
+// ?????????????????????????????????? ?????????????????????????????????
 func (h *Handler) setUserAuthenticated(w http.ResponseWriter, user *models.User) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  "session_id",
