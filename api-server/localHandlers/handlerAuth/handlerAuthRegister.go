@@ -11,20 +11,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/1Password/srp"
-
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 )
 
 //const debugTag = "handlerAuth."
-
-//type Handler struct {
-//	appConf *appCore.Config
-//	//srvc *store.Service
-//	//app  *core.Config
-//	Pool map[string]*poolItem
-//}
 
 type serverVerify struct {
 	B     *big.Int
@@ -36,44 +27,6 @@ type clientVerify struct {
 	UserName string
 	Proof    []byte
 	Token    string
-}
-
-//func New(appConf *appCore.Config) *Handler {
-//	return &Handler{
-//		appConf: appConf,
-//		//srvc:    app.Service,
-//		//app:     app,
-//		Pool: make(map[string]*poolItem),
-//	}
-//}
-
-type poolItem struct {
-	serverSRP *srp.SRP
-	userID    int
-}
-
-type poolList map[string]poolItem
-
-func (h *Handler) PoolAdd(token string, userID int, srpServer *srp.SRP) {
-	p := poolItem{
-		serverSRP: srpServer,
-		userID:    userID,
-	}
-	h.Pool[token] = p
-}
-
-func (h *Handler) PoolDelete(token string) {
-	delete(h.Pool, token)
-}
-
-func (h *Handler) PoolGet(token string) poolItem {
-	return h.Pool[token]
-}
-
-func (h *Handler) PoolList() {
-	for i, v := range h.Pool {
-		log.Printf("Pool item=%v, details=%+v", i, v)
-	}
 }
 
 //*************************************************************************************************

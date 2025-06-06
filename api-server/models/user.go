@@ -2,30 +2,40 @@ package models
 
 import (
 	"math/big"
+	"strconv"
 	"time"
 
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/guregu/null/v5/zero"
 )
 
 type User struct {
-	ID              int         `json:"id" db:"id"`
-	Name            string      `json:"name" db:"name"`
-	Username        string      `json:"username" db:"username"`
-	Email           zero.String `json:"email" db:"email"`
-	Address         zero.String `json:"user_address" db:"user_address"`
-	MemberCode      zero.String `json:"member_code" db:"member_code"`
-	BirthDate       zero.Time   `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
-	UserAgeGroupID  zero.Int    `json:"user_age_group_id" db:"user_age_group_id"`
-	MemberStatusID  zero.Int    `json:"member_status_id" db:"member_status_id"`
-	MemberStatus    zero.String `json:"member_status" db:"member_status"`
-	Password        zero.String `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
-	Salt            []byte      `json:"salt" db:"salt"`
-	Verifier        *big.Int    `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-	AccountStatusID zero.Int    `json:"user_account_status_id" db:"user_account_status_id"`
-	AccountHidden   zero.Bool   `json:"user_account_hidden" db:"user_account_hidden"`
-	Created         time.Time   `json:"created" db:"created"`
-	Modified        time.Time   `json:"modified" db:"modified"`
+	ID              int                   `json:"id" db:"id"`
+	Name            string                `json:"name" db:"name"`
+	Username        string                `json:"username" db:"username"`
+	Email           zero.String           `json:"email" db:"email"`
+	Address         zero.String           `json:"user_address" db:"user_address"`
+	MemberCode      zero.String           `json:"member_code" db:"member_code"`
+	BirthDate       zero.Time             `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
+	UserAgeGroupID  zero.Int              `json:"user_age_group_id" db:"user_age_group_id"`
+	MemberStatusID  zero.Int              `json:"member_status_id" db:"member_status_id"`
+	MemberStatus    zero.String           `json:"member_status" db:"member_status"`
+	Password        zero.String           `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
+	Salt            []byte                `json:"salt" db:"salt"`
+	Verifier        *big.Int              `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
+	AccountStatusID zero.Int              `json:"user_account_status_id" db:"user_account_status_id"`
+	AccountHidden   zero.Bool             `json:"user_account_hidden" db:"user_account_hidden"`
+	Credentials     []webauthn.Credential `json:"credentials" db:"credentials"` // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
+	Created         time.Time             `json:"created" db:"created"`
+	Modified        time.Time             `json:"modified" db:"modified"`
 }
+
+// WebAuthnUser is used to implement the webauthn.User interface for the User struct to be used with the webauthn library.
+func (u User) WebAuthnID() []byte                         { return []byte(strconv.Itoa(u.ID)) }
+func (u User) WebAuthnName() string                       { return u.Username }
+func (u User) WebAuthnDisplayName() string                { return u.Name }
+func (u User) WebAuthnIcon() string                       { return "" }
+func (u User) WebAuthnCredentials() []webauthn.Credential { return u.Credentials }
 
 type UserAgeGroups struct {
 	ID       int       `json:"id" db:"id"`

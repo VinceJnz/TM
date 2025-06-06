@@ -16,7 +16,7 @@ type HandlerFunc func(http.ResponseWriter, *http.Request)
 
 type Handler struct {
 	appConf *appCore.Config
-	Pool    poolList
+	Pool    srpPoolList
 }
 
 func New(appConf *appCore.Config) *Handler {
@@ -24,7 +24,7 @@ func New(appConf *appCore.Config) *Handler {
 		appConf: appConf,
 		//srvc:    app.Service,
 		//app:     app,
-		Pool: poolList{},
+		Pool: srpPoolList{},
 	}
 }
 
