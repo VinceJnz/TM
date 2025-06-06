@@ -15,14 +15,15 @@ const (
 
 // Token stores cookies for user sessions
 type Token struct {
-	ID        int
-	UserID    int
-	Name      zero.String
-	Host      zero.String
-	TokenStr  zero.String
-	Valid     zero.Bool //A flag for the application to know if the cookie is valid or not
-	ValidFrom zero.Time
-	ValidTo   zero.Time
+	ID          int
+	UserID      int
+	Name        zero.String
+	Host        zero.String
+	TokenStr    zero.String
+	SessionData zero.String // This can be used to store session data in JSON format
+	Valid       zero.Bool   //A flag for the application to know if the cookie is valid or not
+	ValidFrom   zero.Time
+	ValidTo     zero.Time
 }
 
 // Session = access control information derived from a user's access levels and the requested resource. This info is passed to handlers in the ctx.

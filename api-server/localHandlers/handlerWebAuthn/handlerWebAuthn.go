@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	uuid "github.com/satori/go.uuid"
 )
 
 const debugTag = "handlerWebAuthn."
@@ -51,7 +53,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	// Store sessionData in your session store
 	// TODO: Implement your own session management here
-	_ = sessionData
+	_ = sessionData // This is where you would store the session data, e.g., in a database or in-memory store
+	//h.StoreSessionData(sessionData) // Assuming you have a method to store session data
 	json.NewEncoder(w).Encode(options)
 }
 
@@ -61,6 +64,9 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to get user from request", http.StatusBadRequest)
 		return
+	}
+	if user.Credentials == nil {
+		user.Credentials = []webauthn.Credential{}
 	}
 	// TODO: Retrieve sessionData from your session store
 	var sessionData webauthn.SessionData
@@ -89,6 +95,8 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	// Store sessionData in your session store
 	// TODO: Implement your own session management here
+	// https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/webauthn#SessionData
+	// For example, you might store it in a database or in-memory store
 	_ = sessionData
 	json.NewEncoder(w).Encode(options)
 }
@@ -108,7 +116,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to finish login", http.StatusBadRequest)
 		return
 	}
-	h.setUserAuthenticated(w, user)
+	h.setUserAuthenticated(w, r, user)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -147,17 +155,23 @@ func (h *Handler) extractUserTokenFromSession(r *http.Request) (*models.Token, e
 	var err error
 	var token models.Token
 	sessionToken, err := r.Cookie("session")
-	if err == http.ErrNoCookie { // If there is no session cookie
-		log.Println(debugTag+"Handler.extractUserTokenFromSession()2 - Authentication required ", "sessionToken=", sessionToken, "err =", err)
-		return nil, err
-	} else { // If there is a session cookie try to find it in the repository
-		token, err = h.FindSessionToken(sessionToken.Value) //This succeeds if the cookie is in the DB and the user is current
-		if err != nil {                                     // could not find user sessionToken so token is not valid
-			log.Println(debugTag+"Handler.extractUserTokenFromSession()3 - Not authorised ", "token =", token, "err =", err)
+	if err != nil { // If there is an error other than no cookie
+		switch err {
+		case http.ErrNoCookie: // If there is no session cookie
+			log.Println(debugTag+"Handler.extractUserTokenFromSession()1 - Authentication required ", "sessionToken=", sessionToken, "err =", err)
+			return nil, err
+		default: // If there is some other error
+			log.Println(debugTag+"Handler.extractUserTokenFromSession()2 - Error retrieving session cookie ", "sessionToken=", sessionToken, "err =", err)
 			return nil, err
 		}
 	}
-	return &token, nil
+	// If there is a session cookie try to find it in the repository
+	token, err = h.FindSessionToken(sessionToken.Value) //This succeeds if the cookie is in the DB and the user is current
+	if err != nil {                                     // could not find user sessionToken so token is not valid
+		log.Println(debugTag+"Handler.extractUserTokenFromSession()3 - Not authorised ", "token =", token, "err =", err)
+		return nil, err
+	}
+	return &token, nil // Session token found and user is current
 }
 
 // func (h *Handler) saveUser(user *User) {
@@ -166,11 +180,21 @@ func (h *Handler) saveUser(record *models.User) {
 	h.UserWriteQry(*record) // Assuming UserWriteQry is implemented to save the user
 }
 
-// ?????????????????????????????????? ?????????????????????????????????
-func (h *Handler) setUserAuthenticated(w http.ResponseWriter, user *models.User) {
+// setUserAuthenticated sets the user as authenticated and creates a session cookie
+func (h *Handler) setUserAuthenticated(w http.ResponseWriter, r *http.Request, user *models.User) {
+	//Authentication successful
+	//Create and store a new cookie
+	sessionToken, err := h.createSessionToken(user.ID, r.RemoteAddr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to create cookie"))
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()8: Failed to create cookie, createSessionToken fail", "", err, "userID =", user.ID, "r.RemoteAddr =", r.RemoteAddr)
+		return
+	}
+
 	http.SetCookie(w, &http.Cookie{
-		Name:  "session_id",
-		Value: "some-session-id", // Replace with actual session ID logic
+		Name:  sessionToken.Name,  //"session",
+		Value: sessionToken.Value, // Replace with actual session ID logic
 	})
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "User authenticated"})
@@ -219,4 +243,52 @@ func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
 		return result, err
 	}
 	return result, nil
+}
+
+// createSessionToken store it in the DB and in the session struct and return *http.Token
+func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, error) {
+	var err error
+	//expiration := time.Now().Add(365 * 24 * time.Hour)
+	sessionToken := &http.Cookie{
+		Name:  "session",
+		Value: uuid.NewV4().String(),
+		Path:  "/",
+		//Domain: "localhost",
+		//Expires:    time.Time{},
+		//RawExpires: "",
+		//MaxAge:     0,
+		//Secure:   false,
+		Secure:   true,  //https --> true,
+		HttpOnly: false, //https --> true, http --> false
+		SameSite: http.SameSiteNoneMode,
+		//SameSite: http.SameSiteLaxMode,
+		//SameSite: http.SameSiteStrictMode,
+		//Raw:        "",
+		//Unparsed:   []string{},
+	}
+	// Store the session cookie for the user in the database
+	tokenItem := models.Token{}
+	tokenItem.UserID = userID
+	tokenItem.Name.SetValid(sessionToken.Name)
+	tokenItem.Host.SetValid(host)
+	tokenItem.TokenStr.SetValid(sessionToken.Value)
+	tokenItem.SessionData.SetValid("")
+	tokenItem.Valid.SetValid(true)
+	tokenItem.ValidFrom.SetValid(time.Now())
+	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
+
+	tokenItem.ID, err = h.TokenWriteQry(tokenItem)
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+	} else {
+		err = h.TokenCleanOld(tokenItem.ID)
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+		}
+		h.TokenCleanExpired()
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+		}
+	}
+	return sessionToken, err
 }
