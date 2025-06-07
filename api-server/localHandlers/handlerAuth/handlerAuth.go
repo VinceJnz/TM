@@ -2,6 +2,7 @@ package handlerAuth
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/app/srpPool"
 	"api-server/v2/models"
 	"context"
 	"errors"
@@ -16,15 +17,13 @@ type HandlerFunc func(http.ResponseWriter, *http.Request)
 
 type Handler struct {
 	appConf *appCore.Config
-	Pool    srpPoolList
+	Pool    *srpPool.Pool
 }
 
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{
 		appConf: appConf,
-		//srvc:    app.Service,
-		//app:     app,
-		Pool: srpPoolList{},
+		Pool:    srpPool.NewSRPPool(),
 	}
 }
 

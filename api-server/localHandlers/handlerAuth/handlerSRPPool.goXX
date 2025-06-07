@@ -1,0 +1,50 @@
+//package handlerAuth
+
+import (
+	"log"
+
+	"github.com/1Password/srp"
+)
+
+type srpPoolItem struct {
+	serverSRP *srp.SRP
+	userID    int
+}
+
+type srpPoolList map[string]srpPoolItem
+
+func (h *Handler) PoolAdd(token string, userID int, srpServer *srp.SRP) {
+	p := srpPoolItem{
+		serverSRP: srpServer,
+		userID:    userID,
+	}
+	h.Pool[token] = p
+}
+
+func (h *Handler) PoolDelete(token string) {
+	delete(h.Pool, token)
+}
+
+func (h *Handler) PoolGet(token string) srpPoolItem {
+	return h.Pool[token]
+}
+
+func (h *Handler) PoolList() {
+	for i, v := range h.Pool {
+		log.Printf("Pool item=%v, details=%+v", i, v)
+	}
+}
+
+//ctx := context.WithValue(context.Background(), token, server)
+//ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+//go h.AuthCancel(token) //Remove the pool item after a timeout
+
+// AuthCancel this is used to cancel the Auth process.
+// Could use a context.WithCancel here ??????? to be invesitgated later. ?????????????
+//func (h *Handler) AuthCancel(token string) {
+//	time.Sleep(15 * time.Second)
+//	if _, ok := h.Pool[token]; ok {
+//		h.PoolDelete(token)
+//		log.Printf(debugTag + "Handler.AuthCancel()1 ****** Auth timed out: Pool server deleted ********")
+//	}
+//}

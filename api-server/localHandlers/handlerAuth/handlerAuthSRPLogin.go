@@ -87,12 +87,8 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	//store the server in a pool - it gets used later in the authentication process so it needs to be stored in temp memory
 	//The token needs to be sent ot the client so that the server can be recovered later in the auth process
 	token := uuid.NewV4().String()
-	h.PoolAdd(token, user.ID, server)
+	h.Pool.Add(token, user.ID, server, 15) // Add the server to the pool with a timeout of 15 seconds
 	ServerVerify.Token = token
-
-	//ctx := context.WithValue(context.Background(), token, server)
-	//ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	go h.AuthCancel(token) //Remove the pool item after a timeout
 
 	// The server will get A (clients ephemeral public key) from the client
 	// which the server will set using SetOthersPublic
@@ -161,10 +157,10 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Recover server instance from pool and delete it from the pool (it only gets used once in this process)
-	authItem := h.PoolGet(ClientVerify.Token)
-	h.PoolDelete(ClientVerify.Token)
-	userID := authItem.userID
-	server := authItem.serverSRP
+	authItem := h.Pool.Get(ClientVerify.Token)
+	h.Pool.Delete(ClientVerify.Token)
+	userID := authItem.UserID
+	server := authItem.ServerSRP
 	if server == nil {
 		log.Printf("%v %v %v %v %v", debugTag+"Handler.AuthCheckClientProof()6 Fatal: Couldn't set up server", "authItem =", authItem, "ClientVerify =", ClientVerify)
 		return
@@ -210,13 +206,13 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 
 // AuthCancel this is used to cancel the Auth process.
 // Could use a context.WithCancel here ??????? to be invesitgated later. ?????????????
-func (h *Handler) AuthCancel(token string) {
-	time.Sleep(15 * time.Second)
-	if _, ok := h.Pool[token]; ok {
-		h.PoolDelete(token)
-		log.Printf(debugTag + "Handler.AuthCancel()1 ****** Auth timed out: Pool server deleted ********")
-	}
-}
+//func (h *Handler) AuthCancel(token string) {
+//	time.Sleep(15 * time.Second)
+//	if _, ok := h.Pool[token]; ok {
+//		h.PoolDelete(token)
+//		log.Printf(debugTag + "Handler.AuthCancel()1 ****** Auth timed out: Pool server deleted ********")
+//	}
+//}
 
 // createSessionToken store it in the DB and in the session struct and return *http.Token
 func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, error) {
