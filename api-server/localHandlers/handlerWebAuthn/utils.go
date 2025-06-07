@@ -8,11 +8,14 @@ import (
 )
 
 // createTemporaryToken and return *http.Token
-func createTemporaryToken(host string) (*http.Cookie, error) {
+func createTemporaryToken(name, host string) (*http.Cookie, error) {
 	var err error
+	if name == "" {
+		name = "temp_session_token"
+	}
 	expiration := time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
 	tempSessionToken := &http.Cookie{
-		Name:    "session",
+		Name:    name,
 		Value:   uuid.NewV4().String(),
 		Path:    "/",
 		Domain:  host,

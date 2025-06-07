@@ -3,15 +3,12 @@ package handlerWebAuthn
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/webAuthnPool"
-	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
-	uuid "github.com/satori/go.uuid"
 )
 
 const debugTag = "handlerWebAuthn."
@@ -55,7 +52,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	// Store sessionData in your session store
 	// TODO: Implement your own session management here
-	tempSessionToken, err := createTemporaryToken(h.appConf.Settings.Host)
+	tempSessionToken, err := createTemporaryToken("temp_session_token", h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
@@ -71,8 +68,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	// TODO: Retrieve sessionData from your session store
 	var sessionData webauthn.SessionData
-	var user *models.User                        //webauthn.User
-	tempSessionToken, err := r.Cookie("session") // Retrieve the session cookie
+	var user *models.User                                   //webauthn.User
+	tempSessionToken, err := r.Cookie("temp_session_token") // Retrieve the session cookie
 	if err != nil {
 		switch err {
 		case http.ErrNoCookie: // If there is no session cookie
@@ -112,7 +109,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: Implement your own session management here
-	tempSessionToken, err := createTemporaryToken(h.appConf.Settings.Host)
+	tempSessionToken, err := createTemporaryToken("temp_session_token", h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
@@ -128,8 +125,8 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	// TODO: Retrieve sessionData from your session store
 	var sessionData webauthn.SessionData
-	var user *models.User                        //webauthn.User
-	tempSessionToken, err := r.Cookie("session") // Retrieve the session cookie
+	var user *models.User                                   //webauthn.User
+	tempSessionToken, err := r.Cookie("temp_session_token") // Retrieve the session cookie
 	if err != nil {
 		switch err {
 		case http.ErrNoCookie: // If there is no session cookie
@@ -225,97 +222,4 @@ func (h *Handler) setUserAuthenticated(w http.ResponseWriter, r *http.Request, u
 	http.SetCookie(w, sessionToken) // Set the session cookie in the response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "User authenticated"})
-}
-
-const (
-	//Finds only valid cookies where the user account is current
-	//if the user account is disabled or set to new it will not return the cookie
-	//if the cookie is not valid it will not return the cookie.
-	sqlFindSessionToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
-	FROM st_token stt
-		JOIN st_users stu ON stu.ID=stt.User_ID
-	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2`
-
-	//Finds valid tokens where user account exists and the token name is the same as the name passed in
-	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
-	FROM st_token stt
-		JOIN st_users stu ON stu.ID=stt.User_ID
-	WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid`
-)
-
-// FindSessionToken using the session cookie string find session cookie data in the DB and return the token item
-// if the cookie is not found return the DB error
-func (h *Handler) FindSessionToken(cookieStr string) (models.Token, error) {
-	var err error
-	result := models.Token{}
-	result.TokenStr.SetValid(cookieStr)
-	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
-	err = h.appConf.Db.QueryRow(sqlFindSessionToken, result.TokenStr, handlerUserAccountStatus.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
-		return result, err
-	}
-	return result, nil
-}
-
-// FindToken using the session cookie name and cookie string find session cookie data in the DB and return the token item
-func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
-	var err error
-	result := models.Token{}
-	result.TokenStr.SetValid(cookieStr)
-	result.Name.SetValid(name)
-	err = h.appConf.Db.QueryRow(sqlFindToken, result.TokenStr, result.Name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
-		return result, err
-	}
-	return result, nil
-}
-
-// createSessionToken store it in the DB and in the session struct and return *http.Cookie
-func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, error) {
-	var err error
-	//expiration := time.Now().Add(365 * 24 * time.Hour)
-	sessionToken := &http.Cookie{
-		Name:  "session",
-		Value: uuid.NewV4().String(),
-		Path:  "/",
-		//Domain: "localhost",
-		//Expires:    time.Time{},
-		//RawExpires: "",
-		//MaxAge:     0,
-		//Secure:   false,
-		Secure:   true,  //https --> true,
-		HttpOnly: false, //https --> true, http --> false
-		SameSite: http.SameSiteNoneMode,
-		//SameSite: http.SameSiteLaxMode,
-		//SameSite: http.SameSiteStrictMode,
-		//Raw:        "",
-		//Unparsed:   []string{},
-	}
-	// Store the session cookie for the user in the database
-	tokenItem := models.Token{}
-	tokenItem.UserID = userID
-	tokenItem.Name.SetValid(sessionToken.Name)
-	tokenItem.Host.SetValid(host)
-	tokenItem.TokenStr.SetValid(sessionToken.Value)
-	tokenItem.SessionData.SetValid("")
-	tokenItem.Valid.SetValid(true)
-	tokenItem.ValidFrom.SetValid(time.Now())
-	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
-
-	tokenItem.ID, err = h.TokenWriteQry(tokenItem)
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-	} else {
-		err = h.TokenCleanOld(tokenItem.ID)
-		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-		}
-		h.TokenCleanExpired()
-		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-		}
-	}
-	return sessionToken, err
 }
