@@ -2,6 +2,7 @@ package handlerWebAuthn
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/app/webAuthnPool"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"encoding/json"
@@ -20,6 +21,7 @@ const debugTag = "handlerWebAuthn."
 type Handler struct {
 	appConf  *appCore.Config
 	webAuthn *webauthn.WebAuthn
+	Pool     *webAuthnPool.Pool // Uncomment if you want to use a pool for session data
 }
 
 func New(appConf *appCore.Config) *Handler {
@@ -53,24 +55,40 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	// Store sessionData in your session store
 	// TODO: Implement your own session management here
-	_ = sessionData // This is where you would store the session data, e.g., in a database or in-memory store
-	//h.StoreSessionData(sessionData) // Assuming you have a method to store session data
+	tempSessionToken, err := createTemporaryToken(h.appConf.Settings.Host)
+	if err != nil {
+		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
+		return
+	}
+	h.Pool.Add(tempSessionToken.Value, user, sessionData, 15) // Assuming you have a pool to manage session data
+	// add the session token to the response
+	http.SetCookie(w, tempSessionToken)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(options)
 }
 
 // Registration (Finish)
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserFromRegistrationRequest(r)
-	if err != nil {
-		http.Error(w, "Failed to get user from request", http.StatusBadRequest)
-		return
-	}
-	if user.Credentials == nil {
-		user.Credentials = []webauthn.Credential{}
-	}
 	// TODO: Retrieve sessionData from your session store
 	var sessionData webauthn.SessionData
-	//credential, err := webAuthnInstance.FinishRegistration(user, r, sessionData)
+	var user *models.User                        //webauthn.User
+	tempSessionToken, err := r.Cookie("session") // Retrieve the session cookie
+	if err != nil {
+		switch err {
+		case http.ErrNoCookie: // If there is no session cookie
+			http.Error(w, "Authentication required", http.StatusUnauthorized)
+			log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+			return
+		default: // If there is some other error
+			http.Error(w, "Error retrieving session cookie", http.StatusInternalServerError)
+			log.Println(debugTag+"Handler.FinishRegistration()2 - Error retrieving session cookie ", "sessionToken=", tempSessionToken, "err =", err)
+			return
+		}
+	}
+	poolItem := h.Pool.Get(tempSessionToken.Value) // Assuming you have a pool to manage session data
+	sessionData = *poolItem.SessionData            // Retrieve session data from the pool
+	user = poolItem.User                           // Set the user data from the pool
+
 	credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)
 	if err != nil {
 		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
@@ -93,30 +111,48 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
 		return
 	}
-	// Store sessionData in your session store
 	// TODO: Implement your own session management here
-	// https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/webauthn#SessionData
-	// For example, you might store it in a database or in-memory store
-	_ = sessionData
+	tempSessionToken, err := createTemporaryToken(h.appConf.Settings.Host)
+	if err != nil {
+		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
+		return
+	}
+	h.Pool.Add(tempSessionToken.Value, user, sessionData, 15) // Assuming you have a pool to manage session data
+	// add the session token to the response
+	http.SetCookie(w, tempSessionToken)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(options)
 }
 
 // Login (Finish)
 func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserFromAuthenticatedRequest(r)
-	if err != nil {
-		http.Error(w, "Failed to get user from request", http.StatusBadRequest)
-		return
-	}
 	// TODO: Retrieve sessionData from your session store
 	var sessionData webauthn.SessionData
-	//_, err := webAuthnInstance.FinishLogin(user, r, sessionData)
+	var user *models.User                        //webauthn.User
+	tempSessionToken, err := r.Cookie("session") // Retrieve the session cookie
+	if err != nil {
+		switch err {
+		case http.ErrNoCookie: // If there is no session cookie
+			http.Error(w, "Authentication required", http.StatusUnauthorized)
+			log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+			return
+		default: // If there is some other error
+			http.Error(w, "Error retrieving session cookie", http.StatusInternalServerError)
+			log.Println(debugTag+"Handler.FinishRegistration()2 - Error retrieving session cookie ", "sessionToken=", tempSessionToken, "err =", err)
+			return
+		}
+	}
+	poolItem := h.Pool.Get(tempSessionToken.Value) // Assuming you have a pool to manage session data
+	sessionData = *poolItem.SessionData            // Retrieve session data from the pool
+	user = poolItem.User                           // Set the user data from the pool
+
 	_, err = h.webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
 		http.Error(w, "Failed to finish login", http.StatusBadRequest)
 		return
 	}
 	h.setUserAuthenticated(w, r, user)
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -129,15 +165,9 @@ func (h *Handler) getUserFromRegistrationRequest(r *http.Request) (*models.User,
 	}
 
 	return &user, nil
-	//return &models.User{
-	//	ID:       1,
-	//	Username: "testuser",
-	//	Name:     "Test User",
-	//	Email:    zero.NewString("testuser@example.com", true),
-	//}, nil
 }
 
-// getUserFromRegistrationRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
+// getUserFromAuthenticatedRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
 func (h *Handler) getUserFromAuthenticatedRequest(r *http.Request) (*models.User, error) {
 	token, err := h.extractUserTokenFromSession(r)
 	if err != nil {
@@ -192,10 +222,7 @@ func (h *Handler) setUserAuthenticated(w http.ResponseWriter, r *http.Request, u
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:  sessionToken.Name,  //"session",
-		Value: sessionToken.Value, // Replace with actual session ID logic
-	})
+	http.SetCookie(w, sessionToken) // Set the session cookie in the response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "User authenticated"})
 }
@@ -245,7 +272,7 @@ func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
 	return result, nil
 }
 
-// createSessionToken store it in the DB and in the session struct and return *http.Token
+// createSessionToken store it in the DB and in the session struct and return *http.Cookie
 func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, error) {
 	var err error
 	//expiration := time.Now().Add(365 * 24 * time.Hour)

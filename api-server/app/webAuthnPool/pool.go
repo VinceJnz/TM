@@ -1,24 +1,25 @@
-package srpPool
+package webAuthnPool
 
 import (
+	"api-server/v2/models"
 	"log"
 	"time"
 
-	"github.com/1Password/srp"
+	"github.com/go-webauthn/webauthn/webauthn"
 )
 
-const debugTag = "srpPool."
+const debugTag = "webAuthnPool."
 
-// PoolItem is used to store the SRP server and user ID in the pool.
+// PoolItem is used to store the server and user ID in the pool.
 type PoolItem struct {
-	ServerSRP *srp.SRP
-	UserID    int
+	SessionData *webauthn.SessionData
+	User        *models.User //webauthn.User
 }
 
-// PoolList is a map that holds the SRP pool items, keyed by a token (string).
+// PoolList is a map that holds the pool items, keyed by a token (string).
 type PoolList map[string]PoolItem
 
-// srpPool is a struct that holds the pool of SRP items.
+// Pool is a struct that holds the pool of items.
 type Pool struct {
 	Pool PoolList
 }
@@ -29,10 +30,10 @@ func NewSRPPool() *Pool {
 	}
 }
 
-func (p *Pool) Add(token string, userID int, srpServer *srp.SRP, attrib ...time.Duration) {
+func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.SessionData, attrib ...time.Duration) {
 	i := PoolItem{
-		ServerSRP: srpServer,
-		UserID:    userID,
+		SessionData: sessionData,
+		User:        user,
 	}
 	p.Pool[token] = i
 
