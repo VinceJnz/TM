@@ -13,11 +13,9 @@ import (
 
 const debugTag = "handlerWebAuthn."
 
-//var webAuthnInstance *webauthn.WebAuthn
-
 type Handler struct {
 	appConf  *appCore.Config
-	webAuthn *webauthn.WebAuthn
+	webAuthn *webauthn.WebAuthn // webAuthn instance for handling WebAuthn operations
 	Pool     *webAuthnPool.Pool // Uncomment if you want to use a pool for session data
 }
 
@@ -51,7 +49,6 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Store sessionData in your session store
-	// TODO: Implement your own session management here
 	tempSessionToken, err := createTemporaryToken("temp_session_token", h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
@@ -66,7 +63,6 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 
 // Registration (Finish)
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
-	// TODO: Retrieve sessionData from your session store
 	var sessionData webauthn.SessionData
 	var user *models.User                                   //webauthn.User
 	tempSessionToken, err := r.Cookie("temp_session_token") // Retrieve the session cookie
@@ -96,11 +92,23 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Login (Begin)
+// Login
+// The BeginLogin step is to get data from the user browser request. This data will contain the user credentials.
+// The user credentials (which where created during registration and stored in the database and on the browser)
+// are used to identify the user/device.
+// The FinishLogin step is to create a session, which will be used to store the user's authentication state.
+
+// BeginLogin starts the login process by initiating a WebAuthn login request.
 func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserFromAuthenticatedRequest(r)
+	credential, err := h.getCreditentialsFromAuthenticateRequest(r) // The browser request should contain the user credentials.
 	if err != nil {
 		http.Error(w, "Failed to get user from request", http.StatusBadRequest)
+		return
+	}
+	user, err := h.UserReadQry(credential) // Assuming UserReadQry is implemented to read the user by ID
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", credential.UserID, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
 	options, sessionData, err := h.webAuthn.BeginLogin(user)
@@ -108,7 +116,6 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
 		return
 	}
-	// TODO: Implement your own session management here
 	tempSessionToken, err := createTemporaryToken("temp_session_token", h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
@@ -121,9 +128,8 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(options)
 }
 
-// Login (Finish)
+// FinishLogin completes the login process by verifying the user's credentials and creating a session.
 func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
-	// TODO: Retrieve sessionData from your session store
 	var sessionData webauthn.SessionData
 	var user *models.User                                   //webauthn.User
 	tempSessionToken, err := r.Cookie("temp_session_token") // Retrieve the session cookie
@@ -151,6 +157,20 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	h.setUserAuthenticated(w, r, user)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) getCreditentialsFromAuthenticateRequest(r *http.Request) (*webauthn.Credential, error) {
+	// Read the data from the web form or JSON body
+	var credential webauthn.Credential
+	if err := json.NewDecoder(r.Body).Decode(&credential); err != nil {
+		return nil, err // handle error appropriately
+	}
+	// Here you would typically look up the user in your database using the credentials provided
+	// For example, you might check the username and password against your user database
+	// This is a placeholder implementation; you should replace it with your actual user lookup logic
+	// For example, you might check the username and password against your user database
+
+	return &credential, nil
 }
 
 // getUserFromRegistrationRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
