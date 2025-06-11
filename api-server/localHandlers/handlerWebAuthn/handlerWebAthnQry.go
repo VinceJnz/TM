@@ -11,15 +11,25 @@ import (
 )
 
 const (
-	sqlUserFind   = `SELECT id, FROM st_users WHERE id = $1`
-	sqlUserRead   = `SELECT id, name, username, email FROM st_users WHERE id = $1`
-	sqlUserInsert = `INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id`
-	sqlUserUpdate = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
+	sqlUserFind     = `SELECT id, FROM st_users WHERE id = $1`
+	sqlUserNameRead = `SELECT id, name, username, email FROM st_users WHERE username = $1`
+	sqlUserRead     = `SELECT id, name, username, email FROM st_users WHERE id = $1`
+	sqlUserInsert   = `INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id`
+	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
 )
 
 func (h *Handler) UserReadQry(id int) (models.User, error) {
 	record := models.User{}
 	err := h.appConf.Db.Get(&record, sqlUserRead, id)
+	if err != nil {
+		return models.User{}, err
+	}
+	return record, nil
+}
+
+func (h *Handler) UserNameReadQry(username string) (models.User, error) {
+	record := models.User{}
+	err := h.appConf.Db.Get(&record, sqlUserNameRead, username)
 	if err != nil {
 		return models.User{}, err
 	}

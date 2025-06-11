@@ -108,7 +108,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := h.UserReadQry(credential) // Assuming UserReadQry is implemented to read the user by ID
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", credential.UserID, "r.RemoteAddr =", r.RemoteAddr)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", credential.ID, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
 	options, sessionData, err := h.webAuthn.BeginLogin(user)
@@ -121,7 +121,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
 	}
-	h.Pool.Add(tempSessionToken.Value, user, sessionData, 15) // Assuming you have a pool to manage session data
+	h.Pool.Add(tempSessionToken.Value, &user, sessionData, 15) // Assuming you have a pool to manage session data
 	// add the session token to the response
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")
@@ -159,18 +159,24 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) getCreditentialsFromAuthenticateRequest(r *http.Request) (*webauthn.Credential, error) {
-	// Read the data from the web form or JSON body
-	var credential webauthn.Credential
-	if err := json.NewDecoder(r.Body).Decode(&credential); err != nil {
-		return nil, err // handle error appropriately
-	}
+func (h *Handler) getCreditentialsFromAuthenticateRequest(r *http.Request) ([]webauthn.Credential, error) {
 	// Here you would typically look up the user in your database using the credentials provided
 	// For example, you might check the username and password against your user database
 	// This is a placeholder implementation; you should replace it with your actual user lookup logic
 	// For example, you might check the username and password against your user database
 
-	return &credential, nil
+	// Read the data from the web form or JSON body //?????????? needs to be fixed
+	var Username string
+	if err := json.NewDecoder(r.Body).Decode(&Username); err != nil {
+		return nil, err // handle error appropriately
+	}
+
+	user, err := h.UserNameReadQry(Username) // Assuming UserReadQry is implemented to read the user by ID
+	if err != nil {
+		return nil, err // handle error appropriately
+	}
+
+	return user.WebAuthnCredentials(), nil
 }
 
 // getUserFromRegistrationRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
