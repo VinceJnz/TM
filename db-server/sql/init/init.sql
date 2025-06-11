@@ -245,8 +245,8 @@ CREATE TABLE st_token (
 CREATE TABLE IF NOT EXISTS st_users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE, -- This includes an index to ensure uniqueness
+    email VARCHAR(255) NOT NULL UNIQUE, -- This includes an index to ensure uniqueness
     user_address VARCHAR(255),
     member_code VARCHAR(20),
     user_birth_date DATE NOT NULL, --This can be used to calculate what age group to apply
