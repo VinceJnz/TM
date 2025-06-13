@@ -3,6 +3,7 @@ package handlerWebAuthn
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/webAuthnPool"
+	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"log"
@@ -87,28 +88,37 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
 		return
 	}
-	user.Credentials = append(user.Credentials, *credential)
+	//TODO: Save the credential to the user in your database
+	// this requires serializing the credential to store it in the database
+	// For example, you might use json.Marshal to convert the credential to JSON
+
+	creds := user.WebAuthnCredentials()
+	creds = append(creds, *credential) // Append the new credential to the user's credentials
+
+	// Serialize the credentials to JSON or any other format you use in your database
+	credsJSON, err := json.Marshal(creds)
+	if err != nil {
+		http.Error(w, "Failed to serialize credentials", http.StatusInternalServerError)
+		return
+	}
+	user.Credentials = credsJSON // Update the user's credentials
+
 	h.saveUser(user)
 	w.WriteHeader(http.StatusOK)
 }
 
-// Login
-// The BeginLogin step is to get data from the user browser request. This data will contain the user credentials.
-// The user credentials (which where created during registration and stored in the database and on the browser)
-// are used to identify the user/device.
-// The FinishLogin step is to create a session, which will be used to store the user's authentication state.
-
 // BeginLogin starts the login process by initiating a WebAuthn login request.
+// This first step reads the user name provided in the request and to retrieve the user credentials from the database.
+// It then generates the options for the WebAuthn login process, creates a temporary session token.
+// The temporary session token is stored in a session pool for later retrieval.
+// It then sends the WebAuthn login options and a temporary session token as a cookie to the client.
+// The client will then use this session token to complete the login process in the FinishLogin step.
 func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
-	credential, err := h.getCreditentialsFromAuthenticateRequest(r) // The browser request should contain the user credentials.
-	if err != nil {
-		http.Error(w, "Failed to get user from request", http.StatusBadRequest)
-		return
-	}
-	user, err := h.UserReadQry(credential) // Assuming UserReadQry is implemented to read the user by ID
+	name := handlerStandardTemplate.GetName(w, r)
+	user, err := h.UserNameReadQry(name) // Assuming UserNameQry is implemented to read the user by credentials
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", credential.ID, "r.RemoteAddr =", r.RemoteAddr)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", user.ID, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
 	options, sessionData, err := h.webAuthn.BeginLogin(user)
@@ -129,6 +139,12 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // FinishLogin completes the login process by verifying the user's credentials and creating a session.
+// It retrieves the session data from the session pool using the temporary session token.
+// If the session token is not found or invalid, it returns an error.
+// If the session token is valid, it calls the webauthn.FinishLogin method to verify the user's credentials.
+// If the verification is successful, it sets the user as authenticated and creates a session cookie.
+// If the verification fails, it returns an error.
+// This function is called after the client has provided the user's credentials in response to the BeginLogin request.
 func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
 	var user *models.User                                   //webauthn.User
@@ -159,6 +175,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+/*
 func (h *Handler) getCreditentialsFromAuthenticateRequest(r *http.Request) ([]webauthn.Credential, error) {
 	// Here you would typically look up the user in your database using the credentials provided
 	// For example, you might check the username and password against your user database
@@ -178,8 +195,10 @@ func (h *Handler) getCreditentialsFromAuthenticateRequest(r *http.Request) ([]we
 
 	return user.WebAuthnCredentials(), nil
 }
+*/
 
 // getUserFromRegistrationRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
+// TODO: Work out the best way to get the user from the registration request.
 func (h *Handler) getUserFromRegistrationRequest(r *http.Request) (*models.User, error) {
 	//Read the data from the web form or JSON body
 	var user models.User
@@ -190,6 +209,7 @@ func (h *Handler) getUserFromRegistrationRequest(r *http.Request) (*models.User,
 	return &user, nil
 }
 
+/*
 // getUserFromAuthenticatedRequest You must implement getUserFromRequest, saveUser, setUserAuthenticated, and session management.
 func (h *Handler) getUserFromAuthenticatedRequest(r *http.Request) (*models.User, error) {
 	token, err := h.extractUserTokenFromSession(r)
@@ -202,7 +222,9 @@ func (h *Handler) getUserFromAuthenticatedRequest(r *http.Request) (*models.User
 	}
 	return &user, nil
 }
+*/
 
+/*
 // extractUserTokenFromSession is a function to use the session id to retrieve user token.
 func (h *Handler) extractUserTokenFromSession(r *http.Request) (*models.Token, error) {
 	var err error
@@ -226,6 +248,7 @@ func (h *Handler) extractUserTokenFromSession(r *http.Request) (*models.Token, e
 	}
 	return &token, nil // Session token found and user is current
 }
+*/
 
 // func (h *Handler) saveUser(user *User) {
 func (h *Handler) saveUser(record *models.User) {
