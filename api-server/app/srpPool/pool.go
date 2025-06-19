@@ -30,6 +30,7 @@ func NewSRPPool() *Pool {
 }
 
 func (p *Pool) Add(token string, userID int, srpServer *srp.SRP, attrib ...time.Duration) {
+	log.Printf(debugTag+"Handler.Add()1 - Adding SRP server to pool with token: %s, userID: %d, attrib: %+v", token, userID, attrib)
 	i := PoolItem{
 		ServerSRP: srpServer,
 		UserID:    userID,
@@ -68,6 +69,6 @@ func (p *Pool) ItemTimeOut(token string, timeout time.Duration) {
 	time.Sleep(timeout)
 	if _, ok := p.Pool[token]; ok {
 		p.Delete(token)
-		log.Printf(debugTag + "Handler.ItemTimeOut()1 ****** Auth timed out: Pool server deleted ********")
+		log.Printf(debugTag+"Handler.ItemTimeOut()1 ****** Auth timed out: Pool server deleted ********, token=%s, timeout=%v", token, timeout)
 	}
 }

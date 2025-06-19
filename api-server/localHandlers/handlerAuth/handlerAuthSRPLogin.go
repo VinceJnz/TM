@@ -90,7 +90,9 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	//store the server in a pool - it gets used later in the authentication process so it needs to be stored in temp memory
 	//The token needs to be sent ot the client so that the server can be recovered later in the auth process
 	token := uuid.NewV4().String()
-	h.Pool.Add(token, user.ID, server, 15) // Add the server to the pool with a timeout of 15 seconds
+	log.Printf(debugTag+"Handler.AuthGetKeyB()6a AppPool: token = %s, userID = %d, server = %+v", token, user.ID, server)
+	//h.Pool.Add(token, user.ID, server, 15)            // Add the server to the pool with a timeout of 15 seconds
+	h.Pool.Add(token, user.ID, server, 2*time.Second) // Add the server to the pool with a timeout of 15 seconds
 	ServerVerify.Token = token
 
 	// The server will get A (clients ephemeral public key) from the client
@@ -125,7 +127,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v, A=%v\n", err, user, group, ServerVerify, strA, A)
+	log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v, A=%v\n", err, user, group, ServerVerify, strA, A)
 
 	//server publicKey(B), Proof and a Token is sent to client
 	json.NewEncoder(w).Encode(ServerVerify)
@@ -199,7 +201,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.AuthCheckClientProof()11: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", *sessionToken)
+	log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.AuthCheckClientProof()11: Success, can advise client", "err=", err, "user=", user, "r.RemoteAddr=", r.RemoteAddr, "sessionToken=", *sessionToken)
 
 	// If all okay we can set the sessionCookie and let the user know
 	http.SetCookie(w, sessionToken)
@@ -265,5 +267,6 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}
 	}
+	log.Printf("%v %v %v %v %v %v %v %v %v", debugTag+"Handler.createSessionToken()4: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
 	return sessionToken, err
 }
