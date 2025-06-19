@@ -257,7 +257,6 @@ CREATE TABLE IF NOT EXISTS st_users (
     verifier BYTEA DEFAULT NULL, -- varbinary(500)
     user_account_status_id INT NOT NULL DEFAULT 1, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
     user_account_hidden BOOLEAN, -- Hide the user account from the public, Admins can still see it
-    credentials JSONB NOT NULL DEFAULT '[]',
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
@@ -361,3 +360,45 @@ CREATE TABLE et_token_valid (
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Table for storing WebAuthn credentials
+CREATE TABLE st_webauthn_credentials (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    credential_id TEXT NOT NULL UNIQUE,
+    public_key TEXT NOT NULL,
+    aaguid TEXT,
+    sign_count INTEGER NOT NULL,
+    attestation_type TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Index for fast lookup by user_id
+--CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id);
+
+-- Create triggers to update the modified column automatically
+
+-- 1. Create the trigger function
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.modified := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Generate the CREATE TRIGGER statements for all tables with a "modified" column
+-- This will generate the SQL statements to create triggers for all tables that have a "modified" column
+-- You can run this query to see the generated SQL statements
+-- and then copy them to execute them to create the triggers.
+SELECT
+    'CREATE TRIGGER set_modified_timestamp_' || table_name ||
+    ' BEFORE UPDATE ON ' || quote_ident(table_name) ||
+    ' FOR EACH ROW EXECUTE FUNCTION update_modified_column();'
+FROM information_schema.columns
+WHERE column_name = 'modified'
+  AND table_schema = 'public';
+
+-- 2. Create the trigger for each table that needs it
