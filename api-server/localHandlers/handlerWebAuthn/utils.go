@@ -1,34 +1,26 @@
 package handlerWebAuthn
 
 import (
+	"fmt"
 	"net/http"
-	"time"
-
-	uuid "github.com/satori/go.uuid"
 )
 
-// createTemporaryToken and return *http.Token
-func createTemporaryToken(name, host string) (*http.Cookie, error) {
-	var err error
-	if name == "" {
-		name = "temp_session_token"
+// getSessionToken retrieves the session token from the request and processes errors.
+func getSessionToken(w http.ResponseWriter, r *http.Request) (*http.Cookie, error) {
+	tempSessionToken, err := r.Cookie(WebAuthnSessionCookieName) // Retrieve the session cookie
+	if err != nil {
+		switch err {
+		case http.ErrNoCookie: // If there is no session cookie
+			http.Error(w, "Authentication required", http.StatusUnauthorized)
+			//log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+			var ErrAuthenticationRequired = fmt.Errorf("%sHandler.FinishRegistration()1 - Authentication required", debugTag)
+			return nil, ErrAuthenticationRequired
+		default: // If there is some other error
+			http.Error(w, "Error retrieving session cookie", http.StatusInternalServerError)
+			//log.Println(debugTag+"Handler.FinishRegistration()2 - Error retrieving session cookie ", "sessionToken=", tempSessionToken, "err =", err)
+			var ErrSessionCookieRetrieval = fmt.Errorf("%sHandler.FinishRegistration()2 - Error retrieving session cookie", debugTag)
+			return nil, ErrSessionCookieRetrieval
+		}
 	}
-	expiration := time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
-	tempSessionToken := &http.Cookie{
-		Name:    name,
-		Value:   uuid.NewV4().String(),
-		Path:    "/",
-		Domain:  host,
-		Expires: expiration,
-		Secure:  true, // Always true for HTTPS
-		//RawExpires: "",
-		//MaxAge:     0,
-		HttpOnly: false, //https --> true, http --> false
-		SameSite: http.SameSiteNoneMode,
-		//SameSite: http.SameSiteLaxMode,
-		//SameSite: http.SameSiteStrictMode,
-		//Raw:        "",
-		//Unparsed:   []string{},
-	}
-	return tempSessionToken, err
+	return tempSessionToken, nil
 }

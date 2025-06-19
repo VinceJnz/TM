@@ -292,7 +292,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 //	DBConn *dataStore.DB
 //}
 
-// createSessionToken store it in the DB and in the session struct and return *http.Cookie
+// CreateSessionToken store it in the DB and in the session struct and return *http.Cookie
 func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (*http.Cookie, error) {
 	var err error
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
@@ -338,4 +338,30 @@ func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (
 		}
 	}
 	return sessionToken, err
+}
+
+// createTemporaryToken and return *http.Token
+func CreateTemporaryToken(name, host string) (*http.Cookie, error) {
+	var err error
+	if name == "" {
+		name = "temp_session_token"
+	}
+	expiration := time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
+	tempSessionToken := &http.Cookie{
+		Name:    name,
+		Value:   uuid.NewV4().String(),
+		Path:    "/",
+		Domain:  host,
+		Expires: expiration,
+		Secure:  true, // Always true for HTTPS
+		//RawExpires: "",
+		//MaxAge:     0,
+		HttpOnly: false, //https --> true, http --> false
+		SameSite: http.SameSiteNoneMode,
+		//SameSite: http.SameSiteLaxMode,
+		//SameSite: http.SameSiteStrictMode,
+		//Raw:        "",
+		//Unparsed:   []string{},
+	}
+	return tempSessionToken, err
 }

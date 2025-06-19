@@ -57,7 +57,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Store sessionData in your session store
-	tempSessionToken, err := createTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	//tempSessionToken, err := createTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	tempSessionToken, err := handlerAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
@@ -72,19 +73,11 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 // Registration (Finish)
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
-	var user *models.User                                        //webauthn.User
-	tempSessionToken, err := r.Cookie(WebAuthnSessionCookieName) // Retrieve the session cookie
+	var user *models.User                          //webauthn.User
+	tempSessionToken, err := getSessionToken(w, r) // Retrieve the session cookie
 	if err != nil {
-		switch err {
-		case http.ErrNoCookie: // If there is no session cookie
-			http.Error(w, "Authentication required", http.StatusUnauthorized)
-			log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
-			return
-		default: // If there is some other error
-			http.Error(w, "Error retrieving session cookie", http.StatusInternalServerError)
-			log.Println(debugTag+"Handler.FinishRegistration()2 - Error retrieving session cookie ", "sessionToken=", tempSessionToken, "err =", err)
-			return
-		}
+		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+		return
 	}
 	poolItem := h.Pool.Get(tempSessionToken.Value) // Assuming you have a pool to manage session data
 	sessionData = *poolItem.SessionData            // Retrieve session data from the pool
@@ -108,7 +101,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to serialize credentials", http.StatusInternalServerError)
 		return
 	}
-	user.Credentials = credsJSON // Update the user's credentials
+	user.Credentials = credsJSON // Update the user's credentials // What credential info do we need to save?
 
 	//h.saveUser(user)
 	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, *user)
@@ -149,7 +142,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
 		return
 	}
-	tempSessionToken, err := createTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	tempSessionToken, err := handlerAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
@@ -170,19 +163,12 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 // This function is called after the client has provided the user's credentials in response to the BeginLogin request.
 func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
-	var user *models.User                                        //webauthn.User
-	tempSessionToken, err := r.Cookie(WebAuthnSessionCookieName) // Retrieve the session cookie
+	var user *models.User //webauthn.User
+
+	tempSessionToken, err := getSessionToken(w, r) // Retrieve the session cookie
 	if err != nil {
-		switch err {
-		case http.ErrNoCookie: // If there is no session cookie
-			http.Error(w, "Authentication required", http.StatusUnauthorized)
-			log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
-			return
-		default: // If there is some other error
-			http.Error(w, "Error retrieving session cookie", http.StatusInternalServerError)
-			log.Println(debugTag+"Handler.FinishRegistration()2 - Error retrieving session cookie ", "sessionToken=", tempSessionToken, "err =", err)
-			return
-		}
+		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+		return
 	}
 	poolItem := h.Pool.Get(tempSessionToken.Value) // Assuming you have a pool to manage session data
 	sessionData = *poolItem.SessionData            // Retrieve session data from the pool
