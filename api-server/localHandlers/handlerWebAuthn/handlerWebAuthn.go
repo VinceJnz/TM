@@ -3,16 +3,18 @@ package handlerWebAuthn
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/webAuthnPool"
-	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerWebAuthn."
+
+const WebAuthnSessionCookieName = "_temp_session"
 
 type Handler struct {
 	appConf  *appCore.Config
@@ -35,6 +37,10 @@ func New(appConf *appCore.Config) *Handler {
 	}
 }
 
+// ******************************************************************************
+// WebAuthn Registration process
+// ******************************************************************************
+
 // Registration (Begin)
 func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	user, err := h.getUserFromRegistrationRequest(r)
@@ -50,7 +56,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Store sessionData in your session store
-	tempSessionToken, err := createTemporaryToken("temp_session_token", h.appConf.Settings.Host)
+	tempSessionToken, err := createTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
@@ -65,8 +71,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 // Registration (Finish)
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
-	var user *models.User                                   //webauthn.User
-	tempSessionToken, err := r.Cookie("temp_session_token") // Retrieve the session cookie
+	var user *models.User                                        //webauthn.User
+	tempSessionToken, err := r.Cookie(WebAuthnSessionCookieName) // Retrieve the session cookie
 	if err != nil {
 		switch err {
 		case http.ErrNoCookie: // If there is no session cookie
@@ -107,6 +113,10 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ******************************************************************************
+// WebAuthn Login process
+// ******************************************************************************
+
 // BeginLogin starts the login process by initiating a WebAuthn login request.
 // This first step reads the user name provided in the request and to retrieve the user credentials from the database.
 // It then generates the options for the WebAuthn login process, creates a temporary session token.
@@ -114,8 +124,13 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 // It then sends the WebAuthn login options and a temporary session token as a cookie to the client.
 // The client will then use this session token to complete the login process in the FinishLogin step.
 func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
-	name := handlerStandardTemplate.GetName(w, r)
-	user, err := h.UserNameReadQry(name) // Assuming UserNameQry is implemented to read the user by credentials
+	params := mux.Vars(r)
+	username := params["username"]
+	if username == "" {
+		http.Error(w, "Invalid username", http.StatusBadRequest)
+		return
+	}
+	user, err := h.UserNameReadQry(username) // Assuming UserNameQry is implemented to read the user by credentials
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", user.ID, "r.RemoteAddr =", r.RemoteAddr)
@@ -126,7 +141,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
 		return
 	}
-	tempSessionToken, err := createTemporaryToken("temp_session_token", h.appConf.Settings.Host)
+	tempSessionToken, err := createTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
@@ -147,8 +162,8 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 // This function is called after the client has provided the user's credentials in response to the BeginLogin request.
 func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
-	var user *models.User                                   //webauthn.User
-	tempSessionToken, err := r.Cookie("temp_session_token") // Retrieve the session cookie
+	var user *models.User                                        //webauthn.User
+	tempSessionToken, err := r.Cookie(WebAuthnSessionCookieName) // Retrieve the session cookie
 	if err != nil {
 		switch err {
 		case http.ErrNoCookie: // If there is no session cookie

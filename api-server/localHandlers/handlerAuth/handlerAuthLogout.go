@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/templates/handlerAuthTemplate"
 	"api-server/v2/models"
 	"log"
 	"net/http"
@@ -32,12 +33,14 @@ func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) removeSessionToken(tokenStr string) error {
-	tokenItem, err := h.FindSessionToken(tokenStr)
+	//tokenItem, err := h.FindSessionToken(tokenStr)
+	tokenItem, err := handlerAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, tokenStr)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken()1 token not found", "err =", err, "tokenItem =", tokenItem)
 		return err
 	}
-	err = h.TokenDeleteQry(tokenItem.ID)
+	//err = h.TokenDeleteQry(tokenItem.ID)
+	err = handlerAuthTemplate.TokenDeleteQry(debugTag+"Handler.removeSessionToken()2 ", h.appConf.Db, tokenItem.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken()2 failed to remove token", "err =", err, "tokenItem =", tokenItem)
 		return err

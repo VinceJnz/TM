@@ -3,6 +3,7 @@ package handlerAuth
 import (
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
+	"api-server/v2/localHandlers/templates/handlerAuthTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"io"
@@ -33,7 +34,8 @@ func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 	username = vars["username"]
 
 	//Get the salt for the user
-	user, err = h.GetUserSalt(username)
+	//user, err = h.GetUserSalt(username)
+	user, err = handlerAuthTemplate.GetUserAuth(debugTag+"Handler.AuthGetSalt()1 ", h.appConf.Db, username)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthGetSalt()1 ", "err =", err, "user =", user)
 		return
@@ -71,7 +73,8 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	//log.Printf(debugTag+"Handler.AuthGetKeyB()1: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v\n", err, user, group, ServerVerify, strA)
 
 	//Get store user auth info (salt, etc...)
-	user, err = h.GetUserAuth(user.Username)
+	//user, err = h.GetUserAuth(user.Username)
+	user, err = handlerAuthTemplate.GetUserAuth(debugTag+"Handler.AuthReset()2 ", h.appConf.Db, user.Username)
 	if err != nil {
 		log.Println(debugTag + "Handler.AuthGetKeyB()5 Fatal: can't retrieve user auth")
 		return
@@ -187,7 +190,8 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Fetch the user details
-	user, err = h.UserReadQry(userID)
+	//user, err = h.UserReadQry(userID)
+	user, err = handlerAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, userID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to retreive user details"))
@@ -245,15 +249,18 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 	tokenItem.ValidFrom.SetValid(time.Now())
 	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
 
-	tokenItem.ID, err = h.TokenWriteQry(tokenItem)
+	//tokenItem.ID, err = h.TokenWriteQry(tokenItem)
+	tokenItem.ID, err = handlerAuthTemplate.TokenWriteQry(debugTag+"Handler.createSessionToken()1 ", h.appConf.Db, tokenItem)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 	} else {
-		err = h.TokenCleanOld(tokenItem.ID)
+		//err = h.TokenCleanOld(tokenItem.ID)
+		err = handlerAuthTemplate.TokenCleanOld(debugTag+"Handler.createSessionToken()2 ", h.appConf.Db, tokenItem.ID)
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}
-		h.TokenCleanExpired()
+		//h.TokenCleanExpired()
+		handlerAuthTemplate.TokenCleanExpired(debugTag+"Handler.createSessionToken()3 ", h.appConf.Db) // Clean expired tokens for the user
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}

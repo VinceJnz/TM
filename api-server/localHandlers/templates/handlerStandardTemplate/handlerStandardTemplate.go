@@ -195,16 +195,3 @@ func ReturnError(w http.ResponseWriter, r *http.Request, err error) {
 	w.WriteHeader(http.StatusUnprocessableEntity)
 	json.NewEncoder(w).Encode(map[string]string{"error": debugTag + "Update: " + err.Error()})
 }
-
-// GetName retrieves the name parameter from the request URL and returns it.
-// If the name is not provided or is empty, it returns a 400 Bad Request error.
-// TODO: Consider returning and error type.
-func GetName(w http.ResponseWriter, r *http.Request) string {
-	params := mux.Vars(r)
-	name := params["name"]
-	if name == "" {
-		http.Error(w, "Invalid name", http.StatusBadRequest)
-		return ""
-	}
-	return name
-}

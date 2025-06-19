@@ -3,6 +3,7 @@ package handlerAuth
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/srpPool"
+	"api-server/v2/localHandlers/templates/handlerAuthTemplate"
 	"api-server/v2/models"
 	"context"
 	"errors"
@@ -50,7 +51,8 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 			w.Write([]byte("Logon required."))
 			return
 		} else { // If there is a session cookie try to find it in the repository
-			token, err = h.FindSessionToken(sessionCookie.Value)
+			//token, err = h.FindSessionToken(sessionCookie.Value)
+			token, err = handlerAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionCookie.Value)
 			if err != nil { // could not find user session cookie in DB so user is not authorised
 				log.Printf("%v %v %v %v %v %v %+v %v %+v\n", debugTag+"Handler.RequireRestAuth()2", "err =", err, "sessionCookie =", sessionCookie, "token =", token, "r =", r)
 				w.WriteHeader(http.StatusNetworkAuthenticationRequired)
@@ -65,7 +67,8 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 					return
 				} else {
 					// check access to resource
-					accessCheck, err = h.UserCheckAccess(token.UserID, resource.ResourceName, resource.AccessMethod)
+					//accessCheck, err = h.UserCheckAccess(token.UserID, resource.ResourceName, resource.AccessMethod)
+					accessCheck, err = handlerAuthTemplate.UserCheckAccess(debugTag+"RequireRestAuth()3a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
 					if err != nil {
 						log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()4", "err =", err, "resource =", resource, "r =", r)
 						w.WriteHeader(http.StatusUnauthorized)
