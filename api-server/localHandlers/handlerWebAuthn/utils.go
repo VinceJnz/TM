@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-// getSessionToken retrieves the session token from the request and processes errors.
-func getSessionToken(w http.ResponseWriter, r *http.Request) (*http.Cookie, error) {
+// getTempSessionToken retrieves the temporary session token from the request and processes errors.
+func getTempSessionToken(w http.ResponseWriter, r *http.Request) (*http.Cookie, error) {
 	tempSessionToken, err := r.Cookie(WebAuthnSessionCookieName) // Retrieve the session cookie
 	if err != nil {
 		switch err {

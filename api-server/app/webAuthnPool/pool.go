@@ -31,9 +31,18 @@ func NewSRPPool() *Pool {
 }
 
 func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.SessionData, attrib ...time.Duration) {
+	if user == nil || sessionData == nil {
+		log.Printf(debugTag + "Handler.Add()1 - User or sessionData is nil, cannot add to pool")
+		return
+	}
 	i := PoolItem{
 		SessionData: sessionData,
 		User:        user,
+	}
+	// Check if the token already exists in the pool
+	if _, exists := p.Pool[token]; exists {
+		log.Printf(debugTag + "Handler.Add()2 - Token already exists in pool, updating existing item")
+		// Update the existing item in the pool
 	}
 	p.Pool[token] = i
 
@@ -49,8 +58,9 @@ func (p *Pool) Delete(token string) {
 	delete(p.Pool, token)
 }
 
-func (p *Pool) Get(token string) PoolItem {
-	return p.Pool[token]
+func (p *Pool) Get(token string) (PoolItem, bool) {
+	item, exists := p.Pool[token]
+	return item, exists
 }
 
 func (p *Pool) List() {

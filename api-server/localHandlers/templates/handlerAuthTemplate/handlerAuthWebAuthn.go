@@ -25,12 +25,13 @@ const (
 // webAuthn2DbRecord converts a webauthn.Credential to a models.WebAuthnCredential for database storage.
 func WebAuthn2DbRecord(userid int, cred webauthn.Credential) models.WebAuthnCredential {
 	return models.WebAuthnCredential{
-		UserID:         userid,
-		CredentialID:   base64.StdEncoding.EncodeToString(cred.ID),
-		PublicKey:      base64.StdEncoding.EncodeToString(cred.PublicKey),
-		AAGUID:         base64.StdEncoding.EncodeToString(cred.Authenticator.AAGUID),
-		SignCount:      cred.Authenticator.SignCount,
-		CredentialType: cred.AttestationType,
+		UserID:          userid,
+		CredentialID:    base64.StdEncoding.EncodeToString(cred.ID),
+		PublicKey:       base64.StdEncoding.EncodeToString(cred.PublicKey),
+		AttestationType: cred.AttestationType,
+		AAGUID:          base64.StdEncoding.EncodeToString(cred.Authenticator.AAGUID),
+		SignCount:       cred.Authenticator.SignCount,
+		//CloneWarning:    cred.Authenticator.CloneWarning, // This value is not stored in the database. It is only used during the authentication or login process.
 	}
 }
 
@@ -43,7 +44,7 @@ func DbRecord2WebAuthn(record models.WebAuthnCredential) webauthn.Credential {
 	return webauthn.Credential{
 		ID:              credID,
 		PublicKey:       pubKey,
-		AttestationType: record.CredentialType,
+		AttestationType: record.AttestationType,
 		Authenticator: webauthn.Authenticator{
 			AAGUID:    aaguid,
 			SignCount: record.SignCount,
@@ -64,7 +65,7 @@ func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Crede
 	defer rows.Close()
 
 	for rows.Next() {
-		if err := rows.Scan(&record.CredentialID, &record.PublicKey, &record.AAGUID, &record.SignCount, &record.CredentialType); err != nil {
+		if err := rows.Scan(&record.CredentialID, &record.PublicKey, &record.AAGUID, &record.SignCount, &record.AttestationType); err != nil {
 			return nil, err
 		}
 		// Convert DB record to WebAuthnCredential
@@ -84,12 +85,12 @@ func WebAuthnReadQry(debugStr string, Db *sqlx.DB, id int) (models.WebAuthnCrede
 }
 
 func WebAuthnInsertQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) (int, error) {
-	err := Db.QueryRow(sqlWebAuthnInsert, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.CredentialType).Scan(&record.ID)
+	err := Db.QueryRow(sqlWebAuthnInsert, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.AttestationType).Scan(&record.ID)
 	return record.ID, err
 }
 
 func WebAuthnUpdateQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) error {
-	_, err := Db.Exec(sqlWebAuthnUpdate, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.CredentialType, record.ID)
+	_, err := Db.Exec(sqlWebAuthnUpdate, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.AttestationType, record.ID)
 	return err
 }
 

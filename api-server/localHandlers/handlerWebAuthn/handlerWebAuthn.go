@@ -73,15 +73,19 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 // Registration (Finish)
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
-	var user *models.User                          //webauthn.User
-	tempSessionToken, err := getSessionToken(w, r) // Retrieve the session cookie
+	var user *models.User                              //webauthn.User
+	tempSessionToken, err := getTempSessionToken(w, r) // Retrieve the session cookie
 	if err != nil {
 		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
 		return
 	}
-	poolItem := h.Pool.Get(tempSessionToken.Value) // Assuming you have a pool to manage session data
-	sessionData = *poolItem.SessionData            // Retrieve session data from the pool
-	user = poolItem.User                           // Set the user data from the pool
+	poolItem, exists := h.Pool.Get(tempSessionToken.Value)              // Assuming you have a pool to manage session data
+	if !exists || poolItem.SessionData == nil || poolItem.User == nil { // Check if the session data or user is nil) {
+		http.Error(w, "Session not found or expired", http.StatusUnauthorized)
+		return
+	}
+	sessionData = *poolItem.SessionData // Retrieve session data from the pool
+	user = poolItem.User                // Set the user data from the pool
 
 	credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)
 	if err != nil {
@@ -131,13 +135,31 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid username", http.StatusBadRequest)
 		return
 	}
-	//user, err := h.UserNameReadQry(username) // Assuming UserNameQry is implemented to read the user by credentials
 	user, err := handlerAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginLogin()1a ", h.appConf.Db, username)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", user.ID, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
+	// Check if the user is active
+	if user.AccountStatusID.Int64 != 1 { // Assuming 1 is the ID for an active user
+		http.Error(w, "User is not active", http.StatusForbidden)
+		return
+	}
+	// Fetch the user's WebAuthn credentials from the database
+	credentials, err := handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.BeginLogin()1b ", h.appConf.Db, user.ID)
+	if err != nil {
+		http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
+		return
+	}
+	// Check if the user has WebAuthn credentials
+	if len(credentials) == 0 {
+		http.Error(w, "User has no WebAuthn credentials", http.StatusForbidden)
+		return
+	}
+	// Set the user's credentials in the user object
+	user.Credentials = credentials
+	// Begin the WebAuthn login process
 	options, sessionData, err := h.webAuthn.BeginLogin(user)
 	if err != nil {
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
@@ -166,14 +188,19 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
 	var user *models.User //webauthn.User
 
-	tempSessionToken, err := getSessionToken(w, r) // Retrieve the session cookie
+	tempSessionToken, err := getTempSessionToken(w, r) // Retrieve the temp session cookie
 	if err != nil {
 		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
 		return
 	}
-	poolItem := h.Pool.Get(tempSessionToken.Value) // Assuming you have a pool to manage session data
-	sessionData = *poolItem.SessionData            // Retrieve session data from the pool
-	user = poolItem.User                           // Set the user data from the pool
+	poolItem, exists := h.Pool.Get(tempSessionToken.Value)               // Assuming you have a pool to manage session data
+	if exists && (poolItem.SessionData == nil || poolItem.User == nil) { // Check if the session data or user is nil) {
+		http.Error(w, "Session not found or expired", http.StatusUnauthorized)
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishLogin()1: Session not found or expired", "sessionToken=", tempSessionToken, "err =", err)
+		return
+	}
+	sessionData = *poolItem.SessionData // Retrieve session data from the pool
+	user = poolItem.User                // Set the user data from the pool
 
 	_, err = h.webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
