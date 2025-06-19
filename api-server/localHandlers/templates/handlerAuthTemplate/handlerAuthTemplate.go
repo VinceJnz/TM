@@ -5,8 +5,11 @@ import (
 	"api-server/v2/models"
 	"errors"
 	"log"
+	"net/http"
+	"time"
 
 	"github.com/jmoiron/sqlx"
+	uuid "github.com/satori/go.uuid"
 )
 
 const debugTag = "handlerAuthTemplate."
@@ -234,15 +237,25 @@ func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, acc
 }
 
 const (
-	sqlUserFind   = `SELECT id, FROM st_users WHERE id = $1`
-	sqlUserRead   = `SELECT id, name, username, email FROM st_users WHERE id = $1`
-	sqlUserInsert = `INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id`
-	sqlUserUpdate = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
+	sqlUserFind     = `SELECT id, FROM st_users WHERE id = $1`
+	sqlUserRead     = `SELECT id, name, username, email FROM st_users WHERE id = $1`
+	sqlUserNameRead = `SELECT id, name, username, email FROM st_users WHERE username = $1`
+	sqlUserInsert   = `INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id`
+	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
 )
 
 func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
 	record := models.User{}
 	err := Db.Get(&record, sqlUserRead, id)
+	if err != nil {
+		return models.User{}, err
+	}
+	return record, nil
+}
+
+func UserNameReadQry(debugStr string, Db *sqlx.DB, username string) (models.User, error) {
+	record := models.User{}
+	err := Db.Get(&record, sqlUserNameRead, username)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -278,3 +291,51 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 //type UtilsRepo struct {
 //	DBConn *dataStore.DB
 //}
+
+// createSessionToken store it in the DB and in the session struct and return *http.Cookie
+func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (*http.Cookie, error) {
+	var err error
+	//expiration := time.Now().Add(365 * 24 * time.Hour)
+	sessionToken := &http.Cookie{
+		Name:  "session",
+		Value: uuid.NewV4().String(),
+		Path:  "/",
+		//Domain: "localhost",
+		//Expires:    time.Time{},
+		//RawExpires: "",
+		//MaxAge:     0,
+		//Secure:   false,
+		Secure:   true,  //https --> true,
+		HttpOnly: false, //https --> true, http --> false
+		SameSite: http.SameSiteNoneMode,
+		//SameSite: http.SameSiteLaxMode,
+		//SameSite: http.SameSiteStrictMode,
+		//Raw:        "",
+		//Unparsed:   []string{},
+	}
+	// Store the session cookie for the user in the database
+	tokenItem := models.Token{}
+	tokenItem.UserID = userID
+	tokenItem.Name.SetValid(sessionToken.Name)
+	tokenItem.Host.SetValid(host)
+	tokenItem.TokenStr.SetValid(sessionToken.Value)
+	tokenItem.SessionData.SetValid("")
+	tokenItem.Valid.SetValid(true)
+	tokenItem.ValidFrom.SetValid(time.Now())
+	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
+
+	tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+	} else {
+		err = TokenCleanOld(debugStr, Db, tokenItem.ID)
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+		}
+		TokenCleanExpired(debugStr, Db)
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+		}
+	}
+	return sessionToken, err
+}

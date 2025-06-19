@@ -1,4 +1,4 @@
-package handlerWebAuthn
+//package handlerWebAuthn
 
 import (
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
@@ -18,7 +18,7 @@ const (
 	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
 )
 
-func (h *Handler) UserReadQry(id int) (models.User, error) {
+func (h *Handler) UserReadQryXX(id int) (models.User, error) {
 	record := models.User{}
 	err := h.appConf.Db.Get(&record, sqlUserRead, id)
 	if err != nil {
@@ -27,7 +27,7 @@ func (h *Handler) UserReadQry(id int) (models.User, error) {
 	return record, nil
 }
 
-func (h *Handler) UserNameReadQry(username string) (models.User, error) {
+func (h *Handler) UserNameReadQryXX(username string) (models.User, error) {
 	record := models.User{}
 	err := h.appConf.Db.Get(&record, sqlUserNameRead, username)
 	if err != nil {
@@ -36,23 +36,23 @@ func (h *Handler) UserNameReadQry(username string) (models.User, error) {
 	return record, nil
 }
 
-func (h *Handler) UserInsertQry(record models.User) (int, error) {
+func (h *Handler) UserInsertQryXX(record models.User) (int, error) {
 	err := h.appConf.Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email).Scan(&record.ID)
 	return record.ID, err
 }
 
-func (h *Handler) UserUpdateQry(record models.User) error {
+func (h *Handler) UserUpdateQryXX(record models.User) error {
 	_, err := h.appConf.Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.ID)
 	return err
 }
 
-func (h *Handler) UserWriteQry(record models.User) (int, error) {
+func (h *Handler) UserWriteQryXX(record models.User) (int, error) {
 	var err error
 	err = h.appConf.Db.QueryRow(sqlUserFind, record.ID).Scan(&record.ID) // Check to see if a record exists
 	if err != nil {
-		record.ID, err = h.UserInsertQry(record) //No Existing record found so we are okay to insert the new record
+		record.ID, err = h.UserInsertQryXX(record) //No Existing record found so we are okay to insert the new record
 	} else {
-		err = h.UserUpdateQry(record) //Existing record found so we are okay to update the record
+		err = h.UserUpdateQryXX(record) //Existing record found so we are okay to update the record
 	}
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"TokenWriteQry()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
@@ -71,25 +71,25 @@ const (
 	sqlTokenUpdate = `UPDATE st_token SET (user_id, name, host, token, token_valid, valid_from, valid_to) = ($2, $3, $4, $5, $6, $7, $8) WHERE id=$1`
 )
 
-func (h *Handler) TokenInsertQry(record models.Token) (int, error) {
+func (h *Handler) TokenInsertQryXX(record models.Token) (int, error) {
 	err := h.appConf.Db.QueryRow(sqlTokenInsert,
 		record.UserID, record.Name, record.Host, record.TokenStr, record.Valid, record.ValidFrom, record.ValidTo).Scan(&record.ID)
 	return record.ID, err
 }
 
-func (h *Handler) TokenUpdateQry(record models.Token) error {
+func (h *Handler) TokenUpdateQryXX(record models.Token) error {
 	err := h.appConf.Db.QueryRow(sqlTokenUpdate,
 		record.ID, record.UserID, record.Name, record.Host, record.TokenStr, record.Valid, record.ValidFrom, record.ValidTo).Scan(&record.ID)
 	return err
 }
 
-func (h *Handler) TokenWriteQry(record models.Token) (int, error) {
+func (h *Handler) TokenWriteQryXX(record models.Token) (int, error) {
 	var err error
 	err = h.appConf.Db.QueryRow(sqlTokenFind, record.ID).Scan(&record.ID) // Check to see if a record exists
 	if err != nil {
-		record.ID, err = h.TokenInsertQry(record) //No Existing record found so we are okay to insert the new record
+		record.ID, err = h.TokenInsertQryXX(record) //No Existing record found so we are okay to insert the new record
 	} else {
-		err = h.TokenUpdateQry(record) //Existing record found so we are okay to update the record
+		err = h.TokenUpdateQryXX(record) //Existing record found so we are okay to update the record
 	}
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"TokenWriteQry()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
@@ -98,7 +98,7 @@ func (h *Handler) TokenWriteQry(record models.Token) (int, error) {
 	return record.ID, err
 }
 
-func (h *Handler) TokenDeleteQry(recordID int) error {
+func (h *Handler) TokenDeleteQryXX(recordID int) error {
 	_, err := h.appConf.Db.Exec(sqlTokenDelete, recordID)
 	return err
 }
@@ -116,7 +116,7 @@ const (
 )
 
 // CleanOld removes tokens older than the latest token
-func (h *Handler) TokenCleanOld(recordID int) error {
+func (h *Handler) TokenCleanOldXX(recordID int) error {
 	var err error
 	result, err := h.appConf.Db.Exec(sqlTokenCleanOld, recordID)
 	if err != nil { // Various errors including: no record found; key constraints
@@ -131,7 +131,7 @@ func (h *Handler) TokenCleanOld(recordID int) error {
 	return nil
 }
 
-func (h *Handler) TokenCleanExpired() error {
+func (h *Handler) TokenCleanExpiredXX() error {
 	var err error
 	result, err := h.appConf.Db.Exec(sqlTokenCleanExpired)
 	if err != nil { // Various errors including: no record found; key constraints
@@ -164,7 +164,7 @@ const (
 
 // FindSessionToken using the session cookie string find session cookie data in the DB and return the token item
 // if the cookie is not found return the DB error
-func (h *Handler) FindSessionToken(cookieStr string) (models.Token, error) {
+func (h *Handler) FindSessionTokenXX(cookieStr string) (models.Token, error) {
 	var err error
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
@@ -178,7 +178,7 @@ func (h *Handler) FindSessionToken(cookieStr string) (models.Token, error) {
 }
 
 // FindToken using the session cookie name and cookie string find session cookie data in the DB and return the token item
-func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
+func (h *Handler) FindTokenXX(name, cookieStr string) (models.Token, error) {
 	var err error
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
@@ -192,7 +192,7 @@ func (h *Handler) FindToken(name, cookieStr string) (models.Token, error) {
 }
 
 // createSessionToken store it in the DB and in the session struct and return *http.Cookie
-func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, error) {
+func (h *Handler) CreateSessionTokenXX(userID int, host string) (*http.Cookie, error) {
 	var err error
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
 	sessionToken := &http.Cookie{
@@ -223,15 +223,15 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 	tokenItem.ValidFrom.SetValid(time.Now())
 	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
 
-	tokenItem.ID, err = h.TokenWriteQry(tokenItem)
+	tokenItem.ID, err = h.TokenWriteQryXX(tokenItem)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 	} else {
-		err = h.TokenCleanOld(tokenItem.ID)
+		err = h.TokenCleanOldXX(tokenItem.ID)
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}
-		h.TokenCleanExpired()
+		h.TokenCleanExpiredXX()
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}
