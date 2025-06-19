@@ -94,19 +94,20 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 
 	creds := user.WebAuthnCredentials()
 	creds = append(creds, *credential) // Append the new credential to the user's credentials
+	user.Credentials = creds           // Update the user's credentials // What credential info do we need to save?
 
-	// Serialize the credentials to JSON or any other format you use in your database
-	credsJSON, err := json.Marshal(creds)
-	if err != nil {
-		http.Error(w, "Failed to serialize credentials", http.StatusInternalServerError)
-		return
-	}
-	user.Credentials = credsJSON // Update the user's credentials // What credential info do we need to save?
-
-	//h.saveUser(user)
+	//saveUser to the database
 	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, *user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.saveUser()2: Failed to save user", "err =", err, "record =", user, "userID =", userID)
+		return
+	}
+
+	// Save credential to the database
+	dbCredential := handlerAuthTemplate.WebAuthn2DbRecord(userID, *credential)
+	_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, dbCredential)
+	if err != nil {
+		log.Printf("%v %v %v %+v %v", debugTag+"Handler.saveUser()2: Failed to save credential", "err =", err, "record =", dbCredential)
 		return
 	}
 

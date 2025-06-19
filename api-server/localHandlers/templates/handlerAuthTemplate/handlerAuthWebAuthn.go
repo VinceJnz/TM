@@ -1,0 +1,110 @@
+package handlerAuthTemplate
+
+import (
+	"api-server/v2/models"
+	"encoding/base64"
+	"log"
+
+	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/jmoiron/sqlx"
+)
+
+const (
+	//sqlWebAuthnFind   = `SELECT id, FROM st_webauthn_credentials WHERE id = $1`
+	sqlWebAuthnFind   = `SELECT id, FROM st_webauthn_credentials WHERE credential_id = $1`
+	sqlWebAuthnRead   = `SELECT * FROM st_webauthn_credentials WHERE id = $1`
+	sqlWebAuthnIdRead = `SELECT * FROM st_webauthn_credentials WHERE credential_id = $1`
+	sqlWebAuthnInsert = `INSERT INTO st_webauthn_credentials (user_id, credential_id, public_key, aaguid, sign_count, credential_type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	sqlWebAuthnUpdate = `UPDATE st_webauthn_credentials SET user_id = $1, credential_id = $2, public_key = $3, aaguid = $4, sign_count = $5, credential_type = $6 WHERE id = $7`
+
+	sqlUserWebAuthnRead = `SELECT * FROM st_webauthn_credentials WHERE user_id = $1`
+)
+
+//ID, UserID, CredentialID, PublicKey, AAGUID, SignCount, CredentialType
+
+// webAuthn2DbRecord converts a webauthn.Credential to a models.WebAuthnCredential for database storage.
+func WebAuthn2DbRecord(userid int, cred webauthn.Credential) models.WebAuthnCredential {
+	return models.WebAuthnCredential{
+		UserID:         userid,
+		CredentialID:   base64.StdEncoding.EncodeToString(cred.ID),
+		PublicKey:      base64.StdEncoding.EncodeToString(cred.PublicKey),
+		AAGUID:         base64.StdEncoding.EncodeToString(cred.Authenticator.AAGUID),
+		SignCount:      cred.Authenticator.SignCount,
+		CredentialType: cred.AttestationType,
+	}
+}
+
+// dbRecord2WebAuthn converts a models.WebAuthnCredential to a webauthn.Credential for use in the WebAuthn library.
+func DbRecord2WebAuthn(record models.WebAuthnCredential) webauthn.Credential {
+	credID, _ := base64.StdEncoding.DecodeString(record.CredentialID)
+	pubKey, _ := base64.StdEncoding.DecodeString(record.PublicKey)
+	aaguid, _ := base64.StdEncoding.DecodeString(record.AAGUID)
+
+	return webauthn.Credential{
+		ID:              credID,
+		PublicKey:       pubKey,
+		AttestationType: record.CredentialType,
+		Authenticator: webauthn.Authenticator{
+			AAGUID:    aaguid,
+			SignCount: record.SignCount,
+			//CloneWarning: false, // This value is not stored in the database. It is only used during the authentication or login process.
+		},
+	}
+}
+
+// UserWebAuthnReadQry reads the webauthn credentials for a user from the database and returns them as a slice of webauthn.Credential.
+func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Credential, error) {
+	var record models.WebAuthnCredential    // database record
+	var webAuthnCreds []webauthn.Credential // WebAuthn records
+
+	rows, err := Db.Query(sqlUserWebAuthnRead, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&record.CredentialID, &record.PublicKey, &record.AAGUID, &record.SignCount, &record.CredentialType); err != nil {
+			return nil, err
+		}
+		// Convert DB record to WebAuthnCredential
+		webAuthnCred := DbRecord2WebAuthn(record)
+		webAuthnCreds = append(webAuthnCreds, webAuthnCred)
+	}
+	return webAuthnCreds, rows.Err()
+}
+
+func WebAuthnReadQry(debugStr string, Db *sqlx.DB, id int) (models.WebAuthnCredential, error) {
+	record := models.WebAuthnCredential{}
+	err := Db.Get(&record, sqlWebAuthnRead, id)
+	if err != nil {
+		return models.WebAuthnCredential{}, err
+	}
+	return record, nil
+}
+
+func WebAuthnInsertQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) (int, error) {
+	err := Db.QueryRow(sqlWebAuthnInsert, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.CredentialType).Scan(&record.ID)
+	return record.ID, err
+}
+
+func WebAuthnUpdateQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) error {
+	_, err := Db.Exec(sqlWebAuthnUpdate, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.CredentialType, record.ID)
+	return err
+}
+
+// WebAuthnWriteQry writes the user record to the database, inserting or updating as necessary
+func WebAuthnWriteQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) (int, error) {
+	var err error
+	err = Db.QueryRow(sqlWebAuthnFind, record.ID).Scan(&record.CredentialID) // Check to see if a record exists
+	if err != nil {
+		record.ID, err = WebAuthnInsertQry(debugStr, Db, record) //No Existing record found so we are okay to insert the new record
+	} else {
+		err = WebAuthnUpdateQry(debugStr, Db, record) //Existing record found so we are okay to update the record
+	}
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"WebAuthnWriteQry()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+		return 0, err
+	}
+	return record.ID, err
+}
