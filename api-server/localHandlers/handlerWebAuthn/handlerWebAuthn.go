@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -49,21 +51,34 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get user from request", http.StatusBadRequest)
 		return
 	}
-	options, sessionData, err := h.webAuthn.BeginRegistration(
-		user,
-	)
+	// At this point the user is a new user or an existing user who is registering a new WebAuthn credential.
+	// So there should no user existing in the database with the same username or email.
+	// Check if the user is already registered
+	existingUser, err := handlerAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, user.Username)
+	if err != nil {
+		http.Error(w, "Failed to check existing user", http.StatusInternalServerError)
+		return
+	}
+	if existingUser.ID != 0 { // If the user already exists in the database
+		http.Error(w, "User is already registered", http.StatusConflict)
+		return
+	}
+	// User is not registered, so we can proceed with registration
+	// Generate a temporary UUID for WebAuthnID. If registration is successful, this will be saved to the user record in the database.
+	user.WebAuthnHandle = []byte(uuid.New().String())
+
+	options, sessionData, err := h.webAuthn.BeginRegistration(user)
 	if err != nil {
 		http.Error(w, "Failed to begin registration", http.StatusInternalServerError)
 		return
 	}
-	// Store sessionData in your session store
-	//tempSessionToken, err := createTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	// Create and Store sessionData in your session pool store
 	tempSessionToken, err := handlerAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
 	}
-	h.Pool.Add(tempSessionToken.Value, user, sessionData, 15) // Assuming you have a pool to manage session data
+	h.Pool.Add(tempSessionToken.Value, user, sessionData, 2*time.Second) // Assuming you have a pool to manage session data
 	// add the session token to the response
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")
@@ -92,22 +107,29 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
 		return
 	}
+	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.FinishRegistration()2: Successfully finished registration", "user =", user, "credential=", credential)
 	//TODO: Save the credential to the user in your database
 	// this requires serializing the credential to store it in the database
 	// For example, you might use json.Marshal to convert the credential to JSON
 
-	creds := user.WebAuthnCredentials()
-	creds = append(creds, *credential) // Append the new credential to the user's credentials
-	user.Credentials = creds           // Update the user's credentials // What credential info do we need to save?
+	// This may not be needed as the credential record is just written directly to the database
+	//creds := user.WebAuthnCredentials() // Get the existing credentials from the user
+	//if creds == nil { // ??? Is this necessary?
+	//	creds = make([]webauthn.Credential, 0) // Initialize the credentials slice if it is nil
+	//}
+	//creds = append(creds, *credential) // Append the new credential to the user's credentials
+	//user.Credentials = creds           // Update the user's credentials // What credential info do we need to save?
 
 	//saveUser to the database
+	// Need to set this up as a transaction so that if the user save fails or the credential save fails, the changes can be rolled back
+	// Then respond with an error if it fails
 	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, *user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.saveUser()2: Failed to save user", "err =", err, "record =", user, "userID =", userID)
 		return
 	}
 
-	// Save credential to the database
+	// Save the new credential to the database
 	dbCredential := handlerAuthTemplate.WebAuthn2DbRecord(userID, *credential)
 	_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, dbCredential)
 	if err != nil {
@@ -170,7 +192,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
 	}
-	h.Pool.Add(tempSessionToken.Value, &user, sessionData, 15) // Assuming you have a pool to manage session data
+	h.Pool.Add(tempSessionToken.Value, &user, sessionData, 2*time.Second) // Assuming you have a pool to manage session data
 	// add the session token to the response
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")

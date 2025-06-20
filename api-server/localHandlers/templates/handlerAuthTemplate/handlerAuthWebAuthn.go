@@ -84,28 +84,95 @@ func WebAuthnReadQry(debugStr string, Db *sqlx.DB, id int) (models.WebAuthnCrede
 	return record, nil
 }
 
-func WebAuthnInsertQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) (int, error) {
+// WebAuthnWriteQry writes the user record to the database, inserting or updating as necessary
+func WebAuthnWriteQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) (int, error) {
+	var err error
+	Tx, err := Db.Beginx() // Start a transaction
+	if err != nil {
+		log.Printf("%v %v %v", debugTag+"WebAuthnWriteQry()1 - ", "err =", err)
+		return 0, err
+	}
+	defer Tx.Rollback()                               // Ensure the transaction is rolled back if not committed
+	_, err = WebAuthnWriteQryTx(debugStr, Tx, record) // Write the webauthn credential record to the database
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"WebAuthnWriteQry()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+		return 0, err
+	}
+	if err := Tx.Commit(); err != nil { // Commit the transaction
+		log.Printf("%v %v %v %v %+v", debugTag+"WebAuthnWriteQry()8 - ", "err =", err, "record =", record)
+		return 0, err
+	}
+	return record.ID, err
+}
+
+func WebAuthnInsertQryTx(debugStr string, Db *sqlx.Tx, record models.WebAuthnCredential) (int, error) {
 	err := Db.QueryRow(sqlWebAuthnInsert, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.AttestationType).Scan(&record.ID)
 	return record.ID, err
 }
 
-func WebAuthnUpdateQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) error {
+func WebAuthnUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.WebAuthnCredential) error {
 	_, err := Db.Exec(sqlWebAuthnUpdate, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.AttestationType, record.ID)
 	return err
 }
 
 // WebAuthnWriteQry writes the user record to the database, inserting or updating as necessary
-func WebAuthnWriteQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) (int, error) {
+func WebAuthnWriteQryTx(debugStr string, Db *sqlx.Tx, record models.WebAuthnCredential) (int, error) {
 	var err error
 	err = Db.QueryRow(sqlWebAuthnFind, record.ID).Scan(&record.CredentialID) // Check to see if a record exists
 	if err != nil {
-		record.ID, err = WebAuthnInsertQry(debugStr, Db, record) //No Existing record found so we are okay to insert the new record
+		record.ID, err = WebAuthnInsertQryTx(debugStr, Db, record) //No Existing record found so we are okay to insert the new record
 	} else {
-		err = WebAuthnUpdateQry(debugStr, Db, record) //Existing record found so we are okay to update the record
+		err = WebAuthnUpdateQryTx(debugStr, Db, record) //Existing record found so we are okay to update the record
 	}
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"WebAuthnWriteQry()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
 		return 0, err
 	}
 	return record.ID, err
+}
+
+func WebAuthnUserRegisterQry(debugStr string, Db *sqlx.DB, user models.User, cred models.WebAuthnCredential) ([]webauthn.Credential, error) {
+	var webAuthnCreds []webauthn.Credential
+	// Setup a transaction to ensure atomicity
+	tx, err := Db.Beginx()
+	if err != nil {
+		log.Printf("%v %v %v", debugTag+"WebAuthnUserRegisterQry()1 - ", "err =", err)
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Check if the user exists
+	err = tx.Get(&user, sqlUserNameRead, user.Username) // Read the user record from the database
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"WebAuthnUserRegisterQry()2 - ", "err =", err, "user.Username =", user.Username, "user =", user, user)
+		return nil, err
+	}
+
+	// check if the credential already exists
+	err = tx.Get(&cred.CredentialID, sqlWebAuthnFind, cred.CredentialID) // Read the user record from the database
+	if err == nil {
+		// Credential already exists, return an error
+		log.Printf("%v %v %+v", debugTag+"WebAuthnUserRegisterQry()3 - cred already exists", "cred =", cred)
+		return nil, models.ErrWebAuthnCredentialExists // Return an error indicating the credential already exists
+	}
+
+	// If no errors then Save the user and credential to the db
+	user.ID, err = UserWriteQryTx(debugStr, tx, user) // Write the user record to the database
+	if err != nil {
+		log.Printf("%v %v %v %v %+v", debugTag+"WebAuthnUserRegisterQry()4 - ", "err =", err, "user =", user)
+		return nil, err
+	}
+
+	_, err = WebAuthnWriteQryTx(debugStr, tx, cred) // Write the webauthn credential record to the database
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"WebAuthnUserRegisterQry()4 - ", "err =", err, "cred =", cred, "user =", user, user)
+		return nil, err
+	}
+
+	// No errors, so we can commit the transaction
+	if err := tx.Commit(); err != nil {
+		log.Printf("%v %v %v %v %+v", debugTag+"WebAuthnUserRegisterQry()4 - ", "err =", err, "user =", user)
+		return nil, err
+	}
+	return webAuthnCreds, nil
 }
