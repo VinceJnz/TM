@@ -1,7 +1,10 @@
-package webAuthnView
+package webAuthnRegisterView
 
 import (
+	"client1/v2/app/httpProcessor"
 	"encoding/base64"
+	"log"
+	"net/http"
 	"syscall/js"
 )
 
@@ -12,52 +15,62 @@ func decodeBase64ToUint8Array(b64 string) js.Value {
 	return uint8Array
 }
 
-func Register(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) BeginRegistration(item TableData) {
+	success := func(err error, data *httpProcessor.ReturnData) {
+		if err != nil {
+			log.Printf("%v %v %+v %v %+v", debugTag+"Register()4 success error: ", "err =", err, "item =", item) //Log the error in the browser
+		}
+		log.Printf("%v %v %+v %v %+v", debugTag+"Register()5 success: ", "err =", err, "item =", item) //Log the error in the browser
+		// Next process step
+		editor.onCompletionMsg("Account registration started???")
+		editor.FinishRegistration(item)
+	}
+
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()6 fail: ", "err =", err, "item =", item) //Log the error in the browser
+		editor.onCompletionMsg("Account creation failed???")
+	}
+
+	editor.updateStateDisplay(ItemStateSaving)
+
 	go func() {
 		// 1. Begin registration
-		fetch := js.Global().Get("fetch")
-		respPromise := fetch.Invoke("/api/v1/webauthn/register/begin", map[string]interface{}{
-			"method": "POST",
-		})
-		then := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			resp := args[0]
-			jsonPromise := resp.Call("json")
-			then2 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-				options := args[0]
-				publicKey := options.Get("publicKey")
-				// 2. Call WebAuthn API
-				publicKey.Set("challenge", decodeBase64ToUint8Array(publicKey.Get("challenge").String()))
-				user := publicKey.Get("user")
-				user.Set("id", decodeBase64ToUint8Array(user.Get("id").String()))
-				publicKey.Set("user", user)
-				credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]interface{}{
-					"publicKey": publicKey,
-				})
-				then3 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-					cred := args[0]
-					// 3. Send result to server
-					credJSON := js.Global().Get("JSON").Call("stringify", cred)
-					js.Global().Get("fetch").Invoke("/api/v1/webauthn/register/finish", map[string]interface{}{
-						"method": "POST",
-						"body":   credJSON,
-						"headers": map[string]interface{}{
-							"Content-Type": "application/json",
-						},
-					})
-					return nil
-				})
-				credPromise.Call("then", then3)
-				return nil
-			})
-			jsonPromise.Call("then", then2)
-			return nil
-		})
-		respPromise.Call("then", then)
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/begin", nil, &item, success, fail)
+		editor.RecordState = RecordStateReloadRequired
+		//editor.FetchItems() // Refresh the item list
+		editor.updateStateDisplay(ItemStateNone)
 	}()
-	return nil
 }
 
-func Login(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) FinishRegistration(item TableData) {
+	success := func(err error, data *httpProcessor.ReturnData) {
+		if err != nil {
+			log.Printf("%v %v %+v %v %+v", debugTag+"Register()4 success error: ", "err =", err, "item =", item) //Log the error in the browser
+		}
+		log.Printf("%v %v %+v %v %+v", debugTag+"Register()5 success: ", "err =", err, "item =", item) //Log the error in the browser
+		// Next process step
+		editor.onCompletionMsg("Account registration started???")
+		editor.FinishRegistration(item)
+	}
+
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()6 fail: ", "err =", err, "item =", item) //Log the error in the browser
+		editor.onCompletionMsg("Account creation failed???")
+	}
+
+	editor.updateStateDisplay(ItemStateSaving)
+
+	go func() {
+		// 1. Begin registration
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/finish", nil, &item, success, fail)
+		editor.RecordState = RecordStateReloadRequired
+		//editor.FetchItems() // Refresh the item list
+		editor.updateStateDisplay(ItemStateNone)
+	}()
+
+}
+
+func (editor *ItemEditor) Login(this js.Value, args []js.Value) interface{} {
 	go func() {
 		// 1. Begin authentication
 		fetch := js.Global().Get("fetch")
@@ -108,10 +121,10 @@ func Login(this js.Value, args []js.Value) interface{} {
 }
 
 // Register both registration and login callbacks
-func RegisterCallbacks() {
-	js.Global().Set("goWebAuthnRegister", js.FuncOf(Register))
-	js.Global().Set("goWebAuthnLogin", js.FuncOf(Login))
-}
+//func RegisterCallbacks() {
+//	js.Global().Set("goWebAuthnRegister", js.FuncOf(Register))
+//	js.Global().Set("goWebAuthnLogin", js.FuncOf(Login))
+//}
 
 /*
 // Registration
