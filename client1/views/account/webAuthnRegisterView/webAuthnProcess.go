@@ -33,6 +33,9 @@ func (editor *ItemEditor) BeginRegistration(item TableData) {
 
 	editor.updateStateDisplay(ItemStateSaving)
 
+	// Start the registration process
+	// Send the user item to the server to begin registration
+	// The server will return a challenge and other parameters needed for the WebAuthn API
 	go func() {
 		// 1. Begin registration
 		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/begin", nil, &item, success, fail)
