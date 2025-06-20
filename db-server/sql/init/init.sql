@@ -365,7 +365,7 @@ CREATE TABLE et_token_valid (
 CREATE TABLE st_webauthn_credentials (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    credential_id TEXT NOT NULL UNIQUE,
+    credential_id TEXT NOT NULL UNIQUE, -- This is the unique identifier for the WebAuthn credential. It is a UUID byte array that is base64url encoded.
     public_key TEXT NOT NULL,
     aaguid TEXT,
     sign_count INTEGER NOT NULL,
@@ -375,8 +375,10 @@ CREATE TABLE st_webauthn_credentials (
     --FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Index for fast lookup by user_id
+-- Index for fast lookup by user_id and credential_id
+-- Uncomment the following lines to create indexes for faster lookups
 --CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id);
+--CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_credential_id ON webauthn_credentials(credential_id);
 
 -- Create triggers to update the modified column automatically
 
