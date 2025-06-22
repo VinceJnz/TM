@@ -9,6 +9,8 @@ import (
 	"math/big"
 	"syscall/js"
 	"time"
+
+	"github.com/go-webauthn/webauthn/protocol"
 )
 
 const debugTag = "acountRegisterView."
@@ -77,7 +79,8 @@ type ParentData struct {
 }
 
 type Item struct {
-	Record TableData
+	Record          TableData
+	WebAuthnOptions protocol.CredentialCreation // This will hold the WebAuthn options for registration
 	//Add child structures as necessary
 }
 

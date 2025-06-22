@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"syscall/js"
+
+	"github.com/go-webauthn/webauthn/protocol"
 )
 
 func decodeBase64ToUint8Array(b64 string) js.Value {
@@ -16,6 +18,7 @@ func decodeBase64ToUint8Array(b64 string) js.Value {
 }
 
 func (editor *ItemEditor) BeginRegistration(item TableData) {
+	var WebAuthnOptions protocol.CredentialCreation
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
 			log.Printf("%v %v %+v %v %+v", debugTag+"Register()4 success error: ", "err =", err, "item =", item) //Log the error in the browser
@@ -23,7 +26,7 @@ func (editor *ItemEditor) BeginRegistration(item TableData) {
 		log.Printf("%v %v %+v %v %+v", debugTag+"Register()5 success: ", "err =", err, "item =", item) //Log the error in the browser
 		// Next process step
 		editor.onCompletionMsg("Account registration started???")
-		editor.FinishRegistration(item)
+		editor.FinishRegistration(WebAuthnOptions)
 	}
 
 	fail := func(err error, data *httpProcessor.ReturnData) {
@@ -38,14 +41,14 @@ func (editor *ItemEditor) BeginRegistration(item TableData) {
 	// The server will return a challenge and other parameters needed for the WebAuthn API
 	go func() {
 		// 1. Begin registration
-		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/begin", nil, &item, success, fail)
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/begin", &WebAuthnOptions, &item, success, fail)
 		editor.RecordState = RecordStateReloadRequired
 		//editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 }
 
-func (editor *ItemEditor) FinishRegistration(item TableData) {
+func (editor *ItemEditor) FinishRegistration(options protocol.CredentialCreation) {
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
 			log.Printf("%v %v %+v %v %+v", debugTag+"Register()4 success error: ", "err =", err, "item =", item) //Log the error in the browser
@@ -63,9 +66,38 @@ func (editor *ItemEditor) FinishRegistration(item TableData) {
 
 	editor.updateStateDisplay(ItemStateSaving)
 
+	// Set challenge
+	publicKey := js.Global().Get("Object").New()
+	challengeBytes, _ := base64.StdEncoding.DecodeString(options.Response.Challenge.String())
+	challenge := js.Global().Get("Uint8Array").New(len(challengeBytes))
+	js.CopyBytesToJS(challenge, challengeBytes)
+	publicKey.Set("challenge", challenge)
+
+	// Set user
+	user := js.Global().Get("Object").New()
+	user.Set("name", options.Response.User.Name)
+	user.Set("displayName", options.Response.User.DisplayName)
+	userIDBytes, _ := base64.StdEncoding.DecodeString(options.Response.User.ID)
+	userID := js.Global().Get("Uint8Array").New(len(userIDBytes))
+	js.CopyBytesToJS(userID, userIDBytes)
+	user.Set("id", userID)
+	publicKey.Set("user", user)
+
+	// Set other fields as needed (e.g., rp, pubKeyCredParams, timeout, etc.)
+	publicKey.Set("rp", map[string]interface{}{
+		"name": options.Response.RelyingParty.Name,
+	})
+	publicKey.Set("pubKeyCredParams", options.Response.PubKeyCredParams)
+	// ...set any other required fields...
+
+	// Call WebAuthn API
+	credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]interface{}{
+		"publicKey": publicKey,
+	})
+
 	go func() {
 		// 1. Begin registration
-		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/finish", nil, &item, success, fail)
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/finish", nil, &publicKey, success, fail)
 		editor.RecordState = RecordStateReloadRequired
 		//editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
