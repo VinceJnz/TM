@@ -21,8 +21,12 @@ POST /webauthn/register/begin
 
 2. Server Generates Registration Options (Server → Client)
 * The API server receives the request, creates a new (not yet persisted) user object, and calls BeginRegistration.
-* The server generates a challenge and other WebAuthn options, and stores the sessionData (in DB or memory e.g. a pool) associated with the user's temporary session/cookie.
+* BeginRegistration: The server generates a challenge and other WebAuthn options, and stores the sessionData (in DB or memory e.g. a pool) associated with the user's temporary session/cookie.
+  * sessionData: <https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/webauthn#SessionData>
 * The server responds with the PublicKeyCredentialCreationOptions and a temporary session cookie/token.
+  * options: <https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/protocol#CredentialCreation> - This gets sent to the client.
+    * PublicKeyCredentialCreationOptions: https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/protocol#PublicKeyCredentialCreationOptions
+    * CredentialMediationRequirement: https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/protocol#CredentialMediationRequirement
 
 Example response:
 ```json
