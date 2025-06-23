@@ -41,6 +41,7 @@ Example response:
 * The browserautomatically stores the temporary session cookie/token.
 * The WASM client receives the options plus the temporary session cookie/token and calls the browser’s WebAuthn API:
 
+For registration:
 ```go
 navigator.credentials.create({ publicKey: ... })
 ```
