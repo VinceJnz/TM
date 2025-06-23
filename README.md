@@ -104,3 +104,32 @@ Will now use this to authenticate clients.
 
 <https://github.com/go-webauthn/webauthn>
 
+
+
+
+
+## Coding approach
+A philosophical question... Should values be passed to methods using the method stuct or should they be passed as function values?
+
+This is a classic design question in Go (and many languages). Here’s a concise, practical answer:
+
+Pass via Method Receiver (Struct Field)
+* Use when the value is part of the object’s state (e.g., editor.CurrentRecord).
+* Good for values that are persistent or shared across multiple methods.
+* Makes sense for "object-oriented" patterns or when the method logically acts on the struct’s data.
+
+Pass as Function Argument
+* Use when the value is temporary, context-specific, or not part of the struct’s state.
+* Improves testability and reusability (method doesn’t depend on struct state).
+* Makes the method’s dependencies explicit.
+
+**Philosophy:**
+* Prefer passing as arguments when possible for clarity and testability.
+* Use struct fields for persistent state or when the value is truly part of the object.
+
+**In practice:**
+* If a value is only needed for a single operation, pass it as an argument.
+* If it’s part of the editor’s ongoing state, keep it as a field.
+
+**Summary:**
+There’s no single right answer—choose the approach that makes your code clearer, safer, and easier to maintain.
