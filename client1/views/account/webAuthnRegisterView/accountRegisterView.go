@@ -278,7 +278,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//case ItemStateEditing:
 	//     go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
-		editor.BeginRegistration(editor.CurrentRecord)
+		//editor.BeginRegistration(editor.CurrentRecord)
+		editor.BeginWebAuthnRegistration(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
 	}

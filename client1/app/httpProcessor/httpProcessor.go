@@ -152,40 +152,6 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 		return err
 	}
 
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-
 	//req.Header.Set("Authorization", "Bearer your_token_here")
 	req.Header.Set("Access-Control-Allow-Credentials", "true")
 	req.Header.Set("Content-Type", "application/json")
@@ -246,14 +212,6 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 			log.Printf("%v %v %v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - rx data structure is nil but the response body contains data ", "res.StatusCode =", res.StatusCode, "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
 		}
 	}
-
-	//
-	//
-	//
-	//
-	//
-	//
-	//
 
 	returnData := &ReturnData{FieldNames: fieldNames}
 	callBackSuccess(nil, returnData)

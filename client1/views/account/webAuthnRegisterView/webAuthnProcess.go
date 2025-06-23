@@ -1,13 +1,8 @@
 package webAuthnRegisterView
 
 import (
-	"client1/v2/app/httpProcessor"
 	"encoding/base64"
-	"log"
-	"net/http"
 	"syscall/js"
-
-	"github.com/go-webauthn/webauthn/protocol"
 )
 
 //********************************************************************
@@ -29,6 +24,7 @@ func decodeBase64ToUint8Array(b64 string) js.Value {
 	return uint8Array
 }
 
+/*
 // Helper to convert JS ArrayBuffer to base64 string
 func arrayBufferToBase64(buf js.Value) string {
 	uint8Array := js.Global().Get("Uint8Array").New(buf)
@@ -37,7 +33,9 @@ func arrayBufferToBase64(buf js.Value) string {
 	js.CopyBytesToGo(data, uint8Array)
 	return base64.StdEncoding.EncodeToString(data)
 }
+*/
 
+/*
 func (editor *ItemEditor) BeginRegistration(item TableData) {
 	var WebAuthnOptions protocol.CredentialCreation
 	success := func(err error, data *httpProcessor.ReturnData) {
@@ -47,7 +45,8 @@ func (editor *ItemEditor) BeginRegistration(item TableData) {
 		log.Printf("%v %v %+v %v %+v", debugTag+"Register()5 success: ", "err =", err, "item =", item) //Log the error in the browser
 		// Next process step
 		editor.onCompletionMsg("Account registration started???")
-		editor.FinishRegistration(WebAuthnOptions)
+		//editor.FinishRegistration(WebAuthnOptions)
+		editor.BeginWebAuthnRegistration() // Start the WebAuthn registration process
 	}
 
 	fail := func(err error, data *httpProcessor.ReturnData) {
@@ -62,13 +61,78 @@ func (editor *ItemEditor) BeginRegistration(item TableData) {
 	// The server will return a challenge and other parameters needed for the WebAuthn API
 	go func() {
 		// 1. Begin registration
+		// ??????????????????? Need to create a request that returns a js.value for the WebAuthn options
+		// ??????????????????? It needs to be a js.value as this is the simplest way to use the WebAuthn API in the browser
 		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/begin", &WebAuthnOptions, &item, success, fail)
 		editor.RecordState = RecordStateReloadRequired
 		//editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 }
+*/
 
+func (editor *ItemEditor) BeginWebAuthnRegistration(item TableData) {
+	go func() {
+		// 1. Fetch registration options from the server
+		fetch := js.Global().Get("fetch")
+		// Marshal editor.CurrentRecord to JSON
+		userData := js.Global().Get("JSON").Call("stringify", map[string]interface{}{
+			"name":     item.Name,
+			"username": item.Username,
+			"email":    item.Email,
+			"password": item.Password,
+			// Add other fields as needed
+		})
+		respPromise := fetch.Invoke(ApiURL+"/register/begin", map[string]interface{}{
+			"method": "POST",
+			"body":   userData,
+			"headers": map[string]interface{}{
+				"Content-Type": "application/json",
+			},
+		})
+
+		then := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			resp := args[0]
+			jsonPromise := resp.Call("json")
+			then2 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				options := args[0]
+				publicKey := options.Get("publicKey")
+
+				// 2. Convert challenge and user.id from base64 to Uint8Array
+				publicKey.Set("challenge", decodeBase64ToUint8Array(publicKey.Get("challenge").String()))
+				user := publicKey.Get("user")
+				user.Set("id", decodeBase64ToUint8Array(user.Get("id").String()))
+				publicKey.Set("user", user)
+
+				// 3. Call the browser WebAuthn API
+				credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]interface{}{
+					"publicKey": publicKey,
+				})
+
+				then3 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+					cred := args[0]
+					// 4. Send result to server
+					credJSON := js.Global().Get("JSON").Call("stringify", cred)
+					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish", map[string]interface{}{
+						"method": "POST",
+						"body":   credJSON,
+						"headers": map[string]interface{}{
+							"Content-Type": "application/json",
+						},
+					})
+					return nil
+				})
+				credPromise.Call("then", then3)
+				return nil
+			})
+			jsonPromise.Call("then", then2)
+			return nil
+		})
+		respPromise.Call("then", then)
+	}()
+}
+
+/*
 func (editor *ItemEditor) FinishRegistration(options protocol.CredentialCreation) {
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
@@ -90,7 +154,26 @@ func (editor *ItemEditor) FinishRegistration(options protocol.CredentialCreation
 
 	editor.updateStateDisplay(ItemStateSaving)
 
-	// Build publicKey JS object
+	publicKey := createPublicKey(options)
+
+	// Call WebAuthn API
+	attestation, err := getAttestation(publicKey)
+	if err != nil {
+		log.Printf("%v %v %+v %v %+v", debugTag+"Register() getAttestation error: ", "err =", err, "options =", options) //Log the error in the browser
+		editor.onCompletionMsg("Account creation failed")
+		return
+	}
+
+	go func() {
+		go editor.client.NewRequest(http.MethodPost, ApiURL+"/register/finish", nil, &attestation, success, fail)
+		editor.RecordState = RecordStateReloadRequired
+		//editor.FetchItems() // Refresh the item list
+		editor.updateStateDisplay(ItemStateNone)
+	}()
+
+}
+
+func createPublicKey(options protocol.CredentialCreation) js.Value {
 	publicKey := js.Global().Get("Object").New()
 
 	// Set challenge
@@ -106,7 +189,7 @@ func (editor *ItemEditor) FinishRegistration(options protocol.CredentialCreation
 	userIDStr, ok := options.Response.User.ID.(string)
 	if !ok {
 		log.Println("User ID is not a string")
-		return
+		return js.Undefined()
 	}
 	userIDBytes, _ := base64.StdEncoding.DecodeString(userIDStr)
 	userID := js.Global().Get("Uint8Array").New(len(userIDBytes))
@@ -127,37 +210,33 @@ func (editor *ItemEditor) FinishRegistration(options protocol.CredentialCreation
 	// publicKey.Set("timeout", options.Response.Timeout)
 	// publicKey.Set("attestation", options.Response.Attestation)
 
-	// Call WebAuthn API
-	var attestation WebAuthnAttestation
+	return publicKey
+}
+
+func getAttestation(publicKey js.Value) (WebAuthnAttestation, error) {
+	// Call the browser WebAuthn API
 	credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]interface{}{
 		"publicKey": publicKey,
 	})
-	then := js.FuncOf(getA)
+
+	// When the promise resolves, send the credential to the server
+	then := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		cred := args[0]
+		credJSON := js.Global().Get("JSON").Call("stringify", cred)
+		js.Global().Get("fetch").Invoke("/api/v1/webauthn/register/finish", map[string]interface{}{
+			"method": "POST",
+			"body":   credJSON,
+			"headers": map[string]interface{}{
+				"Content-Type": "application/json",
+			},
+		})
+		return nil
+	})
 	credPromise.Call("then", then)
 
-	go func() {
-		go editor.client.NewRequest(http.MethodPost, ApiURL+"/register/finish", nil, &attestation, success, fail)
-		editor.RecordState = RecordStateReloadRequired
-		//editor.FetchItems() // Refresh the item list
-		editor.updateStateDisplay(ItemStateNone)
-	}()
 
 }
-
-func getA(this js.Value, args []js.Value) interface{} {
-	cred := args[0]
-	resp := cred.Get("response")
-
-	attestation = WebAuthnAttestation{
-		ID:             cred.Get("id").String(),
-		RawID:          arrayBufferToBase64(cred.Get("rawId")),
-		Type:           cred.Get("type").String(),
-		ClientDataJSON: arrayBufferToBase64(resp.Get("clientDataJSON")),
-		AttestationObj: arrayBufferToBase64(resp.Get("attestationObject")),
-	}
-
-	return nil
-}
+*/
 
 /*
 func (editor *ItemEditor) FinishRegistrationXX(options protocol.CredentialCreation) {
