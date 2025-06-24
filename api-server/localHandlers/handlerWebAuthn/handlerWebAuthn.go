@@ -108,21 +108,8 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.FinishRegistration()2: Successfully finished registration", "user =", user, "credential=", credential)
-	//TODO: Save the credential to the user in your database
-	// this requires serializing the credential to store it in the database
-	// For example, you might use json.Marshal to convert the credential to JSON
-
-	// This may not be needed as the credential record is just written directly to the database
-	//creds := user.WebAuthnCredentials() // Get the existing credentials from the user
-	//if creds == nil { // ??? Is this necessary?
-	//	creds = make([]webauthn.Credential, 0) // Initialize the credentials slice if it is nil
-	//}
-	//creds = append(creds, *credential) // Append the new credential to the user's credentials
-	//user.Credentials = creds           // Update the user's credentials // What credential info do we need to save?
-
+	// At this point the user is registered and the credential is created.
 	//saveUser to the database
-	// Need to set this up as a transaction so that if the user save fails or the credential save fails, the changes can be rolled back
-	// Then respond with an error if it fails
 	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, *user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.saveUser()2: Failed to save user", "err =", err, "record =", user, "userID =", userID)

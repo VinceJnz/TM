@@ -221,3 +221,61 @@ navigator.credentials
         ...
     })
 ```
+
+
+
+## WebAuthn information
+
+### Infomation to be stored
+
+When WebAuthn registration is successful, the server should store the following information in the database for each credential:
+
+**User Table**
+* User information (if not already stored):
+  * User ID (internal, e.g., integer primary key)
+  * Username, email, etc.
+  * WebAuthn user handle (a unique, opaque identifier, e.g., UUID or random string, used as WebAuthnID)
+
+**WebAuthn Credentials Table** (one row per credential)
+* User ID (foreign key to user table)
+* Credential ID (unique, base64-encoded string)
+* Public Key (base64-encoded or PEM string)
+* AAGUID (Authenticator Attestation GUID, base64-encoded string)
+* Sign Count (integer, from the authenticator)
+* Credential Type (usually "public-key")
+* Attestation Format (optional, for auditing)
+* Created At (timestamp)
+
+**Example Table Schema:**
+```sql
+CREATE TABLE webauthn_credentials (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    credential_id TEXT NOT NULL UNIQUE,
+    public_key TEXT NOT NULL,
+    aaguid TEXT,
+    sign_count INTEGER NOT NULL,
+    credential_type TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+**Summary:**
+
+Store the user’s WebAuthn handle in the user table, and for each credential, store: user ID, credential ID, public key, AAGUID, sign count, credential type, and created timestamp in a separate credentials table.
+This ensures you can authenticate users, support multiple credentials per user, and manage credentials securely.
+
+## Information that should not be stored
+When storing WebAuthn registration data in your database, you should NOT store:
+
+* Private keys: Never store the authenticator’s private key. Only the public key is needed for verification.
+* Raw attestation objects (unless you have a specific auditing or compliance need): These can be large and are not required for authentication.
+* Sensitive client data: Do not store unnecessary client-side information such as user agent, IP address, or geolocation unless required for security/audit purposes.
+* Temporary session data: Do not persist SessionData used during registration/login ceremonies; it should only be kept in memory or a temporary store and deleted after the ceremony.
+* Passwords or PINs: WebAuthn is passwordless; do not store user PINs or authenticator secrets.
+* Unencrypted sensitive fields: If you must store anything sensitive (rare for WebAuthn), ensure it is encrypted at rest.
+
+**Summary:**
+
+Only store what is needed for authentication: user handle, credential ID, public key, AAGUID, sign count, credential type, and user association.
+Never store private keys, temporary session data, or unnecessary sensitive client information.
