@@ -1,4 +1,4 @@
-package webAuthnRegisterView
+package webAuthnView
 
 import (
 	"client1/v2/app/appCore"
@@ -146,6 +146,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	return editor
 }
 
+///	Display()
+//	FetchItems()
+//	Hide()
+//	GetDiv() js.Value
+//	ResetView()
+
 func (editor *ItemEditor) ResetView() {
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
@@ -279,7 +285,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//     go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
 		//editor.BeginRegistration(editor.CurrentRecord)
-		editor.BeginWebAuthnRegistration(editor.CurrentRecord)
+		editor.WebAuthnRegistration(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
@@ -292,6 +298,10 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
 	editor.resetEditForm()
 	return nil
+}
+
+func (editor *ItemEditor) FetchItems() {
+	//editor.NewItemData() // The login view is different to all the other views, there is no data to fetch.
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {

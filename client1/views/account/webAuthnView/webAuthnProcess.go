@@ -1,4 +1,4 @@
-package webAuthnRegisterView
+package webAuthnView
 
 import (
 	"encoding/base64"
@@ -71,7 +71,7 @@ func (editor *ItemEditor) BeginRegistration(item TableData) {
 }
 */
 
-func (editor *ItemEditor) BeginWebAuthnRegistration(item TableData) {
+func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 	go func() {
 		// 1. Fetch registration options from the server
 		fetch := js.Global().Get("fetch")
