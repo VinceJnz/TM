@@ -1,4 +1,4 @@
-package webAuthnView
+package webAuthnRegisterView
 
 import (
 	"client1/v2/app/appCore"
@@ -13,7 +13,7 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 )
 
-const debugTag = "acountRegisterView."
+const debugTag = "webAuthnRegisterView."
 
 type ItemState int
 
@@ -270,7 +270,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		event.Call("preventDefault")
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
-
+	log.Println(debugTag+"SubmitItemEdit()1", "ItemState =", editor.ItemState)
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()

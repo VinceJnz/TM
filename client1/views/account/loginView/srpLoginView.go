@@ -112,7 +112,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.elements.Div = editor.document.Call("createElement", "div")
 	editor.elements.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displayingthe editor
+	// Create a div for displaying the editor
 	editor.elements.EditDiv = editor.document.Call("createElement", "div")
 	editor.elements.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.elements.Div.Call("appendChild", editor.elements.EditDiv)
@@ -231,6 +231,22 @@ func (editor *ItemEditor) populateEditForm() {
 	// Append child components to editor div
 	editor.elements.EditDiv.Call("appendChild", registerButton)
 	editor.elements.EditDiv.Call("appendChild", register.Div)
+
+	// Create and add child views and buttons to Item
+	webAuthnRegister := acountRegisterView.New(editor.document, editor.events, editor.appCore, acountRegisterView.ParentData{})
+
+	// Create a toggle child button
+	webAuthnButton := editor.document.Call("createElement", "button")
+	webAuthnButton.Set("innerHTML", "WebAuthnRegister")
+	webAuthnButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		webAuthnRegister.NewItemData(this, args) // WARNING ... this is different for the page ...
+		webAuthnRegister.Toggle()
+		return nil
+	}))
+
+	// Append child components to editor div
+	editor.elements.EditDiv.Call("appendChild", webAuthnButton)
+	editor.elements.EditDiv.Call("appendChild", webAuthnRegister.Div)
 
 	// Append form to editor div
 	editor.elements.EditDiv.Call("appendChild", form)

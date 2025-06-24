@@ -8,7 +8,6 @@ import (
 	"client1/v2/views/accessTypeView"
 	"client1/v2/views/account/loginView"
 	"client1/v2/views/account/logoutView"
-	"client1/v2/views/account/webAuthnView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/groupBookingView"
@@ -167,7 +166,6 @@ func (v *View) Setup() {
 	// Add all the menu options to the sidemenu
 	v.AddViewItem("&times;", "", false, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("Login", "", true, loginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
-	v.AddViewItem("Login Authn", "", true, webAuthnView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	v.AddViewItem("Home", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("About", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("Contact", "", true, nil, true, false, v.elements.sidemenu)
