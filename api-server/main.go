@@ -40,6 +40,7 @@ const debugTag = "main."
 
 func main() {
 	app := appCore.New(true)
+	app.Settings.LoadEnv()
 	defer app.Close()
 
 	r := mux.NewRouter()
@@ -60,10 +61,10 @@ func main() {
 
 	// WebAuthn handlers
 	WebAuthn := handlerWebAuthn.New(app)
-	subR1.HandleFunc("/webauthn/register/begin", WebAuthn.BeginRegistration).Methods("POST")
-	subR1.HandleFunc("/webauthn/register/finish", WebAuthn.FinishRegistration).Methods("POST")
-	subR1.HandleFunc("/webauthn/login/begin", WebAuthn.BeginLogin).Methods("POST")
-	subR1.HandleFunc("/webauthn/login/finish", WebAuthn.FinishLogin).Methods("POST")
+	subR1.HandleFunc("/webauthn/register/begin/", WebAuthn.BeginRegistration).Methods("POST")
+	subR1.HandleFunc("/webauthn/register/finish/", WebAuthn.FinishRegistration).Methods("POST")
+	subR1.HandleFunc("/webauthn/login/begin/", WebAuthn.BeginLogin).Methods("POST")
+	subR1.HandleFunc("/webauthn/login/finish/", WebAuthn.FinishLogin).Methods("POST")
 
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler

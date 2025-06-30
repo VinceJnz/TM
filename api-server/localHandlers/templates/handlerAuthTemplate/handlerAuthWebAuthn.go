@@ -11,7 +11,7 @@ import (
 
 const (
 	//sqlWebAuthnFind   = `SELECT id, FROM st_webauthn_credentials WHERE id = $1`
-	sqlWebAuthnFind   = `SELECT id, FROM st_webauthn_credentials WHERE credential_id = $1`
+	sqlWebAuthnFind   = `SELECT id FROM st_webauthn_credentials WHERE credential_id = $1`
 	sqlWebAuthnRead   = `SELECT * FROM st_webauthn_credentials WHERE id = $1`
 	sqlWebAuthnIdRead = `SELECT * FROM st_webauthn_credentials WHERE credential_id = $1`
 	sqlWebAuthnInsert = `INSERT INTO st_webauthn_credentials (user_id, credential_id, public_key, aaguid, sign_count, credential_type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`

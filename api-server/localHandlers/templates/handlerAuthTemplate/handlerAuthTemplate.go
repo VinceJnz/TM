@@ -237,7 +237,7 @@ func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, acc
 }
 
 const (
-	sqlUserFind     = `SELECT id, FROM st_users WHERE id = $1`
+	sqlUserFind     = `SELECT id FROM st_users WHERE id = $1`
 	sqlUserRead     = `SELECT id, name, username, email FROM st_users WHERE id = $1`
 	sqlUserNameRead = `SELECT id, name, username, email FROM st_users WHERE username = $1`
 	sqlUserInsert   = `INSERT INTO st_users (name, username, email, webauthn_handle) VALUES ($1, $2, $3, $4) RETURNING id`
