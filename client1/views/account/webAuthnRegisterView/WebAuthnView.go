@@ -42,7 +42,9 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/webauthn"
+// const ApiURL =  "/webauthn"
+// const ApiURL = "https://localhost:8086/api/v1" + "/webauthn"
+const ApiURL = "/api/v1" + "/webauthn"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {

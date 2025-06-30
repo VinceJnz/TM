@@ -1,4 +1,4 @@
-package acountRegisterView
+package accountRegisterView
 
 import (
 	"client1/v2/app/appCore"

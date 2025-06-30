@@ -2,6 +2,7 @@ package webAuthnRegisterView
 
 import (
 	"encoding/base64"
+	"log"
 	"syscall/js"
 )
 
@@ -83,7 +84,9 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 			"password": item.Password,
 			// Add other fields as needed
 		})
-		respPromise := fetch.Invoke(ApiURL+"/register/begin", map[string]interface{}{
+		log.Printf("%v %v %+v", debugTag+"WebAuthnRegistration()1 userData: ", "userData =", userData.String()) //Log the user data in the browser
+
+		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]interface{}{
 			"method": "POST",
 			"body":   userData,
 			"headers": map[string]interface{}{
@@ -113,7 +116,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 					cred := args[0]
 					// 4. Send result to server
 					credJSON := js.Global().Get("JSON").Call("stringify", cred)
-					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish", map[string]interface{}{
+					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/", map[string]interface{}{
 						"method": "POST",
 						"body":   credJSON,
 						"headers": map[string]interface{}{
@@ -311,7 +314,7 @@ func (editor *ItemEditor) Login(this js.Value, args []js.Value) interface{} {
 	go func() {
 		// 1. Begin authentication
 		fetch := js.Global().Get("fetch")
-		respPromise := fetch.Invoke("/api/v1/webauthn/login/begin", map[string]interface{}{
+		respPromise := fetch.Invoke(ApiURL+"/login/begin/", map[string]interface{}{
 			"method": "POST",
 		})
 		then := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -337,7 +340,7 @@ func (editor *ItemEditor) Login(this js.Value, args []js.Value) interface{} {
 					cred := args[0]
 					// 4. Send result to server
 					credJSON := js.Global().Get("JSON").Call("stringify", cred)
-					js.Global().Get("fetch").Invoke("/api/v1/webauthn/login/finish", map[string]interface{}{
+					js.Global().Get("fetch").Invoke(ApiURL+"/login/finish/", map[string]interface{}{
 						"method": "POST",
 						"body":   credJSON,
 						"headers": map[string]interface{}{

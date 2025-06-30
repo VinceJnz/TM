@@ -4,7 +4,8 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
-	"client1/v2/views/account/acountRegisterView"
+	"client1/v2/views/account/accountRegisterView"
+	"client1/v2/views/account/webAuthnRegisterView"
 	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
 	"time"
@@ -217,11 +218,11 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item
-	register := acountRegisterView.New(editor.document, editor.events, editor.appCore, acountRegisterView.ParentData{})
+	register := accountRegisterView.New(editor.document, editor.events, editor.appCore, accountRegisterView.ParentData{})
 
 	// Create a toggle child button
 	registerButton := editor.document.Call("createElement", "button")
-	registerButton.Set("innerHTML", "Register")
+	registerButton.Set("innerHTML", "SrpRegister")
 	registerButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		register.NewItemData(this, args) // WARNING ... this is different for the page ...
 		register.Toggle()
@@ -233,7 +234,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.elements.EditDiv.Call("appendChild", register.Div)
 
 	// Create and add child views and buttons to Item
-	webAuthnRegister := acountRegisterView.New(editor.document, editor.events, editor.appCore, acountRegisterView.ParentData{})
+	webAuthnRegister := webAuthnRegisterView.New(editor.document, editor.events, editor.appCore, webAuthnRegisterView.ParentData{})
 
 	// Create a toggle child button
 	webAuthnButton := editor.document.Call("createElement", "button")
