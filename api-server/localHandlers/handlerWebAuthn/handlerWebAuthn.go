@@ -36,9 +36,11 @@ func New(appConf *appCore.Config) *Handler {
 	if err != nil {
 		panic("failed to create WebAuthn from config: " + err.Error())
 	}
+
 	return &Handler{
 		webAuthn: webAuthnInstance,
 		appConf:  appConf,
+		Pool:     webAuthnPool.New(),
 	}
 }
 
@@ -83,7 +85,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()1: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
 		return
 	}
-	h.Pool.Add(tempSessionToken.Value, user, sessionData, 2*time.Second) // Assuming you have a pool to manage session data
+	h.Pool.Add(tempSessionToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data
 	// add the session token to the response
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")
@@ -109,6 +111,9 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 
 	credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)
 	if err != nil {
+		var body []byte
+		r.Body.Read(body)
+		log.Printf("%v %v %v %v %+v %v %+v %v %v", debugTag+"Handler.FinishRegistration()2: FinishRegistration failed", "err =", err, "user =", user, "sessionData =", sessionData, "r.Body =", string(body))
 		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
 		return
 	}

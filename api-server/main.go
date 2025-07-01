@@ -42,7 +42,7 @@ func main() {
 	app := appCore.New(true)
 	app.Settings.LoadEnv()
 	defer app.Close()
-
+	log.Printf("%smain() App settings: %+v, os Env: %+v\n", debugTag, app.Settings, os.Environ())
 	r := mux.NewRouter()
 
 	// Setup your API subrouter with CORS middleware

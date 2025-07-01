@@ -24,7 +24,7 @@ type Pool struct {
 	Pool PoolList
 }
 
-func NewSRPPool() *Pool {
+func New() *Pool {
 	return &Pool{
 		Pool: make(PoolList),
 	}
