@@ -133,3 +133,9 @@ Pass as Function Argument
 
 **Summary:**
 There’s no single right answer—choose the approach that makes your code clearer, safer, and easier to maintain.
+
+
+
+## Docker
+
+<https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configure-global-options-with-wslconfig>
