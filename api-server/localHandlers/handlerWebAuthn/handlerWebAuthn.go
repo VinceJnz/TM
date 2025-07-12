@@ -7,6 +7,7 @@ import (
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -30,12 +31,13 @@ func New(appConf *appCore.Config) *Handler {
 	webAuthnInstance, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: appConf.Settings.AppTitle,
 		RPID:          appConf.Settings.Host,
-		RPOrigins:     []string{"https://" + appConf.Settings.Host + ":" + appConf.Settings.PortHttp},
+		RPOrigins:     []string{"https://" + appConf.Settings.Host + ":" + appConf.Settings.PortHttps},
 	})
 	log.Printf("%v %v %+v %v %+v", debugTag+"New()1: Created WebAuthn instance", "webAuthnInstance =", *webAuthnInstance, "appConf.Settings =", appConf.Settings)
 	if err != nil {
 		panic("failed to create WebAuthn from config: " + err.Error())
 	}
+	log.Printf(debugTag+"New()2: WebAuthn config: RPID=%s, RPOrigins=%+v", appConf.Settings.Host, []string{"https://" + appConf.Settings.Host + ":" + appConf.Settings.PortHttps})
 
 	return &Handler{
 		webAuthn: webAuthnInstance,
@@ -78,6 +80,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()1: Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
+	log.Printf("BeginRegistration: challenge=%s", sessionData.Challenge)
 	// Create and Store sessionData in your session pool store
 	tempSessionToken, err := handlerAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
@@ -111,13 +114,14 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 
 	credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)
 	if err != nil {
-		var body []byte
-		r.Body.Read(body)
-		log.Printf("%v %v %v %v %+v %v %+v %v %v", debugTag+"Handler.FinishRegistration()2: FinishRegistration failed", "err =", err, "user =", user, "sessionData =", sessionData, "r.Body =", string(body))
+		//var body []byte
+		body, _ := io.ReadAll(r.Body)
+		log.Printf("FinishRegistration: challenge=%s", sessionData.Challenge)
+		log.Printf("%v Handler.FinishRegistration()2: FinishRegistration failed, err=%v, user=%+v, sessionData=%+v, r.Body=%s", debugTag, err, user, sessionData, string(body))
 		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
 		return
 	}
-	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.FinishRegistration()2: Successfully finished registration", "user =", user, "credential=", credential)
+	log.Printf("%v %v %+v %v %+v %v %+v", debugTag+"Handler.FinishRegistration()2: Successfully finished registration", "user =", user, "sessionData =", sessionData, "credential=", credential)
 	// At this point the user is registered and the credential is created.
 	//saveUser to the database
 	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, *user)

@@ -95,10 +95,10 @@ func (s *settings) LoadEnv() error {
 	s.ClientCaCert = os.Getenv("CLIENT_CA_CERT")
 	s.ServerKey = os.Getenv("SERVER_KEY")
 	s.ServerCert = os.Getenv("SERVER_CERT")
-	s.CertOpt, err = strconv.Atoi(os.Getenv("CERT_OPT"))
+	s.CertOpt, err = strconv.Atoi(os.Getenv("CERT_OPTION"))
 	if err != nil {
 		s.CertOpt = 0 // Default value if conversion fails
-		log.Printf("%sLoadEnv() Error converting CERT_OPT to int: %v, using default value 0\n", debugTag, err)
+		log.Printf("%sLoadEnv() Warning: converting CERT_OPTION to int: %v, using default value 0\n", debugTag, err)
 	}
 	s.LogFile = os.Getenv("LOG_FILE")
 	s.EmailAddr = os.Getenv("EMAIL_ADDR")

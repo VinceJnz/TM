@@ -120,9 +120,9 @@ func main() {
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:8081", "https://localhost:8081"}),                   // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // "http://localhost:8081" // or "*" if you want to test without restrictions
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),                           // Allowed HTTP methods
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}), // Allowed headers
+		handlers.AllowedOrigins([]string{"http://localhost:8081", "https://localhost:8081", "http://localhost:8085", "https://localhost:8086"}), // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // "http://localhost:8081" // or "*" if you want to test without restrictions
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),                                                            // Allowed HTTP methods
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}),                                  // Allowed headers
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
