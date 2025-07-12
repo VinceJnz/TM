@@ -33,11 +33,9 @@ func New(appConf *appCore.Config) *Handler {
 		RPID:          appConf.Settings.Host,
 		RPOrigins:     []string{"https://" + appConf.Settings.Host + ":" + appConf.Settings.PortHttps},
 	})
-	log.Printf("%v %v %+v %v %+v", debugTag+"New()1: Created WebAuthn instance", "webAuthnInstance =", *webAuthnInstance, "appConf.Settings =", appConf.Settings)
 	if err != nil {
 		panic("failed to create WebAuthn from config: " + err.Error())
 	}
-	log.Printf(debugTag+"New()2: WebAuthn config: RPID=%s, RPOrigins=%+v", appConf.Settings.Host, []string{"https://" + appConf.Settings.Host + ":" + appConf.Settings.PortHttps})
 
 	return &Handler{
 		webAuthn: webAuthnInstance,
@@ -80,7 +78,6 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()1: Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
-	log.Printf("BeginRegistration: challenge=%s", sessionData.Challenge)
 	// Create and Store sessionData in your session pool store
 	tempSessionToken, err := handlerAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {

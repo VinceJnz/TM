@@ -88,8 +88,6 @@ func WebAuthnReadQry(debugStr string, Db *sqlx.DB, id int) (models.WebAuthnCrede
 // WebAuthnWriteQry writes the user record to the database, inserting or updating as necessary
 func WebAuthnWriteQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCredential) (int, error) {
 	var err error
-	log.Printf("%v %v %v %v %+v", debugTag+"WebAuthnWriteQry()1 - ", "err =", err, "record =", record)
-
 	Tx, err := Db.Beginx() // Start a transaction
 	if err != nil {
 		log.Printf("%v %v %v", debugTag+"WebAuthnWriteQry()2 - ", "err =", err)
