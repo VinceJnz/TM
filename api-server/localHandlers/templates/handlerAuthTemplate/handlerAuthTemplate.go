@@ -3,6 +3,7 @@ package handlerAuthTemplate
 import (
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
+	"database/sql"
 	"errors"
 	"log"
 	"net/http"
@@ -240,8 +241,8 @@ const (
 	sqlUserFind     = `SELECT id FROM st_users WHERE id = $1`
 	sqlUserRead     = `SELECT id, name, username, email FROM st_users WHERE id = $1`
 	sqlUserNameRead = `SELECT id, name, username, email FROM st_users WHERE username = $1`
-	sqlUserInsert   = `INSERT INTO st_users (name, username, email, webauthn_handle) VALUES ($1, $2, $3, $4) RETURNING id`
-	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3, webauthn_handle = $4 WHERE id = $5`
+	sqlUserInsert   = `INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id`
+	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
 )
 
 func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
@@ -271,7 +272,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 	}
 	defer Tx.Rollback() // Ensure the transaction is rolled back if we don't commit it
 
-	_, err = UserWriteQryTx(debugStr, Tx, record) // Write the user record to the database
+	record.ID, err = UserWriteQryTx(debugStr, Tx, record) // Write the user record to the database
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry()2 - ", "err =", err, "record =", record)
 		return 0, err // If we can't write the record then we can't commit the transaction
@@ -285,25 +286,40 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.WebAuthnHandle).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email).Scan(&record.ID)
+	if err != nil {
+		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)
+		return 0, err // If we can't commit the transaction then we can't write the record
+	}
 	return record.ID, err
 }
 
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
-	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.WebAuthnHandle, record.ID)
+	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.ID)
+	if err != nil {
+		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx()1 - ", "err =", err, "record =", record)
+	}
 	return err
 }
 
 func UserWriteQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
 	var err error
 	err = Db.QueryRow(sqlUserFind, record.ID).Scan(&record.ID) // Check to see if a record exists
-	if err != nil {
+	switch err {
+	case sql.ErrNoRows:
 		record.ID, err = UserInsertQryTx(debugStr, Db, record) //No Existing record found so we are okay to insert the new record
-	} else {
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx()5 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+			return 0, err
+		}
+	case nil:
 		err = UserUpdateQryTx(debugStr, Db, record) //Existing record found so we are okay to update the record
-	}
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"TokenWriteQry()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx()6 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+			return 0, err
+		}
+	default:
+		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
 		return 0, err
 	}
 	return record.ID, err

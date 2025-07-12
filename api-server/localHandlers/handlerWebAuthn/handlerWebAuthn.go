@@ -121,20 +121,20 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
 		return
 	}
-	log.Printf("%v %v %+v %v %+v %v %+v", debugTag+"Handler.FinishRegistration()2: Successfully finished registration", "user =", user, "sessionData =", sessionData, "credential=", credential)
+
 	// At this point the user is registered and the credential is created.
 	//saveUser to the database
-	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, *user)
+	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.FinishRegistration()3 ", h.appConf.Db, *user)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.saveUser()2: Failed to save user", "err =", err, "record =", user, "userID =", userID)
+		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.FinishRegistration()4: Failed to save user", "err =", err, "record =", user, "userID =", userID)
 		return
 	}
 
 	// Save the new credential to the database
 	dbCredential := handlerAuthTemplate.WebAuthn2DbRecord(userID, *credential)
-	_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.saveUser()1 ", h.appConf.Db, dbCredential)
+	_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, dbCredential)
 	if err != nil {
-		log.Printf("%v %v %v %+v %v", debugTag+"Handler.saveUser()2: Failed to save credential", "err =", err, "record =", dbCredential)
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", dbCredential)
 		return
 	}
 
