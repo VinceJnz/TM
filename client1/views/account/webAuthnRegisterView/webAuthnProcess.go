@@ -108,7 +108,6 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 			"password": item.Password,
 			// Add other fields as needed
 		})
-		log.Printf("%v %v %+v", debugTag+"WebAuthnRegistration()1 userData: ", "userData =", userData.String()) //Log the user data in the browser
 
 		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]interface{}{
 			"method": "POST",

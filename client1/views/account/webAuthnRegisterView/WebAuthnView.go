@@ -5,7 +5,6 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
-	"log"
 	"math/big"
 	"syscall/js"
 	"time"
@@ -270,9 +269,9 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
 		event.Call("preventDefault")
-		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
+		//log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
-	log.Println(debugTag+"SubmitItemEdit()1", "ItemState =", editor.ItemState)
+
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
