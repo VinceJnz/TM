@@ -3,6 +3,7 @@ package webAuthnRegisterView
 import (
 	"encoding/base64"
 	"log"
+	"strings"
 	"syscall/js"
 )
 
@@ -18,8 +19,31 @@ type WebAuthnAttestation struct {
 	AttestationObj string `json:"attestationObject"`
 }
 
+// decodeBase64ToUint8Array Decode base64 string to Uint8Array
+// This function is used to convert the challenge and user.id from base64 to Uint8Array
 func decodeBase64ToUint8Array(b64 string) js.Value {
 	decoded, _ := base64.StdEncoding.DecodeString(b64)
+	uint8Array := js.Global().Get("Uint8Array").New(len(decoded))
+	js.CopyBytesToJS(uint8Array, decoded)
+	return uint8Array
+}
+
+// decodeBase64URLToUint8Array Decode base64 URL-encoded string to Uint8Array
+// This function replaces '-' with '+' and '_' with '/' to make it compatible with base64 decoding
+// It also pads the string with '=' if necessary to make its length a multiple of 4
+func decodeBase64URLToUint8Array(b64 string) js.Value {
+	// Pad the string if necessary
+	missing := len(b64) % 4
+	if missing != 0 {
+		b64 += strings.Repeat("=", 4-missing)
+	}
+	b64 = strings.ReplaceAll(b64, "-", "+")
+	b64 = strings.ReplaceAll(b64, "_", "/")
+	decoded, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		log.Printf("Error decoding challenge: %v", err)
+		return js.Undefined()
+	}
 	uint8Array := js.Global().Get("Uint8Array").New(len(decoded))
 	js.CopyBytesToJS(uint8Array, decoded)
 	return uint8Array
@@ -102,9 +126,11 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				publicKey := options.Get("publicKey")
 
 				// 2. Convert challenge and user.id from base64 to Uint8Array
-				publicKey.Set("challenge", decodeBase64ToUint8Array(publicKey.Get("challenge").String()))
+				//publicKey.Set("challenge", decodeBase64ToUint8Array(publicKey.Get("challenge").String()))
+				publicKey.Set("challenge", decodeBase64URLToUint8Array(publicKey.Get("challenge").String()))
 				user := publicKey.Get("user")
-				user.Set("id", decodeBase64ToUint8Array(user.Get("id").String()))
+				//user.Set("id", decodeBase64ToUint8Array(user.Get("id").String()))
+				user.Set("id", decodeBase64URLToUint8Array(user.Get("id").String()))
 				publicKey.Set("user", user)
 
 				// 3. Call the browser WebAuthn API
@@ -359,6 +385,8 @@ func (editor *ItemEditor) Login(this js.Value, args []js.Value) interface{} {
 	}()
 	return nil
 }
+
+//navigator.credentials.create({ publicKey: options.publicKey })
 
 // Register both registration and login callbacks
 //func RegisterCallbacks() {
