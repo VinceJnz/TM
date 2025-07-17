@@ -101,7 +101,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		// 1. Fetch registration options from the server
 		fetch := js.Global().Get("fetch")
 		// Marshal editor.CurrentRecord to JSON
-		userData := js.Global().Get("JSON").Call("stringify", map[string]interface{}{
+		userData := js.Global().Get("JSON").Call("stringify", map[string]any{
 			"name":     item.Name,
 			"username": item.Username,
 			"email":    item.Email,
@@ -109,18 +109,18 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 			// Add other fields as needed
 		})
 
-		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]interface{}{
+		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]any{
 			"method": "POST",
 			"body":   userData,
-			"headers": map[string]interface{}{
+			"headers": map[string]any{
 				"Content-Type": "application/json",
 			},
 		})
 
-		then := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		then := js.FuncOf(func(this js.Value, args []js.Value) any {
 			resp := args[0]
 			jsonPromise := resp.Call("json")
-			then2 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
 				options := args[0]
 				publicKey := options.Get("publicKey")
 
@@ -133,18 +133,18 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				publicKey.Set("user", user)
 
 				// 3. Call the browser WebAuthn API
-				credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]interface{}{
+				credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
 					"publicKey": publicKey,
 				})
 
-				then3 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
 					cred := args[0]
 					// 4. Send result to server
 					credJSON := js.Global().Get("JSON").Call("stringify", cred)
-					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/", map[string]interface{}{
+					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/", map[string]any{
 						"method": "POST",
 						"body":   credJSON,
-						"headers": map[string]interface{}{
+						"headers": map[string]any{
 							"Content-Type": "application/json",
 						},
 					})
@@ -226,7 +226,7 @@ func createPublicKey(options protocol.CredentialCreation) js.Value {
 	publicKey.Set("user", user)
 
 	// Set relying party
-	publicKey.Set("rp", map[string]interface{}{
+	publicKey.Set("rp", map[string]any{
 		"name": options.Response.RelyingParty.Name,
 	})
 
@@ -243,18 +243,18 @@ func createPublicKey(options protocol.CredentialCreation) js.Value {
 
 func getAttestation(publicKey js.Value) (WebAuthnAttestation, error) {
 	// Call the browser WebAuthn API
-	credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]interface{}{
+	credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
 		"publicKey": publicKey,
 	})
 
 	// When the promise resolves, send the credential to the server
-	then := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	then := js.FuncOf(func(this js.Value, args []js.Value) any {
 		cred := args[0]
 		credJSON := js.Global().Get("JSON").Call("stringify", cred)
-		js.Global().Get("fetch").Invoke("/api/v1/webauthn/register/finish", map[string]interface{}{
+		js.Global().Get("fetch").Invoke("/api/v1/webauthn/register/finish", map[string]any{
 			"method": "POST",
 			"body":   credJSON,
-			"headers": map[string]interface{}{
+			"headers": map[string]any{
 				"Content-Type": "application/json",
 			},
 		})
@@ -309,14 +309,14 @@ func (editor *ItemEditor) FinishRegistrationXX(options protocol.CredentialCreati
 	publicKey.Set("user", user)
 
 	// Set other fields as needed (e.g., rp, pubKeyCredParams, timeout, etc.)
-	publicKey.Set("rp", map[string]interface{}{
+	publicKey.Set("rp", map[string]any{
 		"name": options.Response.RelyingParty.Name,
 	})
 	publicKey.Set("pubKeyCredParams", options.Response.Parameters)
 	// ...set any other required fields...
 
 	// Call WebAuthn API
-	//credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]interface{}{
+	//credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
 	//	"publicKey": publicKey,
 	//})
 
@@ -335,17 +335,17 @@ func (editor *ItemEditor) FinishRegistrationXX(options protocol.CredentialCreati
 // WebAuthn Login process
 //********************************************************************
 
-func (editor *ItemEditor) Login(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) Login(this js.Value, args []js.Value) any {
 	go func() {
 		// 1. Begin authentication
 		fetch := js.Global().Get("fetch")
-		respPromise := fetch.Invoke(ApiURL+"/login/begin/", map[string]interface{}{
+		respPromise := fetch.Invoke(ApiURL+"/login/begin/", map[string]any{
 			"method": "POST",
 		})
-		then := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		then := js.FuncOf(func(this js.Value, args []js.Value) any {
 			resp := args[0]
 			jsonPromise := resp.Call("json")
-			then2 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
 				options := args[0]
 				publicKey := options.Get("publicKey")
 				// 2. Prepare challenge and allowCredentials
@@ -358,17 +358,17 @@ func (editor *ItemEditor) Login(this js.Value, args []js.Value) interface{} {
 				}
 				publicKey.Set("allowCredentials", allowCredentials)
 				// 3. Call WebAuthn API
-				credPromise := js.Global().Get("navigator").Get("credentials").Call("get", map[string]interface{}{
+				credPromise := js.Global().Get("navigator").Get("credentials").Call("get", map[string]any{
 					"publicKey": publicKey,
 				})
-				then3 := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
 					cred := args[0]
 					// 4. Send result to server
 					credJSON := js.Global().Get("JSON").Call("stringify", cred)
-					js.Global().Get("fetch").Invoke(ApiURL+"/login/finish/", map[string]interface{}{
+					js.Global().Get("fetch").Invoke(ApiURL+"/login/finish/", map[string]any{
 						"method": "POST",
 						"body":   credJSON,
-						"headers": map[string]interface{}{
+						"headers": map[string]any{
 							"Content-Type": "application/json",
 						},
 					})
