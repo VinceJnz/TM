@@ -4,8 +4,7 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
-	"client1/v2/views/account/accountRegisterView"
-	"client1/v2/views/account/webAuthnRegisterView"
+	"client1/v2/views/account/webAuthnRegistrationView"
 	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
 	"time"
@@ -47,8 +46,8 @@ const ApiURL = "/auth"
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
 	Username string `json:"username"`
-	Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)
-	Salt     []byte `json:"salt"`
+	//Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)
+	//Salt     []byte `json:"salt"`
 	//Created         time.Time `json:"created"`
 	//Modified        time.Time `json:"modified"`
 }
@@ -201,12 +200,12 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
 	editor.UiComponents.Username.Call("setAttribute", "required", "true")
 
-	localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "itemPassword")
-	editor.UiComponents.Password.Call("setAttribute", "required", "true")
+	//localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "itemPassword")
+	//editor.UiComponents.Password.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Username)
-	form.Call("appendChild", localObjs.Password)
+	//form.Call("appendChild", localObjs.Password)
 
 	// Create form buttons
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -218,23 +217,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item
-	register := accountRegisterView.New(editor.document, editor.events, editor.appCore, accountRegisterView.ParentData{})
-
-	// Create a toggle child button
-	registerButton := editor.document.Call("createElement", "button")
-	registerButton.Set("innerHTML", "SrpRegister")
-	registerButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		register.NewItemData(this, args) // WARNING ... this is different for the page ...
-		register.Toggle()
-		return nil
-	}))
-
-	// Append child components to editor div
-	editor.elements.EditDiv.Call("appendChild", registerButton)
-	editor.elements.EditDiv.Call("appendChild", register.Div)
-
-	// Create and add child views and buttons to Item
-	webAuthnRegister := webAuthnRegisterView.New(editor.document, editor.events, editor.appCore, webAuthnRegisterView.ParentData{})
+	webAuthnRegister := webAuthnRegistrationView.New(editor.document, editor.events, editor.appCore, webAuthnRegistrationView.ParentData{})
 
 	// Create a toggle child button
 	webAuthnButton := editor.document.Call("createElement", "button")
@@ -280,22 +263,23 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
+	//editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 
 	//log.Printf(debugTag+"SubmitItemEdit()2 Username %v, Password %v", editor.CurrentRecord.Username, editor.CurrentRecord.Password)
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
-	//switch editor.ItemState {
-	//case ItemStateEditing:
+	//itch editor.ItemState {
+	//se viewHelpers.ItemStateEditing:
 	//	go editor.UpdateItem(editor.CurrentRecord)
-	//case ItemStateAdding:
+	//se viewHelpers.ItemStateAdding:
 	//	go editor.AddItem(editor.CurrentRecord)
-	//default:
+	//fault:
 	//	editor.onCompletionMsg("Invalid item state for submission")
-	//}
-	editor.authProcess()
+	//
+
+	editor.WebAuthnLogin1(editor.CurrentRecord.Username)
 
 	editor.resetEditForm()
 	return nil

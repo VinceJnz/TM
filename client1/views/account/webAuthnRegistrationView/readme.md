@@ -218,3 +218,111 @@ navigator.credentials
         ...
     })
 ```
+
+
+
+## Debug notes from chatGPT
+
+### Question
+
+In golang I am using the package "github.com/go-webauthn/webauthn/webauthn" to do authentication.
+
+I get the following error when trying to authenticate: userHandle and User ID do not match
+
+How to I determine where the error is coming from, e.g. API server or client?
+
+
+### Answer
+
+The error message:
+
+```
+userHandle and User ID do not match
+```
+
+from the Go WebAuthn package (`github.com/go-webauthn/webauthn/webauthn`) occurs **during the assertion (authentication) process** when the `userHandle` returned from the client does **not match** the user ID known to the server for the credential being used.
+
+---
+
+### ✅ What this means
+
+In the WebAuthn protocol:
+
+* During authentication (`FinishLogin()`), the **authenticator** sends back a `userHandle`.
+* The **server** uses the credential ID (from the request) to **look up the stored credential**, including the user ID it was registered with.
+* The server then **compares**:
+
+  ```
+  response.UserHandle == storedCredential.User.ID()
+  ```
+
+If these **don’t match exactly**, the server throws:
+
+> `userHandle and User ID do not match`
+
+---
+
+### 🔍 Where the error is happening
+
+**This error is thrown on the API server**, specifically inside the `webauthn.FinishLogin()` function. It is **not a client-side error**.
+
+---
+
+### 🧪 How to investigate
+
+Here’s how to find the cause:
+
+#### 1. **Check what you're returning for `User.ID()`**
+
+* The `User` object must implement the `webauthn.User` interface.
+* Make sure the `ID()` method returns a **consistent and correct byte slice**.
+
+Example:
+
+```go
+func (u *User) ID() []byte {
+    return []byte(u.IDString) // or however you store the ID
+}
+```
+
+Ensure the byte slice returned here is **exactly the same** as what was used during registration for this credential.
+
+#### 2. **Check stored credential’s User ID**
+
+* When storing credentials during registration, make sure the `Credential` struct (with `Authenticator`) is linked to the correct user ID.
+* Some bugs happen if you're storing the wrong user ID alongside the credential.
+
+#### 3. **Log the values**
+
+Add debug logs before calling `webauthn.FinishLogin()`:
+
+```go
+log.Printf("Start FinishLogin with user ID: %x", user.ID())
+```
+
+Then inspect the `response.UserHandle` manually:
+
+```go
+log.Printf("UserHandle from client: %x", parsedAssertionResponse.Response.UserHandle)
+```
+
+To dig deeper, you might wrap or fork the library to add detailed logging.
+
+---
+
+### ⚠️ Common Mistakes
+
+* Returning a new `[]byte` each time from `User.ID()` that isn't equal due to memory or encoding issues.
+* Storing the credential without correctly associating it with the user's ID at registration time.
+* Base64 encoding/decoding issues between frontend and backend.
+* If you're storing user IDs as strings in your database, make sure you're not returning a mismatched string-to-byte conversion.
+
+---
+
+### 🧭 Summary
+
+* ✅ **Error location**: Server side, in `FinishLogin()`
+* 🔍 **Check**: That `User.ID()` matches the `userHandle` that was returned during login
+* 🛠 **Solution**: Ensure consistent user ID handling across registration and authentication
+
+Would you like help inspecting a specific snippet of your code (e.g., your `User` struct or how you handle credential registration)?

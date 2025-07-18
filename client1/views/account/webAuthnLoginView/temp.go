@@ -2,6 +2,7 @@ package webAuthnLoginView
 
 import (
 	"encoding/base64"
+	"log"
 	"strings"
 	"syscall/js"
 )
@@ -21,7 +22,7 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 		bodyJSON := js.Global().Get("JSON").Call("stringify", requestBody).String()
 
-		promise := js.Global().Call("fetch", "/api/v1/webauthn/login/begin", map[string]any{
+		promise := js.Global().Call("fetch", "/api/v1/webauthn/login/begin/"+username, map[string]any{
 			"method": "POST",
 			"headers": map[string]any{
 				"Content-Type": "application/json",
@@ -31,10 +32,10 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 		// Handle fetch response
 		then := js.FuncOf(func(this js.Value, args []js.Value) any {
-			defer func() {
-				// Clean up the function to prevent memory leaks
-				args[0].Call("release")
-			}()
+			//defer func() {
+			//	// Clean up the function to prevent memory leaks
+			//	args[0].Call("release")
+			//}()
 
 			resp := args[0]
 
@@ -47,10 +48,10 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 			jsonPromise := resp.Call("json")
 
 			then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
-				defer func() {
-					// Clean up
-					args[0].Call("release")
-				}()
+				//defer func() {
+				//	// Clean up
+				//	args[0].Call("release")
+				//}()
 
 				options := args[0]
 				publicKey := options.Get("publicKey")
@@ -87,17 +88,18 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 				// Handle credential response
 				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
-					defer func() {
-						args[0].Call("release")
-					}()
+					//defer func() {
+					//	args[0].Call("release")
+					//}()
 
 					cred := args[0]
 
 					// Properly serialize the credential
 					credJSON := editor.serializeCredential(cred)
+					log.Printf("%sItemEditor.WebAuthnLogin1()2, credJSON = %+v", debugTag, credJSON)
 
 					// 3. Send result to server
-					finishPromise := js.Global().Call("fetch", "/api/v1/webauthn/login/finish", map[string]any{
+					finishPromise := js.Global().Call("fetch", "/api/v1/webauthn/login/finish/", map[string]any{
 						"method": "POST",
 						"body":   credJSON,
 						"headers": map[string]any{
@@ -107,9 +109,9 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 					// Handle final response
 					finishThen := js.FuncOf(func(this js.Value, args []js.Value) any {
-						defer func() {
-							args[0].Call("release")
-						}()
+						//defer func() {
+						//	args[0].Call("release")
+						//}()
 
 						resp := args[0]
 						if resp.Get("ok").Bool() {
@@ -121,9 +123,9 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 					})
 
 					finishCatch := js.FuncOf(func(this js.Value, args []js.Value) any {
-						defer func() {
-							args[0].Call("release")
-						}()
+						//defer func() {
+						//	args[0].Call("release")
+						//}()
 						editor.handleWebAuthnError("Network error during login finish")
 						return nil
 					})
@@ -134,9 +136,9 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 				// Handle credential error
 				credCatch := js.FuncOf(func(this js.Value, args []js.Value) any {
-					defer func() {
-						args[0].Call("release")
-					}()
+					//defer func() {
+					//	args[0].Call("release")
+					//}()
 					editor.handleWebAuthnError("WebAuthn credential request failed")
 					return nil
 				})
@@ -151,9 +153,9 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 		// Handle initial fetch error
 		catchFunc := js.FuncOf(func(this js.Value, args []js.Value) any {
-			defer func() {
-				args[0].Call("release")
-			}()
+			//defer func() {
+			//	args[0].Call("release")
+			//}()
 			editor.handleWebAuthnError("Network error during login begin")
 			return nil
 		})
@@ -227,11 +229,11 @@ func (editor *ItemEditor) arrayBufferToBase64URL(buffer js.Value) string {
 }
 
 // Success handling function
-func (editor *ItemEditor) handleWebAuthnSuccess1x() {
-	// Implement your success handling logic here
-	js.Global().Get("console").Call("log", "WebAuthn login successful")
-	// You might want to redirect or update UI state
-}
+//func (editor *ItemEditor) handleWebAuthnSuccess1x() {
+//	// Implement your success handling logic here
+//	js.Global().Get("console").Call("log", "WebAuthn login successful")
+//	// You might want to redirect or update UI state
+//}
 
 // Example usage function - how to integrate with your UI
 func (editor *ItemEditor) HandleLoginFormSubmit() {

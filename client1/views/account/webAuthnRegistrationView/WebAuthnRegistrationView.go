@@ -1,18 +1,18 @@
-package accountRegisterView
+package webAuthnRegistrationView
 
 import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
-	"log"
 	"math/big"
-	"net/http"
 	"syscall/js"
 	"time"
+
+	"github.com/go-webauthn/webauthn/protocol"
 )
 
-const debugTag = "acountRegisterView."
+const debugTag = "webAuthnRegisterView."
 
 type ItemState int
 
@@ -41,7 +41,9 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/auth"
+// const ApiURL =  "/webauthn"
+// const ApiURL = "https://localhost:8086/api/v1" + "/webauthn"
+const ApiURL = "/api/v1" + "/webauthn"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -62,7 +64,7 @@ type TableData struct {
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`
 
-	group int // This is for debug purposes
+	//group int // This is for debug purposes
 }
 
 // ********************* This needs to be changed for each api **********************
@@ -78,7 +80,8 @@ type ParentData struct {
 }
 
 type Item struct {
-	Record TableData
+	Record          TableData
+	WebAuthnOptions protocol.CredentialCreation // This will hold the WebAuthn options for registration
 	//Add child structures as necessary
 }
 
@@ -116,7 +119,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displaying the editor
+	// Create a div for displayingthe editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
@@ -143,6 +146,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 	return editor
 }
+
+///	Display()
+//	FetchItems()
+//	Hide()
+//	GetDiv() js.Value
+//	ResetView()
 
 func (editor *ItemEditor) ResetView() {
 	editor.RecordState = RecordStateReloadRequired
@@ -260,7 +269,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
 		event.Call("preventDefault")
-		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
+		//log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
 	// ********************* This needs to be changed for each api **********************
@@ -276,7 +285,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//case ItemStateEditing:
 	//     go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
-		go editor.AddItem(editor.CurrentRecord)
+		//editor.BeginRegistration(editor.CurrentRecord)
+		editor.WebAuthnRegistration(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
@@ -291,125 +301,9 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 	return nil
 }
 
-/*
-// UpdateItem updates an existing item record in the item list
-func (editor *ItemEditor) UpdateItem(item TableData) {
-	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
-	editor.RecordState = RecordStateReloadRequired
-	editor.FetchItems() // Refresh the item list
-	editor.updateStateDisplay(ItemStateNone)
-	editor.onCompletionMsg("Item record updated successfully")
-}
-*/
-
-// AddItem adds a new item to the item list
-func (editor *ItemEditor) AddItem(item TableData) {
-	success := func(err error, data *httpProcessor.ReturnData) {
-		if err != nil {
-			log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()4 success error: ", "err =", err, "item =", item) //Log the error in the browser
-		}
-		log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()5 success: ", "err =", err, "item =", item) //Log the error in the browser
-		// Next process step
-		editor.onCompletionMsg("Account successfully created???")
-	}
-
-	fail := func(err error, data *httpProcessor.ReturnData) {
-		log.Printf("%v %v %+v %v %+v", debugTag+"AddItem()6 fail: ", "err =", err, "item =", item) //Log the error in the browser
-		editor.onCompletionMsg("Account creation failed???")
-	}
-
-	editor.updateStateDisplay(ItemStateSaving)
-	item, err := authCreate(item)
-	if err != nil {
-		log.Println(debugTag + "AddItem()1 Cannot create account. Failed to create auth data for item.")
-		return
-	}
-	go func() {
-		editor.client.NewRequest(http.MethodPost, ApiURL+"/register/", nil, &item, success, fail)
-		editor.RecordState = RecordStateReloadRequired
-		//editor.FetchItems() // Refresh the item list
-		editor.updateStateDisplay(ItemStateNone)
-	}()
-}
-
-/*
 func (editor *ItemEditor) FetchItems() {
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.RecordState = RecordStateCurrent
-		// Fetch child data
-		//.....
-		go func() {
-			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
-			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-		}()
-	}
+	//editor.NewItemData() // The login view is different to all the other views, there is no data to fetch.
 }
-*/
-
-/*
-func (editor *ItemEditor) deleteItem(itemID int) {
-	go func() {
-		editor.updateStateDisplay(ItemStateDeleting)
-		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
-		editor.RecordState = RecordStateReloadRequired
-		editor.FetchItems()
-		editor.updateStateDisplay(ItemStateNone)
-		editor.onCompletionMsg("Item record deleted successfully")
-	}()
-}
-*/
-
-/*
-func (editor *ItemEditor) populateItemList() {
-		editor.ListDiv.Set("innerHTML", "") // Clear existing content
-
-		// Add New Item button
-		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
-		editor.ListDiv.Call("appendChild", addNewItemButton)
-
-		for _, i := range editor.Records {
-			record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
-
-			// Create and add child views to Item
-			//editor.ItemList = append(editor.ItemList, Item{Record: record})
-			//
-
-			itemDiv := editor.document.Call("createElement", "div")
-			itemDiv.Set("id", debugTag+"itemDiv")
-			// ********************* This needs to be changed for each api **********************
-			itemDiv.Set("innerHTML", record.Name+" ("+record.Email+")")
-			itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
-
-			// Create an edit button
-			editButton := editor.document.Call("createElement", "button")
-			editButton.Set("innerHTML", "Edit")
-			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-				editor.CurrentRecord = record
-				editor.updateStateDisplay(ItemStateEditing)
-				editor.populateEditForm()
-				return nil
-			}))
-
-			// Create a delete button
-			deleteButton := editor.document.Call("createElement", "button")
-			deleteButton.Set("innerHTML", "Delete")
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-				editor.deleteItem(record.ID)
-				return nil
-			}))
-
-			itemDiv.Call("appendChild", editButton)
-			itemDiv.Call("appendChild", deleteButton)
-
-			editor.ListDiv.Call("appendChild", itemDiv)
-		}
-}
-*/
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: viewHelpers.ItemState(newState)})

@@ -1,4 +1,4 @@
-package loginView
+package srpLoginView
 
 import (
 	"client1/v2/app/eventProcessor"
@@ -11,7 +11,7 @@ import (
 	"github.com/1Password/srp"
 )
 
-//const debugTag = "viewLogin."
+//const debugTag = "srpLoginView."
 
 //Add some sort of timeout on this process ?????????????????????
 //Either via context or go routine?????

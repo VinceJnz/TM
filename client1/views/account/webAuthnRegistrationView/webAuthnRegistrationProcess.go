@@ -1,4 +1,4 @@
-package webAuthnRegisterView
+package webAuthnRegistrationView
 
 import (
 	"encoding/base64"

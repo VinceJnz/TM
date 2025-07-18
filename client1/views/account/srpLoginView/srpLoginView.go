@@ -1,11 +1,10 @@
-package loginView
+package srpLoginView
 
 import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
-	"client1/v2/views/account/accountRegisterView"
-	"client1/v2/views/account/webAuthnRegisterView"
+	"client1/v2/views/account/srpRegistrationView"
 	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
 	"time"
@@ -13,7 +12,7 @@ import (
 	"github.com/1Password/srp"
 )
 
-const debugTag = "loginView."
+const debugTag = "srpLoginView."
 
 type ItemState int
 
@@ -218,7 +217,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item
-	register := accountRegisterView.New(editor.document, editor.events, editor.appCore, accountRegisterView.ParentData{})
+	register := srpRegistrationView.New(editor.document, editor.events, editor.appCore, srpRegistrationView.ParentData{})
 
 	// Create a toggle child button
 	registerButton := editor.document.Call("createElement", "button")
@@ -232,22 +231,6 @@ func (editor *ItemEditor) populateEditForm() {
 	// Append child components to editor div
 	editor.elements.EditDiv.Call("appendChild", registerButton)
 	editor.elements.EditDiv.Call("appendChild", register.Div)
-
-	// Create and add child views and buttons to Item
-	webAuthnRegister := webAuthnRegisterView.New(editor.document, editor.events, editor.appCore, webAuthnRegisterView.ParentData{})
-
-	// Create a toggle child button
-	webAuthnButton := editor.document.Call("createElement", "button")
-	webAuthnButton.Set("innerHTML", "WebAuthnRegister")
-	webAuthnButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		webAuthnRegister.NewItemData(this, args) // WARNING ... this is different for the page ...
-		webAuthnRegister.Toggle()
-		return nil
-	}))
-
-	// Append child components to editor div
-	editor.elements.EditDiv.Call("appendChild", webAuthnButton)
-	editor.elements.EditDiv.Call("appendChild", webAuthnRegister.Div)
 
 	// Append form to editor div
 	editor.elements.EditDiv.Call("appendChild", form)

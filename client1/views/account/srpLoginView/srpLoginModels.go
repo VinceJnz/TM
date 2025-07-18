@@ -1,4 +1,4 @@
-package loginView
+package srpLoginView
 
 import "math/big"
 

@@ -1,4 +1,4 @@
-package accountRegisterView
+package srpRegistrationView
 
 import (
 	"crypto/rand"
