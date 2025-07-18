@@ -139,3 +139,16 @@ There’s no single right answer—choose the approach that makes your code clea
 ## Docker
 
 <https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configure-global-options-with-wslconfig>
+
+Use the following command steps to compact the docker vhdx (vdisk)
+
+```cmd
+wsl --shutdown
+
+docker system prune
+
+diskpart
+select vdisk file="C:\Users\Vince2\AppData\Local\Docker\wsl\disk\docker_data.vhdx"
+compact vdisk
+exit
+```
