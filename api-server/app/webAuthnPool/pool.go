@@ -32,7 +32,7 @@ func New() *Pool {
 
 func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.SessionData, attrib ...time.Duration) {
 	if user == nil || sessionData == nil {
-		log.Printf(debugTag + "Handler.Add()1 - User or sessionData is nil, cannot add to pool")
+		log.Printf(debugTag + "Pool.Add()1 - User or sessionData is nil, cannot add to pool")
 		return
 	}
 	i := PoolItem{
@@ -41,10 +41,12 @@ func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.Sessio
 	}
 	// Check if the token already exists in the pool
 	if _, exists := p.Pool[token]; exists {
-		log.Printf(debugTag + "Handler.Add()2 - Token already exists in pool, updating existing item")
+		log.Printf(debugTag + "Pool.Add()2 - Token already exists in pool, updating existing item")
 		// Update the existing item in the pool
 	}
 	p.Pool[token] = i
+
+	log.Printf("%sPool.Add()3 attrib = %+v, token = %+v, user = %+v, sessionData = %+v", debugTag, attrib, token, user, sessionData)
 
 	if len(attrib) > 0 {
 		if attrib[0] > 0 {
@@ -79,6 +81,6 @@ func (p *Pool) ItemTimeOut(token string, timeout time.Duration) {
 	time.Sleep(timeout)
 	if _, ok := p.Pool[token]; ok {
 		p.Delete(token)
-		log.Printf(debugTag + "Handler.ItemTimeOut()1 ****** Auth timed out: Pool server deleted ********")
+		log.Printf(debugTag + "Pool.ItemTimeOut()1 ****** Auth timed out: Pool server deleted ********")
 	}
 }

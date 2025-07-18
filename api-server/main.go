@@ -63,7 +63,7 @@ func main() {
 	WebAuthn := handlerWebAuthn.New(app)
 	subR1.HandleFunc("/webauthn/register/begin/", WebAuthn.BeginRegistration).Methods("POST")
 	subR1.HandleFunc("/webauthn/register/finish/", WebAuthn.FinishRegistration).Methods("POST")
-	subR1.HandleFunc("/webauthn/login/begin/", WebAuthn.BeginLogin).Methods("POST")
+	subR1.HandleFunc("/webauthn/login/begin/{username}", WebAuthn.BeginLogin).Methods("POST")
 	subR1.HandleFunc("/webauthn/login/finish/", WebAuthn.FinishLogin).Methods("POST")
 
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()

@@ -66,7 +66,7 @@ func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Crede
 	defer rows.Close()
 
 	for rows.Next() {
-		if err := rows.Scan(&record.CredentialID, &record.PublicKey, &record.AAGUID, &record.SignCount, &record.AttestationType); err != nil {
+		if err := rows.Scan(&record.ID, &record.UserID, &record.CredentialID, &record.PublicKey, &record.AAGUID, &record.SignCount, &record.AttestationType, &record.Created, &record.Modified); err != nil {
 			return nil, err
 		}
 		// Convert DB record to WebAuthnCredential

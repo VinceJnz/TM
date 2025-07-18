@@ -17,7 +17,7 @@ import (
 type AccountStatus int
 
 const (
-	AccountNew AccountStatus = iota + 1
+	AccountNew AccountStatus = iota
 	AccountVerified
 	AccountActive
 	AccountDisabled
