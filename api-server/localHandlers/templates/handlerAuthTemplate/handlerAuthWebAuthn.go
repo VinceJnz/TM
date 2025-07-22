@@ -66,12 +66,14 @@ func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Crede
 	defer rows.Close()
 
 	for rows.Next() {
+		log.Printf("%vWebAuthnUserReadQry()1: id = %v webAuthnCreds = %v", debugStr, id, webAuthnCreds)
 		if err := rows.Scan(&record.ID, &record.UserID, &record.CredentialID, &record.PublicKey, &record.AAGUID, &record.SignCount, &record.AttestationType, &record.Created, &record.Modified); err != nil {
 			return nil, err
 		}
 		// Convert DB record to WebAuthnCredential
 		webAuthnCred := DbRecord2WebAuthn(record)
 		webAuthnCreds = append(webAuthnCreds, webAuthnCred)
+		log.Printf("%vWebAuthnUserReadQry()2: id = %v webAuthnCreds = %v", debugStr, id, webAuthnCreds)
 	}
 	return webAuthnCreds, rows.Err()
 }

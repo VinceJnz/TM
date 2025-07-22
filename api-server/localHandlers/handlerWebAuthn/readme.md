@@ -279,3 +279,111 @@ When storing WebAuthn registration data in your database, you should NOT store:
 
 Only store what is needed for authentication: user handle, credential ID, public key, AAGUID, sign count, credential type, and user association.
 Never store private keys, temporary session data, or unnecessary sensitive client information.
+
+
+## WebAuthn Credential struct
+
+```go
+func NewCredential(clientDataHash []byte, c *protocol.ParsedCredentialCreationData) (credential *Credential, err error) {
+	credential = &Credential{
+		ID:              c.Response.AttestationObject.AuthData.AttData.CredentialID,
+		PublicKey:       c.Response.AttestationObject.AuthData.AttData.CredentialPublicKey,
+		AttestationType: c.Response.AttestationObject.Format,
+		Transport:       c.Response.Transports,
+		Flags:           NewCredentialFlags(c.Response.AttestationObject.AuthData.Flags),
+		Authenticator: Authenticator{
+			AAGUID:     c.Response.AttestationObject.AuthData.AttData.AAGUID,
+			SignCount:  c.Response.AttestationObject.AuthData.Counter,
+			Attachment: c.AuthenticatorAttachment,
+		},
+		Attestation: CredentialAttestation{
+			ClientDataJSON:     c.Raw.AttestationResponse.ClientDataJSON,
+			ClientDataHash:     clientDataHash,
+			AuthenticatorData:  c.Raw.AttestationResponse.AuthenticatorData,
+			PublicKeyAlgorithm: c.Raw.AttestationResponse.PublicKeyAlgorithm,
+			Object:             c.Raw.AttestationResponse.AttestationObject,
+		},
+	}
+
+	return credential, nil
+}
+```
+
+
+```go
+type Credential struct {
+	// The Credential ID of the public key credential source. Described by the Credential Record 'id' field.
+	ID []byte `json:"id"`
+
+	// The credential public key of the public key credential source. Described by the Credential Record 'publicKey field.
+	PublicKey []byte `json:"publicKey"`
+
+	// The attestation format used (if any) by the authenticator when creating the credential.
+	AttestationType string `json:"attestationType"`
+
+	// The transport types the authenticator supports.
+	Transport []protocol.AuthenticatorTransport `json:"transport"`
+
+	// The commonly stored flags.
+	Flags CredentialFlags `json:"flags"`
+
+	// The Authenticator information for a given certificate.
+	Authenticator Authenticator `json:"authenticator"`
+
+	// The attestation values that can be used to validate this credential via the MDS3 at a later date.
+	Attestation CredentialAttestation `json:"attestation"`
+}
+
+
+    type AuthenticatorTransport string
+
+
+    type CredentialFlags struct {
+      // Flag UP indicates the users presence.
+      UserPresent bool `json:"userPresent"`
+
+      // Flag UV indicates the user performed verification.
+      UserVerified bool `json:"userVerified"`
+
+      // Flag BE indicates the credential is able to be backed up and/or sync'd between devices. This should NEVER change.
+      BackupEligible bool `json:"backupEligible"`
+
+      // Flag BS indicates the credential has been backed up and/or sync'd. This value can change but it's recommended
+      // that RP's keep track of this value.
+      BackupState bool `json:"backupState"`
+
+      raw protocol.AuthenticatorFlags
+    }
+
+        type AuthenticatorFlags byte
+
+
+    type Authenticator struct {
+      // The AAGUID of the authenticator. An AAGUID is defined as an array containing the globally unique
+      // identifier of the authenticator model being sought.
+      AAGUID []byte `json:"AAGUID"`
+
+      // SignCount -Upon a new login operation, the Relying Party compares the stored signature counter value
+      // with the new signCount value returned in the assertion’s authenticator data. If this new
+      // signCount value is less than or equal to the stored value, a cloned authenticator may
+      // exist, or the authenticator may be malfunctioning.
+      SignCount uint32 `json:"signCount"`
+
+      // CloneWarning - This is a signal that the authenticator may be cloned, i.e. at least two copies of the
+      // credential private key may exist and are being used in parallel. Relying Parties should incorporate
+      // this information into their risk scoring. Whether the Relying Party updates the stored signature
+      // counter value in this case, or not, or fails the authentication ceremony or not, is Relying Party-specific.
+      CloneWarning bool `json:"cloneWarning"`
+
+      // Attachment is the authenticatorAttachment value returned by the request.
+      Attachment protocol.AuthenticatorAttachment `json:"attachment"`
+    }
+
+    type CredentialAttestation struct {
+      ClientDataJSON     []byte `json:"clientDataJSON"`
+      ClientDataHash     []byte `json:"clientDataHash"`
+      AuthenticatorData  []byte `json:"authenticatorData"`
+      PublicKeyAlgorithm int64  `json:"publicKeyAlgorithm"`
+      Object             []byte `json:"object"`
+    }
+```
