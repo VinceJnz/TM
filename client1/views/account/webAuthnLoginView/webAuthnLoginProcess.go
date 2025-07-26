@@ -30,6 +30,7 @@ func decodeBase64URLToUint8Array(b64 string) js.Value {
 }
 
 func (editor *ItemEditor) WebAuthnLogin(item TableData) {
+	log.Printf("%sWebAuthnLogin()0 called with item: %v", debugTag, item)
 	go func() {
 		// Marshal editor.CurrentRecord to JSON
 		userData := js.Global().Get("JSON").Call("stringify", map[string]any{
@@ -64,6 +65,7 @@ func (editor *ItemEditor) WebAuthnLogin(item TableData) {
 			}
 
 			jsonPromise := resp.Call("json")
+			log.Printf("%sWebAuthnLogin()1 Login options fetched successfully, jsonPromise = %s", debugTag, jsonPromise.String())
 
 			then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
 				defer func() {
@@ -76,6 +78,8 @@ func (editor *ItemEditor) WebAuthnLogin(item TableData) {
 
 				// Convert challenge from base64url to Uint8Array
 				challengeStr := publicKey.Get("challenge").String()
+				log.Printf("%sWebAuthnLogin()2 PublicKey = %s, challenge = %s", debugTag, publicKey.String(), challengeStr)
+
 				challenge, err := editor.decodeBase64URLToUint8Array(challengeStr)
 				if err != nil {
 					editor.handleWebAuthnError("Failed to decode challenge")
@@ -114,6 +118,7 @@ func (editor *ItemEditor) WebAuthnLogin(item TableData) {
 
 					// Properly serialize the credential
 					credJSON := js.Global().Get("JSON").Call("stringify", cred)
+					log.Printf("%sWebAuthnLogin()3 Credential JSON: %s", debugTag, credJSON.String())
 
 					// 3. Send result to server
 					finishPromise := js.Global().Call("fetch", "/api/v1/webauthn/login/finish", map[string]any{

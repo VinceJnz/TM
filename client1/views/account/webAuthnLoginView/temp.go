@@ -8,6 +8,7 @@ import (
 )
 
 func (editor *ItemEditor) WebAuthnLogin1(username string) {
+	log.Printf("%sItemEditor.WebAuthnLogin1()0, username = %s", debugTag, username)
 	// Validate username input
 	if username == "" {
 		editor.handleWebAuthnError("Username is required")
@@ -21,6 +22,7 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 		}
 
 		bodyJSON := js.Global().Get("JSON").Call("stringify", requestBody).String()
+		log.Printf("%sItemEditor.WebAuthnLogin1()1, bodyJSON = %s", debugTag, bodyJSON)
 
 		promise := js.Global().Call("fetch", "/api/v1/webauthn/login/begin/"+username, map[string]any{
 			"method": "POST",
@@ -58,6 +60,7 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 				// Convert challenge from base64url to Uint8Array
 				challengeStr := publicKey.Get("challenge").String()
+				log.Printf("%sItemEditor.WebAuthnLogin1()2, publicKey = %+v, challenge = %s", debugTag, publicKey, challengeStr)
 				challenge, err := editor.decodeBase64URLToUint8Array(challengeStr)
 				if err != nil {
 					editor.handleWebAuthnError("Failed to decode challenge")
@@ -96,7 +99,7 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 					// Properly serialize the credential
 					credJSON := editor.serializeCredential(cred)
-					log.Printf("%sItemEditor.WebAuthnLogin1()2, credJSON = %+v", debugTag, credJSON)
+					log.Printf("%sItemEditor.WebAuthnLogin1()3, credJSON = %+v", debugTag, credJSON)
 
 					// 3. Send result to server
 					finishPromise := js.Global().Call("fetch", "/api/v1/webauthn/login/finish/", map[string]any{

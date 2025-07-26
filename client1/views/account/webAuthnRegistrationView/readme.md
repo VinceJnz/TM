@@ -235,10 +235,7 @@ How to I determine where the error is coming from, e.g. API server or client?
 ### Answer
 
 The error message:
-
-```
-userHandle and User ID do not match
-```
+`userHandle and User ID do not match`
 
 from the Go WebAuthn package (`github.com/go-webauthn/webauthn/webauthn`) occurs **during the assertion (authentication) process** when the `userHandle` returned from the client does **not match** the user ID known to the server for the credential being used.
 
@@ -252,9 +249,7 @@ In the WebAuthn protocol:
 * The **server** uses the credential ID (from the request) to **look up the stored credential**, including the user ID it was registered with.
 * The server then **compares**:
 
-  ```
-  response.UserHandle == storedCredential.User.ID()
-  ```
+  `response.UserHandle == storedCredential.User.ID()`
 
 If these **don’t match exactly**, the server throws:
 
@@ -326,3 +321,104 @@ To dig deeper, you might wrap or fork the library to add detailed logging.
 * 🛠 **Solution**: Ensure consistent user ID handling across registration and authentication
 
 Would you like help inspecting a specific snippet of your code (e.g., your `User` struct or how you handle credential registration)?
+
+
+
+
+## Client code explanation notes from deekseek
+
+This Go code is part of a WebAssembly (Wasm) client that implements the WebAuthn registration flow. It interacts with JavaScript APIs from Go using the syscall/js package. Here's a step-by-step explanation:
+
+1. Initial Promise Handling
+
+```go
+then := js.FuncOf(func(this js.Value, args []js.Value) any {
+    resp := args[0]
+    jsonPromise := resp.Call("json")
+```
+
+* A JavaScript then callback is created to handle the response (resp) from a fetch request.
+* resp.Call("json") converts the response to a JSON promise.
+
+2. JSON Response Handling
+
+```go
+then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
+    options := args[0]
+    publicKey := options.Get("publicKey")
+```
+
+* Another then callback (then2) is created to handle the resolved JSON promise.
+* It extracts the publicKey options from the response, which contains WebAuthn registration parameters.
+
+3. Data Conversion
+
+```go
+publicKey.Set("challenge", decodeBase64URLToUint8Array(publicKey.Get("challenge").String()))
+user := publicKey.Get("user")
+user.Set("id", decodeBase64URLToUint8Array(user.Get("id").String()))
+publicKey.Set("user", user)
+```
+
+* The WebAuthn challenge and user.id (which are base64url-encoded strings) are converted to Uint8Array as required by the WebAuthn API.
+* The modified values are set back in the publicKey object.
+
+4. WebAuthn API Call
+
+```go
+credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
+    "publicKey": publicKey,
+})
+```
+
+* Calls the WebAuthn API (navigator.credentials.create()) with the prepared publicKey options.
+* This prompts the user to register a new authenticator (e.g., security key or biometric device).
+
+5. Credential Handling
+
+```go
+then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
+    cred := args[0]
+    credJSON := js.Global().Get("JSON").Call("stringify", cred)
+```
+
+* A third then callback (then3) handles the credential result.
+* The credential is converted to a JSON string.
+
+6. Sending Result to Server
+
+```go
+js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/", map[string]any{
+    "method": "POST",
+    "body":   credJSON,
+    "headers": map[string]any{
+        "Content-Type": "application/json",
+    },
+})
+```
+
+* Sends the credential to the server's /register/finish/ endpoint via a POST request.
+* The credential is sent as JSON in the request body.
+
+7. Promise Chaining
+```go
+credPromise.Call("then", then3)
+jsonPromise.Call("then", then2)
+respPromise.Call("then", then)
+```
+
+* The promises are chained together:
+  * respPromise → then (handles initial response)
+  * jsonPromise → then2 (handles JSON conversion)
+  * credPromise → then3 (handles WebAuthn credential)
+
+**Key Points:**
+* The code uses Go's js package to interoperate with JavaScript.
+* It follows the WebAuthn registration flow:
+  * Receives options from the server.
+  * Converts data formats.
+  * Calls the WebAuthn browser API.
+  * Sends the result back to the server.
+* Each async operation is handled via JavaScript promises with Go callbacks.
+
+This is a typical pattern for WebAuthn in Wasm, where Go manages the flow but delegates to browser APIs for cryptographic operations and user interaction.

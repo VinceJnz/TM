@@ -6,6 +6,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/account/webAuthnRegistrationView"
 	"client1/v2/views/utils/viewHelpers"
+	"log"
 	"syscall/js"
 	"time"
 
@@ -278,7 +279,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//fault:
 	//	editor.onCompletionMsg("Invalid item state for submission")
 	//
-
+	log.Printf("%sSubmitItemEdit()3 Submitting item: %v", debugTag, editor.CurrentRecord)
 	editor.WebAuthnLogin1(editor.CurrentRecord.Username)
 
 	editor.resetEditForm()
