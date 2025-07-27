@@ -188,7 +188,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	// Set the user's credentials in the user object
 	user.Credentials = credentials
 	// Begin the WebAuthn login process
-	options, sessionData, err := h.webAuthn.BeginLogin(user)
+	options, sessionData, err := h.webAuthn.BeginLogin(user) //options -> Challenge and options for the client. sessionData -> Stores expected challenge, allowed credentials, RP ID hash, user verification requirements.
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()5 Error: err = %+v, user = %+v", debugTag, err, user)
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
@@ -204,7 +204,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	// add the session token to the response
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(options)
+	json.NewEncoder(w).Encode(options) //Challenge and options sent to the client
 }
 
 // FinishLogin completes the login process by verifying the user's credentials and creating a session.
@@ -240,16 +240,24 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	poolItem, exists := h.Pool.Get(tempSessionToken.Value)               // Assuming you have a pool to manage session data
 	if exists && (poolItem.SessionData == nil || poolItem.User == nil) { // Check if the session data or user is nil) {
 		http.Error(w, "Session not found or expired", http.StatusUnauthorized)
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishLogin()1: Session not found or expired", "sessionToken=", tempSessionToken, "err =", err)
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()2: Session not found or expired", "sessionToken=", tempSessionToken, "err =", err)
 		return
 	}
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
 	user = poolItem.User                // Set the user data from the pool
 
+	// Fetch the users webAuthn credentials from the database
+	user.Credentials, err = handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.FinishRegistration()3 ", h.appConf.Db, user.ID) // Read the user record from the database
+	if err != nil {
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()4: Failed to read user from database", "userID=", user.ID, "err =", err)
+		http.Error(w, "Failed to read user from database", http.StatusInternalServerError)
+		return
+	}
+
 	_, err = h.webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
 		body3, err3 := io.ReadAll(copiedBody)
-		log.Printf("%sHandler.FinishRegistration()3, err = %+v, user = %v, sessionData = %v, r.Body = %v, err3 = %v", debugTag, err, user, sessionData, string(body3), err3)
+		log.Printf("%sHandler.FinishRegistration()5, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), err3)
 		http.Error(w, "Failed to finish login", http.StatusBadRequest)
 		return
 	}
