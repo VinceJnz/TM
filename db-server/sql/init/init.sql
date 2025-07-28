@@ -366,6 +366,16 @@ CREATE TABLE et_token_valid (
 CREATE TABLE st_webauthn_credentials (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
+    credential_data JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE st_webauthn_credentials1 (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
     credential_id TEXT NOT NULL UNIQUE, -- This is the unique identifier for the WebAuthn credential. It is a UUID byte array that is base64url encoded.
     public_key TEXT NOT NULL,
     aaguid TEXT,
