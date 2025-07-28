@@ -257,7 +257,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	_, err = h.webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
 		body3, err3 := io.ReadAll(copiedBody)
-		log.Printf("%sHandler.FinishRegistration()5, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), err3)
+		log.Printf("%sHandler.FinishRegistration()5, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, r = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), r, err3)
 		http.Error(w, "Failed to finish login", http.StatusBadRequest)
 		return
 	}

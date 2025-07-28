@@ -41,7 +41,7 @@ func CheckUserAuthXX(debugStr string, Db *sqlx.DB, username, password string) (m
 	return result, errors.New("Depreciated")
 }
 
-// PutUserAuth stores the user auth info in the user table
+// UserAuthUpdate stores the user auth info in the user table
 // Need to depreciate this ??????????????? why??????????????? it is currently used in by the following...
 // handler\rest\ctrlAuth\ctrlAuthRegister.go:107:14: h.srvc.PutUserAuth undefined (type *store.Service has no field or method PutUserAuth)
 // handler\rest\ctrlAuth\ctrlAuthReset.go:127:14: h.srvc.PutUserAuth undefined (type *store.Service has no field or method PutUserAuth)

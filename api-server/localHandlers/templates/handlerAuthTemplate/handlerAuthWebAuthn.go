@@ -18,7 +18,9 @@ const (
 	sqlWebAuthnInsert = `INSERT INTO st_webauthn_credentials (user_id, credential_id, public_key, aaguid, sign_count, attestation_type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	sqlWebAuthnUpdate = `UPDATE st_webauthn_credentials SET user_id = $1, credential_id = $2, public_key = $3, aaguid = $4, sign_count = $5, attestation_type = $6 WHERE id = $7`
 
-	sqlUserWebAuthnRead = `SELECT * FROM st_webauthn_credentials WHERE user_id = $1`
+	sqlWebAuthnUserRead = `SELECT * FROM st_webauthn_credentials WHERE user_id = $1`
+
+	sqlUserWebAuthnUpdate = `UPDATE st_users SET webauthn_handle = $2 WHERE id = $1`
 )
 
 //ID, UserID, CredentialID, PublicKey, AAGUID, SignCount, CredentialType
@@ -54,12 +56,25 @@ func DbRecord2WebAuthn(record models.WebAuthnCredential) webauthn.Credential {
 	}
 }
 
+// UserWebAuthnUpdate stores the user webAuth info in the user table
+// Need to depreciate this ??????????????? why??????????????? it is currently used in by the following...
+func UserWebAuthnUpdate(debugStr string, Db *sqlx.DB, user models.User) error {
+	var err error
+
+	result, err := Db.Exec(sqlUserWebAuthnUpdate, user.ID, user.WebAuthnHandle)
+	if err != nil {
+		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"UserAuthUpdate()2 ", "err =", err, "result =", result, "DB =", Db.DB)
+		return err //Auth set failed
+	}
+	return nil //Auth set succeeded
+}
+
 // UserWebAuthnReadQry reads the webauthn credentials for a user from the database and returns them as a slice of webauthn.Credential.
 func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Credential, error) {
 	var record models.WebAuthnCredential    // database record
 	var webAuthnCreds []webauthn.Credential // WebAuthn records
 
-	rows, err := Db.Query(sqlUserWebAuthnRead, id)
+	rows, err := Db.Query(sqlWebAuthnUserRead, id)
 	if err != nil {
 		return nil, err
 	}
