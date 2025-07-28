@@ -257,6 +257,7 @@ CREATE TABLE IF NOT EXISTS st_users (
     verifier BYTEA DEFAULT NULL, -- varbinary(500)
     user_account_status_id INT NOT NULL DEFAULT 1, -- Example: 'current', 'disabled', 'new', 'verified', 'password reset required'
     user_account_hidden BOOLEAN, -- Hide the user account from the public, Admins can still see it
+    webauthn_handle BYTEA DEFAULT NULL, -- varbinary(50)
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_group(id)
