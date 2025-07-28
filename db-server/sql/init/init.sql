@@ -372,20 +372,6 @@ CREATE TABLE st_webauthn_credentials (
     --FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-
-CREATE TABLE st_webauthn_credentials1 (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    credential_id TEXT NOT NULL UNIQUE, -- This is the unique identifier for the WebAuthn credential. It is a UUID byte array that is base64url encoded.
-    public_key TEXT NOT NULL,
-    aaguid TEXT,
-    sign_count INTEGER NOT NULL,
-    attestation_type TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
 -- Index for fast lookup by user_id and credential_id
 -- Uncomment the following lines to create indexes for faster lookups
 --CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id);
