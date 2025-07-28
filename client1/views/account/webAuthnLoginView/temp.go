@@ -99,7 +99,7 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 					// Properly serialize the credential
 					credJSON := editor.serializeCredential(cred)
-					log.Printf("%sItemEditor.WebAuthnLogin1()3, credJSON = %+v", debugTag, credJSON)
+					log.Printf("%sItemEditor.WebAuthnLogin1()3, credJSON = %+v, cred = %+v", debugTag, credJSON, cred)
 
 					// 3. Send result to server
 					finishPromise := js.Global().Call("fetch", "/api/v1/webauthn/login/finish/", map[string]any{
