@@ -1,7 +1,7 @@
 package handlerTrip
 
 import (
-	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/handlerStandardTemplate"
 	"api-server/v2/models"
 	"log"
 	"net/http"

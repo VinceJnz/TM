@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"api-server/v2/app/appCore"
-	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/handlerStandardTemplate"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
