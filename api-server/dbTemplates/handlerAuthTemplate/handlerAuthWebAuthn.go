@@ -3,7 +3,6 @@ package handlerAuthTemplate
 import (
 	"api-server/v2/models"
 	"database/sql"
-	"encoding/base64"
 	"log"
 
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -23,39 +22,6 @@ const (
 	sqlUserWebAuthnUpdate = `UPDATE st_users SET webauthn_handle = $2 WHERE id = $1`
 )
 
-//ID, UserID, CredentialID, PublicKey, AAGUID, SignCount, CredentialType
-
-// webAuthn2DbRecord converts a webauthn.Credential to a models.WebAuthnCredential for database storage.
-func WebAuthn2DbRecord(userid int, cred webauthn.Credential) models.WebAuthnCredential {
-	return models.WebAuthnCredential{
-		UserID:          userid,
-		CredentialID:    base64.StdEncoding.EncodeToString(cred.ID),
-		PublicKey:       base64.StdEncoding.EncodeToString(cred.PublicKey),
-		AttestationType: cred.AttestationType,
-		AAGUID:          base64.StdEncoding.EncodeToString(cred.Authenticator.AAGUID),
-		SignCount:       cred.Authenticator.SignCount,
-		//CloneWarning:    cred.Authenticator.CloneWarning, // This value is not stored in the database. It is only used during the authentication or login process.
-	}
-}
-
-// dbRecord2WebAuthn converts a models.WebAuthnCredential to a webauthn.Credential for use in the WebAuthn library.
-func DbRecord2WebAuthn(record models.WebAuthnCredential) webauthn.Credential {
-	credID, _ := base64.StdEncoding.DecodeString(record.CredentialID)
-	pubKey, _ := base64.StdEncoding.DecodeString(record.PublicKey)
-	aaguid, _ := base64.StdEncoding.DecodeString(record.AAGUID)
-
-	return webauthn.Credential{
-		ID:              credID,
-		PublicKey:       pubKey,
-		AttestationType: record.AttestationType,
-		Authenticator: webauthn.Authenticator{
-			AAGUID:    aaguid,
-			SignCount: record.SignCount,
-			//CloneWarning: false, // This value is not stored in the database. It is only used during the authentication or login process.
-		},
-	}
-}
-
 // UserWebAuthnUpdate stores the user webAuth info in the user table
 // Need to depreciate this ??????????????? why??????????????? it is currently used in by the following...
 func UserWebAuthnUpdate(debugStr string, Db *sqlx.DB, user models.User) error {
@@ -73,6 +39,7 @@ func UserWebAuthnUpdate(debugStr string, Db *sqlx.DB, user models.User) error {
 func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Credential, error) {
 	var record models.WebAuthnCredential    // database record
 	var webAuthnCreds []webauthn.Credential // WebAuthn records
+	var webAuthnCred webauthn.Credential
 
 	rows, err := Db.Query(sqlWebAuthnUserRead, id)
 	if err != nil {
@@ -82,14 +49,15 @@ func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Crede
 
 	for rows.Next() {
 		log.Printf("%vWebAuthnUserReadQry()1: id = %v webAuthnCreds = %v", debugStr, id, webAuthnCreds)
-		if err := rows.Scan(&record.ID, &record.UserID, &record.CredentialID, &record.PublicKey, &record.AAGUID, &record.SignCount, &record.AttestationType, &record.Created, &record.Modified); err != nil {
+		if err := rows.Scan(&record.ID, &record.UserID, &record.CredentialID, &record.Credential, &record.Created, &record.Modified); err != nil {
 			return nil, err
 		}
 		// Convert DB record to WebAuthnCredential
-		webAuthnCred := DbRecord2WebAuthn(record)
+		record.Credential.Scan(webAuthnCred)
 		webAuthnCreds = append(webAuthnCreds, webAuthnCred)
 		log.Printf("%vWebAuthnUserReadQry()2: id = %v webAuthnCreds = %v", debugStr, id, webAuthnCreds)
 	}
+
 	return webAuthnCreds, rows.Err()
 }
 
@@ -124,12 +92,12 @@ func WebAuthnWriteQry(debugStr string, Db *sqlx.DB, record models.WebAuthnCreden
 }
 
 func WebAuthnInsertQryTx(debugStr string, Db *sqlx.Tx, record models.WebAuthnCredential) (int, error) {
-	err := Db.QueryRow(sqlWebAuthnInsert, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.AttestationType).Scan(&record.ID)
+	err := Db.QueryRow(sqlWebAuthnInsert, record.UserID, record.CredentialID, record.Credential).Scan(&record.ID)
 	return record.ID, err
 }
 
 func WebAuthnUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.WebAuthnCredential) error {
-	_, err := Db.Exec(sqlWebAuthnUpdate, record.UserID, record.CredentialID, record.PublicKey, record.AAGUID, record.SignCount, record.AttestationType, record.ID)
+	_, err := Db.Exec(sqlWebAuthnUpdate, record.UserID, record.CredentialID, record.Credential, record.ID)
 	return err
 }
 

@@ -1,9 +1,9 @@
 package handlerAuth
 
 import (
+	"api-server/v2/dbTemplates/handlerAuthTemplate"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/localHandlers/templates/handlerAuthTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"io"

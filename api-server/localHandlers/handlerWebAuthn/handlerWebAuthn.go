@@ -3,8 +3,8 @@ package handlerWebAuthn
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/webAuthnPool"
+	"api-server/v2/dbTemplates/handlerAuthTemplate"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
-	"api-server/v2/localHandlers/templates/handlerAuthTemplate"
 	"api-server/v2/models"
 	"bytes"
 	"database/sql"
@@ -133,7 +133,12 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the new credential to the database
-	dbCredential := handlerAuthTemplate.WebAuthn2DbRecord(userID, *credential)
+	dbCredential := models.WebAuthnCredential{
+		UserID:       userID,
+		CredentialID: string(credential.ID),
+		Credential:   models.JSONBCredential{Credential: *credential},
+	}
+
 	_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, dbCredential)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", dbCredential)

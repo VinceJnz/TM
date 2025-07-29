@@ -1,8 +1,8 @@
 package handlerAuth
 
 import (
+	"api-server/v2/dbTemplates/handlerStandardTemplate"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
-	"api-server/v2/localHandlers/templates/handlerStandardTemplate"
 	"api-server/v2/models"
 	"net/http"
 )

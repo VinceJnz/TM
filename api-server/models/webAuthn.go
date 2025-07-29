@@ -1,7 +1,9 @@
 package models
 
 import (
+	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -10,21 +12,61 @@ import (
 //var W webauthn.WebAuthn
 //var C webauthn.Credential
 
+// JSONBCredential wraps webauthn.Credential for JSON marshaling/unmarshaling
+type JSONBCredential struct {
+	webauthn.Credential
+}
+
 type WebAuthnCredential struct {
-	ID              []byte    `db:"id"`
+	ID           int             `json:"id" db:"id"`                           // This is the primary key, usually an auto-incremented integer
+	UserID       int             `json:"user_id" db:"user_id"`                 // or string, depending on your user model. This is the foreign key to the user table
+	CredentialID string          `json:"credential_id" db:"credential_id"`     // base64-encoded string, unique identifier for the credential
+	Credential   JSONBCredential `json:"credential_data" db:"credential_data"` // JSON-encoded webauthn.Credential
+	Created      time.Time       `json:"created" db:"created"`
+	Modified     time.Time       `json:"modified" db:"modified"`
+}
+
+// Value implements the driver.Valuer interface for database storage
+func (c JSONBCredential) Value() (driver.Value, error) {
+	return json.Marshal(c.Credential)
+}
+
+// Scan implements the sql.Scanner interface for database retrieval
+func (c *JSONBCredential) Scan(value any) error {
+	if value == nil {
+		return nil
+	}
+
+	var bytes []byte
+	switch v := value.(type) {
+	case []byte:
+		bytes = v
+	case string:
+		bytes = []byte(v)
+	default:
+		return fmt.Errorf("cannot scan %T into JSONBCredential", value)
+	}
+
+	return json.Unmarshal(bytes, &c.Credential)
+}
+
+// ***************************************************************************
+// Old approach
+type WebAuthnCredential3 struct {
+	ID              int       `db:"id"`
 	PublicKey       []byte    `db:"public_key"`
 	AttestationType string    `db:"attestation_type"`
 	Transport       []byte    `db:"transport"`     // JSON-encoded
 	Flags           []byte    `db:"flags"`         // JSON-encoded
 	Authenticator   []byte    `db:"authenticator"` // JSON-encoded
 	UserID          string    `db:"user_id"`
-	CreatedAt       time.Time `db:"created_at"`
-	UpdatedAt       time.Time `db:"updated_at"`
+	Created         time.Time `db:"created"`
+	Modified        time.Time `db:"modified"`
 }
 
 // Convert webauthn.Credential to DB format
-func (c *WebAuthnCredential) FromWebAuthnCredential(cred webauthn.Credential, userID string) error {
-	c.ID = cred.ID
+func (c *WebAuthnCredential3) FromWebAuthnCredential(cred webauthn.Credential, userID string) error {
+	//c.ID = cred.ID
 	c.PublicKey = cred.PublicKey
 	c.AttestationType = cred.AttestationType
 	c.UserID = userID
@@ -52,10 +94,10 @@ func (c *WebAuthnCredential) FromWebAuthnCredential(cred webauthn.Credential, us
 }
 
 // Convert DB format back to webauthn.Credential
-func (c *WebAuthnCredential) ToWebAuthnCredential() (webauthn.Credential, error) {
+func (c *WebAuthnCredential3) ToWebAuthnCredential() (webauthn.Credential, error) {
 	var cred webauthn.Credential
 
-	cred.ID = c.ID
+	//cred.ID = c.ID
 	cred.PublicKey = c.PublicKey
 	cred.AttestationType = c.AttestationType
 
