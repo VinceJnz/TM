@@ -133,15 +133,16 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the new credential to the database
-	dbCredential := models.WebAuthnCredential{
-		UserID:       userID,
-		CredentialID: string(credential.ID),
-		Credential:   models.JSONBCredential{Credential: *credential},
-	}
+	//dbCredential := models.WebAuthnCredential{
+	//	UserID:       userID,
+	//	CredentialID: string(credential.ID),
+	//	Credential:   models.JSONBCredential{Credential: *credential},
+	//}
 
-	_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, dbCredential)
+	//_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, dbCredential)
+	err = handlerAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, *credential)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", dbCredential)
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", credential)
 		return
 	}
 
@@ -178,7 +179,8 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Fetch the user's WebAuthn credentials from the database
-	credentials, err := handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.BeginLogin()1b ", h.appConf.Db, user.ID)
+	//credentials, err := handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.BeginLogin()1b ", h.appConf.Db, user.ID)
+	credentials, err := handlerAuthTemplate.GetUserCredentials(debugTag+"Handler.BeginLogin()2 ", h.appConf.Db, user.ID)
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()3 Error: err = %+v", debugTag, err)
 		http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
@@ -239,22 +241,22 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 
 	tempSessionToken, err := getTempSessionToken(w, r) // Retrieve the temp session cookie
 	if err != nil {
-		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+		log.Println(debugTag+"Handler.FinishLogin()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
 		return
 	}
 	poolItem, exists := h.Pool.Get(tempSessionToken.Value)               // Assuming you have a pool to manage session data
 	if exists && (poolItem.SessionData == nil || poolItem.User == nil) { // Check if the session data or user is nil) {
 		http.Error(w, "Session not found or expired", http.StatusUnauthorized)
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()2: Session not found or expired", "sessionToken=", tempSessionToken, "err =", err)
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishLogin()2: Session not found or expired", "sessionToken=", tempSessionToken, "err =", err)
 		return
 	}
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
 	user = poolItem.User                // Set the user data from the pool
 
 	// Fetch the users webAuthn credentials from the database
-	user.Credentials, err = handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.FinishRegistration()3 ", h.appConf.Db, user.ID) // Read the user record from the database
+	user.Credentials, err = handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.FinishLogin()3 ", h.appConf.Db, user.ID) // Read the user record from the database
 	if err != nil {
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()4: Failed to read user from database", "userID=", user.ID, "err =", err)
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishLogin()4: Failed to read user from database", "userID=", user.ID, "err =", err)
 		http.Error(w, "Failed to read user from database", http.StatusInternalServerError)
 		return
 	}
@@ -262,7 +264,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	_, err = h.webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
 		body3, err3 := io.ReadAll(copiedBody)
-		log.Printf("%sHandler.FinishRegistration()5, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, r = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), r, err3)
+		log.Printf("%sHandler.FinishLogin()5, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, r = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), r, err3)
 		http.Error(w, "Failed to finish login", http.StatusBadRequest)
 		return
 	}

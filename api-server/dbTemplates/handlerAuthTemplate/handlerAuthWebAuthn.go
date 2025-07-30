@@ -17,7 +17,7 @@ const (
 	sqlWebAuthnInsert = `INSERT INTO st_webauthn_credentials (user_id, credential_id, public_key, aaguid, sign_count, attestation_type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	sqlWebAuthnUpdate = `UPDATE st_webauthn_credentials SET user_id = $1, credential_id = $2, public_key = $3, aaguid = $4, sign_count = $5, attestation_type = $6 WHERE id = $7`
 
-	sqlWebAuthnUserRead = `SELECT * FROM st_webauthn_credentials WHERE user_id = $1`
+	sqlWebAuthnUserRead = `SELECT id, user_id, credential_id, credential_data, created, modified FROM st_webauthn_credentials WHERE user_id = $1`
 
 	sqlUserWebAuthnUpdate = `UPDATE st_users SET webauthn_handle = $2 WHERE id = $1`
 )
@@ -43,19 +43,20 @@ func WebAuthnUserReadQry(debugStr string, Db *sqlx.DB, id int) ([]webauthn.Crede
 
 	rows, err := Db.Query(sqlWebAuthnUserRead, id)
 	if err != nil {
+		log.Printf("%sWebAuthnUserReadQry()1.%s: err = %v, id = %v", debugTag, debugStr, err, id)
 		return nil, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		log.Printf("%vWebAuthnUserReadQry()1: id = %v webAuthnCreds = %v", debugStr, id, webAuthnCreds)
 		if err := rows.Scan(&record.ID, &record.UserID, &record.CredentialID, &record.Credential, &record.Created, &record.Modified); err != nil {
+			log.Printf("%sWebAuthnUserReadQry()2.%s: err = %v, id = %v webAuthnCreds = %v", debugTag, debugStr, err, id, webAuthnCreds)
 			return nil, err
 		}
 		// Convert DB record to WebAuthnCredential
 		record.Credential.Scan(webAuthnCred)
 		webAuthnCreds = append(webAuthnCreds, webAuthnCred)
-		log.Printf("%vWebAuthnUserReadQry()2: id = %v webAuthnCreds = %v", debugStr, id, webAuthnCreds)
+		log.Printf("%sWebAuthnUserReadQry()3.%s: id = %v webAuthnCreds = %v", debugTag, debugStr, id, webAuthnCreds)
 	}
 
 	return webAuthnCreds, rows.Err()
