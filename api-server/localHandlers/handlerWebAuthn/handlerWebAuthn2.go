@@ -195,6 +195,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	// Set the user's credentials in the user object
 	user.Credentials = credentials
 	// Begin the WebAuthn login process
+	// ???? Change this to use a webAuthn.User interface instead of models.User ???????
 	options, sessionData, err := h.webAuthn.BeginLogin(user) //options -> Challenge and options for the client. sessionData -> Stores expected challenge, allowed credentials, RP ID hash, user verification requirements.
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()5 Error: err = %+v, user = %+v", debugTag, err, user)
@@ -254,17 +255,29 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	user = poolItem.User                // Set the user data from the pool
 
 	// Fetch the users webAuthn credentials from the database
-	user.Credentials, err = handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.FinishLogin()3 ", h.appConf.Db, user.ID) // Read the user record from the database
+	user.Credentials, err = handlerAuthTemplate.GetUserCredentials(debugTag+"Handler.FinishLogin()3 ", h.appConf.Db, user.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishLogin()4: Failed to read user from database", "userID=", user.ID, "err =", err)
-		http.Error(w, "Failed to read user from database", http.StatusInternalServerError)
+		log.Printf("%sHandler.FinishLogin()4: Failed to fetch user credentials, err = %+v, user = %+v", debugTag, err, user)
+		http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
 		return
 	}
+	if len(user.Credentials) == 0 {
+		log.Printf("%sHandler.FinishLogin()5: No credentials found for user %d", debugTag, user.ID)
+		http.Error(w, "No credentials found for user", http.StatusForbidden)
+		return
+	}
+
+	//user.Credentials, err = handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.FinishLogin()3 ", h.appConf.Db, user.ID) // Read the user record from the database
+	//if err != nil {
+	//	log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishLogin()4: Failed to read user from database", "userID=", user.ID, "err =", err)
+	//	http.Error(w, "Failed to read user from database", http.StatusInternalServerError)
+	//	return
+	//}
 
 	_, err = h.webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
 		body3, err3 := io.ReadAll(copiedBody)
-		log.Printf("%sHandler.FinishLogin()5, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, r = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), r, err3)
+		log.Printf("%sHandler.FinishLogin()6, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, r = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), r, err3)
 		http.Error(w, "Failed to finish login", http.StatusBadRequest)
 		return
 	}

@@ -10,7 +10,8 @@ var ErrWebAuthnCredentialExists = errors.New("WebAuthn credential already exists
 
 // WebAuthn.User is used to implement the webauthn.User interface for the User struct to be used with the webauthn library.
 // https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/webauthn#User
-func (u User) WebAuthnID() []byte                         { return u.WebAuthnHandle }
+// func (u User) WebAuthnID() []byte                         { return u.WebAuthnHandle }
+func (u User) WebAuthnID() []byte                         { return u.Credentials[0].ID } //???? This needs to be fixed ??????
 func (u User) WebAuthnName() string                       { return u.Username }
 func (u User) WebAuthnDisplayName() string                { return u.Name }
 func (u User) WebAuthnIcon() string                       { return "" }
