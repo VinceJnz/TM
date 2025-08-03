@@ -24,8 +24,8 @@ type User struct {
 	Verifier        *big.Int              `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
 	AccountStatusID zero.Int              `json:"user_account_status_id" db:"user_account_status_id"`
 	AccountHidden   zero.Bool             `json:"user_account_hidden" db:"user_account_hidden"`
-	WebAuthnHandle  []byte                `json:"webauthn_handle" db:"webauthn_handle"` // This is the WebAuthn ID, which is a byte slice representation of the user ID
-	Credentials     []webauthn.Credential `json:"credentials" db:"credentials"`         // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
+	WebAuthnUserID  []byte                `json:"webauthn_user_id" db:"webauthn_user_id"` // This is the WebAuthn ID (user handle), which is a byte slice representation of the user ID
+	Credentials     []webauthn.Credential `json:"credentials" db:"credentials"`           // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
 	Created         time.Time             `json:"created" db:"created"`
 	Modified        time.Time             `json:"modified" db:"modified"`
 }

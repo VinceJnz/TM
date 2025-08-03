@@ -71,8 +71,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// User is not registered, so we can proceed with registration
-	// Generate a temporary UUID for WebAuthnID. If registration is successful, this will be saved to the user record in the database.
-	user.WebAuthnHandle = []byte(uuid.New().String())
+	// Generate a temporary UUID for WebAuthnUserID (user handle). If registration is successful, this will be saved to the user record in the database.
+	user.WebAuthnUserID = []byte(uuid.New().String())
 
 	options, sessionData, err := h.webAuthn.BeginRegistration(user)
 	if err != nil {

@@ -241,8 +241,8 @@ const (
 	sqlUserFind     = `SELECT id FROM st_users WHERE id = $1`
 	sqlUserRead     = `SELECT * FROM st_users WHERE id = $1`
 	sqlUserNameRead = `SELECT * FROM st_users WHERE username = $1`
-	sqlUserInsert   = `INSERT INTO st_users (name, username, email) VALUES ($1, $2, $3) RETURNING id`
-	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3 WHERE id = $4`
+	sqlUserInsert   = `INSERT INTO st_users (name, username, email, webauthn_user_id) VALUES ($1, $2, $3, $4) RETURNING id`
+	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3, webauthn_user_id = $4 WHERE id = $5`
 )
 
 func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
@@ -286,7 +286,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.WebAuthnUserID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
@@ -295,7 +295,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 }
 
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
-	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.ID)
+	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.WebAuthnUserID, record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx()1 - ", "err =", err, "record =", record)
 	}

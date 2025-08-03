@@ -19,7 +19,7 @@ const (
 
 	sqlWebAuthnUserRead = `SELECT id, user_id, credential_id, credential_data, created, modified FROM st_webauthn_credentials WHERE user_id = $1`
 
-	sqlUserWebAuthnUpdate = `UPDATE st_users SET webauthn_handle = $2 WHERE id = $1`
+	sqlUserWebAuthnUpdate = `UPDATE st_users SET webauthn_user_id = $2 WHERE id = $1`
 )
 
 // UserWebAuthnUpdate stores the user webAuth info in the user table
@@ -27,7 +27,7 @@ const (
 func UserWebAuthnUpdate(debugStr string, Db *sqlx.DB, user models.User) error {
 	var err error
 
-	result, err := Db.Exec(sqlUserWebAuthnUpdate, user.ID, user.WebAuthnHandle)
+	result, err := Db.Exec(sqlUserWebAuthnUpdate, user.ID, user.WebAuthnUserID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"UserAuthUpdate()2 ", "err =", err, "result =", result, "DB =", Db.DB)
 		return err //Auth set failed
