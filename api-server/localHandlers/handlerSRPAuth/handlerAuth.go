@@ -1,4 +1,4 @@
-package handlerAuth
+package handlerSRPAuth
 
 import (
 	"api-server/v2/app/appCore"

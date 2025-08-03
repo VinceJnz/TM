@@ -4,7 +4,6 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/handlerAccessLevel"
 	"api-server/v2/localHandlers/handlerAccessType"
-	"api-server/v2/localHandlers/handlerAuth"
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
@@ -12,6 +11,7 @@ import (
 	"api-server/v2/localHandlers/handlerMemberStatus"
 	"api-server/v2/localHandlers/handlerMyBookings"
 	"api-server/v2/localHandlers/handlerResource"
+	"api-server/v2/localHandlers/handlerSRPAuth"
 	"api-server/v2/localHandlers/handlerSeasons"
 	"api-server/v2/localHandlers/handlerSecurityGroup"
 	"api-server/v2/localHandlers/handlerSecurityGroupResource"
@@ -49,7 +49,7 @@ func main() {
 	subR1 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 
 	//SRP authentication and registration process handlers
-	SRPauth := handlerAuth.New(app)
+	SRPauth := handlerSRPAuth.New(app)
 	subR1.HandleFunc("/auth/register/", SRPauth.AccountCreate).Methods("Post")
 	subR1.HandleFunc("/auth/{username}/salt/", SRPauth.AuthGetSalt).Methods("Get", "Options")
 	subR1.HandleFunc("/auth/{username}/key/{A}", SRPauth.AuthGetKeyB).Methods("Get")
