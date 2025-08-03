@@ -9,8 +9,6 @@ import (
 	"log"
 	"syscall/js"
 	"time"
-
-	"github.com/1Password/srp"
 )
 
 const debugTag = "webAuthnLoginView."
@@ -73,8 +71,6 @@ type viewElements struct {
 
 type children struct {
 	//Add child structures as necessary
-	SrpClient *srp.SRP
-	SrpGroup  int
 }
 
 type ItemEditor struct {
@@ -133,7 +129,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 	// Create child editors here
 	//..........
-	editor.Children.SrpGroup = srp.RFC5054Group3072
+	//editor.Children.SrpGroup = srp.RFC5054Group3072
 	editor.RecordState = RecordStateReloadRequired
 
 	return editor

@@ -8,6 +8,18 @@ import (
 	"syscall/js"
 )
 
+func (editor *ItemEditor) NewPOSTPromise(url string, bodyJSON string) js.Value {
+	baseURL := "/api/v1/" //editor.client.BaseURL - This baseURL currently includes "https://localhost:port/".
+	promise := js.Global().Call("fetch", baseURL+url, map[string]any{
+		"method": "POST",
+		"headers": map[string]any{
+			"Content-Type": "application/json",
+		},
+		"body": bodyJSON,
+	})
+	return promise
+}
+
 func (editor *ItemEditor) WebAuthnLogin(username string) {
 	log.Printf("%sItemEditor.WebAuthnLogin1()0, username = %s", debugTag, username)
 	// Validate username input
@@ -24,14 +36,7 @@ func (editor *ItemEditor) WebAuthnLogin(username string) {
 
 		bodyJSON := js.Global().Get("JSON").Call("stringify", requestBody).String()
 		log.Printf("%sItemEditor.WebAuthnLogin1()1, bodyJSON = %s", debugTag, bodyJSON)
-
-		promise := js.Global().Call("fetch", "/api/v1/webauthn/login/begin/"+username, map[string]any{
-			"method": "POST",
-			"headers": map[string]any{
-				"Content-Type": "application/json",
-			},
-			"body": bodyJSON,
-		})
+		promise := editor.NewPOSTPromise(ApiURL+"/login/begin/"+username, bodyJSON)
 
 		// Handle fetch response
 		then := js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -103,13 +108,7 @@ func (editor *ItemEditor) WebAuthnLogin(username string) {
 					log.Printf("%sItemEditor.WebAuthnLogin1()3, credJSON = %+v, cred = %+v", debugTag, credJSON, cred)
 
 					// 3. Send result to server
-					finishPromise := js.Global().Call("fetch", "/api/v1/webauthn/login/finish/", map[string]any{
-						"method": "POST",
-						"body":   credJSON,
-						"headers": map[string]any{
-							"Content-Type": "application/json",
-						},
-					})
+					finishPromise := editor.NewPOSTPromise(ApiURL+"/login/finish/", credJSON)
 
 					// Handle final response
 					finishThen := js.FuncOf(func(this js.Value, args []js.Value) any {

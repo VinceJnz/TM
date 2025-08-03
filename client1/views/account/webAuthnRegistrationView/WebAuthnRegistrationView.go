@@ -47,11 +47,10 @@ const ApiURL = "/api/v1" + "/webauthn"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-
+	ID              int       `json:"id"`
+	Name            string    `json:"name"`
+	Username        string    `json:"username"`
+	Email           string    `json:"email"`
 	Address         string    `json:"user_address"`
 	MemberCode      string    `json:"member_code"`
 	BirthDate       time.Time `json:"user_birth_date"` //This can be used to calculate what age group to apply
@@ -85,6 +84,10 @@ type Item struct {
 	//Add child structures as necessary
 }
 
+type children struct {
+	//Add child structures as necessary
+}
+
 type ItemEditor struct {
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
@@ -103,6 +106,7 @@ type ItemEditor struct {
 	ParentData  ParentData
 	ViewState   ViewState
 	RecordState RecordState
+	Children    children // Add child structures as necessary
 }
 
 // NewItemEditor creates a new ItemEditor instance
