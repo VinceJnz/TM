@@ -137,7 +137,7 @@ func (editor *ItemEditor) WebAuthnLogin(item TableData) {
 
 						resp := args[0]
 						if resp.Get("ok").Bool() {
-							editor.handleWebAuthnSuccess2()
+							editor.handleWebAuthnSuccess2(item.Username)
 						} else {
 							editor.handleWebAuthnError("Login failed")
 						}

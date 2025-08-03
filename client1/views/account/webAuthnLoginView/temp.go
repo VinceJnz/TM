@@ -1,6 +1,7 @@
 package webAuthnLoginView
 
 import (
+	"client1/v2/app/eventProcessor"
 	"encoding/base64"
 	"log"
 	"strings"
@@ -118,7 +119,7 @@ func (editor *ItemEditor) WebAuthnLogin1(username string) {
 
 						resp := args[0]
 						if resp.Get("ok").Bool() {
-							editor.handleWebAuthnSuccess2()
+							editor.handleWebAuthnSuccess2(username)
 						} else {
 							editor.handleWebAuthnError("Login failed")
 						}
@@ -287,20 +288,24 @@ func (editor *ItemEditor) handleWebAuthnError(message string) {
 }
 
 // Updated success handling to reset loading state
-func (editor *ItemEditor) handleWebAuthnSuccess2() {
+func (editor *ItemEditor) handleWebAuthnSuccess2(username string) {
+	// Need to do something here to signify the login being successful!!!!
+	editor.onCompletionMsg(debugTag + "Login successfully completed: " + username)
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: username})
+
 	// Reset loading state
-	editor.setLoginLoading(false)
+	//editor.setLoginLoading(false)
 
 	// Implement your success handling logic here
-	js.Global().Get("console").Call("log", "WebAuthn login successful")
+	//js.Global().Get("console").Call("log", "WebAuthn login successful")
 
 	// Hide error message
-	errorDiv := js.Global().Get("document").Call("getElementById", "error-message")
-	if !errorDiv.IsNull() {
-		errorDiv.Get("style").Set("display", "none")
-	}
+	//errorDiv := js.Global().Get("document").Call("getElementById", "error-message")
+	//if !errorDiv.IsNull() {
+	//	errorDiv.Get("style").Set("display", "none")
+	//}
 
 	// Redirect or update UI state
 	// For example: window.location.href = "/dashboard"
-	js.Global().Get("window").Get("location").Set("href", "/dashboard")
+	//js.Global().Get("window").Get("location").Set("href", "/dashboard")
 }
