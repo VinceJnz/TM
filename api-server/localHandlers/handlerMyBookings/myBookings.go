@@ -2,7 +2,7 @@ package handlerMyBookings
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/dbTemplates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
@@ -89,30 +89,30 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"GetAll()1 userID=%v, adminFlag=%v\n", session.UserID, session.AdminFlag)
 
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
-	//handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
-	//handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MyBooking{}, qryGetAll, session.UserID)
+	//dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
+	//dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MyBooking{}, qryGetAll, session.UserID)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id)
+	id := dbStandardTemplate.GetID(w, r)
+	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id)
 }
 
 // Get: retrieves and returns a list of records identified by parent id
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetList, id)
+	id := dbStandardTemplate.GetID(w, r)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetList, id)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
@@ -127,15 +127,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	//log.Printf(debugTag+"Create()3 record = %+v, query = %+v", record, qryCreate)
 
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
 
-	id := handlerStandardTemplate.GetID(w, r)
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	id := dbStandardTemplate.GetID(w, r)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
@@ -151,17 +151,17 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.AdminFlag {
-		handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
 	} else {
-		handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 	}
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
+	id := dbStandardTemplate.GetID(w, r)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
 }
 
 func (h *Handler) RecordValidation(record models.Booking) error {

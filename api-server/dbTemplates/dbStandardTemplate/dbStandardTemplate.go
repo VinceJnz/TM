@@ -1,4 +1,4 @@
-package handlerStandardTemplate
+package dbStandardTemplate
 
 import (
 	"api-server/v2/app/appCore"
@@ -13,7 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const debugTag = "handlerStandardTemplate."
+const debugTag = "dbStandardTemplate."
 
 // GetAll: retrieves and returns all records
 func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string) {

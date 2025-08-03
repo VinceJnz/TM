@@ -1,14 +1,6 @@
-package handlerAuthTemplate
+//package dbAuthTemplate
 
-import (
-	"api-server/v2/models"
-	"database/sql"
-	"log"
-
-	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/jmoiron/sqlx"
-)
-
+/*
 const (
 	//sqlWebAuthnFind   = `SELECT id, FROM st_webauthn_credentials WHERE id = $1`
 	sqlWebAuthnFind   = `SELECT id FROM st_webauthn_credentials WHERE credential_id = $1`
@@ -21,7 +13,9 @@ const (
 
 	sqlUserWebAuthnUpdate = `UPDATE st_users SET webauthn_user_id = $2 WHERE id = $1`
 )
+*/
 
+/*
 // UserWebAuthnUpdate stores the user webAuth info in the user table
 // Need to depreciate this ??????????????? why??????????????? it is currently used in by the following...
 func UserWebAuthnUpdate(debugStr string, Db *sqlx.DB, user models.User) error {
@@ -173,3 +167,4 @@ func WebAuthnUserRegisterQry(debugStr string, Db *sqlx.DB, user models.User, cre
 	}
 	return webAuthnCreds, nil
 }
+*/

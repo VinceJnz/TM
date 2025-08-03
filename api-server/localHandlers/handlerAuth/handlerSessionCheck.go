@@ -1,7 +1,7 @@
 package handlerAuth
 
 import (
-	"api-server/v2/dbTemplates/handlerAuthTemplate"
+	"api-server/v2/dbTemplates/dbAuthTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"log"
@@ -25,7 +25,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	} else { // If there is a session cookie try to find it in the repository
 		//token, err = h.FindSessionToken(sessionToken.Value) //This succeeds if the cookie is in the DB and the user is current
-		token, err = handlerAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionToken.Value)
+		token, err = dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionToken.Value)
 		//user.User.ID = user.Session.UserID
 		if err != nil { // could not find user sessionToken so user is not authorised
 			log.Println(debugTag+"Handler.SessionCheckRestHandler()3 - Not authorised ", "token =", token, "err =", err)
@@ -34,7 +34,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 			return
 		} else { //Session cookie found, get user details and return to client
 			//user, err = h.UserReadQry(token.UserID)
-			user, err := handlerAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, token.UserID)
+			user, err := dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, token.UserID)
 			if err != nil {
 				log.Printf("%v %v %v %v %+v %v %+v", debugTag+"Handler.SessionCheckRestHandler()8 - User not found", "err =", err, "user =", user, "sessionToken =", sessionToken)
 				w.WriteHeader(http.StatusInternalServerError)

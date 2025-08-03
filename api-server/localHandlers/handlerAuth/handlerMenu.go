@@ -1,7 +1,7 @@
 package handlerAuth
 
 import (
-	"api-server/v2/dbTemplates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"net/http"
@@ -31,14 +31,14 @@ const (
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuUserGet()1 session=%+v", session)
-	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &models.MenuUser{}, sqlMenuUser, session.UserID, handlerUserAccountStatus.AccountActive)
+	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &models.MenuUser{}, sqlMenuUser, session.UserID, handlerUserAccountStatus.AccountActive)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuListGet()1 session=%+v", session)
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, handlerUserAccountStatus.AccountActive)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, handlerUserAccountStatus.AccountActive)
 }

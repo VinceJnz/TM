@@ -3,7 +3,7 @@
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/webAuthnPool"
-	"api-server/v2/dbTemplates/handlerAuthTemplate"
+	"api-server/v2/dbTemplates/dbAuthTemplate"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"bytes"
@@ -60,7 +60,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	// At this point the user is a new user or an existing user who is registering a new WebAuthn credential.
 	// So there should no user existing in the database with the same username or email.
 	// Check if the user is already registered
-	existingUser, err := handlerAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, user.Username)
+	existingUser, err := dbAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, user.Username)
 	if err != sql.ErrNoRows {
 		http.Error(w, "Failed to check existing user", http.StatusInternalServerError)
 		log.Printf("%v %v %v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()2: Failed to check existing user", "err =", err, "username =", user.Username, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
@@ -81,7 +81,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Create and Store sessionData in your session pool store
-	tempSessionToken, err := handlerAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
@@ -126,7 +126,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 
 	// At this point the user is registered and the credential is created.
 	//saveUser to the database
-	userID, err := handlerAuthTemplate.UserWriteQry(debugTag+"Handler.FinishRegistration()4 ", h.appConf.Db, *user)
+	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"Handler.FinishRegistration()4 ", h.appConf.Db, *user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.FinishRegistration()5: Failed to save user", "err =", err, "record =", user, "userID =", userID)
 		return
@@ -139,7 +139,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		Credential:   models.JSONBCredential{Credential: *credential},
 	}
 
-	_, err = handlerAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, dbCredential)
+	_, err = dbAuthTemplate.WebAuthnWriteQry(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, dbCredential)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", dbCredential)
 		return
@@ -165,7 +165,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid username", http.StatusBadRequest)
 		return
 	}
-	user, err := handlerAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginLogin()1a ", h.appConf.Db, username)
+	user, err := dbAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginLogin()1a ", h.appConf.Db, username)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", user.ID, "r.RemoteAddr =", r.RemoteAddr)
 		http.Error(w, "User not found", http.StatusNotFound)
@@ -178,7 +178,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Fetch the user's WebAuthn credentials from the database
-	credentials, err := handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.BeginLogin()1b ", h.appConf.Db, user.ID)
+	credentials, err := dbAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.BeginLogin()1b ", h.appConf.Db, user.ID)
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()3 Error: err = %+v", debugTag, err)
 		http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
@@ -199,7 +199,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
 		return
 	}
-	tempSessionToken, err := handlerAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()6 Error: err = %+v, WebAuthnSessionCookieName = %v, Host = %v", debugTag, err, WebAuthnSessionCookieName, h.appConf.Settings.Host)
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
@@ -252,7 +252,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	user = poolItem.User                // Set the user data from the pool
 
 	// Fetch the users webAuthn credentials from the database
-	user.Credentials, err = handlerAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.FinishRegistration()3 ", h.appConf.Db, user.ID) // Read the user record from the database
+	user.Credentials, err = dbAuthTemplate.WebAuthnUserReadQry(debugTag+"Handler.FinishRegistration()3 ", h.appConf.Db, user.ID) // Read the user record from the database
 	if err != nil {
 		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()4: Failed to read user from database", "userID=", user.ID, "err =", err)
 		http.Error(w, "Failed to read user from database", http.StatusInternalServerError)
@@ -351,7 +351,7 @@ func (h *Handler) setUserAuthenticated(w http.ResponseWriter, r *http.Request, u
 	//Authentication successful
 	//Create and store a new cookie
 	//sessionToken, err := h.createSessionToken(user.ID, r.RemoteAddr)
-	sessionToken, err := handlerAuthTemplate.CreateSessionToken(debugTag+"Handler.AuthCheckClientProof()1 ", h.appConf.Db, user.ID, r.RemoteAddr)
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"Handler.AuthCheckClientProof()1 ", h.appConf.Db, user.ID, r.RemoteAddr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to create cookie"))

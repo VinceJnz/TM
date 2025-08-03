@@ -1,4 +1,4 @@
-package handlerAuthTemplate
+package dbAuthTemplate
 
 import (
 	"api-server/v2/localHandlers/handlerUserAccountStatus"

@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"api-server/v2/app/appCore"
-	"api-server/v2/dbTemplates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
@@ -46,7 +46,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll)
+	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll)
 
 	records := []models.BookingPeople{}
 	err := h.appConf.Db.Select(&records, qryGetAll)
@@ -91,14 +91,14 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGet, id)
+	id := dbStandardTemplate.GetID(w, r)
+	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGet, id)
 }
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
@@ -111,14 +111,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.BookingID, record.PersonID, record.Notes)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.BookingID, record.PersonID, record.Notes)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
-	id := handlerStandardTemplate.GetID(w, r)
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	id := dbStandardTemplate.GetID(w, r)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
@@ -133,15 +133,15 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.PersonID, record.Notes)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.PersonID, record.Notes)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var record models.BookingPeople
-	id := handlerStandardTemplate.GetID(w, r)
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	id := dbStandardTemplate.GetID(w, r)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	// Validation stuff
 	record.ID = id
@@ -156,7 +156,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
 }
 
 const (

@@ -2,7 +2,7 @@ package handlerGroupBooking
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/dbTemplates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"log"
@@ -29,13 +29,13 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all group bookings
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.GroupBooking{}, qryGetAll)
+	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.GroupBooking{}, qryGetAll)
 }
 
 // Get: retrieves and returns a single group booking identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.GroupBooking{}, qryGet, id)
+	id := dbStandardTemplate.GetID(w, r)
+	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.GroupBooking{}, qryGet, id)
 }
 
 // Create: adds a new group booking
@@ -46,13 +46,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.GroupName, record.OwnerID)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.GroupName, record.OwnerID)
 }
 
 // Update: modifies an existing group booking
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.GroupBooking
-	id := handlerStandardTemplate.GetID(w, r)
+	id := dbStandardTemplate.GetID(w, r)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
@@ -61,11 +61,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.GroupName, record.OwnerID, id)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.GroupName, record.OwnerID, id)
 }
 
 // Delete: removes a group booking identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	id := dbStandardTemplate.GetID(w, r)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }

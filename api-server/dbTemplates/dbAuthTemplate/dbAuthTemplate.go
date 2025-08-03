@@ -1,4 +1,4 @@
-package handlerAuthTemplate
+package dbAuthTemplate
 
 import (
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
@@ -13,7 +13,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-const debugTag = "handlerAuthTemplate."
+const debugTag = "dbAuthTemplate."
 
 // sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
 // NOTE: If the group (stg) admin_flag is set then access is given regardless of the resource or action settings.

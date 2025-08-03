@@ -1,16 +1,21 @@
-package handlerAuthTemplate
+package dbAuthTemplate
 
 //package main
 
 import (
+	"database/sql"
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
-/*
+// *
 // JSONBCredential wraps webauthn.Credential for JSON marshaling/unmarshaling
 type JSONBCredential struct {
 	webauthn.Credential
@@ -56,7 +61,8 @@ type CredentialStore struct {
 func NewCredentialStore(db *sql.DB) *CredentialStore {
 	return &CredentialStore{db: db}
 }
-*/
+
+//*/
 
 // StoreCredential saves a webauthn.Credential to the database
 func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential webauthn.Credential) error {

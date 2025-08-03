@@ -1,7 +1,7 @@
 package handlerAuth
 
 import (
-	"api-server/v2/dbTemplates/handlerAuthTemplate"
+	"api-server/v2/dbTemplates/dbAuthTemplate"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
@@ -32,7 +32,7 @@ func (h *Handler) AuthReset(w http.ResponseWriter, r *http.Request) {
 
 	user := models.User{}
 	//user, err = h.GetUserAuth(username)
-	user, err = handlerAuthTemplate.GetUserAuth(debugTag+"Handler.AuthReset()2 ", h.appConf.Db, username)
+	user, err = dbAuthTemplate.GetUserAuth(debugTag+"Handler.AuthReset()2 ", h.appConf.Db, username)
 	if err != nil {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()3 user not found ", "username =", username)
 		w.WriteHeader(http.StatusNotFound)
@@ -93,7 +93,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//token, err = h.FindToken("passwordReset", tokenStr)
-	token, err = handlerAuthTemplate.FindToken(debugTag, h.appConf.Db, "accountValidation", tokenStr)
+	token, err = dbAuthTemplate.FindToken(debugTag, h.appConf.Db, "accountValidation", tokenStr)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()5 ", "err =", err, "tokenStr =", tokenStr)
 		return
@@ -101,7 +101,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 
 	//Get the server user info
 	//userS, err = h.UserReadQry(token.UserID)
-	userS, err = handlerAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, token.UserID)
+	userS, err = dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, token.UserID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()6 ", "err =", err, "token =", token)
 		return
@@ -115,7 +115,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//err = h.TokenDeleteQry(token.ID)
-	err = handlerAuthTemplate.TokenDeleteQry(debugTag+"Handler.AuthUpdate()7 ", h.appConf.Db, token.ID)
+	err = dbAuthTemplate.TokenDeleteQry(debugTag+"Handler.AuthUpdate()7 ", h.appConf.Db, token.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()7 ", "err =", err, "token =", token)
 	}
@@ -131,7 +131,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 	userS.Salt = userC.Salt
 
 	//err = h.UserAuthUpdate(userS)
-	err = handlerAuthTemplate.UserAuthUpdate(debugTag+"Handler.AuthUpdate()8a ", h.appConf.Db, userS)
+	err = dbAuthTemplate.UserAuthUpdate(debugTag+"Handler.AuthUpdate()8a ", h.appConf.Db, userS)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()9 ", "err =", err, "userS =", userS)
 		return
@@ -139,7 +139,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if handlerUserAccountStatus.AccountStatus(userS.AccountStatusID.ValueOrZero()) == handlerUserAccountStatus.AccountResetRequired {
 		//err = h.UserSetStatusID(userS.ID, handlerUserAccountStatus.AccountActive)
-		err = handlerAuthTemplate.UserSetStatusID(debugTag+"Handler.AuthUpdate()9a ", h.appConf.Db, userS.ID, handlerUserAccountStatus.AccountActive)
+		err = dbAuthTemplate.UserSetStatusID(debugTag+"Handler.AuthUpdate()9a ", h.appConf.Db, userS.ID, handlerUserAccountStatus.AccountActive)
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()10 ", "err =", err, "userS =", userS)
 		}

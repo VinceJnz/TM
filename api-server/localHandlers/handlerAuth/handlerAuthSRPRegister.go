@@ -1,7 +1,7 @@
 package handlerAuth
 
 import (
-	"api-server/v2/dbTemplates/handlerAuthTemplate"
+	"api-server/v2/dbTemplates/dbAuthTemplate"
 	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
@@ -60,7 +60,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 	//Create the new user record in the DB - this doesn't store the password
 	log.Printf("%v %v %+v", debugTag+"Handler.AccountCreate()5", "&user =", &user)
 	//user.ID, err = h.UserWriteQry(user)
-	user.ID, err = handlerAuthTemplate.UserWriteQry(debugTag+"Handler.AccountCreate()5a ", h.appConf.Db, user)
+	user.ID, err = dbAuthTemplate.UserWriteQry(debugTag+"Handler.AccountCreate()5a ", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()6 ", "err =", err, "user =", user)
 		status, err := helpers.SqlErr(err)
@@ -70,7 +70,7 @@ func (h *Handler) AccountCreate(w http.ResponseWriter, r *http.Request) {
 
 	//Set the password in the DB
 	//err = h.UserAuthUpdate(user)
-	err = handlerAuthTemplate.UserAuthUpdate(debugTag+"Handler.AccountCreate()6a ", h.appConf.Db, user)
+	err = dbAuthTemplate.UserAuthUpdate(debugTag+"Handler.AccountCreate()6a ", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountCreate()7 ", "err =", err, "user =", user)
 		status, err := helpers.SqlErr(err)
@@ -116,7 +116,7 @@ func (h *Handler) createToken(userID int, host, tokenName string, duration strin
 
 	//token.ID, err = h.srvc.Token.WriteDB(token.ID, &token)
 	//token.ID, err = h.TokenWriteQry(token)
-	token.ID, err = handlerAuthTemplate.TokenWriteQry(debugTag+"Handler.createToken()1 ", h.appConf.Db, token)
+	token.ID, err = dbAuthTemplate.TokenWriteQry(debugTag+"Handler.createToken()1 ", h.appConf.Db, token)
 
 	return token, err
 }
@@ -132,7 +132,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	tokenStr = vars["token"]
 
 	//token, err := h.FindToken("accountValidation", tokenStr)
-	token, err := handlerAuthTemplate.FindToken(debugTag, h.appConf.Db, "accountValidation", tokenStr)
+	token, err := dbAuthTemplate.FindToken(debugTag, h.appConf.Db, "accountValidation", tokenStr)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()5 ", "err =", err, "token =", token)
 		status, err := helpers.SqlErr(err)
@@ -142,7 +142,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	}
 	//delete/invalidate the token - it is allowed to be used only once.
 	//err = h.TokenDeleteQry(token.ID)
-	err = handlerAuthTemplate.TokenDeleteQry(debugTag+"Handler.AccountValidate()5a ", h.appConf.Db, token.ID)
+	err = dbAuthTemplate.TokenDeleteQry(debugTag+"Handler.AccountValidate()5a ", h.appConf.Db, token.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()6 ", "err =", err, "token =", token)
 		status, err := helpers.SqlErr(err)
@@ -154,7 +154,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	//Set the user account to verified
 	//err = h.srvc.SetUserStatus(token.UserID, mdlUser.Verified)
 	//err = h.UserSetStatusID(token.UserID, handlerUserAccountStatus.AccountVerified)
-	err = handlerAuthTemplate.UserSetStatusID(debugTag+"Handler.AccountValidate()6a ", h.appConf.Db, token.UserID, handlerUserAccountStatus.AccountVerified)
+	err = dbAuthTemplate.UserSetStatusID(debugTag+"Handler.AccountValidate()6a ", h.appConf.Db, token.UserID, handlerUserAccountStatus.AccountVerified)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7 ", "err =", err, "token =", token)
 		status, err := helpers.SqlErr(err)
@@ -165,7 +165,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 
 	//Get the user details and Send an email to the user
 	//user, err := h.UserReadQry(token.UserID)
-	user, err := handlerAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, token.UserID)
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, token.UserID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7a ", "err =", err, "user =", user) // User this for testing
 		status, err := helpers.SqlErr(err)
@@ -182,7 +182,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 
 	//Notify administrators of the validated accounts
 	//adminList, err := h.GetAdminList(1)
-	adminList, err := handlerAuthTemplate.GetAdminList(debugTag+"Handler.AccountValidate()8 ", h.appConf.Db, 1) // Get the admin list for group 1
+	adminList, err := dbAuthTemplate.GetAdminList(debugTag+"Handler.AccountValidate()8 ", h.appConf.Db, 1) // Get the admin list for group 1
 	if err == nil {
 		for _, adminUser := range adminList {
 			log.Printf("%v %v %+v", debugTag+"Handler.AccountValidate()9 ", "adminUser =", adminUser)

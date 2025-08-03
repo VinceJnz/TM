@@ -1,7 +1,7 @@
 package handlerTrip
 
 import (
-	"api-server/v2/dbTemplates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/models"
 	"log"
 	"net/http"
@@ -51,9 +51,9 @@ const (
 
 // GetBookingStatus: retrieves and returns all records with the status of each users booking (trip participant booking status list)
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	log.Printf("%vGetParticipantStatus()1 session=%+v\n", debugTag, session)
-	handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.TripParticipantStatus{}, sqlGetParticipantStatus, session.AdminFlag)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.TripParticipantStatus{}, sqlGetParticipantStatus, session.AdminFlag)
 	/*
 		records := []models.TripParticipantStatus{}
 		err := h.appConf.Db.Select(&records, sqlGetParticipantStatus)

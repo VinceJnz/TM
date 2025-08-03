@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"api-server/v2/app/appCore"
-	"api-server/v2/dbTemplates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/models"
 )
 
@@ -52,7 +52,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r) - 1 // The slice starts at index 0
+	id := dbStandardTemplate.GetID(w, r) - 1 // The slice starts at index 0
 	if id < 0 || id >= len(h.list) {
 		http.Error(w, "Index out of range", http.StatusBadRequest)
 		return

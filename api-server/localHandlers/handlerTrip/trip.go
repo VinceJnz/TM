@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"api-server/v2/app/appCore"
-	"api-server/v2/dbTemplates/handlerStandardTemplate"
+	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 )
@@ -52,20 +52,20 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	//log.Printf(debugTag+"GetAll()2 session=%v\n", session)
 
 	// Includes code to check if the user has access.
-	//handlerStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll, session.UserID, session.AdminFlag)
-	handlerStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll)
+	//dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll, session.UserID, session.AdminFlag)
+	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	handlerStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGet, id)
+	id := dbStandardTemplate.GetID(w, r)
+	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGet, id)
 }
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -77,14 +77,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
-	id := handlerStandardTemplate.GetID(w, r)
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	id := dbStandardTemplate.GetID(w, r)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
@@ -104,14 +104,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf(debugTag + "Update()3 processing the update")
-	handlerStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := handlerStandardTemplate.GetID(w, r)
-	session := handlerStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	handlerStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
+	id := dbStandardTemplate.GetID(w, r)
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
 }
 
 func (h *Handler) RecordValidation(record models.Trip) error {
