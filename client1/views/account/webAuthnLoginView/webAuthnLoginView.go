@@ -47,8 +47,6 @@ const ApiURL = "/auth"
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
 	Username string `json:"username"`
-	//Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)
-	//Salt     []byte `json:"salt"`
 	//Created         time.Time `json:"created"`
 	//Modified        time.Time `json:"modified"`
 }
@@ -271,16 +269,16 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
 	// to avoid the data being overwritten etc.
-	//itch editor.ItemState {
-	//se viewHelpers.ItemStateEditing:
+	//switch editor.ItemState {
+	//case viewHelpers.ItemStateEditing:
 	//	go editor.UpdateItem(editor.CurrentRecord)
-	//se viewHelpers.ItemStateAdding:
+	//case viewHelpers.ItemStateAdding:
 	//	go editor.AddItem(editor.CurrentRecord)
-	//fault:
+	//default:
 	//	editor.onCompletionMsg("Invalid item state for submission")
 	//
 	log.Printf("%sSubmitItemEdit()3 Submitting item: %v", debugTag, editor.CurrentRecord)
-	editor.WebAuthnLogin1(editor.CurrentRecord.Username)
+	editor.WebAuthnLogin(editor.CurrentRecord.Username)
 
 	editor.resetEditForm()
 	return nil
