@@ -115,7 +115,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 // WebAuthn Login process
 //********************************************************************
 
-func (editor *ItemEditor) Login(this js.Value, args []js.Value) any {
+func (editor *ItemEditor) LoginXX(this js.Value, args []js.Value) any {
 	go func() {
 		// 1. Begin authentication
 		fetch := js.Global().Get("fetch")

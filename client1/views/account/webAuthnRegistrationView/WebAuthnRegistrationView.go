@@ -123,7 +123,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displayingthe editor
+	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
@@ -211,19 +211,19 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
+	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "regItemName")
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
-	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "regItemUsername")
 	editor.UiComponents.Username.Call("setAttribute", "required", "true")
 
-	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
+	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "regItemEmail")
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
-	localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "itemPassword")
+	localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "regItemPassword")
 	editor.UiComponents.Password.Call("setAttribute", "required", "true")
 
-	localObjs.PasswordChk, editor.UiComponents.PasswordChk = viewHelpers.StringEdit("", editor.document, "Reenter Password", "password", "itemPasswordChk")
+	localObjs.PasswordChk, editor.UiComponents.PasswordChk = viewHelpers.StringEdit("", editor.document, "Reenter Password", "password", "regItemPasswordChk")
 	editor.UiComponents.PasswordChk.Call("setAttribute", "required", "true")
 	editor.UiComponents.PasswordChk.Call("addEventListener", "change", js.FuncOf(editor.ValidatePasswords))
 
@@ -235,8 +235,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.PasswordChk)
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
-	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "regSubmitEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "regCancelEditBtn")
 
 	// Append elements to form
 	form.Call("appendChild", submitBtn)
