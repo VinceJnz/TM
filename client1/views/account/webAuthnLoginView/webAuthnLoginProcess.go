@@ -8,20 +8,8 @@ import (
 	"syscall/js"
 )
 
-func (editor *ItemEditor) NewPOSTPromise(url string, bodyJSON string) js.Value {
-	baseURL := "/api/v1/" //editor.client.BaseURL - This baseURL currently includes "https://localhost:port/".
-	promise := js.Global().Call("fetch", baseURL+url, map[string]any{
-		"method": "POST",
-		"headers": map[string]any{
-			"Content-Type": "application/json",
-		},
-		"body": bodyJSON,
-	})
-	return promise
-}
-
 func (editor *ItemEditor) WebAuthnLogin(username string) {
-	log.Printf("%sItemEditor.WebAuthnLogin1()0, username = %s", debugTag, username)
+	log.Printf("%sItemEditor.WebAuthnLogin()0, username = %s", debugTag, username)
 	// Validate username input
 	if username == "" {
 		editor.handleWebAuthnError("Username is required")
@@ -35,8 +23,15 @@ func (editor *ItemEditor) WebAuthnLogin(username string) {
 		}
 
 		bodyJSON := js.Global().Get("JSON").Call("stringify", requestBody).String()
-		log.Printf("%sItemEditor.WebAuthnLogin1()1, bodyJSON = %s", debugTag, bodyJSON)
-		promise := editor.NewPOSTPromise(ApiURL+"/login/begin/"+username, bodyJSON)
+		log.Printf("%sItemEditor.WebAuthnLogin()1, bodyJSON = %s, ApiURL = %s, username = %s", debugTag, bodyJSON, ApiURL, username)
+		//promise := editor.NewPOSTPromise(ApiURL+"/login/begin/"+username, bodyJSON)
+		promise := js.Global().Call("fetch", "/api/v1/webauthn/login/begin/"+username, map[string]any{
+			"method": "POST",
+			"headers": map[string]any{
+				"Content-Type": "application/json",
+			},
+			"body": bodyJSON,
+		})
 
 		// Handle fetch response
 		then := js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -52,6 +47,7 @@ func (editor *ItemEditor) WebAuthnLogin(username string) {
 				editor.handleWebAuthnError("Failed to fetch login options")
 				return nil
 			}
+			log.Printf("%sItemEditor.WebAuthnLogin()2, resp = %v", debugTag, resp)
 
 			jsonPromise := resp.Call("json")
 
@@ -66,7 +62,7 @@ func (editor *ItemEditor) WebAuthnLogin(username string) {
 
 				// Convert challenge from base64url to Uint8Array
 				challengeStr := publicKey.Get("challenge").String()
-				log.Printf("%sItemEditor.WebAuthnLogin1()2, publicKey = %+v, challenge = %s", debugTag, publicKey, challengeStr)
+				log.Printf("%sItemEditor.WebAuthnLogin()3, publicKey = %+v, challenge = %s", debugTag, publicKey, challengeStr)
 				challenge, err := editor.decodeBase64URLToUint8Array(challengeStr)
 				if err != nil {
 					editor.handleWebAuthnError("Failed to decode challenge")
@@ -105,10 +101,17 @@ func (editor *ItemEditor) WebAuthnLogin(username string) {
 
 					// Properly serialize the credential
 					credJSON := editor.serializeCredential(cred)
-					log.Printf("%sItemEditor.WebAuthnLogin1()3, credJSON = %+v, cred = %+v", debugTag, credJSON, cred)
+					log.Printf("%sItemEditor.WebAuthnLogin()4, credJSON = %+v, cred = %+v, ApiURL = %s", debugTag, credJSON, cred, ApiURL)
 
 					// 3. Send result to server
-					finishPromise := editor.NewPOSTPromise(ApiURL+"/login/finish/", credJSON)
+					//finishPromise := editor.NewPOSTPromise(ApiURL+"/login/finish/", credJSON)
+					finishPromise := js.Global().Call("fetch", "/api/v1/webauthn/login/finish/", map[string]any{
+						"method": "POST",
+						"body":   credJSON,
+						"headers": map[string]any{
+							"Content-Type": "application/json",
+						},
+					})
 
 					// Handle final response
 					finishThen := js.FuncOf(func(this js.Value, args []js.Value) any {
