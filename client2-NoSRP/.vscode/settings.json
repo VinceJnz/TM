@@ -1,0 +1,24 @@
+{
+    //"gopls": {
+    //  "build.env": {
+    //    "GOOS": "js",
+    //    "GOARCH": "wasm"
+    //  }
+    //},
+   
+    "go.toolsEnvVars": {
+        "GOOS": "js",
+        "GOARCH": "wasm"
+    },
+
+    "go.testEnvVars": {
+      "GOOS": "js",
+      "GOARCH": "wasm"
+    },
+
+    "terminal.integrated.env.windows": {
+      "GOOS": "js",
+      "GOARCH": "wasm"
+    }
+
+  }

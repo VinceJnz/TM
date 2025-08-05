@@ -1,26 +1,50 @@
 ############################################################
 # STAGE1: Use a lightweight Go image to build the WASM binary
 #FROM golang:1.23.4-alpine AS wasmbuilder
-#FROM golang:alpine AS wasmbuilder
-FROM tinygo/tinygo:latest AS wasmbuilder
+FROM golang:alpine AS wasmbuilder
 
 # Update package index to ensure latest security patches
-#RUN apk update && apk upgrade
-#
+RUN apk update && apk upgrade
 
 # Set the working directory inside the container
 WORKDIR /app
 
 # Copy the Go source code into the container
-COPY ./client2-NoSRP/ .
+COPY ./client1/ .
 
 # Build the Go WASM binary
-#RUN GOOS=js GOARCH=wasm go build -o ./main.wasm
-RUN tinygo build -o main.wasm -target wasm ./ 
+RUN GOOS=js GOARCH=wasm go build -o ./main.wasm
 
-# Copy wasm_exec.js to target directory
-#RUN cp /usr/local/go/lib/wasm/wasm_exec.js .
-RUN cp /usr/local/tinygo/targets/wasm_exec.js .
+#ENV GOROOT=/usr/local/go
+#COPY $GOROOT/misc/wasm/wasm_exec.js ./out/
+#COPY /usr/local/go/misc/wasm/wasm_exec.js ./out/
+#RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
+RUN cp /usr/local/go/lib/wasm/wasm_exec.js .
+
+############################################################
+# STAGE2: Build Rust WASM client
+#FROM rust:alpine AS rustwasmbuilder
+FROM rust:1.82.0 AS rustwasmbuilder
+
+WORKDIR /app
+
+# Update package index and upgrade packages to reduce vulnerabilities
+#RUN apk update && apk upgrade
+
+# Install wasm target
+RUN rustup target add wasm32-unknown-unknown
+
+# Optionally install wasm-bindgen-cli if you're using it
+RUN cargo install wasm-bindgen-cli
+
+# Copy your Rust project source
+COPY ./client1_rust/ .
+
+# Build your Rust WASM app
+RUN cargo build --release --target wasm32-unknown-unknown
+
+# (Optional) If you're using wasm-bindgen for bindings
+RUN wasm-bindgen --out-dir ./out --target web ./target/wasm32-unknown-unknown/release/rust_client.wasm
 
 ############################################################
 # STAGE3: Use a lightweight Go image to build the webserver

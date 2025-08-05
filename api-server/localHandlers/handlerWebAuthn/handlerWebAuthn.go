@@ -112,7 +112,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
 	user = poolItem.User                // Set the user data from the pool
 
-	log.Printf("%sHandler.FinishRegistration()2: token = %v, user = %+v, sessionData = %+v", debugTag, tempSessionToken.Value, poolItem.User, poolItem.SessionData)
+	//log.Printf("%sHandler.FinishRegistration()2: token = %v, user = %+v, sessionData = %+v", debugTag, tempSessionToken.Value, poolItem.User, poolItem.SessionData)
 
 	credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)
 	if err != nil {

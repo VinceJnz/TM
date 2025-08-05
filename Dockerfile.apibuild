@@ -1,20 +1,23 @@
 ############################################################
 # STAGE1: Use a lightweight Go image to build the WASM binary
-FROM golang:1.23.4-alpine AS wasmbuilder
+#FROM golang:1.23.4-alpine AS wasmbuilder
+FROM tinygo/tinygo:latest AS wasmbuilder
 
 # Set the working directory inside the container
+#WORKDIR /app
 WORKDIR /app
 
 # Copy the Go source code into the container
-COPY ./client1/ .
+#COPY ./client1/ .
+COPY ./client2-NoSRP/ .
 
 # Build the Go WASM binary
-RUN GOOS=js GOARCH=wasm go build -o ./main.wasm
+#RUN GOOS=js GOARCH=wasm go build -o ./main.wasm
+RUN tinygo build -o main.wasm -target wasm ./ 
 
-#ENV GOROOT=/usr/local/go
-#COPY $GOROOT/misc/wasm/wasm_exec.js ./out/
-#COPY /usr/local/go/misc/wasm/wasm_exec.js ./out/
-RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
+# Copy wasm_exec.js to target directory
+#RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
+RUN cp /usr/local/tinygo/targets/wasm_exec.js .
 
 ############################################################
 # STAGE2: Use a lightweight Go image to build the binary
