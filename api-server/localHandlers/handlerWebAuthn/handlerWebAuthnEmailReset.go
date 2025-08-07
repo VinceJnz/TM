@@ -135,7 +135,7 @@ func (h *Handler) InitiateResetHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Failed to send reset email to %s: %v", user.Email.String, err)
 			// Don't reveal email sending failure to prevent enumeration
 		} else {
-			log.Printf("WebAuthn reset email sent to user %d (%s)", user.ID, user.Email)
+			log.Printf("WebAuthn reset email sent to user %d (%+v)", user.ID, user.Email)
 		}
 	}
 
@@ -198,7 +198,7 @@ func (h *Handler) CompleteResetHandler(w http.ResponseWriter, r *http.Request) {
 	//user.WebAuthnUserID = nil                  // Clear WebAuthn ID // Don't clear WebAuthnUserID, as it may be needed for future????
 
 	// Log the successful reset
-	log.Printf("WebAuthn credentials reset completed for user %d (%s). %d credentials removed.",
+	log.Printf("WebAuthn credentials reset completed for user %d (%+v). %d credentials removed.",
 		user.ID, user.Email, credentialCount)
 
 	// Return success response
