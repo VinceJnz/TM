@@ -52,6 +52,7 @@ func (c *JSONBCredential) Scan(value any) error {
 
 // ***************************************************************************
 // Old approach
+/*
 type WebAuthnCredential3 struct {
 	ID              int       `db:"id"`
 	PublicKey       []byte    `db:"public_key"`
@@ -136,3 +137,4 @@ type WebAuthnCredential2 struct {
 	Created  time.Time `json:"created" db:"created"`
 	Modified time.Time `json:"modified" db:"modified"`
 }
+*/
