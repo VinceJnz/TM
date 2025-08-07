@@ -68,28 +68,9 @@ type UserPayments struct {
 	Modified      time.Time   `json:"modified" db:"modified"`
 }
 
-/*
-// User stores user information
-type UserAuthXXX struct {
-	ID       int
-	Status   string
-	Name     string
-	Username string
-	//Phone          zero.String
-	Email zero.String
-	//Address        zero.String
-	//DOB            zero.Time
-	//MemberCode zero.String
-	//Password       zero.String //Probably should never populate this field????
-	AccountStatusID zero.Int
-	//MemberStatusID zero.Int
-	Salt     []byte
-	Verifier *big.Int //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-}
-*/
-
 var ErrWebAuthnCredentialExists = errors.New("WebAuthn credential already exists for this user")
 
+// WebAuthn interface implementation for User
 // WebAuthn.User is used to implement the webauthn.User interface for the User struct to be used with the webauthn library.
 // there is no struct associated with the webauthn.User interface. It is an interface that defines methods that must be implemented.
 // https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/webauthn#User
