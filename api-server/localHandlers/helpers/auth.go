@@ -25,7 +25,8 @@ const (
 	WHERE stu.ID=$1 AND etr.ID=$2`
 )
 
-func AccessCheck(userID int, resourceID int, accessLevel AccessLevel, core *appCore.Config) error {
+// AccessCheck checks if a user has access to a resource with a specific access level ?????
+func XXAccessCheck(userID int, resourceID int, accessLevel AccessLevel, core *appCore.Config) error {
 	var err error
 	var result int
 	err = core.Db.QueryRow(sqlAccessCheck, userID, resourceID, accessLevel).Scan(&result)
