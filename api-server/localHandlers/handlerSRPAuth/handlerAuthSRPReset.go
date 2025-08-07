@@ -2,7 +2,6 @@ package handlerSRPAuth
 
 import (
 	"api-server/v2/dbTemplates/dbAuthTemplate"
-	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"encoding/json"
@@ -40,7 +39,7 @@ func (h *Handler) AuthReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((handlerUserAccountStatus.AccountStatus(user.AccountStatusID.Int64) == handlerUserAccountStatus.AccountActive) || (handlerUserAccountStatus.AccountStatus(user.AccountStatusID.Int64) == handlerUserAccountStatus.AccountResetRequired)) {
+	if !((models.AccountStatus(user.AccountStatusID.Int64) == models.AccountActive) || (models.AccountStatus(user.AccountStatusID.Int64) == models.AccountResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "username =", username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))
@@ -107,7 +106,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((handlerUserAccountStatus.AccountStatus(userS.AccountStatusID.Int64) == handlerUserAccountStatus.AccountActive) || (handlerUserAccountStatus.AccountStatus(userS.AccountStatusID.Int64) == handlerUserAccountStatus.AccountResetRequired)) {
+	if !((models.AccountStatus(userS.AccountStatusID.Int64) == models.AccountActive) || (models.AccountStatus(userS.AccountStatusID.Int64) == models.AccountResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "userS.UserName =", userS.Username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))
@@ -137,9 +136,9 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if handlerUserAccountStatus.AccountStatus(userS.AccountStatusID.ValueOrZero()) == handlerUserAccountStatus.AccountResetRequired {
+	if models.AccountStatus(userS.AccountStatusID.ValueOrZero()) == models.AccountResetRequired {
 		//err = h.UserSetStatusID(userS.ID, handlerUserAccountStatus.AccountActive)
-		err = dbAuthTemplate.UserSetStatusID(debugTag+"Handler.AuthUpdate()9a ", h.appConf.Db, userS.ID, handlerUserAccountStatus.AccountActive)
+		err = dbAuthTemplate.UserSetStatusID(debugTag+"Handler.AuthUpdate()9a ", h.appConf.Db, userS.ID, models.AccountActive)
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()10 ", "err =", err, "userS =", userS)
 		}

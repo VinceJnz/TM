@@ -2,7 +2,6 @@ package handlerSRPAuth
 
 import (
 	"api-server/v2/dbTemplates/dbStandardTemplate"
-	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"net/http"
 )
@@ -33,12 +32,12 @@ const (
 func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuUserGet()1 session=%+v", session)
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &models.MenuUser{}, sqlMenuUser, session.UserID, handlerUserAccountStatus.AccountActive)
+	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &models.MenuUser{}, sqlMenuUser, session.UserID, models.AccountActive)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	//log.Printf(debugTag+"MenuListGet()1 session=%+v", session)
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, handlerUserAccountStatus.AccountActive)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, models.AccountActive)
 }

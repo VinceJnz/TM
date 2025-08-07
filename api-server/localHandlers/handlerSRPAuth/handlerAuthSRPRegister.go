@@ -2,7 +2,6 @@ package handlerSRPAuth
 
 import (
 	"api-server/v2/dbTemplates/dbAuthTemplate"
-	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"encoding/json"
@@ -154,7 +153,7 @@ func (h *Handler) AccountValidate(w http.ResponseWriter, r *http.Request) {
 	//Set the user account to verified
 	//err = h.srvc.SetUserStatus(token.UserID, mdlUser.Verified)
 	//err = h.UserSetStatusID(token.UserID, handlerUserAccountStatus.AccountVerified)
-	err = dbAuthTemplate.UserSetStatusID(debugTag+"Handler.AccountValidate()6a ", h.appConf.Db, token.UserID, handlerUserAccountStatus.AccountVerified)
+	err = dbAuthTemplate.UserSetStatusID(debugTag+"Handler.AccountValidate()6a ", h.appConf.Db, token.UserID, models.AccountVerified)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AccountValidate()7 ", "err =", err, "token =", token)
 		status, err := helpers.SqlErr(err)

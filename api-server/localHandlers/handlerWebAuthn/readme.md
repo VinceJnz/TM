@@ -1,5 +1,12 @@
 # WebAuthn processes
 
+## Documentation
+
+<https://pkg.go.dev/github.com/go-webauthn/webauthn/webauthn>
+
+<https://www.w3.org/TR/webauthn/>
+
+
 ## WebAuthn registration process
 
 Here’s a summary of the WebAuthn registration process and the data exchanged between your API server (the Relying Party) and a WASM (WebAssembly) client (typically running in the browser):

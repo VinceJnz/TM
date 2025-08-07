@@ -1,7 +1,6 @@
 package dbAuthTemplate
 
 import (
-	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"errors"
 	"log"
@@ -32,7 +31,7 @@ func CheckUserAuthXX(debugStr string, Db *sqlx.DB, username, password string) (m
 	var result models.User
 
 	//err = r.DBConn.QueryRow(sqlCheckUserAuth, username, password).Scan(&result.ID, &result.UserName, &result.Salt)
-	err = Db.QueryRow(sqlCheckUserAuth, username, handlerUserAccountStatus.AccountActive).Scan(&result.ID, &result.Username, &result.Salt)
+	err = Db.QueryRow(sqlCheckUserAuth, username, models.AccountActive).Scan(&result.ID, &result.Username, &result.Salt)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v %v %+v", debugTag+"CheckPassword()2 ", "err =", err, "result =", result, "DB =", Db.DB)
 		return models.User{}, err //password check failed
@@ -104,7 +103,7 @@ func GetAdminList(debugStr string, Db *sqlx.DB, groupID int64) ([]models.User, e
 	var result models.User
 	var list []models.User
 
-	rows, err := Db.Query(sqlGetAdminList, groupID, handlerUserAccountStatus.AccountActive)
+	rows, err := Db.Query(sqlGetAdminList, groupID, models.AccountActive)
 	if err != nil {
 		log.Println(debugTag+"GetAdminList()1 - ", "groupID =", groupID, "sqlGetAdminList =", sqlGetAdminList, "err =", err)
 		//log.Fatal(err)

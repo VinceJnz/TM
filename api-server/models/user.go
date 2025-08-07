@@ -8,6 +8,17 @@ import (
 	"github.com/guregu/null/v5/zero"
 )
 
+type AccountStatus int
+
+const (
+	AccountNew AccountStatus = iota
+	AccountVerified
+	AccountActive
+	AccountDisabled
+	AccountResetRequired
+	AccountForDeletion
+)
+
 type User struct {
 	ID              int                   `json:"id" db:"id"`
 	Name            string                `json:"name" db:"name"`

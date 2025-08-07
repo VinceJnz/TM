@@ -1,7 +1,6 @@
 package dbAuthTemplate
 
 import (
-	"api-server/v2/localHandlers/handlerUserAccountStatus"
 	"api-server/v2/models"
 	"database/sql"
 	"errors"
@@ -58,7 +57,7 @@ func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, Act
 	var err error
 	var access models.AccessCheck
 
-	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, handlerUserAccountStatus.AccountActive).Scan(&access.AccessTypeID, &access.AdminFlag)
+	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessTypeID, &access.AdminFlag)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
 		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"CheckAccess()3 Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
 		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
@@ -72,7 +71,7 @@ const (
 )
 
 // SetStatusID sets the users account status
-func UserSetStatusID(debugStr string, Db *sqlx.DB, userID int, status handlerUserAccountStatus.AccountStatus) error {
+func UserSetStatusID(debugStr string, Db *sqlx.DB, userID int, status models.AccountStatus) error {
 	var err error
 
 	result, err := Db.Exec(sqlSetStatus, status, userID)
@@ -191,7 +190,7 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
-	err = Db.QueryRow(sqlFindSessionToken, result.TokenStr, handlerUserAccountStatus.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
+	err = Db.QueryRow(sqlFindSessionToken, result.TokenStr, models.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
@@ -203,9 +202,9 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Token, error) {
 	var err error
 	result := models.Token{}
-	result.TokenStr.SetValid(cookieStr)
-	result.Name.SetValid(name)
-	err = Db.QueryRow(sqlFindToken, result.TokenStr, result.Name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
+	//result.TokenStr.SetValid(cookieStr)
+	//result.Name.SetValid(name)
+	err = Db.QueryRow(sqlFindToken, cookieStr, name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return result, err
@@ -238,11 +237,12 @@ func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, acc
 }
 
 const (
-	sqlUserFind     = `SELECT id FROM st_users WHERE id = $1`
-	sqlUserRead     = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE id = $1`
-	sqlUserNameRead = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE username = $1`
-	sqlUserInsert   = `INSERT INTO st_users (name, username, email, webauthn_user_id) VALUES ($1, $2, $3, $4) RETURNING id`
-	sqlUserUpdate   = `UPDATE st_users SET name = $1, username = $2, email = $3, webauthn_user_id = $4 WHERE id = $5`
+	sqlUserFind      = `SELECT id FROM st_users WHERE id = $1`
+	sqlUserRead      = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE id = $1`
+	sqlUserNameRead  = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE username = $1`
+	sqlUserEmailRead = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE email = $1`
+	sqlUserInsert    = `INSERT INTO st_users (name, username, email, webauthn_user_id) VALUES ($1, $2, $3, $4) RETURNING id`
+	sqlUserUpdate    = `UPDATE st_users SET name = $1, username = $2, email = $3, webauthn_user_id = $4 WHERE id = $5`
 )
 
 func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
@@ -257,6 +257,15 @@ func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
 func UserNameReadQry(debugStr string, Db *sqlx.DB, username string) (models.User, error) {
 	record := models.User{}
 	err := Db.Get(&record, sqlUserNameRead, username)
+	if err != nil {
+		return models.User{}, err
+	}
+	return record, nil
+}
+
+func UserEmailReadQry(debugStr string, Db *sqlx.DB, email string) (models.User, error) {
+	record := models.User{}
+	err := Db.Get(&record, sqlUserEmailRead, email)
 	if err != nil {
 		return models.User{}, err
 	}
