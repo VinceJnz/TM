@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"api-server/v2/app/appCore"
-	"api-server/v2/dbTemplates/dbStandardTemplate"
 	"api-server/v2/localHandlers/helpers"
+	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 )
 

@@ -3,7 +3,7 @@ package handlerSRPAuth
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/srpPool"
-	"api-server/v2/dbTemplates/dbAuthTemplate"
+	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"context"
 	"errors"

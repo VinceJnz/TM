@@ -1,7 +1,7 @@
 package handlerSRPAuth
 
 import (
-	"api-server/v2/dbTemplates/dbAuthTemplate"
+	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"log"
 	"net/http"

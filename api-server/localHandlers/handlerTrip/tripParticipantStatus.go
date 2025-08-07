@@ -1,7 +1,7 @@
 package handlerTrip
 
 import (
-	"api-server/v2/dbTemplates/dbStandardTemplate"
+	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 	"log"
 	"net/http"

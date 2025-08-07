@@ -1,8 +1,8 @@
 package handlerSRPAuth
 
 import (
-	"api-server/v2/dbTemplates/dbAuthTemplate"
 	"api-server/v2/localHandlers/helpers"
+	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"io"
