@@ -67,6 +67,7 @@ type UserPayments struct {
 	Modified      time.Time   `json:"modified" db:"modified"`
 }
 
+/*
 // User stores user information
 type UserAuthXXX struct {
 	ID       int
@@ -84,3 +85,4 @@ type UserAuthXXX struct {
 	Salt     []byte
 	Verifier *big.Int //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
 }
+*/
