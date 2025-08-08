@@ -5,6 +5,7 @@ import (
 	"client2-NoSRP/v2/app/eventProcessor"
 	"client2-NoSRP/v2/app/httpProcessor"
 	"client2-NoSRP/v2/views/account/webAuthnRegistrationView"
+	"client2-NoSRP/v2/views/account/webAuthnResetView"
 	"client2-NoSRP/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
@@ -212,23 +213,40 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item
-	webAuthnRegister := webAuthnRegistrationView.New(editor.document, editor.events, editor.appCore, webAuthnRegistrationView.ParentData{})
+	webAuthnRegisterView := webAuthnRegistrationView.New(editor.document, editor.events, editor.appCore, webAuthnRegistrationView.ParentData{})
 
 	// Create a toggle child button
-	webAuthnButton := editor.document.Call("createElement", "button")
-	webAuthnButton.Set("innerHTML", "WebAuthnRegister")
-	webAuthnButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		webAuthnRegister.NewItemData(this, args) // WARNING ... this is different for the page ...
-		webAuthnRegister.Toggle()
+	webAuthnRegisterButton := editor.document.Call("createElement", "button")
+	webAuthnRegisterButton.Set("innerHTML", "WebAuthnRegister")
+	webAuthnRegisterButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		webAuthnRegisterView.NewItemData(this, args) // WARNING ... this is different for the page ...
+		webAuthnRegisterView.Toggle()
+		return nil
+	}))
+
+	// Need more work here to handle the webAuthnEmailResetView
+	// We could simply make an additional field appear on the current page????
+	// or we could create a new view for the email reset????
+	webAuthnEmailResetView := webAuthnResetView.New(editor.document, editor.events, editor.appCore, webAuthnResetView.ParentData{})
+	// Create a toggle child button
+	webAuthnEmailResetButton := editor.document.Call("createElement", "button")
+	webAuthnEmailResetButton.Set("innerHTML", "WebAuthnEmailReset")
+	webAuthnEmailResetButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		webAuthnEmailResetView.NewItemData(this, args) // WARNING ... this is different for the page ...
+		webAuthnEmailResetView.Toggle()
 		return nil
 	}))
 
 	// Append child components to editor div
-	editor.elements.EditDiv.Call("appendChild", webAuthnButton)
-	editor.elements.EditDiv.Call("appendChild", webAuthnRegister.Div)
+	editor.elements.EditDiv.Call("appendChild", webAuthnRegisterButton)
+	editor.elements.EditDiv.Call("appendChild", webAuthnRegisterView.Div)
 
 	// Append form to editor div
 	editor.elements.EditDiv.Call("appendChild", form)
+
+	// Append child components to editor div
+	editor.elements.EditDiv.Call("appendChild", webAuthnEmailResetButton)
+	editor.elements.EditDiv.Call("appendChild", webAuthnEmailResetView.Div)
 
 	// Make sure the form is visible
 	editor.elements.EditDiv.Get("style").Set("display", "block")
@@ -249,7 +267,7 @@ func (editor *ItemEditor) resetEditForm() {
 }
 
 // SubmitItemEdit handles the submission of the item edit form
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
 		event.Call("preventDefault")
@@ -281,7 +299,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	editor.resetEditForm()
 	return nil
 }

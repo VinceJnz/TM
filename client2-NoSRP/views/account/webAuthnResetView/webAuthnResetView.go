@@ -60,6 +60,9 @@ type UI struct {
 	Email    js.Value
 }
 
+type ParentData struct {
+}
+
 type Item struct {
 	Record TableData
 	//Add child structures as necessary
@@ -80,13 +83,14 @@ type ItemEditor struct {
 	EditDiv       js.Value
 	//ListDiv       js.Value
 	StateDiv    js.Value
+	ParentData  ParentData
 	ParentID    int
 	ViewState   ViewState
 	RecordState RecordState
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
@@ -115,8 +119,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.Div.Call("appendChild", editor.StateDiv)
 
 	// Store supplied parent value
-	if len(idList) == 1 {
-		editor.ParentID = idList[0]
+	if len(parentData) != 0 {
+		editor.ParentData = parentData[0]
 	}
 
 	editor.RecordState = RecordStateReloadRequired
@@ -158,7 +162,7 @@ func (editor *ItemEditor) Display() {
 }
 
 // NewItemData initializes a new item for adding
-func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -256,7 +260,7 @@ func (editor *ItemEditor) resetEditForm() {
 //}
 
 // SubmitItemEdit handles the submission of the item edit form
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
 		event.Call("preventDefault")
@@ -290,7 +294,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	editor.resetEditForm()
 	return nil
 }
