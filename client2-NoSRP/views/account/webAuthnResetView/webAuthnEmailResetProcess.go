@@ -8,8 +8,8 @@ import (
 
 // API endpoints (adjust as needed)
 const (
-	BeginResetURL  = "https://localhost:8086/api/v1/auth/webauthn/email-reset"
-	FinishResetURL = "https://localhost:8086/api/v1/auth/webauthn/email-reset/finish"
+	BeginResetURL  = "https://localhost:8086/api/v1/webauthn/emailReset/begin/"
+	FinishResetURL = "https://localhost:8086/api/v1/webauthn/emailReset/finish/"
 )
 
 // To start the process (request email reset):
