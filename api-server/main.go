@@ -65,6 +65,8 @@ func main() {
 	subR1.HandleFunc("/webauthn/register/finish/", WebAuthn.FinishRegistration).Methods("POST")
 	subR1.HandleFunc("/webauthn/login/begin/{username}", WebAuthn.BeginLogin).Methods("POST")
 	subR1.HandleFunc("/webauthn/login/finish/", WebAuthn.FinishLogin).Methods("POST")
+	subR1.HandleFunc("/webauthn/emailReset/begin/", WebAuthn.BeginEmailResetHandler).Methods("POST")
+	subR1.HandleFunc("/webauthn/emailReset/finish/{token}", WebAuthn.FinishEmailResetHandler).Methods("Get")
 
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler

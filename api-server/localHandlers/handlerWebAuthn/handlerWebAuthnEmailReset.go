@@ -13,10 +13,12 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/gorilla/mux"
 )
 
 // API Request/Response structures - used to decode JSON requests and encode JSON responses
 type ResetRequest struct {
+	//Username string `json:"username"`
 	Email string `json:"email"`
 }
 
@@ -34,7 +36,7 @@ func generateSecureToken() string {
 
 // Send reset email (replace with your email service)
 func sendResetEmail(email, resetToken string) error {
-	resetLink := fmt.Sprintf("https://yourapp.com/reset-webauthn?token=%s", resetToken)
+	resetLink := fmt.Sprintf("https://localhost:8086/api/v1/webauthn/emailReset/finish/%s", resetToken)
 
 	// In production, use your email service (SendGrid, AWS SES, etc.)
 	log.Printf("📧 WebAuthn Reset Email sent to: %s", email)
@@ -61,7 +63,9 @@ Thanks!
 }
 
 // Step 1: User requests reset via email
-func (h *Handler) InitiateResetHandler(w http.ResponseWriter, r *http.Request) {
+// BeginEmailResetHandler handles the initial request to reset WebAuthn credentials via email
+// It checks if the user exists, has WebAuthn enabled, and sends a reset link
+func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method != http.MethodPost {
@@ -107,6 +111,8 @@ func (h *Handler) InitiateResetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("%sHandler.BeginLogin()3 User found: %+v, ID = %d, Email = %s", debugTag, user, user.ID, user.Email.String)
+
 	// Always return success to prevent email enumeration attacks
 	response := ResetResponse{
 		Success: true,
@@ -114,7 +120,8 @@ func (h *Handler) InitiateResetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Only send email if user exists and has WebAuthn credentials
-	if user.WebAuthnEnabled() && user.WebAuthnHasCredentials() {
+	//if user.WebAuthnEnabled() && user.WebAuthnHasCredentials() {
+	if user.WebAuthnEnabled() {
 		// Generate secure reset token
 		resetToken := generateSecureToken()
 
@@ -137,18 +144,26 @@ func (h *Handler) InitiateResetHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			log.Printf("WebAuthn reset email sent to user %d (%+v)", user.ID, user.Email)
 		}
+	} else {
+		log.Printf("User %d (%+v) does not have WebAuthn enabled or no credentials found. No email sent.", user.ID, user)
 	}
+
+	log.Printf("WebAuthn reset request processed for user %d (%+v)", user.ID, user.Email)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
 
 // Step 2: User clicks email link to complete reset
-func (h *Handler) CompleteResetHandler(w http.ResponseWriter, r *http.Request) {
+// FinishEmailResetHandler handles the final step of resetting WebAuthn credentials
+// It validates the reset token, clears the user's WebAuthn credentials, and returns a success response
+// It also deletes the token to prevent reuse
+func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	log.Printf("%sHandler.FinishEmailResetHandler()1 Start", debugTag)
 
-	// Get token from query parameter
-	token := r.URL.Query().Get("token")
+	params := mux.Vars(r)
+	token := params["token"]
 	if token == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
