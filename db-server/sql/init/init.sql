@@ -367,6 +367,7 @@ CREATE TABLE st_webauthn_credentials (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     credential_data JSONB NOT NULL,
+    device_metadata JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
