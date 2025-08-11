@@ -42,11 +42,11 @@ func (c *JSONBCredential) Scan(value any) error {
 }
 
 type JSONBDeviceMetadata struct {
-	UserAgent                   string    `json:"user_agent"`
-	DeviceFingerprint           string    `json:"device_fingerprint"`
-	RegistrationTimestamp       time.Time `json:"registration_timestamp"`
-	LastSuccessfulAuthTimestamp time.Time `json:"last_successful_auth_timestamp"`
-	UserAssignedDeviceName      string    `json:"user_assigned_device_name"`
+	UserAgent                   string    `json:"user_agent"`                     // User agent string of the device used for registration or authentication
+	DeviceFingerprint           string    `json:"device_fingerprint"`             // Unique fingerprint of the device
+	RegistrationTimestamp       time.Time `json:"registration_timestamp"`         // Timestamp of when the device was registered
+	LastSuccessfulAuthTimestamp time.Time `json:"last_successful_auth_timestamp"` // Timestamp of the last successful authentication
+	UserAssignedDeviceName      string    `json:"user_assigned_device_name"`      // User-defined name for the device
 }
 
 // Value implements the driver.Valuer interface for database storage

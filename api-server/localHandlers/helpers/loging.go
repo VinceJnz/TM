@@ -31,16 +31,16 @@ func LogRequest(next http.Handler) http.Handler {
 		info := &HTTPInfo{
 			Duration:      0,
 			URL:           r.URL.String(),
-			Host:          "",
+			Host:          r.Host,
 			Cookie:        "",
 			Method:        r.Method,
-			RequestURI:    "",
-			Referer:       r.Header.Get("Referer"),
+			RequestURI:    r.RequestURI, // "",
+			Referer:       r.Referer(),  // r.Header.Get("Referer"),
 			Protocol:      "",
 			RemoteAddress: r.RemoteAddr,
 			Size:          0,
 			StatusCode:    0,
-			UserAgent:     r.Header.Get("User-Agent"),
+			UserAgent:     r.UserAgent(), // r.Header.Get("User-Agent"),
 			UserID:        0,
 		}
 		start := time.Now()
@@ -51,7 +51,7 @@ func LogRequest(next http.Handler) http.Handler {
 		next.ServeHTTP(lrw, r)
 
 		// Log the response status code and body
-		log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
+		//log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
 		if lrw.statusCode != 0 && lrw.statusCode != 200 {
 			log.Printf(debugTag+`LogRequest()2 Response body: %s`, lrw.body.String())
 		}
