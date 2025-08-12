@@ -82,4 +82,5 @@ type WebAuthnCredential struct {
 	DeviceMetadata JSONBDeviceMetadata `json:"device_metadata" db:"device_metadata"` // JSON-encoded device metadata. Stores information about the device used for authentication so that it can be referenced later, e.g. by the user to delete an expired credential.
 	Created        time.Time           `json:"created" db:"created"`
 	Modified       time.Time           `json:"modified" db:"modified"`
+	//LastSuccessfulAuthTimestamp time.Time           `json:"last_successful_auth_timestamp" db:"last_successful_auth_timestamp"` // Timestamp of the last successful authentication
 }

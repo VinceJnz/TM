@@ -4,6 +4,7 @@ import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
@@ -99,9 +100,28 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, *credential)
+	deviceMetadata := models.JSONBDeviceMetadata{
+		UserAgent:                   r.UserAgent(),
+		RegistrationTimestamp:       time.Now(),
+		LastSuccessfulAuthTimestamp: time.Now(),
+		UserAssignedDeviceName:      "test1", // User-defined name for the device
+		//DeviceFingerprint:           sessionData.DeviceFingerprint,
+	}
+
+	webAuthnCredential := models.WebAuthnCredential{
+		//ID:             credential.ID,
+		UserID:         userID,
+		CredentialID:   base64.RawURLEncoding.EncodeToString(credential.ID),
+		Credential:     models.JSONBCredential{Credential: *credential},
+		DeviceName:     deviceMetadata.UserAssignedDeviceName,
+		DeviceMetadata: deviceMetadata,
+		Created:        time.Now(),
+		Modified:       time.Now(),
+	}
+
+	err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, &webAuthnCredential)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", credential)
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", webAuthnCredential)
 		return
 	}
 

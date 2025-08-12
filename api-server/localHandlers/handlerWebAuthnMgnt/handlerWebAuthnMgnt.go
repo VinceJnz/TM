@@ -13,14 +13,14 @@ import (
 const debugTag = "handlerWebAuthnMgnt."
 
 const (
-	qryGetAll = `SELECT id, user_id, credential_id, credential, device_name, device_metadata, created, modified FROM st_webauthn_credentials
-	WHERE (user_id = $1 OR true=$2)`
-	qryGet = `SELECT id, user_id, credential_id, credential, device_name, device_metadata, created, modified FROM st_webauthn_credentials
-	WHERE id = $1 AND (user_id = $2 OR true=$3)`
-	qryCreate = `INSERT INTO st_webauthn_credentials (user_id, credential_id, credential, device_name, device_metadata) VALUES ($1, $2, $3, $4, $5) RETURNING id`
-	qryUpdate = `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential, device_name, device_metadata) = ($2, $3, $4, $5, $6) WHERE id = $1
-	AND (user_id = $2 OR true=$3)`
-	qryDelete = `DELETE FROM st_webauthn_credentials WHERE id = $1 AND (user_id = $2 OR true=$3)`
+	qryGetAll = `SELECT id, user_id, credential_id, credential_data, device_name, device_metadata, created, modified FROM st_webauthn_credentials
+	WHERE (true=$1 OR user_id = $2)`
+	qryGet = `SELECT id, user_id, credential_id, credential_data, device_name, device_metadata, created, modified FROM st_webauthn_credentials
+	WHERE id = $1 AND (true=$2 OR user_id = $3)`
+	qryCreate = `INSERT INTO st_webauthn_credentials (user_id, credential_id, credential_data, device_name, device_metadata) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	qryUpdate = `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential_data, device_name, device_metadata) = ($3, $4, $5, $6, $7) WHERE id = $1
+	AND (true=$2 OR user_id = $3)`
+	qryDelete = `DELETE FROM st_webauthn_credentials WHERE id = $1 AND (true=$2 OR user_id = $3)`
 )
 
 type Handler struct {
@@ -34,14 +34,14 @@ func New(appConf *appCore.Config) *Handler {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.WebAuthnCredential{}, qryGetAll, session.UserID, session.AdminFlag)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.WebAuthnCredential{}, qryGetAll, session.AdminFlag, session.UserID)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.WebAuthnCredential{}, qryGet, id, session.UserID, session.AdminFlag)
+	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.WebAuthnCredential{}, qryGet, id, session.AdminFlag, session.UserID)
 }
 
 // Create: adds a new record and returns the new record
@@ -70,12 +70,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	record.UserID = session.UserID
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, record.UserID, record.CredentialID, record.Credential, record.DeviceName, record.DeviceMetadata)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.AdminFlag, record.UserID, record.CredentialID, record.Credential, record.DeviceName, record.DeviceMetadata)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.AdminFlag, session.UserID)
 }
