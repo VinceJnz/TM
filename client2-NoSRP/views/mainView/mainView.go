@@ -24,6 +24,7 @@ import (
 	"client2-NoSRP/v2/views/tripStatusView"
 	"client2-NoSRP/v2/views/tripTypeView"
 	"client2-NoSRP/v2/views/tripView"
+	"client2-NoSRP/v2/views/userAccountStatusView"
 	"client2-NoSRP/v2/views/userAgeGroupView"
 	"client2-NoSRP/v2/views/userMemberStatusView"
 	"client2-NoSRP/v2/views/userView"
@@ -184,7 +185,7 @@ func (v *View) Setup() {
 	v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("User Member Status", userMemberStatusView.ApiURL, true, userMemberStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	//v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
+	v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)

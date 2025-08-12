@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const debugTag = "userView."
+const debugTag = "webAuthnMgntView."
 
 type ItemState int
 
@@ -42,7 +42,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/users"
+const ApiURL = "/webauthn"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -215,7 +215,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.DeviceName)
-	//form.Call("appendChild", localObjs.DeviceMetadata)
+	form.Call("appendChild", localObjs.DeviceMetadata)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
