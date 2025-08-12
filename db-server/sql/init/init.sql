@@ -370,7 +370,7 @@ CREATE TABLE st_webauthn_credentials (
     credential_data JSONB NOT NULL,
     device_name VARCHAR(45) NOT NULL, -- Stores the name of the device/browser used for authentication
     device_metadata JSONB NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     --FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
