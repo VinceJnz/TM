@@ -78,6 +78,7 @@ type WebAuthnCredential struct {
 	UserID         int                 `json:"user_id" db:"user_id"`                 // or string, depending on your user model. This is the foreign key to the user table
 	CredentialID   string              `json:"credential_id" db:"credential_id"`     // base64-encoded string, unique identifier for the credential. If a credential is updated, this ID remains the same. If a credential is deleted, this ID can be reused, but it is recommended to generate a new ID for a new credential.
 	Credential     JSONBCredential     `json:"credential_data" db:"credential_data"` // JSON-encoded webauthn.Credential
+	DeviceName     string              `json:"device_name" db:"device_name"`         // User-defined name for the device/browser used for registration or authentication
 	DeviceMetadata JSONBDeviceMetadata `json:"device_metadata" db:"device_metadata"` // JSON-encoded device metadata. Stores information about the device used for authentication so that it can be referenced later, e.g. by the user to delete an expired credential.
 	Created        time.Time           `json:"created" db:"created"`
 	Modified       time.Time           `json:"modified" db:"modified"`
