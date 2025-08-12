@@ -8,6 +8,7 @@ import (
 	"client2-NoSRP/v2/views/accessTypeView"
 	"client2-NoSRP/v2/views/account/logoutView"
 	"client2-NoSRP/v2/views/account/webAuthnLoginView"
+	"client2-NoSRP/v2/views/account/webAuthnMgntView"
 	"client2-NoSRP/v2/views/bookingStatusView"
 	"client2-NoSRP/v2/views/bookingView"
 	"client2-NoSRP/v2/views/groupBookingView"
@@ -191,6 +192,7 @@ func (v *View) Setup() {
 	v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+	v.AddViewItem("My Authn Devices", webAuthnMgntView.ApiURL, true, webAuthnMgntView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput = v.document.Call("createElement", "div")

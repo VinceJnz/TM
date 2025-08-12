@@ -1,6 +1,9 @@
 package viewHelpers
 
-import "syscall/js"
+import (
+	"encoding/json"
+	"syscall/js"
+)
 
 // These are composite view helpers that are used to create more complex UI components.
 // They add themselves to the DOM via the parent parameter.
@@ -72,4 +75,47 @@ func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn fu
 	itemDiv.Call("appendChild", editButton)
 	itemDiv.Call("appendChild", deleteButton)
 	return itemDiv
+}
+
+func JSONEdit(value json.RawMessage, document js.Value, labelText string, inputType string, htmlID string) (object, inputObj js.Value) {
+
+	// Create a fieldset element for grouping
+	fieldset := document.Call("createElement", "fieldset")
+	fieldset.Set("className", "input-group")
+
+	// Create a label element
+	label := Label(document, labelText, htmlID)
+	fieldset.Call("appendChild", label)
+
+	// Create an text area element
+	// Create a textarea for JSON editing
+	textarea := document.Call("createElement", "textarea")
+	textarea.Set("id", htmlID)
+	textarea.Set("className", "form-control")
+	textarea.Set("rows", 6)
+	textarea.Set("style", "width:100%; font-family:monospace;")
+
+	// Set initial value as pretty-printed JSON if possible
+	var pretty string
+	if len(value) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(value, &v); err == nil {
+			if b, err := json.MarshalIndent(v, "", "  "); err == nil {
+				pretty = string(b)
+			} else {
+				pretty = string(value)
+			}
+		} else {
+			pretty = string(value)
+		}
+	}
+	textarea.Set("value", pretty)
+
+	fieldset.Call("appendChild", textarea)
+
+	// Create an span element of error messages
+	span := Span(document, htmlID+"-error")
+	fieldset.Call("appendChild", span)
+
+	return fieldset, textarea
 }
