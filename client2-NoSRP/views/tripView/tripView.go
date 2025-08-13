@@ -209,7 +209,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 		optionElement := editor.document.Call("createElement", "option")
 		//optionElement.Set("value", item.ID)
 		optionElement.Set("value", index) // The index is used as it allows the current record to be updated when the dropdown is changed. This allows the app to use the current record to update UI values.
-		optionElement.Set("text", item.Name+" (From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
+		optionElement.Set("text", item.Name+" (From:"+item.FromDate.Format(viewHelpers.DateLayout)+" - To:"+item.ToDate.Format(viewHelpers.DateLayout)+")")
 		if value == item.ID {
 			optionElement.Set("selected", true)
 		}
@@ -249,14 +249,14 @@ func (editor *ItemEditor) populateEditForm() {
 	uiObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
-	uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
-	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
+	uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.DateLayout), editor.document, "From", "date", "itemFromDate")
+	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.DateLayout))
 	//editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
-	uiObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
-	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
+	uiObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.DateLayout), editor.document, "To", "date", "itemToDate")
+	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.DateLayout))
 	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
@@ -346,12 +346,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	var err error
 
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
+	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing from_date:", err)
 		return nil
 	}
-	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
+	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing to_date:", err)
 		return nil
@@ -479,7 +479,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Name+" (Status:"+record.TripStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+")")
+		itemDiv.Set("innerHTML", record.Name+" (Status:"+record.TripStatus+", From:"+record.FromDate.Format(viewHelpers.DateLayout)+" - To:"+record.ToDate.Format(viewHelpers.DateLayout)+", Participants:"+strconv.Itoa(record.Participants)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.User.AdminFlag {

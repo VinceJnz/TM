@@ -200,12 +200,12 @@ func (v *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 		var err error
 
 		v.CurrentRecord.Name = v.UiComponents.Name.Get("value").String()
-		editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, v.UiComponents.FromDate.Get("value").String())
+		editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.DateLayout, v.UiComponents.FromDate.Get("value").String())
 		if err != nil {
 			log.Println("Error parsing from_date:", err)
 			return nil
 		}
-		v.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, v.UiComponents.ToDate.Get("value").String())
+		v.CurrentRecord.ToDate, err = time.Parse(viewHelpers.DateLayout, v.UiComponents.ToDate.Get("value").String())
 		if err != nil {
 			log.Println("Error parsing to_date:", err)
 			return nil

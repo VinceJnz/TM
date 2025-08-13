@@ -249,7 +249,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.MemberCode, editor.UiComponents.MemberCode = viewHelpers.StringEdit(editor.CurrentRecord.MemberCode, editor.document, "MemberCode", "text", "itemMemberCode")
 	editor.UiComponents.MemberCode.Call("setAttribute", "required", "true")
 
-	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate")
+	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.DateLayout), editor.document, "Birth Date", "date", "itemBirthDate")
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
 	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup")
@@ -332,7 +332,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
 	editor.CurrentRecord.MemberCode = editor.UiComponents.MemberCode.Get("value").String()
-	editor.CurrentRecord.BirthDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BirthDate.Get("value").String())
+	editor.CurrentRecord.BirthDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.BirthDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing Birthdate:", err)
 		return nil

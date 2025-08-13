@@ -214,15 +214,15 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Notes.Set("minlength", 10)
 	editor.UiComponents.Notes.Call("setAttribute", "required", "true")
 
-	localObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
-	editor.UiComponents.FromDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
-	editor.UiComponents.FromDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+	localObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.DateLayout), editor.document, "From", "date", "itemFromDate")
+	editor.UiComponents.FromDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.DateLayout))
+	editor.UiComponents.FromDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.DateLayout))
 	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
-	localObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
-	editor.UiComponents.ToDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
-	editor.UiComponents.ToDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+	localObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.DateLayout), editor.document, "To", "date", "itemToDate")
+	editor.UiComponents.ToDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.DateLayout))
+	editor.UiComponents.ToDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.DateLayout))
 	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
@@ -236,10 +236,10 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.BookingStatusID)
 
 	if editor.appCore.User.AdminFlag {
-		localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
+		localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.DateLayout), editor.document, "Booking Date", "date", "itemBookingDate")
 		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
-		localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.Layout), editor.document, "Payment", "date", "itemPaymentDate")
+		localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.DateLayout), editor.document, "Payment", "date", "itemPaymentDate")
 		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
 		localObjs.BookingPrice, editor.UiComponents.BookingPrice = viewHelpers.StringEdit(editor.CurrentRecord.BookingPrice.String(), editor.document, "Booking Price", "number", "itemBookingPrice")
@@ -287,14 +287,14 @@ func (editor *ItemEditor) updateEditForm(this js.Value, p []js.Value) any {
 	editor.CurrentRecord.TripToDate = editor.Children.TripChooser.CurrentRecord.ToDate
 
 	log.Printf(debugTag+"ValidateTrip()1 TripID=%v, TripName=%v, TripFromDate=%v, TripToDate=%v", editor.CurrentRecord.TripID, editor.CurrentRecord.TripName, editor.CurrentRecord.TripFromDate, editor.CurrentRecord.TripToDate)
-	editor.UiComponents.FromDate.Set("value", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
-	editor.UiComponents.ToDate.Set("value", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+	editor.UiComponents.FromDate.Set("value", editor.CurrentRecord.TripFromDate.Format(viewHelpers.DateLayout))
+	editor.UiComponents.ToDate.Set("value", editor.CurrentRecord.TripToDate.Format(viewHelpers.DateLayout))
 
-	editor.UiComponents.FromDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
-	editor.UiComponents.FromDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+	editor.UiComponents.FromDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.DateLayout))
+	editor.UiComponents.FromDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.DateLayout))
 
-	editor.UiComponents.ToDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.Layout))
-	editor.UiComponents.ToDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.Layout))
+	editor.UiComponents.ToDate.Set("min", editor.CurrentRecord.TripFromDate.Format(viewHelpers.DateLayout))
+	editor.UiComponents.ToDate.Set("max", editor.CurrentRecord.TripToDate.Format(viewHelpers.DateLayout))
 
 	return nil
 }
@@ -325,11 +325,11 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 
 	editor.CurrentRecord.TripID = editor.Children.TripChooser.CurrentRecord.ID
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
-	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
+	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing value:", err)
 	}
-	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
+	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.ToDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing value:", err)
 	}
@@ -339,12 +339,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	}
 
 	if editor.appCore.User.AdminFlag {
-		editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BookingDate.Get("value").String())
+		editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.BookingDate.Get("value").String())
 		if err != nil {
 			log.Println("Error parsing value:", err)
 		}
 
-		editor.CurrentRecord.PaymentDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.PaymentDate.Get("value").String())
+		editor.CurrentRecord.PaymentDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.PaymentDate.Get("value").String())
 		if err != nil {
 			log.Println("Error parsing value:", err)
 		}
@@ -463,7 +463,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", "Trip: "+record.TripName+" (BOOKED by:"+record.Owner+", Notes:"+record.Notes+", Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+", Cost:$"+record.BookingCost.StringFixedBank(2)+")")
+		itemDiv.Set("innerHTML", "Trip: "+record.TripName+" (BOOKED by:"+record.Owner+", Notes:"+record.Notes+", Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.DateLayout)+" - To:"+record.ToDate.Format(viewHelpers.DateLayout)+", Participants:"+strconv.Itoa(record.Participants)+", Cost:$"+record.BookingCost.StringFixedBank(2)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.User.AdminFlag {

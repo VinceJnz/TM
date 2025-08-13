@@ -10,7 +10,9 @@ const debugTag = "viewHelpers."
 // They are used to create more complex UI components, or to create a single UI component.
 
 // Define the date layout (format) and the string you want to parse
-const Layout = "2006-01-02" // The reference layout for Go's date parsing
+const DateLayout = "2006-01-02" // The reference layout for Go's date parsing
+// const DateTimeLayout = "2006-01-02T15:04:05Z07:00" // The reference layout for Go's date parsing
+const DateTimeLayout = "2006-01-02 15:04:05"
 
 // Label creates a label element with the given text and ID.
 func Label(doc js.Value, labelText string, htmlID string) js.Value {

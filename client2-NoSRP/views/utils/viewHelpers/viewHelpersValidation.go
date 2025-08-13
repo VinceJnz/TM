@@ -29,14 +29,14 @@ const (
 
 func ValidateDatesFromLtTo(fromDateObj, toDateObj, msgObj js.Value, warningMsg string) error {
 	from := fromDateObj.Get("value").String()
-	FromDate, err := time.Parse(Layout, from)
+	FromDate, err := time.Parse(DateLayout, from)
 	if err != nil {
 		log.Println("Error parsing from_date:", err)
 		return err
 	}
 
 	to := toDateObj.Get("value").String()
-	ToDate, err := time.Parse(Layout, to)
+	ToDate, err := time.Parse(DateLayout, to)
 	if err != nil {
 		log.Println("Error parsing to_date:", err)
 		return err

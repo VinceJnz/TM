@@ -215,7 +215,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.DeviceMetadata, editor.UiComponents.DeviceMetadata = viewHelpers.JSONEdit(editor.CurrentRecord.DeviceMetadata, editor.document, "Device Metadata", "text", "itemDeviceMetadata")
 	editor.UiComponents.DeviceMetadata.Call("setAttribute", "required", "true")
 
-	localObjs.LastUsed, editor.UiComponents.LastUsed = viewHelpers.StringEdit(editor.CurrentRecord.LastUsed.String(), editor.document, "Last Used", "date", "itemLastUsed")
+	localObjs.LastUsed, editor.UiComponents.LastUsed = viewHelpers.StringEdit(editor.CurrentRecord.LastUsed.Format(viewHelpers.DateTimeLayout), editor.document, "Last Used", "datetime-local", "itemLastUsed")
 	editor.UiComponents.LastUsed.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
@@ -364,7 +364,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.DeviceName+" last used:"+record.LastUsed.Format("2006/01/02 15:04:05"))
+		itemDiv.Set("innerHTML", record.DeviceName+" last used:"+record.LastUsed.Format(viewHelpers.DateTimeLayout))
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

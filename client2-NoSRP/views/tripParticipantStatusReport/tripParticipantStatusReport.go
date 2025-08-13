@@ -193,7 +193,7 @@ func (editor *ItemEditor) populateItemList() {
 			tripDiv.Set("id", debugTag+"tripDiv")
 
 			tripDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
-			tripDiv.Set("innerHTML", "Trip: "+strconv.Itoa(record.TripID)+" Name:"+record.TripName+" (From:"+record.FromDate.Format(viewHelpers.Layout)+", To:"+record.ToDate.Format(viewHelpers.Layout)+")")
+			tripDiv.Set("innerHTML", "Trip: "+strconv.Itoa(record.TripID)+" Name:"+record.TripName+" (From:"+record.FromDate.Format(viewHelpers.DateLayout)+", To:"+record.ToDate.Format(viewHelpers.DateLayout)+")")
 
 			editor.ListDiv.Call("appendChild", tripDiv)
 		}
