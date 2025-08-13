@@ -46,20 +46,22 @@ const ApiURL = "/webauthn"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID             int             `json:"id" db:"id"`                           // This is the primary key, usually an auto-incremented integer
-	UserID         int             `json:"user_id" db:"user_id"`                 // or string, depending on your user model. This is the foreign key to the user table
-	CredentialID   string          `json:"credential_id" db:"credential_id"`     // base64-encoded string, unique identifier for the credential. If a credential is updated, this ID remains the same. If a credential is deleted, this ID can be reused, but it is recommended to generate a new ID for a new credential.
-	Credential     json.RawMessage `json:"credential_data" db:"credential_data"` // JSON-encoded webauthn.Credential
-	DeviceName     string          `json:"device_name" db:"device_name"`         // User-defined name for the device/browser used for registration or authentication
-	DeviceMetadata json.RawMessage `json:"device_metadata" db:"device_metadata"` // JSON-encoded device metadata. Stores information about the device used for authentication so that it can be referenced later, e.g. by the user to delete an expired credential.
-	Created        time.Time       `json:"created" db:"created"`
-	Modified       time.Time       `json:"modified" db:"modified"`
+	ID             int             `json:"id"`              // This is the primary key, usually an auto-incremented integer
+	UserID         int             `json:"user_id"`         // or string, depending on your user model. This is the foreign key to the user table
+	CredentialID   string          `json:"credential_id"`   // base64-encoded string, unique identifier for the credential. If a credential is updated, this ID remains the same. If a credential is deleted, this ID can be reused, but it is recommended to generate a new ID for a new credential.
+	Credential     json.RawMessage `json:"credential_data"` // JSON-encoded webauthn.Credential
+	LastUsed       time.Time       `json:"last_used"`       // Timestamp of the last time the credential was used
+	DeviceName     string          `json:"device_name"`     // User-defined name for the device/browser used for registration or authentication
+	DeviceMetadata json.RawMessage `json:"device_metadata"` // JSON-encoded device metadata. Stores information about the device used for authentication so that it can be referenced later, e.g. by the user to delete an expired credential.
+	//Created        time.Time       `json:"created"`         // Timestamp of when the credential was created
+	//Modified       time.Time       `json:"modified"`        // Timestamp of when the credential was last modified
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
 	CredentialID   js.Value
 	Credential     js.Value
+	LastUsed       js.Value
 	DeviceName     js.Value
 	DeviceMetadata js.Value
 }
@@ -213,9 +215,13 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.DeviceMetadata, editor.UiComponents.DeviceMetadata = viewHelpers.JSONEdit(editor.CurrentRecord.DeviceMetadata, editor.document, "Device Metadata", "text", "itemDeviceMetadata")
 	editor.UiComponents.DeviceMetadata.Call("setAttribute", "required", "true")
 
+	localObjs.LastUsed, editor.UiComponents.LastUsed = viewHelpers.StringEdit(editor.CurrentRecord.LastUsed.String(), editor.document, "Last Used", "date", "itemLastUsed")
+	editor.UiComponents.LastUsed.Call("setAttribute", "required", "true")
+
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.DeviceName)
 	form.Call("appendChild", localObjs.DeviceMetadata)
+	form.Call("appendChild", localObjs.LastUsed)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -358,7 +364,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.DeviceName)
+		itemDiv.Set("innerHTML", record.DeviceName+" last used:"+record.LastUsed.Format("2006/01/02 15:04:05"))
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
