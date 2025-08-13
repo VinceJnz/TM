@@ -45,20 +45,6 @@ func (c *JSONBCredential) Scan(value interface{}) error {
 	return json.Unmarshal(bytes, &c.Credential)
 }
 
-/*
-type WebAuthnCredential struct {
-	ID             int                 `json:"id" db:"id"`                           // This is the primary key, usually an auto-incremented integer
-	UserID         int                 `json:"user_id" db:"user_id"`                 // or string, depending on your user model. This is the foreign key to the user table
-	CredentialID   string              `json:"credential_id" db:"credential_id"`     // base64-encoded string, unique identifier for the credential. If a credential is updated, this ID remains the same. If a credential is deleted, this ID can be reused, but it is recommended to generate a new ID for a new credential.
-	Credential     JSONBCredential     `json:"credential_data" db:"credential_data"` // JSON-encoded webauthn.Credential
-	DeviceName     string              `json:"device_name" db:"device_name"`         // User-defined name for the device/browser used for registration or authentication
-	DeviceMetadata JSONBDeviceMetadata `json:"device_metadata" db:"device_metadata"` // JSON-encoded device metadata. Stores information about the device used for authentication so that it can be referenced later, e.g. by the user to delete an expired credential.
-	Created        time.Time           `json:"created" db:"created"`
-	Modified       time.Time           `json:"modified" db:"modified"`
-	//LastSuccessfulAuthTimestamp time.Time           `json:"last_successful_auth_timestamp" db:"last_successful_auth_timestamp"` // Timestamp of the last successful authentication
-}
-*/
-
 // Database operations
 type CredentialStore struct {
 	db *sql.DB
@@ -72,20 +58,20 @@ func NewCredentialStore(db *sql.DB) *CredentialStore {
 
 // StoreCredential saves a webauthn.Credential to the database
 // func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential webauthn.Credential) error {
-func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential *models.WebAuthnCredential) error {
+func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential *models.WebAuthnCredential) (int, error) {
 	// Create JSONBCredential wrapper for automatic marshaling
 	//jsonbCred := JSONBCredential{Credential: credential}
 
 	query := `
-        INSERT INTO st_webauthn_credentials (user_id, credential_id, credential_data, device_name, device_metadata)
-        VALUES ($1, $2, $3, $4, $5)`
+        INSERT INTO st_webauthn_credentials (user_id, credential_id, credential_data, last_used, device_name, device_metadata)
+        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 
-	t, err := Db.Exec(query, userID, credential.CredentialID, credential.Credential, credential.DeviceName, credential.DeviceMetadata)
+	err := Db.QueryRow(query, userID, credential.CredentialID, credential.Credential, credential.LastUsed, credential.DeviceName, credential.DeviceMetadata).Scan(&credential.ID)
 	if err != nil {
-		log.Printf("%sStoreCredential()1.%s Failed to insert credential: err = %v, userID = %v, credential = %v, result = %v", debugTag, debugStr, err, userID, credential, t)
-		return err
+		log.Printf("%sStoreCredential()1.%s Failed to insert credential: err = %v, userID = %v, credential = %v", debugTag, debugStr, err, userID, credential)
+		return 0, err
 	}
-	return nil
+	return credential.ID, nil
 }
 
 // GetCredential retrieves a credential by credential_id
@@ -94,9 +80,10 @@ func GetCredential(debugStr string, Db *sqlx.DB, credentialID []byte) (*models.W
 	//var jsonbCred JSONBCredential
 	var webAuthnCred models.WebAuthnCredential
 
-	query := `SELECT credential_data FROM st_webauthn_credentials WHERE credential_id = $1`
-	err := Db.QueryRow(query, credentialID).Scan(&webAuthnCred)
+	query := `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata FROM st_webauthn_credentials WHERE credential_id = $1`
+	err := Db.QueryRow(query, credentialID).Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.Credential, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata)
 	if err != nil {
+		log.Printf("%sGetCredential()1.%s Failed to get credential: err = %v, credentialID = %v", debugTag, debugStr, err, credentialID)
 		return nil, err
 	}
 
@@ -105,7 +92,7 @@ func GetCredential(debugStr string, Db *sqlx.DB, credentialID []byte) (*models.W
 
 // GetUserCredentials retrieves all credentials for a user
 func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.WebAuthnCredential, error) {
-	query := `SELECT id, user_id, credential_id, credential_data, device_name, device_metadata FROM st_webauthn_credentials WHERE user_id = $1`
+	query := `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata FROM st_webauthn_credentials WHERE user_id = $1`
 
 	rows, err := Db.Query(query, userID)
 	if err != nil {
@@ -118,7 +105,7 @@ func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.WebA
 	var credentials []models.WebAuthnCredential
 	for rows.Next() {
 		var webAuthnCred models.WebAuthnCredential
-		if err := rows.Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.Credential, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata); err != nil {
+		if err := rows.Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.Credential, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata); err != nil {
 			log.Printf("%sGetUserCredentials()2.%s Failed to scan row: err = %v, userID = %v", debugTag, debugStr, err, userID)
 			return nil, err
 		}
@@ -133,8 +120,8 @@ func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.WebA
 func UpdateCredential(debugStr string, Db *sqlx.DB, credential models.WebAuthnCredential) error {
 	//jsonbCred := JSONBCredential{Credential: credential}
 
-	query := `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential_data, device_name, device_metadata) = ($2, $3, $4, $5, $6) WHERE id = $1`
-	_, err := Db.Exec(query, credential.ID, credential.UserID, credential.CredentialID, credential.Credential, credential.DeviceName, credential.DeviceMetadata)
+	query := `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential_data, last_used, device_name, device_metadata) = ($2, $3, $4, $5, $6, $7) WHERE id = $1`
+	_, err := Db.Exec(query, credential.ID, credential.UserID, credential.CredentialID, credential.Credential, credential.LastUsed, credential.DeviceName, credential.DeviceMetadata)
 	return err
 }
 

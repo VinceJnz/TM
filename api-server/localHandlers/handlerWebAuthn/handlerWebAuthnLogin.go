@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
+	"github.com/guregu/null/v5/zero"
 )
 
 // ******************************************************************************
@@ -131,13 +132,25 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.webAuthn.FinishLogin(user, sessionData, r)
+	cred, err := h.webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
 		body3, err3 := io.ReadAll(copiedBody)
 		log.Printf("%sHandler.FinishLogin()6, err = %+v, user = %+v, sessionData = %+v, r.Body = %+v, r = %+v, err3 = %+v", debugTag, err, user, sessionData, string(body3), r, err3)
 		http.Error(w, "Failed to finish login", http.StatusBadRequest)
 		return
 	}
+
+	credential, err := dbAuthTemplate.GetCredential(debugTag+"Handler.FinishLogin()7 ", h.appConf.Db, cred.ID)
+	if err != nil {
+		log.Printf("%sHandler.FinishLogin()8: Failed to get credential, err = %+v, cred = %+v", debugTag, err, cred)
+		http.Error(w, "Failed to get credential", http.StatusInternalServerError)
+		return
+	}
+	credential.LastUsed = zero.NewTime(time.Now(), true)                             // Update the last used time for the credential
+	credential.DeviceMetadata.LastSuccessfulAuthTimestamp = credential.LastUsed.Time // Update the last successful auth timestamp
+
+	dbAuthTemplate.UpdateCredential(debugTag+"Handler.FinishLogin()9 ", h.appConf.Db, *credential) // Update the credential in the database
+
 	h.setUserAuthenticated(w, r, user)
 
 	w.WriteHeader(http.StatusOK)

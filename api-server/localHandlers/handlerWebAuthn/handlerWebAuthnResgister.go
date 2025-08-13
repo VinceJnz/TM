@@ -119,7 +119,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		Modified:       time.Now(),
 	}
 
-	err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, &webAuthnCredential)
+	_, err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, &webAuthnCredential)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", webAuthnCredential)
 		return

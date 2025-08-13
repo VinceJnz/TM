@@ -13,12 +13,12 @@ import (
 const debugTag = "handlerWebAuthnMgnt."
 
 const (
-	qryGetAll = `SELECT id, user_id, credential_id, credential_data, device_name, device_metadata, created, modified FROM st_webauthn_credentials
+	qryGetAll = `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, created, modified FROM st_webauthn_credentials
 	WHERE (true=$1 OR user_id = $2)`
-	qryGet = `SELECT id, user_id, credential_id, credential_data, device_name, device_metadata, created, modified FROM st_webauthn_credentials
+	qryGet = `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, created, modified FROM st_webauthn_credentials
 	WHERE id = $1 AND (true=$2 OR user_id = $3)`
-	qryCreate = `INSERT INTO st_webauthn_credentials (user_id, credential_id, credential_data, device_name, device_metadata) VALUES ($1, $2, $3, $4, $5) RETURNING id`
-	qryUpdate = `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential_data, device_name, device_metadata) = ($3, $4, $5, $6, $7) WHERE id = $1
+	qryCreate = `INSERT INTO st_webauthn_credentials (user_id, credential_id, credential_data, last_used, device_name, device_metadata) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	qryUpdate = `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential_data, last_used, device_name, device_metadata) = ($3, $4, $5, $6, $7, $8) WHERE id = $1
 	AND (true=$2 OR user_id = $3)`
 	qryDelete = `DELETE FROM st_webauthn_credentials WHERE id = $1 AND (true=$2 OR user_id = $3)`
 )
@@ -54,7 +54,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	record.UserID = session.UserID
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.UserID, record.CredentialID, record.Credential, record.DeviceName, record.DeviceMetadata)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.UserID, record.CredentialID, record.Credential, record.LastUsed, record.DeviceName, record.DeviceMetadata)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
@@ -70,7 +70,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	record.ID = id
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	record.UserID = session.UserID
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.AdminFlag, record.UserID, record.CredentialID, record.Credential, record.DeviceName, record.DeviceMetadata)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.AdminFlag, record.UserID, record.CredentialID, record.Credential, record.LastUsed, record.DeviceName, record.DeviceMetadata)
 }
 
 // Delete: removes a record identified by id

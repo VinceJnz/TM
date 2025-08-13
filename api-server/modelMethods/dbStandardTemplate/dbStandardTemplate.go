@@ -16,7 +16,7 @@ import (
 const debugTag = "dbStandardTemplate."
 
 // GetAll: retrieves and returns all records
-func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string) {
+func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string) {
 	err := Db.Select(dest, query)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -33,7 +33,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 }
 
 // Get: retrieves and returns a single record identified by id
-func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
+func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	err := Db.Get(dest, query, args...)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -52,7 +52,7 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 }
 
 // Get: retrieves and returns a list of records identified by parent id
-func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
+func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	err := Db.Select(dest, query, args...)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -69,7 +69,7 @@ func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.D
 }
 
 // Create: adds a new record and returns the new record
-func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
+func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	//log.Printf(debugTag+debugStr+"Create()1 dest=%+v", dest)
 	//err := json.NewDecoder(r.Body).Decode(dest)
 	//if err != nil {
@@ -104,7 +104,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
-func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
+func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	//if err := json.NewDecoder(r.Body).Decode(dest); err != nil {
 	//	log.Printf(debugTag+debugStr+"Update()1 err=%+v, dest=%+v", err, dest)
 	//	http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -137,7 +137,7 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 }
 
 // Delete: removes a record identified by id
-func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{}) {
+func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	// Begin transaction
 	tx, err := Db.Beginx()
 	if err != nil {
