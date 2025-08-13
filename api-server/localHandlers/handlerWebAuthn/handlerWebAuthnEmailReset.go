@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
 )
 
@@ -208,7 +209,7 @@ func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request
 
 	// Perform the WebAuthn reset
 	credentialCount := len(user.Credentials)
-	user.Credentials = []models.WebAuthnCredential{} // Clear all credentials
+	user.Credentials = []webauthn.Credential{} // Clear all credentials
 	//user.WebAuthnUserID = nil                  // Clear WebAuthn ID // Don't clear WebAuthnUserID, as it may be needed for future????
 
 	// Log the successful reset

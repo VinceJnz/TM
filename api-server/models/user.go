@@ -21,25 +21,25 @@ const (
 )
 
 type User struct {
-	ID              int                  `json:"id" db:"id"`
-	Name            string               `json:"name" db:"name"`
-	Username        string               `json:"username" db:"username"`
-	Email           zero.String          `json:"email" db:"email"`
-	Address         zero.String          `json:"user_address" db:"user_address"`
-	MemberCode      zero.String          `json:"member_code" db:"member_code"`
-	BirthDate       zero.Time            `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
-	UserAgeGroupID  zero.Int             `json:"user_age_group_id" db:"user_age_group_id"`
-	MemberStatusID  zero.Int             `json:"member_status_id" db:"member_status_id"`
-	MemberStatus    zero.String          `json:"member_status" db:"member_status"`
-	Password        zero.String          `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
-	Salt            []byte               `json:"salt" db:"salt"`
-	Verifier        *big.Int             `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-	AccountStatusID zero.Int             `json:"user_account_status_id" db:"user_account_status_id"`
-	AccountHidden   zero.Bool            `json:"user_account_hidden" db:"user_account_hidden"`
-	WebAuthnUserID  []byte               `json:"webauthn_user_id" db:"webauthn_user_id"` // This is the WebAuthn ID (user handle), which is a byte slice representation of the user ID. This does not change.
-	Credentials     []WebAuthnCredential `json:"credentials" db:"credentials"`           // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
-	Created         time.Time            `json:"created" db:"created"`
-	Modified        time.Time            `json:"modified" db:"modified"`
+	ID              int                   `json:"id" db:"id"`
+	Name            string                `json:"name" db:"name"`
+	Username        string                `json:"username" db:"username"`
+	Email           zero.String           `json:"email" db:"email"`
+	Address         zero.String           `json:"user_address" db:"user_address"`
+	MemberCode      zero.String           `json:"member_code" db:"member_code"`
+	BirthDate       zero.Time             `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
+	UserAgeGroupID  zero.Int              `json:"user_age_group_id" db:"user_age_group_id"`
+	MemberStatusID  zero.Int              `json:"member_status_id" db:"member_status_id"`
+	MemberStatus    zero.String           `json:"member_status" db:"member_status"`
+	Password        zero.String           `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
+	Salt            []byte                `json:"salt" db:"salt"`
+	Verifier        *big.Int              `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
+	AccountStatusID zero.Int              `json:"user_account_status_id" db:"user_account_status_id"`
+	AccountHidden   zero.Bool             `json:"user_account_hidden" db:"user_account_hidden"`
+	WebAuthnUserID  []byte                `json:"webauthn_user_id" db:"webauthn_user_id"` // This is the WebAuthn ID (user handle), which is a byte slice representation of the user ID. This does not change.
+	Credentials     []webauthn.Credential `json:"credentials" db:"credentials"`           // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
+	Created         time.Time             `json:"created" db:"created"`
+	Modified        time.Time             `json:"modified" db:"modified"`
 }
 
 type UserAgeGroups struct {
@@ -74,17 +74,11 @@ var ErrWebAuthnCredentialExists = errors.New("WebAuthn credential already exists
 // WebAuthn.User is used to implement the webauthn.User interface for the User struct to be used with the webauthn library.
 // there is no struct associated with the webauthn.User interface. It is an interface that defines methods that must be implemented.
 // https://pkg.go.dev/github.com/go-webauthn/webauthn@v0.13.0/webauthn#User
-func (u User) WebAuthnID() []byte          { return u.WebAuthnUserID }
-func (u User) WebAuthnName() string        { return u.Username }
-func (u User) WebAuthnDisplayName() string { return u.Name }
-func (u User) WebAuthnIcon() string        { return "" }
-func (u User) WebAuthnCredentials() []webauthn.Credential {
-	var creds []webauthn.Credential
-	for _, c := range u.Credentials {
-		creds = append(creds, c.Credential.Credential)
-	}
-	return creds
-}
+func (u User) WebAuthnID() []byte                         { return u.WebAuthnUserID }
+func (u User) WebAuthnName() string                       { return u.Username }
+func (u User) WebAuthnDisplayName() string                { return u.Name }
+func (u User) WebAuthnIcon() string                       { return "" }
+func (u User) WebAuthnCredentials() []webauthn.Credential { return u.Credentials }
 
 // func (u User) WebAuthnEnabled() bool                       { return u.WebAuthnUserID != nil && len(u.Credentials) > 0 }
 func (u User) WebAuthnEnabled() bool { return u.WebAuthnUserID != nil }

@@ -44,20 +44,21 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Fetch the user's WebAuthn credentials from the database
-	credentials, err := dbAuthTemplate.GetUserCredentials(debugTag+"Handler.BeginLogin()2 ", h.appConf.Db, user.ID)
+	dbCredentials, err := dbAuthTemplate.GetUserCredentials(debugTag+"Handler.BeginLogin()2 ", h.appConf.Db, user.ID)
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()3 Error: err = %+v", debugTag, err)
 		http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
 		return
 	}
 	// Check if the user has WebAuthn credentials
-	if len(credentials) == 0 {
-		log.Printf("%sHandler.BeginLogin()4 Error: credentials = %+v", debugTag, credentials)
+	if len(dbCredentials) == 0 {
+		log.Printf("%sHandler.BeginLogin()4 Error: credentials = %+v", debugTag, dbCredentials)
 		http.Error(w, "User has no WebAuthn credentials", http.StatusForbidden)
 		return
 	}
-	// Set the user's credentials in the user object
-	user.Credentials = credentials
+	// extract []webauthn.Credential from dbCredentials and set the user's credentials in the user object
+	user.Credentials = dbAuthTemplate.ExtractWebauthnCredentials(debugTag+"Handler.BeginLogin()5 ", h.appConf.Db, dbCredentials)
+
 	// Begin the WebAuthn login process
 	options, sessionData, err := h.webAuthn.BeginLogin(user) //options -> Challenge and options for the client. sessionData -> Stores expected challenge, allowed credentials, RP ID hash, user verification requirements.
 	if err != nil {
@@ -118,12 +119,12 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	user = poolItem.User                // Set the user data from the pool
 
 	// Fetch the users webAuthn credentials from the database
-	user.Credentials, err = dbAuthTemplate.GetUserCredentials(debugTag+"Handler.FinishLogin()3 ", h.appConf.Db, user.ID)
-	if err != nil {
-		log.Printf("%sHandler.FinishLogin()4: Failed to fetch user credentials, err = %+v, user = %+v", debugTag, err, user)
-		http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
-		return
-	}
+	//user.Credentials, err = dbAuthTemplate.GetUserCredentials(debugTag+"Handler.FinishLogin()3 ", h.appConf.Db, user.ID)
+	//if err != nil {
+	//	log.Printf("%sHandler.FinishLogin()4: Failed to fetch user credentials, err = %+v, user = %+v", debugTag, err, user)
+	//	http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
+	//	return
+	//}
 	if len(user.Credentials) == 0 {
 		log.Printf("%sHandler.FinishLogin()5: No credentials found for user %d", debugTag, user.ID)
 		http.Error(w, "No credentials found for user", http.StatusForbidden)

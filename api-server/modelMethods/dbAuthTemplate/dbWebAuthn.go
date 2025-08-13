@@ -106,8 +106,10 @@ func GetCredential(debugStr string, Db *sqlx.DB, credentialID []byte) (*models.W
 // GetUserCredentials retrieves all credentials for a user
 func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.WebAuthnCredential, error) {
 	query := `SELECT id, user_id, credential_id, credential_data, device_name, device_metadata FROM st_webauthn_credentials WHERE user_id = $1`
+
 	rows, err := Db.Query(query, userID)
 	if err != nil {
+		log.Printf("%sGetUserCredentials()1.%s Failed to query credentials: err = %v, userID = %v", debugTag, debugStr, err, userID)
 		return nil, err
 	}
 	defer rows.Close()
@@ -116,7 +118,8 @@ func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.WebA
 	var credentials []models.WebAuthnCredential
 	for rows.Next() {
 		var webAuthnCred models.WebAuthnCredential
-		if err := rows.Scan(&webAuthnCred); err != nil {
+		if err := rows.Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.Credential, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata); err != nil {
+			log.Printf("%sGetUserCredentials()2.%s Failed to scan row: err = %v, userID = %v", debugTag, debugStr, err, userID)
 			return nil, err
 		}
 
@@ -140,4 +143,13 @@ func DeleteCredential(debugStr string, Db *sqlx.DB, credentialID []byte) error {
 	query := `DELETE FROM st_webauthn_credentials WHERE id = $1`
 	_, err := Db.Exec(query, credentialID)
 	return err
+}
+
+func ExtractWebauthnCredentials(debugStr string, Db *sqlx.DB, dbCredentials []models.WebAuthnCredential) []webauthn.Credential {
+	// extract []webauthn.Credential from dbCredentials and set the user's credentials in the user object
+	credentials := make([]webauthn.Credential, len(dbCredentials))
+	for i, c := range dbCredentials {
+		credentials[i] = c.Credential.Credential
+	}
+	return credentials
 }
