@@ -75,9 +75,8 @@ func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential *model
 }
 
 // GetCredential retrieves a credential by credential_id
-// func GetCredential(debugStr string, Db *sqlx.DB, credentialID []byte) (*webauthn.Credential, error) {
-func GetCredential(debugStr string, Db *sqlx.DB, credentialID []byte) (*models.WebAuthnCredential, error) {
-	//var jsonbCred JSONBCredential
+// credentialID is the base64url-encoded ID of the credential e.g. "base64.RawURLEncoding.EncodeToString(cred.ID)"
+func GetCredential(debugStr string, Db *sqlx.DB, credentialID string) (*models.WebAuthnCredential, error) {
 	var webAuthnCred models.WebAuthnCredential
 
 	query := `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata FROM st_webauthn_credentials WHERE credential_id = $1`

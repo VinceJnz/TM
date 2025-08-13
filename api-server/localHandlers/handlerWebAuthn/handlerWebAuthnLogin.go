@@ -4,6 +4,7 @@ import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
@@ -140,7 +141,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	credential, err := dbAuthTemplate.GetCredential(debugTag+"Handler.FinishLogin()7 ", h.appConf.Db, cred.ID)
+	credential, err := dbAuthTemplate.GetCredential(debugTag+"Handler.FinishLogin()7 ", h.appConf.Db, base64.RawURLEncoding.EncodeToString(cred.ID))
 	if err != nil {
 		log.Printf("%sHandler.FinishLogin()8: Failed to get credential, err = %+v, cred = %+v", debugTag, err, cred)
 		http.Error(w, "Failed to get credential", http.StatusInternalServerError)
