@@ -147,9 +147,9 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get credential", http.StatusInternalServerError)
 		return
 	}
-	credential.LastUsed = zero.NewTime(time.Now(), true)                             // Update the last used time for the credential
-	credential.DeviceMetadata.LastSuccessfulAuthTimestamp = credential.LastUsed.Time // Update the last successful auth timestamp
 
+	credential.LastUsed = zero.NewTime(time.Now(), true)                                           // Update the last used time for the credential
+	credential.DeviceMetadata.LastSuccessfulAuthTimestamp = credential.LastUsed.Time               // Update the last successful auth timestamp
 	dbAuthTemplate.UpdateCredential(debugTag+"Handler.FinishLogin()9 ", h.appConf.Db, *credential) // Update the credential in the database
 
 	h.setUserAuthenticated(w, r, user)
