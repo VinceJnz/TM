@@ -148,3 +148,34 @@ Use postgress numeric type to store money.
 <https://www.postgresql.org/docs/current/datatype-numeric.html>
 
 
+
+## webAuthn query
+
+```sql
+SELECT id, user_id, credential_data, created, modified, credential_id, device_name, device_metadata,
+	to_json(encode(credential_id, 'base64'))::text as credential_id_json,
+	to_json(encode(credential_id, 'hex'))::text as credential_id_hex_json,
+	to_json(convert_from(credential_id, 'UTF8'))::text as credential_id_text_json,
+    array_to_string(
+        array(
+            SELECT '0x' || lpad(upper(to_hex(get_byte(credential_id, i))), 2, '0')
+            FROM generate_series(0, octet_length(credential_id) - 1) i
+        ),
+        ', '
+    ) || 
+    '}' as credential_id_go_byte_slice,
+
+	    '[]byte{' || 
+    array_to_string(
+        array(
+            SELECT get_byte(credential_id, i)::text
+            FROM generate_series(0, octet_length(credential_id) - 1) i
+        ),
+        ', '
+    ) || 
+    '}' as credential_id_go_decimal_byte_slice
+
+	
+	FROM public.st_webauthn_credentials
+	--WHERE credential_id = '\xe2eb6e24f314ee802192e98fddbbc423'::bytea
+```
