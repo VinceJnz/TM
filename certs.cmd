@@ -1,5 +1,6 @@
 @ECHO OFF
 REM This requires certstrap to be installed (written in golang)
+REM This generates the certs for the api-server and the wasm client
 
 REM Save current directory
 SET OLDDIR=%CD%

@@ -28,7 +28,9 @@ WORKDIR /app
 
 # Copy the Go API server source code to the container
 COPY ./api-server/ .
-COPY ./certs/api-server/ ./certs/
+COPY ./certs/api-server/ ./certs/ssl/
+COPY ./certs/gmail/ ./certs/gmail/
+COPY ./certs/stripe/ ./certs/stripe/
 
 # Build the Go API server
 RUN go mod download
@@ -52,7 +54,9 @@ COPY --from=apibuilder /app/static/favicon.png ./static/
 # Copy the compiled webserver binary from the builder stage
 COPY --from=apibuilder /app/apiserver .
 COPY --from=apibuilder /app/.env .
-COPY --from=apibuilder /app/certs/* /etc/ssl/certs/
+COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
+COPY --from=apibuilder /app/certs/gmail/* /etc/certs/gmail/
+COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
 
 # Expose the port the API server listens on
 EXPOSE 8085
