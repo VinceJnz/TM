@@ -136,8 +136,10 @@ func main() {
 	//corsMuxHandler := corsOpts(r)
 
 	// Paths to certificate and key files
-	crtFile := "/etc/ssl/certs/localhost.crt" // "../certs/api-server/cert.pem"
-	keyFile := "/etc/ssl/certs/localhost.key" // "../certs/api-server/key.pem"
+	//crtFile := "/etc/ssl/certs/localhost.crt"
+	//keyFile := "/etc/ssl/certs/localhost.key"
+	crtFile := app.Settings.ServerCert
+	keyFile := app.Settings.ServerKey
 
 	// For debugging: Log all registered routes
 	//r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
