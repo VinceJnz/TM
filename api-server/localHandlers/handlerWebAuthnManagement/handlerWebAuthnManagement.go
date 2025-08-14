@@ -1,4 +1,4 @@
-package handlerWebAuthnMgnt
+package handlerWebAuthnManagement
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"api-server/v2/models"
 )
 
-const debugTag = "handlerWebAuthnMgnt."
+const debugTag = "handlerWebAuthnManagement."
 
 const (
 	qryGetAll = `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, created, modified FROM st_webauthn_credentials

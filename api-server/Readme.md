@@ -179,3 +179,13 @@ SELECT id, user_id, credential_data, created, modified, credential_id, device_na
 	FROM public.st_webauthn_credentials
 	--WHERE credential_id = '\xe2eb6e24f314ee802192e98fddbbc423'::bytea
 ```
+
+## go error fix
+
+`No packages found for open file D:\Users\Vince\Documents\GitHub\TM\api-server\localHandlers\handlerWEbAuthnMgnt\handlerWEbAuthnMgnt.go`
+
+<https://github.com/golang/vscode-go/issues/2715>
+
+go mod init
+go clean -modcache
+go mod tidy

@@ -27,7 +27,7 @@ import (
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/handlerWebAuthn"
-	"api-server/v2/localHandlers/handlerWebAuthnMgnt"
+	"api-server/v2/localHandlers/handlerWebAuthnManagement"
 	"api-server/v2/localHandlers/helpers"
 	"log"
 	"net/http"
@@ -77,7 +77,7 @@ func main() {
 	subR2.HandleFunc("/auth/menuList/", SRPauth.MenuListGet).Methods("Get")
 
 	// Add route groups
-	addRouteGroup(subR2, "webauthn", handlerWebAuthnMgnt.New(app))                       // WebAuthn routes
+	addRouteGroup(subR2, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes
 	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))                             // Seasons routes
 	addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
 	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserAgeGroup routes
