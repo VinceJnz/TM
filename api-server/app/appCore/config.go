@@ -1,6 +1,7 @@
 package appCore
 
 import (
+	"api-server/v2/app/gateways/gmail"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -15,24 +16,43 @@ func GenerateSessionIDContextKey() ContextKey { // User for generating the conte
 }
 
 type Config struct {
-	Db           *sqlx.DB
+	Db       *sqlx.DB
+	EmailSvc *gmail.Gateway
+	//PaymentSvc   *stripeGW.Handler
 	SessionIDKey ContextKey // User for passing the user id value via the context (ctx)
 	Settings     settings
 	TestMode     bool
 }
 
 func New(testMode bool) *Config {
-	db, err := InitDB()
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-
 	sessionIDKey := GenerateSessionIDContextKey()
 	return &Config{
-		Db:           db,
+		Db:       &sqlx.DB{},
+		EmailSvc: &gmail.Gateway{},
+		//PaymentSvc:   &stripeGW.Handler{},
 		SessionIDKey: sessionIDKey,
 		TestMode:     testMode,
 	}
+}
+
+func (c *Config) Run() {
+	var err error
+	// Load environment variables
+	c.Settings.LoadEnv()
+
+	// Initialize the database connection
+	c.Db, err = InitDB()
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+
+	}
+	// Start the email service
+	c.EmailSvc = gmail.New(c.Settings.EmailSecret, c.Settings.EmailToken, c.Settings.EmailAddr)
+
+	// Start the payment service
+	//paymentSvc := stripeGW.New(a.Db, a.WsPool, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
+	//paymentSvc := stripeGW.New(a.Db, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
+	//go c.PaymentSvc.Start()
 }
 
 func (c *Config) Close() {

@@ -41,7 +41,8 @@ const debugTag = "main."
 
 func main() {
 	app := appCore.New(true)
-	app.Settings.LoadEnv()
+	//app.Settings.LoadEnv()
+	app.Run()
 	defer app.Close()
 	log.Printf("%smain() App settings: %+v, os Env: %+v\n", debugTag, app.Settings, os.Environ())
 	r := mux.NewRouter()

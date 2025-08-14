@@ -1,4 +1,4 @@
-package gmailGW
+package gmail
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 
 const debugTag = "gmail."
 
-type Handler struct {
+type Gateway struct {
 	srv  *gmail.Service
 	from string
 }
@@ -144,7 +144,7 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func New(credentialsFile, tokenFile, from string) *Handler {
+func New(credentialsFile, tokenFile, from string) *Gateway {
 	ctx := context.Background()
 	credential, err := os.ReadFile(credentialsFile)
 	if err != nil {
@@ -167,13 +167,13 @@ func New(credentialsFile, tokenFile, from string) *Handler {
 	if err != nil {
 		log.Fatalln(debugTag+"New()3 ... Unable to retrieve Gmail client:", err)
 	}
-	return &Handler{
+	return &Gateway{
 		srv:  gmailService,
 		from: from,
 	}
 }
 
-func (s *Handler) SendMail(to string, title string, message string) (bool, error) {
+func (s *Gateway) SendMail(to string, title string, message string) (bool, error) {
 	// Create the message
 	msgStr := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s", s.from, to, title, message)
 	msg := []byte(msgStr)
@@ -190,7 +190,7 @@ func (s *Handler) SendMail(to string, title string, message string) (bool, error
 	return true, nil
 }
 
-func (s *Handler) SendMail2(from string, to string, title string, message string) (bool, error) {
+func (s *Gateway) SendMail2(from string, to string, title string, message string) (bool, error) {
 	// Create the message
 	msgStr := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s", from, to, title, message)
 	msg := []byte(msgStr)
@@ -207,7 +207,7 @@ func (s *Handler) SendMail2(from string, to string, title string, message string
 	return true, nil
 }
 
-func (s *Handler) Demo(emailAddress string) (bool, error) {
+func (s *Gateway) Demo(emailAddress string) (bool, error) {
 	// Send a demo message
 	if emailAddress == "" {
 		return false, errors.New(debugTag + "Handler.Demo()1 ... error: emailAddress is empty")
