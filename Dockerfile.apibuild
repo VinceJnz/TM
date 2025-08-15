@@ -55,7 +55,7 @@ COPY --from=apibuilder /app/static/favicon.png ./static/
 COPY --from=apibuilder /app/apiserver .
 COPY --from=apibuilder /app/.env .
 COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
-COPY --from=apibuilder /app/certs/gmail/* /etc/certs/gmail/
+COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
 COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
 
 # Expose the port the API server listens on
@@ -64,3 +64,5 @@ EXPOSE 8086
 
 # Command to run the API server
 CMD ["./apiserver"]
+# Command to use to launch an interactive shell
+#CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]

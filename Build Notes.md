@@ -174,3 +174,9 @@ In summary, there are four different ways to present certificates and their comp
  Its used preferentially by Windows systems, and can be freely converted to PEM format through use of openssl.
 * DER - The parent format of PEM. It's useful to think of it as a binary version of the base64-encoded PEM file. Not routinely used very much outside of Windows.
 
+
+
+## Email notes
+
+Run the docker image interactively from the VS Code terminal
+`docker run -it tm-apiserver /bin/sh`
