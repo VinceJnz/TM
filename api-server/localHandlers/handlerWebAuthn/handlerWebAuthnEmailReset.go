@@ -34,6 +34,7 @@ func generateSecureToken() string {
 	return base64.URLEncoding.EncodeToString(bytes)
 }
 
+/*
 // Send reset email (replace with your email service)
 func sendResetEmail(email, resetToken string) error {
 	resetLink := fmt.Sprintf("https://localhost:8086/api/v1/webauthn/emailReset/finish/%s", resetToken)
@@ -58,6 +59,39 @@ If you didn't request this, please ignore this email.
 
 Thanks!
 `, resetLink)
+
+	return nil
+}
+*/
+
+// Send reset email (replace with your email service)
+func (h *Handler) sendResetEmail(email, resetToken string) error {
+	resetLink := fmt.Sprintf("https://localhost:8086/api/v1/webauthn/emailReset/finish/%s", resetToken)
+	title := fmt.Sprintf("📧 WebAuthn Reset Email sent to: %s", email)
+	message := fmt.Sprintf(`
+Subject: Reset Your WebAuthn Credentials
+
+Hi there,
+
+You requested to reset your WebAuthn credentials (authenticators/passkeys).
+
+Click this link to reset your credentials:
+%s
+
+This link expires in 1 hour for security.
+
+If you didn't request this, please ignore this email.
+
+Thanks!
+`, resetLink)
+
+	// In production, use your email service (SendGrid, AWS SES, etc.)
+	log.Printf("%s", title)
+	log.Printf("🔗 Reset Link: %s", resetLink)
+	log.Printf("📝 Email Body:")
+	log.Printf("%s", message)
+
+	h.appConf.EmailSvc.SendMail(email, title, message)
 
 	return nil
 }
@@ -138,7 +172,8 @@ func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request)
 		dbAuthTemplate.TokenWriteQry(debugTag+"Handler.InitiateResetHandler()1 ", h.appConf.Db, newToken)
 
 		// Send reset email
-		if err := sendResetEmail(user.Email.String, resetToken); err != nil {
+		//if err := sendResetEmail(user.Email.String, resetToken); err != nil {
+		if err := h.sendResetEmail(user.Email.String, resetToken); err != nil {
 			log.Printf("Failed to send reset email to %s: %v", user.Email.String, err)
 			// Don't reveal email sending failure to prevent enumeration
 		} else {
