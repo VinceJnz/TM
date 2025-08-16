@@ -26,8 +26,9 @@ func New(appConf *appCore.Config) *Handler {
 			{ID: int(models.AccountVerified), Status: "Account Verified", Description: "The email address has been verified. An Admin now needs to activate the account."},
 			{ID: int(models.AccountActive), Status: "Account Active", Description: "An account that has been activated, and is currently active."},
 			{ID: int(models.AccountDisabled), Status: "Account Disabled", Description: "An account that has been disabled."},
-			{ID: int(models.AccountResetRequired), Status: "Account Reset Required", Description: "The account is flagged for a password reset. The user will be informed at the next login."},
+			{ID: int(models.AccountSRPResetRequired), Status: "Account SRP Reset Required", Description: "The account is flagged for a password reset. The user will be informed at the next login."},
 			{ID: int(models.AccountForDeletion), Status: "Account For Deletion", Description: "The account is flagged for deletion. An admin will need to perform the deletion."},
+			{ID: int(models.AccountWebAuthnResetResetRequired), Status: "Account WebAuthn Reset Required", Description: "The account is flagged for a WebAuthn reset. The user will be sent an email to reset the login."},
 		},
 	}
 }

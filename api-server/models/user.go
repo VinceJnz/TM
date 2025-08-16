@@ -16,8 +16,9 @@ const (
 	AccountVerified
 	AccountActive
 	AccountDisabled
-	AccountResetRequired
+	AccountSRPResetRequired
 	AccountForDeletion
+	AccountWebAuthnResetResetRequired
 )
 
 type User struct {

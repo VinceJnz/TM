@@ -39,7 +39,7 @@ func (h *Handler) AuthReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((models.AccountStatus(user.AccountStatusID.Int64) == models.AccountActive) || (models.AccountStatus(user.AccountStatusID.Int64) == models.AccountResetRequired)) {
+	if !((models.AccountStatus(user.AccountStatusID.Int64) == models.AccountActive) || (models.AccountStatus(user.AccountStatusID.Int64) == models.AccountSRPResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "username =", username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))
@@ -106,7 +106,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !((models.AccountStatus(userS.AccountStatusID.Int64) == models.AccountActive) || (models.AccountStatus(userS.AccountStatusID.Int64) == models.AccountResetRequired)) {
+	if !((models.AccountStatus(userS.AccountStatusID.Int64) == models.AccountActive) || (models.AccountStatus(userS.AccountStatusID.Int64) == models.AccountSRPResetRequired)) {
 		log.Printf("%v %v %+v", debugTag+"Handler.AuthReset()4 user not found ", "userS.UserName =", userS.Username)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("user name not found"))
@@ -136,7 +136,7 @@ func (h *Handler) AuthUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if models.AccountStatus(userS.AccountStatusID.ValueOrZero()) == models.AccountResetRequired {
+	if models.AccountStatus(userS.AccountStatusID.ValueOrZero()) == models.AccountSRPResetRequired {
 		//err = h.UserSetStatusID(userS.ID, handlerUserAccountStatus.AccountActive)
 		err = dbAuthTemplate.UserSetStatusID(debugTag+"Handler.AuthUpdate()9a ", h.appConf.Db, userS.ID, models.AccountActive)
 		if err != nil {

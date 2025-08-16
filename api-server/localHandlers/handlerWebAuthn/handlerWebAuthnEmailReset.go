@@ -16,6 +16,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Reset steps
+// 1. User requests reset via the client by entering their email address
+// 2. Server checks the email is valid and sends an email with a token
+// 3. User enters token via client UI
+// 4. Server checks token and provides a list of user regestered devices
+// 5. The client UI lists the devices registered t the user and the user chooses which device to reset
+// 6. The server resets the device and notifies the user ????
+// 7. The user re-registers the device
+
 // API Request/Response structures - used to decode JSON requests and encode JSON responses
 type ResetRequest struct {
 	//Username string `json:"username"`
@@ -34,36 +43,6 @@ func generateSecureToken() string {
 	return base64.URLEncoding.EncodeToString(bytes)
 }
 
-/*
-// Send reset email (replace with your email service)
-func sendResetEmail(email, resetToken string) error {
-	resetLink := fmt.Sprintf("https://localhost:8086/api/v1/webauthn/emailReset/finish/%s", resetToken)
-
-	// In production, use your email service (SendGrid, AWS SES, etc.)
-	log.Printf("📧 WebAuthn Reset Email sent to: %s", email)
-	log.Printf("🔗 Reset Link: %s", resetLink)
-	log.Printf("📝 Email Body:")
-	log.Printf(`
-Subject: Reset Your WebAuthn Credentials
-
-Hi there,
-
-You requested to reset your WebAuthn credentials (authenticators/passkeys).
-
-Click this link to reset your credentials:
-%s
-
-This link expires in 1 hour for security.
-
-If you didn't request this, please ignore this email.
-
-Thanks!
-`, resetLink)
-
-	return nil
-}
-*/
-
 // Send reset email (replace with your email service)
 func (h *Handler) sendResetEmail(email, resetToken string) error {
 	resetLink := fmt.Sprintf("https://localhost:8086/api/v1/webauthn/emailReset/finish/%s", resetToken)
@@ -78,20 +57,25 @@ You requested to reset your WebAuthn credentials (authenticators/passkeys).
 Click this link to reset your credentials:
 %s
 
+Paste this token into the client to continue with the credential reset:
+%s
+
 This link expires in 1 hour for security.
 
 If you didn't request this, please ignore this email.
 
 Thanks!
-`, resetLink)
+`, resetLink, resetToken)
 
 	// In production, use your email service (SendGrid, AWS SES, etc.)
+	log.Printf("%ssendResetEmail()1 Send Reset Email", debugTag)
 	log.Printf("%s", title)
 	log.Printf("🔗 Reset Link: %s", resetLink)
 	log.Printf("📝 Email Body:")
 	log.Printf("%s", message)
 
-	h.appConf.EmailSvc.SendMail(email, title, message)
+	//h.appConf.EmailSvc.SendMail(email, title, message)
+	h.appConf.EmailSvc.SendMail("vince.jennings@gmail.com", title, message) // ???? For debugging ????
 
 	return nil
 }
@@ -131,21 +115,21 @@ func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request)
 	//}
 
 	// Find user by email
-	user, err := dbAuthTemplate.UserEmailReadQry(debugTag+"Handler.BeginLogin()1a ", h.appConf.Db, req.Email)
+	user, err := dbAuthTemplate.UserEmailReadQry(debugTag+"Handler.BeginEmailResetHandler()1a ", h.appConf.Db, req.Email)
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginLogin()1: User not found", "err =", err, "userID =", user.ID, "r.RemoteAddr =", r.RemoteAddr)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginEmailResetHandler()1: User not found", "err =", err, "userID =", user.ID, "r.RemoteAddr =", r.RemoteAddr)
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
 	// Check if the user is active
 	if user.AccountStatusID.Int64 != int64(models.AccountActive) { // Assuming 1 is the ID for an active user
-		log.Printf("%sHandler.BeginLogin()2 Error: user = %+v, AccountStatusID = %v, AccountActive value= %v", debugTag, user, user.AccountStatusID.Int64, int64(models.AccountActive))
+		log.Printf("%sHandler.BeginEmailResetHandler()2 Error: user = %+v, AccountStatusID = %v, AccountActive value= %v", debugTag, user, user.AccountStatusID.Int64, int64(models.AccountActive))
 		http.Error(w, "User is not active", http.StatusForbidden)
 		return
 	}
 
-	log.Printf("%sHandler.BeginLogin()3 User found: %+v, ID = %d, Email = %s", debugTag, user, user.ID, user.Email.String)
+	log.Printf("%sHandler.BeginEmailResetHandler()3 User found: %+v, ID = %d, Email = %s", debugTag, user, user.ID, user.Email.String)
 
 	// Always return success to prevent email enumeration attacks
 	response := ResetResponse{
@@ -168,10 +152,13 @@ func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request)
 		newToken.ValidFrom.SetValid(time.Now())
 		newToken.ValidTo.SetValid(time.Now().Add(1 * time.Hour)) // Token valid for 1 hour
 
+		user.AccountStatusID.SetValid(int64(models.AccountWebAuthnResetResetRequired))
 		// Store reset token with 1-hour expiry
-		dbAuthTemplate.TokenWriteQry(debugTag+"Handler.InitiateResetHandler()1 ", h.appConf.Db, newToken)
+		dbAuthTemplate.TokenWriteQry(debugTag+"Handler.BeginEmailResetHandler()4 ", h.appConf.Db, newToken)
+		dbAuthTemplate.UserWriteQry(debugTag+"Handler.BeginEmailResetHandler()5 ", h.appConf.Db, user)
 
 		// Send reset email
+		log.Printf("%sHandler.BeginEmailResetHandler()5 user.Email = %+v", debugTag, user.Email.String)
 		//if err := sendResetEmail(user.Email.String, resetToken); err != nil {
 		if err := h.sendResetEmail(user.Email.String, resetToken); err != nil {
 			log.Printf("Failed to send reset email to %s: %v", user.Email.String, err)
@@ -187,6 +174,9 @@ func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) DeviceTokensForResetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Step 2: User clicks email link to complete reset
@@ -208,7 +198,7 @@ func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Validate reset token
-	resetToken, err := dbAuthTemplate.FindToken(debugTag+"Handler.AuthUpdate()7 ", h.appConf.Db, "webauthn_reset", token)
+	resetToken, err := dbAuthTemplate.FindToken(debugTag+"Handler.FinishEmailResetHandler()2 ", h.appConf.Db, "webauthn_reset", token)
 	if err != nil || resetToken.ID == 0 {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -218,9 +208,9 @@ func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Token is used. Delete it so that it can't be reused
-	err = dbAuthTemplate.TokenDeleteQry(debugTag+"Handler.AuthUpdate()7 ", h.appConf.Db, resetToken.ID)
+	err = dbAuthTemplate.TokenDeleteQry(debugTag+"Handler.FinishEmailResetHandler()3 ", h.appConf.Db, resetToken.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.AuthUpdate()7 ", "err =", err, "token =", resetToken)
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishEmailResetHandler()4 ", "err =", err, "token =", resetToken)
 	}
 
 	// Check if token is expired
@@ -233,7 +223,7 @@ func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Find the user
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"Handler.AuthUpdate()8 ", h.appConf.Db, resetToken.UserID)
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"Handler.FinishEmailResetHandler()5 ", h.appConf.Db, resetToken.UserID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -248,8 +238,7 @@ func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request
 	//user.WebAuthnUserID = nil                  // Clear WebAuthn ID // Don't clear WebAuthnUserID, as it may be needed for future????
 
 	// Log the successful reset
-	log.Printf("WebAuthn credentials reset completed for user %d (%+v). %d credentials removed.",
-		user.ID, user.Email, credentialCount)
+	log.Printf("WebAuthn credentials reset completed for user %d (%+v). %d credentials removed.", user.ID, user.Email, credentialCount)
 
 	// Return success response
 	response := map[string]interface{}{

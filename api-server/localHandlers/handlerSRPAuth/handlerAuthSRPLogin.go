@@ -44,7 +44,7 @@ func (h *Handler) AuthGetSalt(w http.ResponseWriter, r *http.Request) {
 	case models.AccountActive:
 		//salt stored by the server is sent to the client
 		json.NewEncoder(w).Encode(user.Salt)
-	case models.AccountResetRequired:
+	case models.AccountSRPResetRequired:
 		//Send message requiring the user to reset the password
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Password reset required."))

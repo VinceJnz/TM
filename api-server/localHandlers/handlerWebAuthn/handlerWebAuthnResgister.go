@@ -3,7 +3,6 @@ package handlerWebAuthn
 import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
-	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -28,11 +27,12 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	// At this point the user is a new user or an existing user who is registering a new WebAuthn credential.
 	// So there should no user existing in the database with the same username or email.
+	// Unless the user is reregetering a device.
 	// Check if the user is already registered
 	existingUser, err := dbAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, user.Username)
-	if err != sql.ErrNoRows {
+	if err != nil { //sql.ErrNoRows {
 		http.Error(w, "Failed to check existing user", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()2: Failed to check existing user", "err =", err, "username =", user.Username, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
+		log.Printf("%v %v %v %v %v %v %v %v %+v", debugTag+"Handler.BeginRegistration()2: Failed to check existing user", "err =", err, "username =", user.Username, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
 		return
 	}
 	if existingUser.ID != 0 { // If the user already exists in the database
