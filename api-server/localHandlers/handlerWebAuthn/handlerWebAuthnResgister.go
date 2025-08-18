@@ -19,6 +19,9 @@ import (
 // ******************************************************************************
 
 // Registration (Begin)
+// This procecess must first check if the user is already registered.
+// If the user is registered then the existing user record should be used.
+// If not then a new user record can be added.
 func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	user, err := h.getUserFromRegistrationRequest(r)
 	if err != nil {
@@ -36,24 +39,26 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existingUser.ID != 0 { // If the user already exists in the database
-		http.Error(w, "User is already registered", http.StatusConflict)
-		return
+		// User is aready registered and wants to register (or re-register) a device
+		*user = existingUser
+		log.Printf(debugTag+"Handler.BeginRegistration()3: user is already registered and is registering an additional device, user = %+v", user)
+	} else {
+		// User is not registered, so we can proceed with registration
+		// Generate a temporary UUID for WebAuthnUserID (user handle). If registration is successful, this will be saved to the user record in the database.
+		user.WebAuthnUserID = []byte(uuid.New().String())
 	}
-	// User is not registered, so we can proceed with registration
-	// Generate a temporary UUID for WebAuthnUserID (user handle). If registration is successful, this will be saved to the user record in the database.
-	user.WebAuthnUserID = []byte(uuid.New().String())
-
 	options, sessionData, err := h.webAuthn.BeginRegistration(user)
 	if err != nil {
 		http.Error(w, "Failed to begin registration", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()3: Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
+
 	// Create and Store sessionData in your session pool store
 	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
 		return
 	}
 	h.Pool.Add(tempSessionToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data

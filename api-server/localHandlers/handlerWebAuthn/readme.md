@@ -100,6 +100,31 @@ Key Points:
 * sessionData must be stored by the server between steps 2 and 5, referenced by a temporary session/cookie.
 * The WASM client acts as a bridge between your UI and the browser’s WebAuthn API.
 
+## WebAuthn reset process
+
+Reset steps
+1. User Requests Reset
+* Client: User enters their email and requests a reset.
+* Server: Validates the email, generates a secure, time-limited single-use token, and sends it to the user via email.
+2. User Receives Token
+* Client: User receives the token in their email.
+3. User Enters Token and Requests Device List
+* Client: User enters the token in the UI.
+* Server: Validates the token, fetches all registered WebAuthn credentials for the user, and returns a list (with device metadata/names).
+4. User Selects Device to Reset
+* Client: UI displays the device list (with names, creation dates, etc.). User selects which device to reset.
+5. Server Deletes Selected Credential
+* Client: Sends the selected credential ID to the server.
+* Server: Validates the token again, deletes only the selected credential from the DB, and (optionally) notifies the user.
+6. User Re-registers Device
+* Client: UI prompts user to register a new credential (standard WebAuthn registration flow).
+* Server: Handles registration as usual.
+
+Security Notes
+* Tokens should be single-use and expire after a short period.
+* Audit all credential deletions.
+* Notify the user by email after a credential is deleted.
+
 
 ## WebAuthn login process
 

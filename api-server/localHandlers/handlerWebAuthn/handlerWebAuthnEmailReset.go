@@ -9,23 +9,25 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
 )
 
 // Reset steps
 // 1. User requests reset via the client by entering their email address
 // 2. Server checks the email is valid and sends an email with a token
-// 3. User enters token via client UI
-// 4. Server checks token and provides a list of user regestered devices
-// 5. The client UI lists the devices registered t the user and the user chooses which device to reset
-// 6. The server resets the device and notifies the user ????
-// 7. The user re-registers the device
+// 3. User enters token via client UI and the client requests a list of registered devices
+// 4. Server checks token and returns a list of the user's regestered devices
+// 5. The client UI displays the devices registered to the user and the user chooses which device to reset
+//     Having this step should ensure that the user does not end up wit a lot of old device registrations.
+// 6. The server resets/re-registers the device and notifies the user ????
 
+// 1. Request Reset
 // API Request/Response structures - used to decode JSON requests and encode JSON responses
+// POST /webauthn/reset/request
 type ResetRequest struct {
 	//Username string `json:"username"`
 	Email string `json:"email"`
@@ -34,6 +36,32 @@ type ResetRequest struct {
 type ResetResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+}
+
+// 2. Validate Token & List Devices
+// POST /webauthn/reset/list
+type ListDevicesRequest struct {
+	Email string `json:"email"`
+	Token string `json:"token"`
+}
+type DeviceInfo struct {
+	CredentialID string `json:"credential_id"`
+	DeviceName   string `json:"device_name"`
+	Created      string `json:"created"`
+}
+type ListDevicesResponse struct {
+	Devices []DeviceInfo `json:"devices"`
+}
+
+// 3. Delete Credential
+// POST /webauthn/reset/delete
+type DeleteCredentialRequest struct {
+	Email        string `json:"email"`
+	Token        string `json:"token"`
+	CredentialID string `json:"credential_id"`
+}
+type DeleteCredentialResponse struct {
+	Success bool `json:"success"`
 }
 
 // Generate cryptographically secure token
@@ -80,10 +108,10 @@ Thanks!
 	return nil
 }
 
-// Step 1: User requests reset via email
+// Step 1: User Requests Reset (Server checks the email is valid and sends an email with a token)
 // BeginEmailResetHandler handles the initial request to reset WebAuthn credentials via email
 // It checks if the user exists, has WebAuthn enabled, and sends a reset link
-func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) EmailResetRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method != http.MethodPost {
@@ -131,12 +159,6 @@ func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request)
 
 	log.Printf("%sHandler.BeginEmailResetHandler()3 User found: %+v, ID = %d, Email = %s", debugTag, user, user.ID, user.Email.String)
 
-	// Always return success to prevent email enumeration attacks
-	response := ResetResponse{
-		Success: true,
-		Message: "If an account with that email exists and has WebAuthn enabled, a reset link has been sent.",
-	}
-
 	// Only send email if user exists and has WebAuthn credentials
 	//if user.WebAuthnEnabled() && user.WebAuthnHasCredentials() {
 	if user.WebAuthnEnabled() {
@@ -172,18 +194,18 @@ func (h *Handler) BeginEmailResetHandler(w http.ResponseWriter, r *http.Request)
 
 	log.Printf("WebAuthn reset request processed for user %d (%+v)", user.ID, user.Email)
 
+	// Always return success to prevent email enumeration attacks
+	response := ResetResponse{
+		Success: true,
+		Message: "If an account with that email exists and has WebAuthn enabled, a reset link has been sent.",
+	}
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) DeviceTokensForResetHandler(w http.ResponseWriter, r *http.Request) {
-}
-
-// Step 2: User clicks email link to complete reset
-// FinishEmailResetHandler handles the final step of resetting WebAuthn credentials
-// It validates the reset token, clears the user's WebAuthn credentials, and returns a success response
-// It also deletes the token to prevent reuse
-func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request) {
+// Step 3: User Enters Token and Requests Device List (Server checks token and returns a list of the user's regestered devices)
+func (h *Handler) EmailResetListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	log.Printf("%sHandler.FinishEmailResetHandler()1 Start", debugTag)
 
@@ -232,10 +254,76 @@ func (h *Handler) FinishEmailResetHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	log.Printf("WebAuthn user %d found (%+v). Token check successfully completed.", user.ID, user.Email)
+
+	credentials, err := dbAuthTemplate.GetUserCredentials(debugTag+"Handler.FinishEmailResetHandler()6 ", h.appConf.Db, user.ID)
+	if err != nil {
+		log.Printf(debugTag+"Handler.FinishEmailResetHandler()6: user = %+v", user)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Credentials not found",
+		})
+		return
+	}
+
+	// Create and Store user in your session pool store
+	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	if err != nil {
+		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
+		return
+	}
+	h.Pool.Add(tempSessionToken.Value, &user, nil, 5*time.Minute) // Assuming you have a pool to manage session data
+
+	// add the session token to the response
+	http.SetCookie(w, tempSessionToken)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(credentials)
+
+}
+
+// Step 6: Server Deletes Selected Credential (The server deleted credential and notifies the user ????)
+// FinishEmailResetHandler handles the final step of resetting WebAuthn credentials
+// The user must then reregisster the device
+func (h *Handler) EmailResetFinishHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	log.Printf("%sHandler.EmailResetFinishHandler()1 Start", debugTag)
+
+	tempSessionToken, err := getTempSessionToken(w, r) // Retrieve the session cookie
+	if err != nil {
+		log.Println(debugTag+"Handler.EmailResetFinishHandler()2 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+		return
+	}
+	poolItem, exists := h.Pool.Get(tempSessionToken.Value) // Assuming you have a pool to manage session data
+	if !exists || poolItem.User == nil {                   // Check if the user is nil) {
+		http.Error(w, "Session not found or expired", http.StatusUnauthorized)
+		return
+	}
+	//sessionData := *poolItem.SessionData // Retrieve session data from the pool
+	user := poolItem.User // Set the user data from the pool
+
+	params := mux.Vars(r)
+	credentialID := params["id"]
+	if credentialID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Reset token is required"})
+		return
+	}
+
+	// Token is used. Delete it so that it can't be reused
+	credentialIDint, err := strconv.Atoi(credentialID)
+	if err != nil {
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.EmailResetFinishHandler()3 ", "err =", err, "credentialID =", credentialID)
+
+	}
+	err = dbAuthTemplate.DeleteCredentialByID(debugTag+"Handler.EmailResetFinishHandler()4 ", h.appConf.Db, credentialIDint)
+	if err != nil {
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.EmailResetFinishHandler()5 ", "err =", err, "credentialIDint =", credentialIDint)
+	}
+
 	// Perform the WebAuthn reset
 	credentialCount := len(user.Credentials)
-	user.Credentials = []webauthn.Credential{} // Clear all credentials
-	//user.WebAuthnUserID = nil                  // Clear WebAuthn ID // Don't clear WebAuthnUserID, as it may be needed for future????
 
 	// Log the successful reset
 	log.Printf("WebAuthn credentials reset completed for user %d (%+v). %d credentials removed.", user.ID, user.Email, credentialCount)

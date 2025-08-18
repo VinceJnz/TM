@@ -126,8 +126,15 @@ func UpdateCredential(debugStr string, Db *sqlx.DB, credential models.WebAuthnCr
 
 // DeleteCredential removes a credential
 func DeleteCredential(debugStr string, Db *sqlx.DB, credentialID []byte) error {
-	query := `DELETE FROM st_webauthn_credentials WHERE id = $1`
+	query := `DELETE FROM st_webauthn_credentials WHERE credential_id = $1`
 	_, err := Db.Exec(query, credentialID)
+	return err
+}
+
+// DeleteCredential removes a credential
+func DeleteCredentialByID(debugStr string, Db *sqlx.DB, id int) error {
+	query := `DELETE FROM st_webauthn_credentials WHERE id = $1`
+	_, err := Db.Exec(query, id)
 	return err
 }
 
