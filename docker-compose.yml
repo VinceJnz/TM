@@ -37,9 +37,11 @@ services:
       - mynetwork
 
   apiserver:
+    profiles: ["prod"]
     build:
       context: .                        # Updated context for API server
       dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
+      target: final                     # <-- normal build (production image)
     container_name: apiserver
     ports:
       - "8085:8085"
@@ -47,11 +49,39 @@ services:
     networks:
       - mynetwork
     environment:
-##      - DATABASE_URL=postgres://user:password@postgres:5432/mydb
+      - GO_ENV=production
+##    - DATABASE_URL=postgres://user:password@postgres:5432/mydb
       - DATABASE_URL=dbserver://api_user:api_password@postgres:5432/mydatabase
     depends_on:
 ##      - postgres
       - dbserver
+
+  apiserver-debug:
+    profiles: ["debug"]
+    build:
+      context: .                        # Updated context for API server
+      dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
+      target: debug                     # <-- debug stage from modified Dockerfile
+    container_name: apiserver-debug
+    ports:
+      - "8085:8085"
+      - "8086:8086"
+      - "40000:40000"        # expose Delve debugger port
+    networks:
+      - mynetwork
+    environment:
+      - GO_ENV=debug
+##    - DATABASE_URL=postgres://user:password@postgres:5432/mydb
+      - DATABASE_URL=dbserver://api_user:api_password@postgres:5432/mydatabase
+    security_opt:            # needed if Delve complains about ptrace
+      - "seccomp:unconfined"
+    cap_add:
+      - SYS_PTRACE
+    depends_on:
+##      - postgres
+      - dbserver
+    volumes:
+      - ./api-server:/app    # <-- mount local code to /app in container
 
 networks:
   mynetwork:

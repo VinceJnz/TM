@@ -34,7 +34,10 @@ COPY ./certs/stripe/ ./certs/stripe/
 
 # Build the Go API server
 RUN go mod download
-RUN go build -o apiserver .
+# Normal build
+# RUN go build -o apiserver .
+# Build with debug symbols (disable optimizations/inlining)
+RUN go build -gcflags="all=-N -l" -o apiserver .
 
 ############################################################
 # STAGE 3: Create a clean image for the final output
@@ -59,10 +62,44 @@ COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
 COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
 
 # Expose the port the API server listens on
-EXPOSE 8085
-EXPOSE 8086
+EXPOSE 8085 8086
 
 # Command to run the API server
 CMD ["./apiserver"]
 # Command to use to launch an interactive shell
 #CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
+
+############################################################
+# STAGE 4: Debug image (delve enabled)
+FROM golang:1.23.4-alpine AS debug
+WORKDIR /app
+
+# Install Delve - for debugging
+RUN apk add --no-cache git bash && \
+    go install github.com/go-delve/delve/cmd/dlv@latest
+
+# Copy the compiled wasm binary from the builder stage to the static folder
+COPY --from=wasmbuilder /app/main.wasm ./static/
+COPY --from=wasmbuilder /app/wasm_exec.js ./static/
+
+# Copy the static files from the builder stage to the static folder
+#COPY --from=apibuilder /app/static/*.html ./static/
+#COPY --from=apibuilder /app/static/*.css ./static/
+#COPY --from=apibuilder /app/static/*.txt ./static/
+#COPY --from=apibuilder /app/static/favicon.ico ./static/
+#COPY --from=apibuilder /app/static/favicon.png ./static/
+
+# Copy the compiled webserver binary from the builder stage
+COPY --from=apibuilder /app/apiserver .
+COPY --from=apibuilder /app/.env .
+COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
+COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
+COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
+
+# Expose the port the API server listens on
+# App ports
+EXPOSE 8085 8086 40000
+
+# Command to Run the server under Delve in headless mode for debugging
+CMD ["dlv", "exec", "/app/apiserver", \
+     "--headless", "--listen=:40000", "--api-version=2", "--accept-multiclient"]

@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Docker Delve",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "/app",             // path inside container
+      //"program": "${workspaceFolder}/api-server", // your local source folder
+      "port": 40000,
+      "host": "127.0.0.1",              // Docker Desktop forwards ports to localhost
+      "apiVersion": 2
+    }
+  ]
+}

@@ -180,3 +180,25 @@ In summary, there are four different ways to present certificates and their comp
 
 Run the docker image interactively from the VS Code terminal
 `docker run -it tm-apiserver /bin/sh`
+
+
+## Debugging
+
+The docker compose file has been reconfigured with profiles to enable debugging
+
+production: `docker compose --profile prod up --build`
+
+debugging: `docker compose --profile debug up --build`
+
+
+**Debugging workflow:**
+* Start containers in debug mode.
+* In VS Code, go to the debug tab → select Connect to Docker Delve → press ▶️.
+* Set breakpoints in your Go code → execution will pause inside the container.
+
+
+**Inside the container**
+```bash
+cd /app
+go build -gcflags="all=-N -l" -o apiserver
+```
