@@ -256,6 +256,7 @@ func (h *Handler) EmailResetListHandler(w http.ResponseWriter, r *http.Request) 
 
 	log.Printf("WebAuthn user %d found (%+v). Token check successfully completed.", user.ID, user.Email)
 
+	// Retrieve user credentials for each device and send it to the client so that they can select which device to reset
 	credentials, err := dbAuthTemplate.GetUserCredentials(debugTag+"Handler.FinishEmailResetHandler()6 ", h.appConf.Db, user.ID)
 	if err != nil {
 		log.Printf(debugTag+"Handler.FinishEmailResetHandler()6: user = %+v", user)

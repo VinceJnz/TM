@@ -18,8 +18,8 @@ import (
 // WebAuthn Registration process
 // ******************************************************************************
 
-// Registration (Begin)
-// This procecess must first check if the user is already registered.
+// BeginRegistration
+// This process must first check if the user is already registered.
 // If the user is registered then the existing user record should be used.
 // If not then a new user record can be added.
 func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
@@ -29,8 +29,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// At this point the user is a new user or an existing user who is registering a new WebAuthn credential.
-	// So there should no user existing in the database with the same username or email.
-	// Unless the user is reregetering a device.
+	// If a new user: There will be no existing user in the database with the same username or email.
+	// If re-registering a device: The existing user record will be used.
 	// Check if the user is already registered
 	existingUser, err := dbAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, user.Username)
 	if err != nil { //sql.ErrNoRows {
@@ -39,14 +39,16 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existingUser.ID != 0 { // If the user already exists in the database
-		// User is aready registered and wants to register (or re-register) a device
-		*user = existingUser
+		// User is already registered and wants to register (or re-register) a device
 		log.Printf(debugTag+"Handler.BeginRegistration()3: user is already registered and is registering an additional device, user = %+v", user)
+		user = &existingUser
 	} else {
 		// User is not registered, so we can proceed with registration
+		log.Printf(debugTag+"Handler.BeginRegistration()3: user is not registered, proceeding with registration, user = %+v", user)
 		// Generate a temporary UUID for WebAuthnUserID (user handle). If registration is successful, this will be saved to the user record in the database.
 		user.WebAuthnUserID = []byte(uuid.New().String())
 	}
+	// Begin the registration process for both new and existing users
 	options, sessionData, err := h.webAuthn.BeginRegistration(user)
 	if err != nil {
 		http.Error(w, "Failed to begin registration", http.StatusInternalServerError)
@@ -63,13 +65,13 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	h.Pool.Add(tempSessionToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data
 
-	// add the session token to the response
+	// add the session token to the response and send the RegistrationOptions to the client
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(options)
 }
 
-// Registration (Finish)
+// FinishRegistration handles the completion of the WebAuthn registration process
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
 	var user *models.User                              //webauthn.User

@@ -132,73 +132,12 @@ func main() {
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
-	// Static handlers
-	//r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
-	/*
-		r.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Set proper content types for different file types
-			if strings.HasSuffix(r.URL.Path, ".js") {
-				w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-			} else if strings.HasSuffix(r.URL.Path, ".wasm") {
-				w.Header().Set("Content-Type", "application/wasm")
-			} else if strings.HasSuffix(r.URL.Path, ".css") {
-				w.Header().Set("Content-Type", "text/css; charset=utf-8")
-			} else if strings.HasSuffix(r.URL.Path, ".html") {
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			}
-
-			// Serve the static file
-			http.StripPrefix("/", http.FileServer(http.Dir("./static"))).ServeHTTP(w, r)
-		}))
-	*/
-	/*
-		r.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Create a custom ResponseWriter to intercept the response
-			if strings.HasSuffix(r.URL.Path, ".js") {
-				// For JS files, serve directly and set content type
-				filePath := "./static" + r.URL.Path
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					http.NotFound(w, r)
-					return
-				}
-
-				w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-				http.ServeFile(w, r, filePath)
-				return
-			} else if strings.HasSuffix(r.URL.Path, ".wasm") {
-				filePath := "./static" + r.URL.Path
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					http.NotFound(w, r)
-					return
-				}
-
-				w.Header().Set("Content-Type", "application/wasm")
-				http.ServeFile(w, r, filePath)
-				return
-			}
-
-			// For all other files, use the regular file server
-			http.StripPrefix("/", http.FileServer(http.Dir("./static"))).ServeHTTP(w, r)
-		}))
-	*/
 	corsMuxHandler := corsOpts(r)
 	loggedHandler := helpers.LogRequest(corsMuxHandler)
-	//corsMuxHandler := corsOpts(r)
-	//loggedHandler := helpers.LogRequest(r)
 
 	// Paths to certificate and key files
-	//crtFile := "/etc/ssl/certs/localhost.crt"
-	//keyFile := "/etc/ssl/certs/localhost.key"
 	crtFile := app.Settings.ServerCert
 	keyFile := app.Settings.ServerKey
-
-	// For debugging: Log all registered routes
-	//r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-	//	path, _ := route.GetPathTemplate()
-	//	methods, _ := route.GetMethods()
-	//	log.Printf("Registered route: %s %v", path, methods)
-	//	return nil
-	//})
 
 	go func() {
 		log.Println(debugTag + "HTTP server running on http://localhost:8085")
