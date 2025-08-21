@@ -189,3 +189,9 @@ SELECT id, user_id, credential_data, created, modified, credential_id, device_na
 go mod init
 go clean -modcache
 go mod tidy
+
+
+
+
+`chown root:root wasm_exec.js main.wasm`
+

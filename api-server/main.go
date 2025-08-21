@@ -113,6 +113,9 @@ func main() {
 	addRouteGroup(subR2, "trips", trip)                                        // Trip routes
 	subR2.HandleFunc("/tripsReport", trip.GetParticipantStatus).Methods("GET") // Trip routes
 
+	// Static handlers
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
+
 	// For debugging: Log all registered routes
 	//subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 	//	path, _ := route.GetPathTemplate()
@@ -120,9 +123,6 @@ func main() {
 	//	log.Printf("Registered routes for subR2: %s %v", path, methods)
 	//	return nil
 	//})
-
-	// Static handlers
-	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
@@ -132,9 +132,59 @@ func main() {
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
+	// Static handlers
+	//r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
+	/*
+		r.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set proper content types for different file types
+			if strings.HasSuffix(r.URL.Path, ".js") {
+				w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+			} else if strings.HasSuffix(r.URL.Path, ".wasm") {
+				w.Header().Set("Content-Type", "application/wasm")
+			} else if strings.HasSuffix(r.URL.Path, ".css") {
+				w.Header().Set("Content-Type", "text/css; charset=utf-8")
+			} else if strings.HasSuffix(r.URL.Path, ".html") {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			}
+
+			// Serve the static file
+			http.StripPrefix("/", http.FileServer(http.Dir("./static"))).ServeHTTP(w, r)
+		}))
+	*/
+	/*
+		r.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Create a custom ResponseWriter to intercept the response
+			if strings.HasSuffix(r.URL.Path, ".js") {
+				// For JS files, serve directly and set content type
+				filePath := "./static" + r.URL.Path
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
+					http.NotFound(w, r)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+				http.ServeFile(w, r, filePath)
+				return
+			} else if strings.HasSuffix(r.URL.Path, ".wasm") {
+				filePath := "./static" + r.URL.Path
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
+					http.NotFound(w, r)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/wasm")
+				http.ServeFile(w, r, filePath)
+				return
+			}
+
+			// For all other files, use the regular file server
+			http.StripPrefix("/", http.FileServer(http.Dir("./static"))).ServeHTTP(w, r)
+		}))
+	*/
 	corsMuxHandler := corsOpts(r)
 	loggedHandler := helpers.LogRequest(corsMuxHandler)
 	//corsMuxHandler := corsOpts(r)
+	//loggedHandler := helpers.LogRequest(r)
 
 	// Paths to certificate and key files
 	//crtFile := "/etc/ssl/certs/localhost.crt"
@@ -164,82 +214,8 @@ func main() {
 		}
 	}()
 
-	/* Seup helpers to start the servers with basic and TLS configuration.
-	appCore.StartServerHTTP(":8086", loggedHandler, debugTag)
-
-	// ...set up caCertPool, etc...
-	tlsConfig := &tls.Config{
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  caCertPool,
-		MinVersion: tls.VersionTLS12,
-	}
-	appCore.StartServerHTTPS(":8085", crtFile, keyFile, loggedHandler, debugTag, tlsConfig)
-	*/
-
 	// Block the main goroutine to keep the servers running
 	select {}
-
-	/*
-		//******************************************************************
-		// Config and Start HTTP
-		//******************************************************************
-
-		server := &http.Server{
-			//Addr:         ":" + *portHttp,
-			Addr: ":" + app.Settings.PortHttp,
-
-			ReadTimeout:  5 * time.Minute, // 5 min to allow for delays when 'curl' on OSx prompts for username/password
-			WriteTimeout: 10 * time.Second,
-			//TLSConfig:    &tls.Config{ServerName: *host},
-			//Handler: (main.LogRequest(app.Mux)),
-			Handler: (corsMuxHandler),
-		}
-
-		go func() error {
-			if err := server.ListenAndServe(); err != nil {
-				//log.Fatal(err)
-				log.Fatal("Web server (HTTP): ", err)
-				return fmt.Errorf("Server failed to start: %w", err)
-			}
-			return nil
-			//err_http := http.ListenAndServe(":8085", main.LogRequest(app.Mux))
-			//if err_http != nil {
-			//	log.Fatal("Web server (HTTP): ", err_http)
-			//}
-		}()
-
-		//******************************************************************
-		// Config and Start HTTPS
-		//******************************************************************
-
-		serverTLS := &http.Server{
-			//Addr:         ":" + *portHttps,
-			Addr:         ":" + app.Settings.PortHttps,
-			ReadTimeout:  5 * time.Minute, // 5 min to allow for delays when 'curl' on OSx prompts for username/password
-			WriteTimeout: 10 * time.Second,
-			//TLSConfig: &tls.Config{
-			//	ServerName: *host,
-			//	ClientAuth: tls.ClientAuthType(*certOpt),
-			//	MinVersion: tls.VersionTLS12, // TLS versions below 1.2 are considered insecure - see https://www.rfc-editor.org/rfc/rfc7525.txt for details
-			//},
-			//TLSConfig: getTLSConfig(*host, *clientCaCert, *serverCaCert, tls.ClientAuthType(*certOpt)),
-			TLSConfig: &tls.Config{
-				ServerName: host,
-				ClientAuth: certOpt,
-				ClientCAs:  caCertPool,
-				MinVersion: tls.VersionTLS12, // TLS versions below 1.2 are considered insecure - see https://www.rfc-editor.org/rfc/rfc7525.txt for details
-			},
-			//getTLSConfig(app.Settings.Host,
-			//	app.Settings.ClientCaCert,
-			//	app.Settings.ServerCaCert,
-			//	tls.ClientAuthType(app.Settings.CertOpt)),
-			Handler: corsMuxHandler,
-		}
-
-		if err := serverTLS.ListenAndServeTLS(app.Settings.ServerCert, app.Settings.ServerKey); err != nil {
-			log.Fatal(debugTag+"Web server (HTTPS): ", err)
-		}
-	*/
 }
 
 type genericHandler interface {

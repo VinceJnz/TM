@@ -6,11 +6,18 @@
       "type": "go",
       "request": "attach",
       "mode": "remote",
-      "remotePath": "/app",             // path inside container
-      //"program": "${workspaceFolder}/api-server", // your local source folder
+      "remotePath": "/src",
       "port": 40000,
-      "host": "127.0.0.1",              // Docker Desktop forwards ports to localhost
-      "apiVersion": 2
+      "host": "127.0.0.1",
+      "apiVersion": 2,
+      "showLog": true,
+      "trace": "verbose",
+      "substitutePath": [
+        {
+          "from": "/src",
+          "to": "${workspaceFolder}"
+        }
+      ]
     }
   ]
 }
