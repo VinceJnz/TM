@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Docker Delve",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "/src",
+      "port": 40000,
+      "host": "127.0.0.1",
+      "apiVersion": 2,
+      "showLog": true,
+      "trace": "verbose",
+      "substitutePath": [
+        {
+          "from": "/src",
+          "to": "${workspaceFolder}/api-server"
+        }
+      ]
+    }
+  ]
+}

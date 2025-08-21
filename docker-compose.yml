@@ -81,7 +81,8 @@ services:
 ##      - postgres
       - dbserver
     volumes:
-      - ./api-server:/app    # <-- mount local code to /app in container
+      ##- ./api-server/app    # <-- mount local code to /app in container
+      - D:/Users/Vince/Documents/GitHub/TM:/src
 
 networks:
   mynetwork:

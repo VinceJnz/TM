@@ -35,9 +35,7 @@ COPY ./certs/stripe/ ./certs/stripe/
 # Build the Go API server
 RUN go mod download
 # Normal build
-# RUN go build -o apiserver .
-# Build with debug symbols (disable optimizations/inlining)
-RUN go build -gcflags="all=-N -l" -o apiserver .
+RUN go build -o apiserver .
 
 ############################################################
 # STAGE 3: Create a clean image for the final output
@@ -78,28 +76,47 @@ WORKDIR /app
 RUN apk add --no-cache git bash && \
     go install github.com/go-delve/delve/cmd/dlv@latest
 
+# Copy the certs to the server
+COPY ./certs/api-server/ /etc/certs/ssl/
+COPY ./certs/gmail/*.json /etc/certs/gmail/
+COPY ./certs/stripe/ /etc/certs/stripe/
+
+# Copy the static files from the source to the static folder
+COPY ./api-server/static/*.html /static/
+COPY ./api-server/static/*.css /static/
+COPY ./api-server/static/*.txt /static/
+COPY ./api-server/static/favicon.ico /static/
+COPY ./api-server/static/favicon.png /static/
+COPY ./api-server/.env /
+
 # Copy the compiled wasm binary from the builder stage to the static folder
-COPY --from=wasmbuilder /app/main.wasm ./static/
-COPY --from=wasmbuilder /app/wasm_exec.js ./static/
+COPY --from=wasmbuilder /app/main.wasm /static/
+COPY --from=wasmbuilder /app/wasm_exec.js /static/
+RUN chown root:root /static/wasm_exec.js /static/main.wasm
 
-# Copy the static files from the builder stage to the static folder
-#COPY --from=apibuilder /app/static/*.html ./static/
-#COPY --from=apibuilder /app/static/*.css ./static/
-#COPY --from=apibuilder /app/static/*.txt ./static/
-#COPY --from=apibuilder /app/static/favicon.ico ./static/
-#COPY --from=apibuilder /app/static/favicon.png ./static/
-
-# Copy the compiled webserver binary from the builder stage
-COPY --from=apibuilder /app/apiserver .
-COPY --from=apibuilder /app/.env .
-COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
-COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
-COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
+# Copy the startup script from the build context
+COPY ./api-server/debug-startup.sh /startup.sh
+RUN chmod +x /startup.sh
 
 # Expose the port the API server listens on
 # App ports
 EXPOSE 8085 8086 40000
 
 # Command to Run the server under Delve in headless mode for debugging
-CMD ["dlv", "exec", "/app/apiserver", \
-     "--headless", "--listen=:40000", "--api-version=2", "--accept-multiclient"]
+#CMD ["dlv", "exec", "/apiserver", \
+#     "--headless", "--listen=:40000", "--api-version=2", "--accept-multiclient"]
+#CMD ["sh", "-c", "cd /src/api-server && go mod download && go build -gcflags='all=-N -l' -o /apiserver . && cd / && dlv exec /apiserver --headless --listen=:40000 --api-version=2 --accept-multiclient"]
+# Command to use to launch an interactive shell
+CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
+#CMD ["/startup.sh"]
+#CMD ["sh", "-c", "cd /src/api-server && go mod download && go build -o /apiserver . && cd / && /apiserver"]
+#CMD ["sh", "-c", "cd /src/api-server && go build -o /apiserver . && cd / && /apiserver"]
+#CMD ["sh", "-c", "cd /src/api-server && go mod download && go build -gcflags='all=-N -l' -o /apiserver . && cd / && dlv exec /apiserver --headless --listen=:40000 --api-version=2 --accept-multiclient"]
+#CMD ["sh", "-c", "cd /src/api-server && go build -gcflags='all=-N -l' -o /apiserver . && cd / && dlv exec /apiserver --headless --listen=:40000 --api-version=2 --accept-multiclient"]
+
+# NOTE: Because the apiserver binary looks for the static files in a relative directory (./static/)
+# you must launch the server from the folder that contains the static directory.
+# for example:
+#   from root dir "/"
+#   ls /static
+#   cd / && ./apiserver
