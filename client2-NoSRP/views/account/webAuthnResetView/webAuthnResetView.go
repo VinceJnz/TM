@@ -4,6 +4,7 @@ import (
 	"client2-NoSRP/v2/app/appCore"
 	"client2-NoSRP/v2/app/eventProcessor"
 	"client2-NoSRP/v2/app/httpProcessor"
+	"client2-NoSRP/v2/views/account/webAuthnMgntView"
 	"client2-NoSRP/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
@@ -63,9 +64,9 @@ type UI struct {
 type ParentData struct {
 }
 
-type Item struct {
-	Record TableData
+type children struct {
 	//Add child structures as necessary
+	DeviceChooser *webAuthnMgntView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -75,18 +76,16 @@ type ItemEditor struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
-	ItemState     ItemState
-	XXRecords     []TableData
-	XXItemList    []Item
+	ItemState     viewHelpers.ItemState
+	Records       []TableData
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
-	//ListDiv       js.Value
-	StateDiv    js.Value
-	ParentData  ParentData
-	ParentID    int
-	ViewState   ViewState
-	RecordState RecordState
+	ListDiv       js.Value
+	ParentData    ParentData
+	ViewState     ViewState
+	RecordState   RecordState
+	Children      children
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -97,7 +96,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.events = eventProcessor
 	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
 
-	editor.ItemState = ItemStateNone
+	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
@@ -113,11 +112,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	//editor.ListDiv.Set("id", debugTag+"itemListDiv")
 	//editor.Div.Call("appendChild", editor.ListDiv)
 
-	// Create a div for displaying ItemState
-	editor.StateDiv = editor.document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
-
 	// Store supplied parent value
 	if len(parentData) != 0 {
 		editor.ParentData = parentData[0]
@@ -127,6 +121,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 	// Create child editors here
 	//..........
+	editor.Children.DeviceChooser = webAuthnMgntView.New(editor.document, eventProcessor, editor.appCore)
 
 	return editor
 }
@@ -163,7 +158,7 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
-	editor.updateStateDisplay(ItemStateAdding)
+	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
 	// Set default values for the new record // ********************* This needs to be changed for each api **********************
@@ -251,7 +246,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.UiComponents = UI{}
 
 	// Update state
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 }
 
 //func (editor *ItemEditor) ValidatePasswords(this js.Value, p []js.Value) interface{} {
@@ -347,7 +342,7 @@ func (editor *ItemEditor) FetchItems() {
 //func (editor *ItemEditor) populateItemList() {
 //}
 
-func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
 	editor.ItemState = newState
 }
