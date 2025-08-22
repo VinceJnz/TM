@@ -58,6 +58,7 @@ type TableData struct {
 	Password       string    `json:"user_password"` //This will probably not be used (see: salt, verifier)
 	//Salt            []byte    `json:"salt"`
 	//Verifier        *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
+	EmailToken      string    `json:"email_token"`
 	AccountStatusID int       `json:"user_account_status_id"`
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`

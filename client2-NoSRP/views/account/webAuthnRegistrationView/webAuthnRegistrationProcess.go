@@ -49,11 +49,17 @@ func decodeBase64URLToUint8Array(b64 string) js.Value {
 	return uint8Array
 }
 
+// WebAuthnRegistration handles the registration process for WebAuthn
+// 1. Send user info to server to get registration options.
+// 2. Convert challenge and user ID to the correct format for WebAuthn.
+// 3. Call browser WebAuthn API to create credentials.
+// 4. Send credentials back to server to finish registration.
 func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 	go func() {
 		// 1. Fetch registration options from the server
 		fetch := js.Global().Get("fetch")
 		// Marshal editor.CurrentRecord to JSON
+		// Prepare user data as JSON string for the request body
 		userData := js.Global().Get("JSON").Call("stringify", map[string]any{
 			"name":     item.Name,
 			"username": item.Username,
@@ -62,6 +68,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 			// Add other fields as needed
 		})
 
+		// Send POST request to /register/begin/ to get registration options
 		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]any{
 			"method": "POST",
 			"body":   userData,
@@ -70,29 +77,32 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 			},
 		})
 
+		// Handle the server response for registration options
 		then := js.FuncOf(func(this js.Value, args []js.Value) any {
 			resp := args[0]
+			// Parse the JSON body of the response
 			jsonPromise := resp.Call("json")
 			then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
 				options := args[0]
 				publicKey := options.Get("publicKey")
 
-				// 2. Convert challenge and user.id from base64 to Uint8Array
+				// 2. Convert challenge and user.id from base64url to Uint8Array, the correct format for WebAuthn
 				publicKey.Set("challenge", decodeBase64URLToUint8Array(publicKey.Get("challenge").String()))
 				user := publicKey.Get("user")
 				user.Set("id", decodeBase64URLToUint8Array(user.Get("id").String()))
 				publicKey.Set("user", user)
 
-				// 3. Call the browser WebAuthn API
+				// 3. Call the browser WebAuthn API to create credentials
 				credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
 					"publicKey": publicKey,
 				})
 
+				// Handle the result of the credentials creation
 				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
 					cred := args[0]
-					// 4. Send result to server
+					// 4. Send the credential result back to the server to finish registration
 					credJSON := js.Global().Get("JSON").Call("stringify", cred)
-					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/", map[string]any{
+					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/", map[string]any{ // an emailToken needs to be added to the url ???????????????????
 						"method": "POST",
 						"body":   credJSON,
 						"headers": map[string]any{

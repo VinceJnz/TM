@@ -9,6 +9,7 @@ type ItemState int
 
 const (
 	ItemStateNone ItemState = iota
+	ItemStateNew
 	ItemStateFetching
 	ItemStateEditing
 	ItemStateAdding

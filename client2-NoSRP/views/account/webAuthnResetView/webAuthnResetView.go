@@ -12,18 +12,6 @@ import (
 
 const debugTag = "webAuthnResetView."
 
-type ItemState int
-
-const (
-	ItemStateNone ItemState = iota
-	ItemStateFetching
-	ItemStateEditing
-	ItemStateAdding
-	ItemStateSaving
-	ItemStateDeleting
-	ItemStateSubmitted
-)
-
 type ViewState int
 
 const (
@@ -282,6 +270,9 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	BeginWebAuthnEmailReset(editor.CurrentRecord.Email, func(success bool, message string) {
 		log.Println("Reset request:", success, message)
 		editor.onCompletionMsg(message)
+		// ?????????????????????????????????????????????
+		// We can take appropriate action based on the success status, and update the UI accordingly.
+		// ?????????????????????????????????????????????
 	})
 
 	editor.resetEditForm()
@@ -344,7 +335,7 @@ func (editor *ItemEditor) FetchItems() {
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
-	editor.ItemState = newState
+	editor.ItemState = viewHelpers.ItemStateNew
 }
 
 // Event handlers and event data types
