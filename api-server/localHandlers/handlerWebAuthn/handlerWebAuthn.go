@@ -9,7 +9,8 @@ import (
 
 const debugTag = "handlerWebAuthn."
 
-const WebAuthnSessionCookieName = "_temp_session"
+const WebAuthnSessionTokenName = "_temp_session_token"
+const WebAuthnEmailTokenName = "_temp_email_token"
 
 type Handler struct {
 	appConf  *appCore.Config

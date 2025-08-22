@@ -58,7 +58,7 @@ func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, Act
 
 	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessTypeID, &access.AdminFlag)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
-		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"CheckAccess()3 Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
+		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"UserCheckAccess()3 Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
 		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
 	}
 	return access, nil
@@ -75,7 +75,7 @@ func UserSetStatusID(debugStr string, Db *sqlx.DB, userID int, status models.Acc
 
 	result, err := Db.Exec(sqlSetStatus, status, userID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserCheckRepo.CheckPassword()2 ", "err =", err, "result =", result)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserSetStatusID()2 ", "err =", err, "result =", result)
 		return err //update failed
 	}
 	return nil //nil error = users status updated
@@ -173,13 +173,13 @@ const (
 	sqlFindSessionToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
-	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2`
+	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2 AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
 
 	//Finds valid tokens where user account exists and the token name is the same as the name passed in
 	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
-	WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid`
+	WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
 )
 
 // FindSessionToken using the session cookie string find session cookie data in the DB and return the token item
@@ -194,6 +194,10 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
 	}
+	err = TokenCleanExpired(debugStr, Db)
+	if err != nil {
+		log.Printf("%v %v %v", debugTag+"Handler.FindSessionToken()3: Token CleanExpired fail", "err =", err)
+	}
 	return result, nil
 }
 
@@ -207,6 +211,10 @@ func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Tok
 	if err != nil {
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return result, err
+	}
+	err = TokenCleanExpired(debugStr, Db)
+	if err != nil {
+		log.Printf("%v %v %v", debugTag+"Handler.FindToken()3: Token CleanExpired fail", "err =", err)
 	}
 	return result, nil
 }
@@ -232,6 +240,7 @@ func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, acc
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"AccessCheck1", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return err
 	}
+
 	return nil
 }
 
@@ -333,7 +342,7 @@ func UserWriteQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, erro
 	return record.ID, err
 }
 
-// CreateSessionToken store it in the DB and in the session struct and return *http.Cookie
+// CreateSessionToken store it in the DB in the session struct and return *http.Cookie
 func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (*http.Cookie, error) {
 	var err error
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
@@ -373,16 +382,12 @@ func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		}
-		TokenCleanExpired(debugStr, Db)
-		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-		}
 	}
 	return sessionToken, err
 }
 
-// createTemporaryToken and return *http.Token
-func CreateTemporaryToken(debugStr string, Db *sqlx.DB, userID int, host, name string) (*http.Cookie, error) {
+// CreateNamedToken and return *http.Token, and store it in the DB if storeToken is true
+func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int, host, name string) (*http.Cookie, error) {
 	var err error
 	if name == "" {
 		name = "temp_session_token"
@@ -405,30 +410,27 @@ func CreateTemporaryToken(debugStr string, Db *sqlx.DB, userID int, host, name s
 		//Unparsed:   []string{},
 	}
 
-	// Store the session cookie for the user in the database
-	tokenItem := models.Token{}
-	tokenItem.UserID = userID
-	tokenItem.Name.SetValid(sessionToken.Name)
-	tokenItem.Host.SetValid(host)
-	tokenItem.TokenStr.SetValid(sessionToken.Value)
-	tokenItem.SessionData.SetValid("")
-	tokenItem.Valid.SetValid(true)
-	tokenItem.ValidFrom.SetValid(time.Now())
-	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
+	if storeToken {
+		// Store the session cookie for the user in the database
+		tokenItem := models.Token{}
+		tokenItem.UserID = userID
+		tokenItem.Name.SetValid(sessionToken.Name)
+		tokenItem.Host.SetValid(host)
+		tokenItem.TokenStr.SetValid(sessionToken.Value)
+		tokenItem.SessionData.SetValid("")
+		tokenItem.Valid.SetValid(true)
+		tokenItem.ValidFrom.SetValid(time.Now())
+		tokenItem.ValidTo.SetValid(time.Now().Add(1 * time.Hour))
 
-	tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-	} else {
-		err = TokenCleanOld(debugStr, Db, tokenItem.ID)
+		tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-		}
-		TokenCleanExpired(debugStr, Db)
-		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.CreateNamedToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+		} else {
+			err = TokenCleanOld(debugStr, Db, tokenItem.ID)
+			if err != nil {
+				log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.CreateNamedToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+			}
 		}
 	}
-
 	return sessionToken, err
 }

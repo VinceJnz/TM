@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-// getTempSessionToken retrieves the temporary session token from the request and processes errors.
+// getTempSessionToken retrieves the temporary token from the request and processes errors.
 func (h *Handler) getTempSessionToken(w http.ResponseWriter, r *http.Request) (*http.Cookie, error) {
-	tempSessionToken, err := r.Cookie(WebAuthnSessionCookieName) // Retrieve the session cookie
+	tempSessionToken, err := r.Cookie(WebAuthnSessionTokenName) // Retrieve the session cookie
 	if err != nil {
 		switch err {
 		case http.ErrNoCookie: // If there is no session cookie
@@ -26,24 +26,7 @@ func (h *Handler) getTempSessionToken(w http.ResponseWriter, r *http.Request) (*
 	return tempSessionToken, nil
 }
 
-type SendMethod int
-
-const (
-	SendMethodEmail SendMethod = iota
-	SendMethodSMS
-)
-
-func (h *Handler) sendTempSessionToken(address string, method SendMethod, tempToken string) {
-	switch method {
-	case SendMethodEmail:
-		// Send the token via email
-		h.sendRegistrationEmail(address, tempToken)
-	case SendMethodSMS:
-		// Send the token via SMS
-		h.sendRegistrationSMS(address, tempToken)
-	}
-}
-
+// sendRegistrationEmail sends a registration email to the user.
 func (h *Handler) sendRegistrationEmail(email, token string) error {
 	title := fmt.Sprintf("📧 WebAuthn Registration Email sent to: %s", email)
 	message := fmt.Sprintf(`
@@ -75,6 +58,7 @@ Thanks!
 	return nil
 }
 
-func (h *Handler) sendRegistrationSMS(email, token string) error {
+// sendRegistrationSMS sends a registration SMS to the user.
+func (h *Handler) sendRegistrationSMS(phoneNumber, token string) error {
 	return fmt.Errorf("SMS sending not implemented yet")
 }

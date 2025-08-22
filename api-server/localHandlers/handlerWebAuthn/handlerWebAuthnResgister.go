@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/gorilla/mux"
 )
 
 // ******************************************************************************
@@ -55,20 +56,26 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create and Store sessionData in your session pool store, consider adding a separate token for auth???????????????
-	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginRegistration()5 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
+	// Create token to send via email and store in the DB
+	tempEmailToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()5 ", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, WebAuthnEmailTokenName)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
 		return
 	}
-	h.Pool.Add(tempSessionToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data
+	h.sendRegistrationEmail(user.Email.String, tempEmailToken.Value)
 
-	registrationToken := dbAuthTemplate.GenerateSecureToken()
-	h.sendTempSessionToken(user.Email.String, SendMethodEmail, registrationToken)
+	// Create and Store sessionData in your session pool store
+	tempRegistrationToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()5 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName)
+	if err != nil {
+		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
+		return
+	}
+	h.Pool.Add(tempRegistrationToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data
 
 	// add the session token to the response and send the RegistrationOptions to the client
-	http.SetCookie(w, tempSessionToken)
+	http.SetCookie(w, tempRegistrationToken)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(options)
 }
@@ -76,13 +83,19 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 // FinishRegistration handles the completion of the WebAuthn registration process
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
-	var user *models.User                                //webauthn.User
-	tempSessionToken, err := h.getTempSessionToken(w, r) // Retrieve the session cookie
-	if err != nil {
-		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
+	var user *models.User //webauthn.User
+	params := mux.Vars(r)
+	tempEmailTokenStr := params["token"]
+	if tempEmailTokenStr == "" {
+		http.Error(w, "Invalid token", http.StatusBadRequest)
 		return
 	}
-	poolItem, exists := h.Pool.Get(tempSessionToken.Value)              // Assuming you have a pool to manage session data
+	tempRegistrationToken, err := h.getTempSessionToken(w, r)
+	if err != nil {
+		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempRegistrationToken, "err =", err)
+		return
+	}
+	poolItem, exists := h.Pool.Get(tempRegistrationToken.Value)         // Assuming you have a pool to manage session data
 	if !exists || poolItem.SessionData == nil || poolItem.User == nil { // Check if the session data or user is nil) {
 		http.Error(w, "Session not found or expired", http.StatusUnauthorized)
 		return
@@ -90,6 +103,18 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
 	user = poolItem.User                // Set the user data from the pool
 
+	tempEmailToken, err := dbAuthTemplate.FindToken(debugTag, h.appConf.Db, WebAuthnEmailTokenName, tempEmailTokenStr)
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.FinishRegistration()2: Failed to find token", "err =", err, "WebAuthnEmailTokenName =", WebAuthnEmailTokenName, "tempEmailTokenStr =", tempEmailTokenStr)
+		http.Error(w, "Failed to find token", http.StatusInternalServerError)
+		return
+	}
+	// Check if the emailToken matches registrationToken
+	if tempEmailToken.UserID != user.ID {
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()2: Invalid token", "tempEmailToken =", tempEmailToken, "userID =", user.ID)
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
 	//log.Printf("%sHandler.FinishRegistration()2: token = %v, user = %+v, sessionData = %+v", debugTag, tempSessionToken.Value, poolItem.User, poolItem.SessionData)
 
 	credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)

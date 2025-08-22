@@ -193,10 +193,10 @@ func (h *Handler) EmailResetRequestHandler(w http.ResponseWriter, r *http.Reques
 
 	// Create and Store user in your session pool store
 	// Carry this token through the whole reset session????????????????
-	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginEmailResetHandler()4 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
+	tempSessionToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginEmailResetHandler()4 ", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
 		return
 	}
 
@@ -270,10 +270,10 @@ func (h *Handler) EmailResetListHandler(w http.ResponseWriter, r *http.Request) 
 
 	// Create and Store user in your session pool store
 	// Replace this with just a token to use in the pool????????????????
-	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginEmailResetHandler()4 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
+	tempSessionToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginEmailResetHandler()4 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
 		return
 	}
 	h.Pool.Add(tempSessionToken.Value, &user, nil, 5*time.Minute) // Assuming you have a pool to manage session data

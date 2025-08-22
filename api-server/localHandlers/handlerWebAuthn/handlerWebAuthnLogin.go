@@ -70,9 +70,9 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Carry this session token through the whole login session, consider using a seperate token for auth????????
-	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginLogin()6 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
+	tempSessionToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginLogin()6 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName)
 	if err != nil {
-		log.Printf("%sHandler.BeginLogin()6 Error: err = %+v, WebAuthnSessionCookieName = %v, Host = %v", debugTag, err, WebAuthnSessionCookieName, h.appConf.Settings.Host)
+		log.Printf("%sHandler.BeginLogin()6 Error: err = %+v, WebAuthnSessionTokenName = %v, Host = %v", debugTag, err, WebAuthnSessionTokenName, h.appConf.Settings.Host)
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
 	}
