@@ -55,8 +55,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create and Store sessionData in your session pool store
-	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	// Create and Store sessionData in your session pool store, consider adding a separate token for auth???????????????
+	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginRegistration()5 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)

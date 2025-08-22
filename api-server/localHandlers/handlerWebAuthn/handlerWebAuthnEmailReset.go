@@ -191,6 +191,16 @@ func (h *Handler) EmailResetRequestHandler(w http.ResponseWriter, r *http.Reques
 		Message: "If an account with that email exists and has WebAuthn enabled, a reset link has been sent.",
 	}
 
+	// Create and Store user in your session pool store
+	// Carry this token through the whole reset session????????????????
+	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginEmailResetHandler()4 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
+	if err != nil {
+		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)
+		return
+	}
+
+	http.SetCookie(w, tempSessionToken)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
@@ -259,7 +269,8 @@ func (h *Handler) EmailResetListHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Create and Store user in your session pool store
-	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+	// Replace this with just a token to use in the pool????????????????
+	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginEmailResetHandler()4 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionCookieName =", WebAuthnSessionCookieName, "host =", h.appConf.Settings.Host)

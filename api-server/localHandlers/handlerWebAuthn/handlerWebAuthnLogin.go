@@ -68,7 +68,9 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to begin login", http.StatusInternalServerError)
 		return
 	}
-	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(WebAuthnSessionCookieName, h.appConf.Settings.Host)
+
+	// Carry this session token through the whole login session, consider using a seperate token for auth????????
+	tempSessionToken, err := dbAuthTemplate.CreateTemporaryToken(debugTag+"Handler.BeginLogin()6 ", h.appConf.Db, user.ID, h.appConf.Settings.Host, WebAuthnSessionCookieName)
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()6 Error: err = %+v, WebAuthnSessionCookieName = %v, Host = %v", debugTag, err, WebAuthnSessionCookieName, h.appConf.Settings.Host)
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)

@@ -382,13 +382,13 @@ func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (
 }
 
 // createTemporaryToken and return *http.Token
-func CreateTemporaryToken(name, host string) (*http.Cookie, error) {
+func CreateTemporaryToken(debugStr string, Db *sqlx.DB, userID int, host, name string) (*http.Cookie, error) {
 	var err error
 	if name == "" {
 		name = "temp_session_token"
 	}
 	expiration := time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
-	tempSessionToken := &http.Cookie{
+	sessionToken := &http.Cookie{
 		Name:    name,
 		Value:   GenerateSecureToken(),
 		Path:    "/",
@@ -404,5 +404,31 @@ func CreateTemporaryToken(name, host string) (*http.Cookie, error) {
 		//Raw:        "",
 		//Unparsed:   []string{},
 	}
-	return tempSessionToken, err
+
+	// Store the session cookie for the user in the database
+	tokenItem := models.Token{}
+	tokenItem.UserID = userID
+	tokenItem.Name.SetValid(sessionToken.Name)
+	tokenItem.Host.SetValid(host)
+	tokenItem.TokenStr.SetValid(sessionToken.Value)
+	tokenItem.SessionData.SetValid("")
+	tokenItem.Valid.SetValid(true)
+	tokenItem.ValidFrom.SetValid(time.Now())
+	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
+
+	tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
+	if err != nil {
+		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+	} else {
+		err = TokenCleanOld(debugStr, Db, tokenItem.ID)
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+		}
+		TokenCleanExpired(debugStr, Db)
+		if err != nil {
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+		}
+	}
+
+	return sessionToken, err
 }
