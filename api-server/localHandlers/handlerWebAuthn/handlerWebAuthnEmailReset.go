@@ -3,8 +3,6 @@ package handlerWebAuthn
 import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -62,13 +60,6 @@ type DeleteCredentialRequest struct {
 }
 type DeleteCredentialResponse struct {
 	Success bool `json:"success"`
-}
-
-// Generate cryptographically secure token
-func generateSecureToken() string {
-	bytes := make([]byte, 32)
-	rand.Read(bytes)
-	return base64.URLEncoding.EncodeToString(bytes)
 }
 
 // Send reset email (replace with your email service)
@@ -163,7 +154,7 @@ func (h *Handler) EmailResetRequestHandler(w http.ResponseWriter, r *http.Reques
 	//if user.WebAuthnEnabled() && user.WebAuthnHasCredentials() {
 	if user.WebAuthnEnabled() {
 		// Generate secure reset token
-		resetToken := generateSecureToken()
+		resetToken := dbAuthTemplate.GenerateSecureToken()
 
 		newToken := models.Token{}
 		newToken.UserID = user.ID
@@ -291,7 +282,7 @@ func (h *Handler) EmailResetFinishHandler(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	log.Printf("%sHandler.EmailResetFinishHandler()1 Start", debugTag)
 
-	tempSessionToken, err := getTempSessionToken(w, r) // Retrieve the session cookie
+	tempSessionToken, err := h.getTempSessionToken(w, r) // Retrieve the session cookie
 	if err != nil {
 		log.Println(debugTag+"Handler.EmailResetFinishHandler()2 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
 		return

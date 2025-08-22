@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	uuid "github.com/satori/go.uuid"
 )
 
 const debugTag = "dbAuthTemplate."
@@ -340,7 +339,7 @@ func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
 	sessionToken := &http.Cookie{
 		Name:  "session",
-		Value: uuid.NewV4().String(),
+		Value: GenerateSecureToken(),
 		Path:  "/",
 		//Domain: "localhost",
 		//Expires:    time.Time{},
@@ -391,7 +390,7 @@ func CreateTemporaryToken(name, host string) (*http.Cookie, error) {
 	expiration := time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
 	tempSessionToken := &http.Cookie{
 		Name:    name,
-		Value:   uuid.NewV4().String(),
+		Value:   GenerateSecureToken(),
 		Path:    "/",
 		Domain:  host,
 		Expires: expiration,

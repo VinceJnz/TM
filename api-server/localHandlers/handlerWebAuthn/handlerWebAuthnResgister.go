@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/google/uuid"
 )
 
 // ******************************************************************************
@@ -46,7 +45,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		// User is not registered, so we can proceed with registration
 		log.Printf(debugTag+"Handler.BeginRegistration()3: user is not registered, proceeding with registration, user = %+v", user)
 		// Generate a temporary UUID for WebAuthnUserID (user handle). If registration is successful, this will be saved to the user record in the database.
-		user.WebAuthnUserID = []byte(uuid.New().String())
+		user.WebAuthnUserID = []byte(dbAuthTemplate.GenerateSecureToken())
 	}
 	// Begin the registration process for both new and existing users
 	options, sessionData, err := h.webAuthn.BeginRegistration(user)
@@ -65,6 +64,9 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	h.Pool.Add(tempSessionToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data
 
+	registrationToken := dbAuthTemplate.GenerateSecureToken()
+	h.sendTempSessionToken(user.Email.String, SendMethodEmail, registrationToken)
+
 	// add the session token to the response and send the RegistrationOptions to the client
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")
@@ -74,8 +76,8 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 // FinishRegistration handles the completion of the WebAuthn registration process
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
-	var user *models.User                              //webauthn.User
-	tempSessionToken, err := getTempSessionToken(w, r) // Retrieve the session cookie
+	var user *models.User                                //webauthn.User
+	tempSessionToken, err := h.getTempSessionToken(w, r) // Retrieve the session cookie
 	if err != nil {
 		log.Println(debugTag+"Handler.FinishRegistration()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
 		return

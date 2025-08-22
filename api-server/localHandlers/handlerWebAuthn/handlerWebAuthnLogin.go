@@ -106,7 +106,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	// Create another NopCloser for the copy
 	copiedBody := io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-	tempSessionToken, err := getTempSessionToken(w, r) // Retrieve the temp session cookie
+	tempSessionToken, err := h.getTempSessionToken(w, r) // Retrieve the temp session cookie
 	if err != nil {
 		log.Println(debugTag+"Handler.FinishLogin()1 - Authentication required ", "sessionToken=", tempSessionToken, "err =", err)
 		return

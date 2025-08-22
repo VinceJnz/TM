@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
 )
 
 //const debugTag = "handlerAuth."
@@ -104,7 +103,7 @@ func (h *Handler) createToken(userID int, host, tokenName string, duration strin
 	validFrom := time.Now()
 	validTo := validFrom.Add(d)
 
-	value := uuid.NewV4().String()
+	value := dbAuthTemplate.GenerateSecureToken()
 	token.UserID = userID
 	token.Name.SetValid(tokenName)
 	token.Host.SetValid(host)

@@ -14,7 +14,6 @@ import (
 	"github.com/1Password/srp"
 
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
 )
 
 //const debugTag = "handlerAuth."
@@ -88,7 +87,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 
 	//store the server in a pool - it gets used later in the authentication process so it needs to be stored in temp memory
 	//The token needs to be sent ot the client so that the server can be recovered later in the auth process
-	token := uuid.NewV4().String()
+	token := dbAuthTemplate.GenerateSecureToken()
 	log.Printf(debugTag+"Handler.AuthGetKeyB()6a AppPool: token = %s, userID = %d, server = %+v", token, user.ID, server)
 	//h.Pool.Add(token, user.ID, server, 15)            // Add the server to the pool with a timeout of 15 seconds
 	h.Pool.Add(token, user.ID, server, 2*time.Second) // Add the server to the pool with a timeout of 15 seconds
@@ -225,7 +224,7 @@ func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, err
 	//expiration := time.Now().Add(365 * 24 * time.Hour)
 	sessionToken := &http.Cookie{
 		Name:  "session",
-		Value: uuid.NewV4().String(),
+		Value: dbAuthTemplate.GenerateSecureToken(),
 		Path:  "/",
 		//Domain: "localhost",
 		//Expires:    time.Time{},
