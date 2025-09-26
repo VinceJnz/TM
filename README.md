@@ -48,7 +48,7 @@ Note: Passwords are not stored in the database. It uses "Secure Remote Password"
 
 ## Google Jules
 
-I want to create a rust version of the Go wasm clinet in the folder "client1". Put the rust client into a new folder "client1_rust".
+I want to create a rust version of the Go wasm client in the folder "client1". Put the rust client into a new folder "client1_rust".
 Before you start I need to configure the environment.
 
 ###  Configuration
@@ -152,3 +152,10 @@ select vdisk file="C:\Users\Vince2\AppData\Local\Docker\wsl\disk\docker_data.vhd
 compact vdisk
 exit
 ```
+
+
+## Connect to a docker image
+`docker exec -it <container_name_or_id> /bin/bash`
+
+e.g.
+`docker exec -it apiserver-debug /bin/bash`
