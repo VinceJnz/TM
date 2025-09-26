@@ -193,15 +193,15 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
-	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
+	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "resetEditForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "resetItemUsername")
 	editor.UiComponents.Username.Call("setAttribute", "required", "true")
 
-	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
+	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "resetItemEmail")
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
@@ -209,8 +209,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.Email)
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
-	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "resetSubmitEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "resetCancelEditBtn")
 
 	// Append elements to form
 	form.Call("appendChild", submitBtn)

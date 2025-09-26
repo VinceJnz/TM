@@ -206,7 +206,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
-	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
+	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "registrationEditForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI

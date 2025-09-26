@@ -188,12 +188,12 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
 	editor.elements.EditDiv.Set("innerHTML", "") // Clear existing content
-	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
+	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "loginEditForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
-	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "loginItemUsername")
 	editor.UiComponents.Username.Call("setAttribute", "required", "true")
 
 	//localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "itemPassword")
@@ -204,8 +204,8 @@ func (editor *ItemEditor) populateEditForm() {
 	//form.Call("appendChild", localObjs.Password)
 
 	// Create form buttons
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
-	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "loginSubmitEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "loginCancelEditBtn")
 
 	// Append elements to form
 	form.Call("appendChild", submitBtn)

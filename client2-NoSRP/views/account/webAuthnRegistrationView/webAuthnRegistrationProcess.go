@@ -31,7 +31,8 @@ func decodeBase64ToUint8Array(b64 string) js.Value {
 // decodeBase64URLToUint8Array Decode base64 URL-encoded string to Uint8Array
 // This function replaces '-' with '+' and '_' with '/' to make it compatible with base64 decoding
 // It also pads the string with '=' if necessary to make its length a multiple of 4
-func decodeBase64URLToUint8Array(b64 string) js.Value {
+func decodeBase64URLToUint8Array(callerTag, b64 string) js.Value {
+	b64init := b64 // Save the initial value for logging/debugging
 	// Pad the string if necessary
 	missing := len(b64) % 4
 	if missing != 0 {
@@ -41,7 +42,7 @@ func decodeBase64URLToUint8Array(b64 string) js.Value {
 	b64 = strings.ReplaceAll(b64, "_", "/")
 	decoded, err := base64.StdEncoding.DecodeString(b64)
 	if err != nil {
-		log.Printf("Error decoding challenge: %v", err)
+		log.Printf(debugTag+"decodeBase64URLToUint8Array()1.%s Error decoding challenge: %v, input: %s, result: %s", callerTag, err, b64init, b64)
 		return js.Undefined()
 	}
 	uint8Array := js.Global().Get("Uint8Array").New(len(decoded))
@@ -87,9 +88,9 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				publicKey := options.Get("publicKey")
 
 				// 2. Convert challenge and user.id from base64url to Uint8Array, the correct format for WebAuthn
-				publicKey.Set("challenge", decodeBase64URLToUint8Array(publicKey.Get("challenge").String()))
+				publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()1", publicKey.Get("challenge").String()))
 				user := publicKey.Get("user")
-				user.Set("id", decodeBase64URLToUint8Array(user.Get("id").String()))
+				user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()2", user.Get("id").String()))
 				publicKey.Set("user", user)
 
 				// 3. Call the browser WebAuthn API to create credentials
