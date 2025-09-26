@@ -31,7 +31,7 @@ type UpdateMenu struct {
 func (editor *View) updateStatus(event eventProcessor.Event) {
 	state, ok := event.Data.(viewHelpers.ItemState)
 	if !ok {
-		log.Printf(debugTag+"updateStatus()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
+		log.Printf(debugTag+"updateStatus()1 Invalid data for event type: %s, source %s, data: %v %T\n", event.Type, event.DebugTag, event.Data, event.Data)
 		return
 	}
 	editor.ItemState.UpdateStatus(state, event.DebugTag)

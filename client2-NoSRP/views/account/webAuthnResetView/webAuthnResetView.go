@@ -334,7 +334,7 @@ func (editor *ItemEditor) FetchItems() {
 //}
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: viewHelpers.ItemState(newState)})
 	editor.ItemState = viewHelpers.ItemStateNew
 }
 
