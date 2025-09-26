@@ -109,7 +109,7 @@ Reset steps
 2. User Receives Token
 * Client: User receives the token in their email.
 3. User Enters Token and Requests Device List
-* Client: User enters the token in the UI.
+* Client: User enters the token in the UI. (along with email address and user name??)
 * Server: Validates the token, fetches all registered WebAuthn credentials for the user, and returns a list (with device metadata/names).
 4. User Selects Device to Reset
 * Client: UI displays the device list (with names, creation dates, etc.). User selects which device to reset.

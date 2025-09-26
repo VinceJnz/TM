@@ -173,13 +173,15 @@ const (
 	sqlFindSessionToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
-	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2 AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
+	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2 AND stt.Valid_From < CURRENT_TIMESTAMP AND stt.Valid_To > CURRENT_TIMESTAMP`
+	//WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2 AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
 
 	//Finds valid tokens where user account exists and the token name is the same as the name passed in
 	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
-	WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
+		WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid AND stt.Valid_From < CURRENT_TIMESTAMP AND stt.Valid_To > CURRENT_TIMESTAMP`
+	//WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
 )
 
 // FindSessionToken using the session cookie string find session cookie data in the DB and return the token item
