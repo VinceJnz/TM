@@ -24,7 +24,7 @@ const (
 type User struct {
 	ID              int                   `json:"id" db:"id"`
 	Name            string                `json:"name" db:"name"`
-	Username        string                `json:"username" db:"username"`
+	Username        string                `json:"username" db:"username"` //WebAuthn json:"displayName"
 	Email           zero.String           `json:"email" db:"email"`
 	Address         zero.String           `json:"user_address" db:"user_address"`
 	MemberCode      zero.String           `json:"member_code" db:"member_code"`

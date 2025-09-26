@@ -40,24 +40,27 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	if existingUser.ID != 0 { // If the user already exists in the database
 		// User is already registered and wants to register (or re-register) a device
-		log.Printf(debugTag+"Handler.BeginRegistration()3: user is already registered and is registering an additional device, user = %+v", user)
+		log.Printf(debugTag+"Handler.BeginRegistration()3: user is already registered and is registering an additional device, user = %+v, existingUser = %+v", user, existingUser)
 		user = &existingUser
-	} else {
-		// User is not registered, so we can proceed with registration
-		log.Printf(debugTag+"Handler.BeginRegistration()3: user is not registered, proceeding with registration, user = %+v", user)
+	}
+
+	if len(user.WebAuthnUserID) == 0 {
+		// User is not webAuthn registered, so we can proceed with registration
+		log.Printf(debugTag+"Handler.BeginRegistration()4: user is not webAuthn registered, proceeding with webAuthn registration, user = %+v", user)
 		// Generate a temporary UUID for WebAuthnUserID (user handle). If registration is successful, this will be saved to the user record in the database.
 		user.WebAuthnUserID = []byte(dbAuthTemplate.GenerateSecureToken())
 	}
 	// Begin the registration process for both new and existing users
+	log.Printf(debugTag+"Handler.BeginRegistration()5a: user = %+v", user)
 	options, sessionData, err := h.webAuthn.BeginRegistration(user)
 	if err != nil {
 		http.Error(w, "Failed to begin registration", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
 
 	// Create token to send via email and store in the DB
-	tempEmailToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()5 ", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, WebAuthnEmailTokenName)
+	tempEmailToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()6 ", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, WebAuthnEmailTokenName)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
@@ -66,10 +69,10 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	h.sendRegistrationEmail(user.Email.String, tempEmailToken.Value)
 
 	// Create and Store sessionData in your session pool store
-	tempRegistrationToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()5 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName)
+	tempRegistrationToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()7 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName)
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()8: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
 		return
 	}
 	h.Pool.Add(tempRegistrationToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data
