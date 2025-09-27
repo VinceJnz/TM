@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
-	session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
+	session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	// Need to check that the user is authorised to logout from the session provided (prevents anyone loging out anyone????
 	//log.Printf(debugTag+"Handler.AuthLogout()1 userID=%v", session.UserID)
 
@@ -21,7 +21,7 @@ func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 		}
 		h.removeSessionToken(sessionToken.Value)
 	} else {
-		log.Printf(debugTag+"AuthLogout()3 UserID not available in request context. userID=%v\n", session.UserID)
+		log.Printf(debugTag+"AuthLogout()3 UserID not available in request context. session=%+v\n", session)
 		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
 		return
 	}

@@ -106,7 +106,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.RecordValidation(&session, record); err != nil {
+	if err := h.RecordValidation(session, record); err != nil {
 		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -128,7 +128,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	record.ID = id
 
-	if err := h.RecordValidation(&session, record); err != nil {
+	if err := h.RecordValidation(session, record); err != nil {
 		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -151,7 +151,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.RecordValidation(&session, record); err != nil {
+	if err := h.RecordValidation(session, record); err != nil {
 		http.Error(w, debugTag+"Delete: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}

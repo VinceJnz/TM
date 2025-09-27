@@ -179,12 +179,12 @@ func GetID(w http.ResponseWriter, r *http.Request) int {
 // GetSession retrieves the session from the request context using the provided SessionIDKey.
 // It returns the session if found, or an empty session and an error response if not found.
 // TODO: Consider returning an error type instead of writing directly to the response.
-func GetSession(w http.ResponseWriter, r *http.Request, SessionIDKey appCore.ContextKey) models.Session {
-	session, ok := r.Context().Value(SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
+func GetSession(w http.ResponseWriter, r *http.Request, SessionIDKey appCore.ContextKey) *models.Session {
+	session, ok := r.Context().Value(SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	if !ok {
 		log.Printf(debugTag+"GetSession()1 UserID not available in request context. session=%+v\n", session)
 		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
-		return models.Session{}
+		return nil
 	}
 	//log.Printf(debugTag+"GetSession()2 session=%+v\n", session)
 	return session

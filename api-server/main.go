@@ -135,7 +135,7 @@ func main() {
 	)
 
 	corsMuxHandler := corsOpts(r)
-	loggedHandler := helpers.LogRequest(corsMuxHandler)
+	loggedHandler := helpers.LogRequest(corsMuxHandler, app.SessionIDKey) // Wrap the router with the logging middleware
 
 	// Paths to certificate and key files
 	crtFile := app.Settings.ServerCert

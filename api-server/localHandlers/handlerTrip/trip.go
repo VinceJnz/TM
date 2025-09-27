@@ -43,7 +43,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	//session, ok := r.Context().Value(h.appConf.SessionIDKey).(models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
+	//session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	//if !ok {
 	//	log.Printf(debugTag+"GetAll()1 UserID not available in request context. userID=%v\n", session.UserID)
 	//	http.Error(w, "UserID not available in request context", http.StatusInternalServerError)

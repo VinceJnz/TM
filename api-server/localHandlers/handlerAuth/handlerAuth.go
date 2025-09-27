@@ -80,7 +80,7 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 			}
 		}
 
-		session := models.Session{
+		session := &models.Session{
 			UserID:         token.UserID,
 			PrevURL:        resource.PrevURL,
 			ResourceName:   resource.ResourceName,
@@ -92,6 +92,7 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 			AdminFlag:      accessCheck.AdminFlag,
 		}
 
+		log.Printf("%v %v %v %v %v %v %v %v %v %v %v %v %v\n", debugTag+"Handler.RequireRestAuth()5", "UserID =", session.UserID, "PrevURL =", session.PrevURL, "ResourceName =", session.ResourceName, "AccessMethod =", session.AccessMethod, "AccessType =", session.AccessType, "AdminFlag =", session.AdminFlag)
 		//w.WriteHeader(http.StatusOK) // If this get called first, subsequent calls to w.WriteHeader are ignored. So it should not be called here.
 		ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session) // Store userID in the context. This can be used to filter rows in subsequent handlers
 		next.ServeHTTP(w, r.WithContext(ctx))                                  // Access is correct so the request is passed to the next handler

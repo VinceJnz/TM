@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"api-server/v2/app/appCore"
+	"api-server/v2/models"
 	"bytes"
 	"encoding/json"
 	"log"
@@ -9,24 +11,25 @@ import (
 )
 
 type HTTPInfo struct {
-	Duration      time.Duration `json:"Duration"` // how long did it take to
-	URL           string        `json:"URL"`
-	Host          string        `json:"Host"`
-	Cookie        string        `json:"Cookie"`
-	Method        string        `json:"Method"` // GET etc.
-	RequestURI    string        `json:"RequestURI"`
-	Referer       string        `json:"Referer"`
-	Protocol      string        `json:"Protocol"`
-	RemoteAddress string        `json:"RemoteAddress"`
-	Size          int64         `json:"Size"`       // number of bytes of the response sent
-	StatusCode    int           `json:"StatusCode"` // response code e.g. 200, 404, etc.
-	UserAgent     string        `json:"UserAgent"`
-	UserID        int64         `json:"UserID"`
-	TLSProtocol   string        `json:"TLSProtocol"`
+	Duration      time.Duration   `json:"Duration"` // how long did it take to
+	URL           string          `json:"URL"`
+	Host          string          `json:"Host"`
+	Cookie        string          `json:"Cookie"`
+	Method        string          `json:"Method"` // GET etc.
+	RequestURI    string          `json:"RequestURI"`
+	Referer       string          `json:"Referer"`
+	Protocol      string          `json:"Protocol"`
+	RemoteAddress string          `json:"RemoteAddress"`
+	Size          int64           `json:"Size"`       // number of bytes of the response sent
+	StatusCode    int             `json:"StatusCode"` // response code e.g. 200, 404, etc.
+	UserAgent     string          `json:"UserAgent"`
+	UserID        int64           `json:"UserID"`
+	TLSProtocol   string          `json:"TLSProtocol"`
+	Session       *models.Session `json:"Session,omitempty"`
 }
 
 // LogRequest This is a MiddleWare handler that logs all request to the console
-func LogRequest(next http.Handler) http.Handler {
+func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		info := &HTTPInfo{
 			Duration:      0,
@@ -42,12 +45,12 @@ func LogRequest(next http.Handler) http.Handler {
 			StatusCode:    0,
 			UserAgent:     r.UserAgent(), // r.Header.Get("User-Agent"),
 			UserID:        0,
+			TLSProtocol:   "",
 		}
 		start := time.Now()
 
 		// Create a response writer that captures the status code and body
 		lrw := &loggingResponseWriter{ResponseWriter: w, body: bytes.NewBuffer(nil)}
-		//next.ServeHTTP(w, r)
 		next.ServeHTTP(lrw, r)
 
 		// Log the response status code and body
