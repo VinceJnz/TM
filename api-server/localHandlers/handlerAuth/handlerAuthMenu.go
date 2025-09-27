@@ -1,6 +1,11 @@
-package handlerSRPAuth
+package handlerAuth
 
-/*
+import (
+	"api-server/v2/modelMethods/dbStandardTemplate"
+	"api-server/v2/models"
+	"net/http"
+)
+
 const (
 	sqlMenuUser = `SELECT stu.ID AS user_id, stu.name, stg.name AS group, stg.admin_flag
 		FROM st_users stu
@@ -36,4 +41,3 @@ func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
 	//log.Printf(debugTag+"MenuListGet()1 session=%+v", session)
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, models.AccountActive)
 }
-*/

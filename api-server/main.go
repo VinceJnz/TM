@@ -4,6 +4,7 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/handlerAccessLevel"
 	"api-server/v2/localHandlers/handlerAccessType"
+	"api-server/v2/localHandlers/handlerAuth"
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
@@ -52,19 +53,19 @@ func main() {
 
 	//SRP authentication and registration process handlers
 	SRPauth := handlerSRPAuth.New(app)
-	subR1.HandleFunc("/auth/register/", SRPauth.AccountCreate).Methods("Post")
-	subR1.HandleFunc("/auth/{username}/salt/", SRPauth.AuthGetSalt).Methods("Get", "Options")
-	subR1.HandleFunc("/auth/{username}/key/{A}", SRPauth.AuthGetKeyB).Methods("Get")
-	subR1.HandleFunc("/auth/proof/", SRPauth.AuthCheckClientProof).Methods("Post")
-	subR1.HandleFunc("/auth/validate/{token}", SRPauth.AccountValidate).Methods("Get")
-	subR1.HandleFunc("/auth/reset/{username}/password/", SRPauth.AuthReset).Methods("Get")
-	subR1.HandleFunc("/auth/reset/{token}/token/", SRPauth.AuthUpdate).Methods("Post")
-	//subR1.HandleFunc("/auth/sessioncheck/", auth.SessionCheck).Methods("Get")
+	subR1.HandleFunc("/srpAuth/register/", SRPauth.AccountCreate).Methods("Post")
+	subR1.HandleFunc("/srpAuth/{username}/salt/", SRPauth.AuthGetSalt).Methods("Get", "Options")
+	subR1.HandleFunc("/srpAuth/{username}/key/{A}", SRPauth.AuthGetKeyB).Methods("Get")
+	subR1.HandleFunc("/srpAuth/proof/", SRPauth.AuthCheckClientProof).Methods("Post")
+	subR1.HandleFunc("/srpAuth/validate/{token}", SRPauth.AccountValidate).Methods("Get")
+	subR1.HandleFunc("/srpAuth/reset/{username}/password/", SRPauth.AuthReset).Methods("Get")
+	subR1.HandleFunc("/srpAuth/reset/{token}/token/", SRPauth.AuthUpdate).Methods("Post")
+	//subR1.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
 
 	// WebAuthn handlers
 	WebAuthn := handlerWebAuthn.New(app)
 	subR1.HandleFunc("/webauthn/register/begin/", WebAuthn.BeginRegistration).Methods("POST")
-	subR1.HandleFunc("/webauthn/register/finish/", WebAuthn.FinishRegistration).Methods("POST")
+	subR1.HandleFunc("/webauthn/register/finish/{token}", WebAuthn.FinishRegistration).Methods("POST")
 	subR1.HandleFunc("/webauthn/login/begin/{username}", WebAuthn.BeginLogin).Methods("POST")
 	subR1.HandleFunc("/webauthn/login/finish/", WebAuthn.FinishLogin).Methods("POST")
 	subR1.HandleFunc("/webauthn/emailReset/request/", WebAuthn.EmailResetRequestHandler).Methods("POST")
@@ -72,11 +73,12 @@ func main() {
 	subR1.HandleFunc("/webauthn/emailReset/finish/{id}", WebAuthn.EmailResetFinishHandler).Methods("POST")
 
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
-	subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
-
-	subR2.HandleFunc("/auth/logout/", SRPauth.AuthLogout).Methods("Get")
-	subR2.HandleFunc("/auth/menuUser/", SRPauth.MenuUserGet).Methods("Get")
-	subR2.HandleFunc("/auth/menuList/", SRPauth.MenuListGet).Methods("Get")
+	//subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	auth := handlerAuth.New(app)
+	subR2.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	subR2.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Get")
+	subR2.HandleFunc("/auth/menuUser/", auth.MenuUserGet).Methods("Get")
+	subR2.HandleFunc("/auth/menuList/", auth.MenuListGet).Methods("Get")
 
 	// Add route groups
 	addRouteGroup(subR2, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes

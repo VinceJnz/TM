@@ -3,16 +3,10 @@ package handlerSRPAuth
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/srpPool"
-	"api-server/v2/modelMethods/dbAuthTemplate"
-	"api-server/v2/models"
-	"context"
-	"errors"
-	"log"
 	"net/http"
-	"strings"
 )
 
-const debugTag = "handlerAuth."
+const debugTag = "handlerSRPAuth."
 
 type HandlerFunc func(http.ResponseWriter, *http.Request)
 
@@ -28,6 +22,7 @@ func New(appConf *appCore.Config) *Handler {
 	}
 }
 
+/*
 //RequireUserAuth The input to this is a function of the form "fn(Session, ResponseWriter, Request)"
 //The return from this function is "http.HandlerFunc"
 //This function uses an anonymouse function to form a closure around "var Session"
@@ -150,3 +145,4 @@ func (h *Handler) setRestResource(r *http.Request) (restResource, error) {
 	}
 	return control, err
 }
+*/
