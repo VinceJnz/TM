@@ -101,15 +101,25 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				// Handle the result of the credentials creation
 				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
 					cred := args[0]
-					// 4. Send the credential result back to the server to finish registration
-					credJSON := js.Global().Get("JSON").Call("stringify", cred)
-					js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/", map[string]any{ // an emailToken needs to be added to the url ???????????????????
-						"method": "POST",
-						"body":   credJSON,
-						"headers": map[string]any{
-							"Content-Type": "application/json",
+					ShowTokenDialog(
+						func(token string) {
+							if token == "" {
+								log.Println("Registration cancelled: No token provided.")
+								return
+							}
+							credJSON := js.Global().Get("JSON").Call("stringify", cred)
+							js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/"+token, map[string]any{
+								"method": "POST",
+								"body":   credJSON,
+								"headers": map[string]any{
+									"Content-Type": "application/json",
+								},
+							})
 						},
-					})
+						func() {
+							log.Println("Registration cancelled by user.")
+						},
+					)
 					return nil
 				})
 				credPromise.Call("then", then3)
@@ -120,4 +130,50 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		})
 		respPromise.Call("then", then)
 	}()
+}
+
+// ShowTokenDialog displays a popup dialog for token input and calls onSubmit with the token string.
+// onCancel is called if the user cancels.
+func ShowTokenDialog(onSubmit func(token string), onCancel func()) {
+	document := js.Global().Get("document")
+	dialog := document.Call("createElement", "div")
+	dialog.Set("style", "position:fixed;top:30%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:2em;border:1px solid #ccc;z-index:10000;")
+	dialog.Set("id", "token-dialog")
+
+	label := document.Call("createElement", "label")
+	label.Set("innerHTML", "Enter the email token you received to complete registration:")
+	label.Set("for", "token-input")
+	dialog.Call("appendChild", label)
+
+	input := document.Call("createElement", "input")
+	input.Set("type", "text")
+	input.Set("id", "token-input")
+	input.Set("style", "margin:1em 0;width:100%;")
+	dialog.Call("appendChild", input)
+
+	submitBtn := document.Call("createElement", "button")
+	submitBtn.Set("innerHTML", "Submit")
+	submitBtn.Set("style", "margin-right:1em;")
+	dialog.Call("appendChild", submitBtn)
+
+	cancelBtn := document.Call("createElement", "button")
+	cancelBtn.Set("innerHTML", "Cancel")
+	dialog.Call("appendChild", cancelBtn)
+
+	document.Get("body").Call("appendChild", dialog)
+
+	// Handle submit
+	submitBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		token := input.Get("value").String()
+		document.Get("body").Call("removeChild", dialog)
+		onSubmit(token)
+		return nil
+	}))
+
+	// Handle cancel
+	cancelBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		document.Get("body").Call("removeChild", dialog)
+		onCancel()
+		return nil
+	}))
 }
