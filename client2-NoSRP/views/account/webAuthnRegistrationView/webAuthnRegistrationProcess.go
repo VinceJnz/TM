@@ -21,12 +21,12 @@ type WebAuthnAttestation struct {
 
 // decodeBase64ToUint8Array Decode base64 string to Uint8Array
 // This function is used to convert the challenge and user.id from base64 to Uint8Array
-func decodeBase64ToUint8Array(b64 string) js.Value {
-	decoded, _ := base64.StdEncoding.DecodeString(b64)
-	uint8Array := js.Global().Get("Uint8Array").New(len(decoded))
-	js.CopyBytesToJS(uint8Array, decoded)
-	return uint8Array
-}
+//func decodeBase64ToUint8Array(b64 string) js.Value {
+//	decoded, _ := base64.StdEncoding.DecodeString(b64)
+//	uint8Array := js.Global().Get("Uint8Array").New(len(decoded))
+//	js.CopyBytesToJS(uint8Array, decoded)
+//	return uint8Array
+//}
 
 // decodeBase64URLToUint8Array Decode base64 URL-encoded string to Uint8Array
 // This function replaces '-' with '+' and '_' with '/' to make it compatible with base64 decoding
@@ -59,16 +59,19 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 	go func() {
 		// 1. Fetch registration options from the server
 		fetch := js.Global().Get("fetch")
+		log.Printf(debugTag+"WebAuthnRegistration()0 Starting WebAuthn registration process. item: %+v", item)
 		// Marshal editor.CurrentRecord to JSON
 		// Prepare user data as JSON string for the request body
 		userData := js.Global().Get("JSON").Call("stringify", map[string]any{
-			"name":     item.Name,
-			"username": item.Username,
-			"email":    item.Email,
-			"password": item.Password,
+			"name":         item.Name,
+			"username":     item.Username,
+			"email":        item.Email,
+			"user_address": item.Address,
+			//"user_birth_date": item.BirthDate.Format(viewHelpers.DateLayout),
+			"device_name": item.DeviceName,
 			// Add other fields as needed
 		})
-
+		log.Printf(debugTag + "WebAuthnRegistration()1 Preparing to send registration begin request to server.")
 		// Send POST request to /register/begin/ to get registration options
 		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]any{
 			"method": "POST",
@@ -77,13 +80,16 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				"Content-Type": "application/json",
 			},
 		})
+		log.Printf(debugTag + "WebAuthnRegistration()2 Sent registration begin request to server.")
 
 		// Handle the server response for registration options
 		then := js.FuncOf(func(this js.Value, args []js.Value) any {
+			log.Printf(debugTag + "WebAuthnRegistration()3 Received response for registration options.")
 			resp := args[0]
 			// Parse the JSON body of the response
 			jsonPromise := resp.Call("json")
 			then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
+				log.Printf(debugTag + "WebAuthnRegistration()4 Parsed JSON response for registration options.")
 				options := args[0]
 				publicKey := options.Get("publicKey")
 
@@ -100,11 +106,12 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 
 				// Handle the result of the credentials creation
 				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
+					log.Printf(debugTag + "WebAuthnRegistration()5 Created credentials using WebAuthn API.")
 					cred := args[0]
 					ShowTokenDialog(
 						func(token string) {
 							if token == "" {
-								log.Println("Registration cancelled: No token provided.")
+								log.Printf("Registration cancelled: No token provided.")
 								return
 							}
 							credJSON := js.Global().Get("JSON").Call("stringify", cred)
@@ -117,7 +124,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 							})
 						},
 						func() {
-							log.Println("Registration cancelled by user.")
+							log.Printf("Registration cancelled by user.")
 						},
 					)
 					return nil

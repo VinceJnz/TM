@@ -5,6 +5,7 @@ import (
 	"client2-NoSRP/v2/app/eventProcessor"
 	"client2-NoSRP/v2/app/httpProcessor"
 	"client2-NoSRP/v2/views/utils/viewHelpers"
+	"log"
 	"syscall/js"
 	"time"
 
@@ -46,33 +47,34 @@ const ApiURL = "/api/v1" + "/webauthn"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	ID             int       `json:"id"`
-	Name           string    `json:"name"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	Address        string    `json:"user_address"`
-	MemberCode     string    `json:"member_code"`
-	BirthDate      time.Time `json:"user_birth_date"` //This can be used to calculate what age group to apply
-	UserAgeGroupID int       `json:"user_age_group_id"`
-	UserStatusID   int       `json:"user_status_id"`
-	Password       string    `json:"user_password"` //This will probably not be used (see: salt, verifier)
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Address  string `json:"user_address"`
+	//MemberCode     string    `json:"member_code"`
+	BirthDate time.Time `json:"user_birth_date"` //This can be used to calculate what age group to apply
+	//UserAgeGroupID int       `json:"user_age_group_id"`
+	//UserStatusID   int       `json:"user_status_id"`
+	//Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)
 	//Salt            []byte    `json:"salt"`
 	//Verifier        *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-	EmailToken      string    `json:"email_token"`
-	AccountStatusID int       `json:"user_account_status_id"`
-	Created         time.Time `json:"created"`
-	Modified        time.Time `json:"modified"`
-
+	//EmailToken      string `json:"email_token"`
+	//AccountStatusID int    `json:"user_account_status_id"`
+	DeviceName string `json:"device_name"`
+	//Created         time.Time `json:"created"`
+	//Modified        time.Time `json:"modified"`
 	//group int // This is for debug purposes
 }
 
 // ********************* This needs to be changed for each api **********************
 type UI struct {
-	Name        js.Value
-	Username    js.Value
-	Email       js.Value
-	Password    js.Value
-	PasswordChk js.Value
+	Name       js.Value
+	Username   js.Value
+	Email      js.Value
+	Address    js.Value
+	BirthDate  js.Value
+	DeviceName js.Value
 }
 
 type ParentData struct {
@@ -220,19 +222,22 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "regItemEmail")
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
-	localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "regItemPassword")
-	editor.UiComponents.Password.Call("setAttribute", "required", "true")
+	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "regItemAddress")
+	editor.UiComponents.Address.Call("setAttribute", "required", "true")
 
-	localObjs.PasswordChk, editor.UiComponents.PasswordChk = viewHelpers.StringEdit("", editor.document, "Reenter Password", "password", "regItemPasswordChk")
-	editor.UiComponents.PasswordChk.Call("setAttribute", "required", "true")
-	editor.UiComponents.PasswordChk.Call("addEventListener", "change", js.FuncOf(editor.ValidatePasswords))
+	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.DateLayout), editor.document, "Birth Date", "date", "regItemBirthDate")
+	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
+
+	localObjs.DeviceName, editor.UiComponents.DeviceName = viewHelpers.StringEdit(editor.CurrentRecord.DeviceName, editor.document, "Device Name", "text", "regItemDeviceName")
+	editor.UiComponents.DeviceName.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Email)
-	form.Call("appendChild", localObjs.Password)
-	form.Call("appendChild", localObjs.PasswordChk)
+	form.Call("appendChild", localObjs.Address)
+	form.Call("appendChild", localObjs.BirthDate)
+	form.Call("appendChild", localObjs.DeviceName)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "regSubmitEditBtn")
@@ -263,24 +268,26 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.updateStateDisplay(ItemStateNone)
 }
 
-func (editor *ItemEditor) ValidatePasswords(this js.Value, p []js.Value) interface{} {
-	viewHelpers.ValidateNewPassword(editor.UiComponents.Password, editor.UiComponents.PasswordChk)
-	return nil
-}
-
 // SubmitItemEdit handles the submission of the item edit form
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
 		event.Call("preventDefault")
-		//log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
+		log.Println(debugTag + "SubmitItemEdit()1 prevent event default")
 	}
 
 	// ********************* This needs to be changed for each api **********************
+	var err error
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
+	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
+	editor.CurrentRecord.BirthDate, err = time.Parse(viewHelpers.DateLayout, editor.UiComponents.BirthDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing value:", err)
+	}
+	editor.CurrentRecord.DeviceName = editor.UiComponents.DeviceName.Get("value").String()
+	log.Printf(debugTag+"SubmitItemEdit()2 CurrentRecord: %+v", editor.CurrentRecord)
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique
@@ -289,6 +296,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//case ItemStateEditing:
 	//     go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
+		log.Printf(debugTag+"SubmitItemEdit()3 Starting WebAuthn registration process, editor.CurrentRecord: %+v", editor.CurrentRecord)
 		//editor.BeginRegistration(editor.CurrentRecord)
 		editor.WebAuthnRegistration(editor.CurrentRecord)
 	default:
