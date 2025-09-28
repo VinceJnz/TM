@@ -56,7 +56,7 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey) http.Handler
 		// Log the response status code and body
 		//log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
 		if lrw.statusCode != 0 && lrw.statusCode != 200 {
-			log.Printf(debugTag+`LogRequest()2 Response body: %s`, lrw.body.String())
+			log.Printf(debugTag+`LogRequest()2 Response body: %s, status: %d`, lrw.body.String(), lrw.statusCode)
 		}
 
 		cookie, err := r.Cookie("session")

@@ -276,7 +276,7 @@ func (h *Handler) EmailResetListHandler(w http.ResponseWriter, r *http.Request) 
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()4: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
 		return
 	}
-	h.Pool.Add(tempSessionToken.Value, &user, nil, 5*time.Minute) // Assuming you have a pool to manage session data
+	h.Pool.Add(tempSessionToken.Value, &user, nil, "", 5*time.Minute) // Assuming you have a pool to manage session data
 
 	// add the session token to the response
 	http.SetCookie(w, tempSessionToken)

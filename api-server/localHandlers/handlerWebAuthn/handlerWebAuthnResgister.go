@@ -23,26 +23,38 @@ import (
 // If the user is registered then the existing user record should be used.
 // If not then a new user record can be added.
 func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserFromRegistrationRequest(r)
+	var user *models.User //webauthn.User
+	// Get the user details from the request
+	//
+	userDeviceRegistration, err := h.getDataFromRegistrationRequest(r)
 	if err != nil {
-		http.Error(w, "Failed to get user from request", http.StatusBadRequest)
+		http.Error(w, "Failed to get data from request", http.StatusBadRequest)
 		return
 	}
+	if err := userDeviceRegistration.IsValid(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// At this point the user is a new user or an existing user who is registering a new WebAuthn credential.
 	// If a new user: There will be no existing user in the database with the same username or email.
 	// If re-registering a device: The existing user record will be used.
 	// Check if the user is already registered
-	existingUser, err := dbAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, user.Username)
-	if err != nil { //sql.ErrNoRows {
-		http.Error(w, "Failed to check existing user", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v %v %+v", debugTag+"Handler.BeginRegistration()2: Failed to check existing user", "err =", err, "username =", user.Username, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
-		return
+	existingUser, err := dbAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, userDeviceRegistration.Username)
+	if err != nil {
+		//http.Error(w, "Failed to check existing user: ", http.StatusInternalServerError)
+		log.Printf("%v %v %v %v %v %v %v %v %+v", debugTag+"Handler.BeginRegistration()2: Failed check for existing user", "err =", err, "username =", userDeviceRegistration.Username, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
+		user = userDeviceRegistration.User() // Create a new user record using the data from the request
+	} else {
+		user = &existingUser // User is already registered and wants to register (or re-register) a device
 	}
-	if existingUser.ID != 0 { // If the user already exists in the database
-		// User is already registered and wants to register (or re-register) a device
-		log.Printf(debugTag+"Handler.BeginRegistration()3: user is already registered and is registering an additional device, user = %+v, existingUser = %+v", user, existingUser)
-		user = &existingUser
-	}
+	//if existingUser.ID != 0 { // If the user already exists in the database
+	//	// User is already registered and wants to register (or re-register) a device
+	//	log.Printf(debugTag+"Handler.BeginRegistration()3: user is already registered and is registering an additional device, user = %+v, existingUser = %+v", user, existingUser)
+	//	user = &existingUser
+	//} else {
+	//	user = userDeviceRegistration.User() // Create a new user record
+	//}
 
 	if len(user.WebAuthnUserID) == 0 {
 		// User is not webAuthn registered, so we can proceed with registration
@@ -75,7 +87,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()8: Failed to create session token", "err =", err, "WebAuthnSessionTokenName =", WebAuthnSessionTokenName, "host =", h.appConf.Settings.Host)
 		return
 	}
-	h.Pool.Add(tempRegistrationToken.Value, user, sessionData, 5*time.Minute) // Assuming you have a pool to manage session data
+	h.Pool.Add(tempRegistrationToken.Value, user, sessionData, userDeviceRegistration.DeviceName, 5*time.Minute) // Assuming you have a pool to manage session data
 
 	// add the session token to the response and send the RegistrationOptions to the client
 	http.SetCookie(w, tempRegistrationToken)
@@ -87,6 +99,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
 	var user *models.User //webauthn.User
+	var deviceName string
 	params := mux.Vars(r)
 	tempEmailTokenStr := params["token"]
 	if tempEmailTokenStr == "" {
@@ -105,6 +118,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
 	user = poolItem.User                // Set the user data from the pool
+	deviceName = poolItem.DeviceName
 
 	tempEmailToken, err := dbAuthTemplate.FindToken(debugTag, h.appConf.Db, WebAuthnEmailTokenName, tempEmailTokenStr)
 	if err != nil {
@@ -141,7 +155,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		UserAgent:                   r.UserAgent(),
 		RegistrationTimestamp:       time.Now(),
 		LastSuccessfulAuthTimestamp: time.Now(),
-		UserAssignedDeviceName:      "test1", // User-defined name for the device
+		UserAssignedDeviceName:      deviceName, // User-defined name for the device
 		//DeviceFingerprint:           sessionData.DeviceFingerprint,
 	}
 
@@ -165,12 +179,12 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) getUserFromRegistrationRequest(r *http.Request) (*models.User, error) {
+func (h *Handler) getDataFromRegistrationRequest(r *http.Request) (*models.UserDeviceRegistration, error) {
 	//Read the data from the web form or JSON body
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+	var userDeviceRegistration models.UserDeviceRegistration
+	if err := json.NewDecoder(r.Body).Decode(&userDeviceRegistration); err != nil {
 		return nil, err // handle error appropriately
 	}
 
-	return &user, nil
+	return &userDeviceRegistration, nil
 }

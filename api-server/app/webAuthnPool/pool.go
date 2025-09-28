@@ -14,6 +14,7 @@ const debugTag = "webAuthnPool."
 type PoolItem struct {
 	SessionData *webauthn.SessionData
 	User        *models.User //webauthn.User
+	DeviceName  string
 }
 
 // PoolList is a map that holds the pool items, keyed by a token (string).
@@ -30,7 +31,7 @@ func New() *Pool {
 	}
 }
 
-func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.SessionData, attrib ...time.Duration) {
+func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.SessionData, deviceName string, attrib ...time.Duration) {
 	if user == nil || sessionData == nil {
 		log.Printf(debugTag + "Pool.Add()1 - User or sessionData is nil, cannot add to pool")
 		return
@@ -38,6 +39,7 @@ func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.Sessio
 	i := PoolItem{
 		SessionData: sessionData,
 		User:        user,
+		DeviceName:  deviceName,
 	}
 	// Check if the token already exists in the pool
 	if _, exists := p.Pool[token]; exists {
@@ -46,7 +48,7 @@ func (p *Pool) Add(token string, user *models.User, sessionData *webauthn.Sessio
 	}
 	p.Pool[token] = i
 
-	log.Printf("%sPool.Add()3 attrib = %+v, token = %+v, user = %+v, sessionData = %+v", debugTag, attrib, token, user, sessionData)
+	log.Printf("%sPool.Add()3 attrib = %+v, token = %+v, user = %+v, sessionData = %+v, deviceName = %+v", debugTag, attrib, token, user, sessionData, deviceName)
 
 	if len(attrib) > 0 {
 		if attrib[0] > 0 {

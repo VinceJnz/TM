@@ -89,3 +89,44 @@ func (u User) WebAuthnHasCredentials() bool {
 func (u User) UserActive() bool {
 	return u.AccountStatusID.Int64 == int64(AccountActive)
 }
+
+type UserDeviceRegistration struct {
+	ID            int         `json:"id" db:"id"`
+	Name          string      `json:"name" db:"name"`
+	Username      string      `json:"username" db:"username"` //WebAuthn json:"displayName"
+	Email         zero.String `json:"email" db:"email"`
+	Address       zero.String `json:"user_address" db:"user_address"`
+	BirthDate     zero.Time   `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
+	Password      zero.String `json:"user_password" db:"user_password"`     //This will probably not be used (see: salt, verifier)
+	AccountHidden zero.Bool   `json:"user_account_hidden" db:"user_account_hidden"`
+	DeviceName    string      `json:"device_name" db:"device_name"` // User-defined name for the device
+}
+
+func (u *UserDeviceRegistration) User() *User {
+	return &User{
+		ID:            u.ID,
+		Username:      u.Username,
+		Email:         u.Email,
+		Name:          u.Name,
+		Address:       u.Address,
+		BirthDate:     u.BirthDate,
+		Password:      u.Password,
+		AccountHidden: u.AccountHidden,
+	}
+}
+
+func (u *UserDeviceRegistration) IsValid() error {
+	if u.Username == "" {
+		return errors.New("username is required")
+	}
+	if u.Email.String == "" {
+		return errors.New("email is required")
+	}
+	if u.Name == "" {
+		return errors.New("name is required")
+	}
+	if u.DeviceName == "" {
+		return errors.New("device_name is required")
+	}
+	return nil
+}

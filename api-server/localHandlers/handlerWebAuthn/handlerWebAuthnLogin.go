@@ -76,7 +76,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
 		return
 	}
-	h.Pool.Add(tempSessionToken.Value, &user, sessionData, 2*time.Minute) // Assuming you have a pool to manage session data
+	h.Pool.Add(tempSessionToken.Value, &user, sessionData, "", 2*time.Minute) // Assuming you have a pool to manage session data
 	// add the session token to the response
 	http.SetCookie(w, tempSessionToken)
 	w.Header().Set("Content-Type", "application/json")

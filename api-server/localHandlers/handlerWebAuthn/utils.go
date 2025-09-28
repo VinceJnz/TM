@@ -47,7 +47,7 @@ Thanks!
 `, token)
 
 	// In production, use your email service (SendGrid, AWS SES, etc.)
-	log.Printf("%sendRegistrationEmail()1 Send Registration Email", debugTag)
+	log.Printf("%sSendRegistrationEmail()1 Send Registration Email", debugTag)
 	log.Printf("%s", title)
 	log.Printf("📝 Email Body:")
 	log.Printf("%s", message)
