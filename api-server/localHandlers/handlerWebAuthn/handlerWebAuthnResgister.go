@@ -43,9 +43,10 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	existingUser, err := dbAuthTemplate.UserNameReadQry(debugTag+"Handler.BeginRegistration()1 ", h.appConf.Db, userDeviceRegistration.Username)
 	if err != nil {
 		//http.Error(w, "Failed to check existing user: ", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v %v %+v", debugTag+"Handler.BeginRegistration()2: Failed check for existing user", "err =", err, "username =", userDeviceRegistration.Username, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
+		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()2: Failed check for existing user", "err =", err, "userDeviceRegistration =", userDeviceRegistration, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
 		user = userDeviceRegistration.User() // Create a new user record using the data from the request
 	} else {
+		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()3: Passed check for existing user", "err =", err, "userDeviceRegistration =", userDeviceRegistration, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
 		user = &existingUser // User is already registered and wants to register (or re-register) a device
 	}
 	//if existingUser.ID != 0 { // If the user already exists in the database

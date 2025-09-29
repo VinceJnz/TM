@@ -177,9 +177,10 @@ const (
 	//WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2 AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
 
 	//Finds valid tokens where user account exists and the token name is the same as the name passed in
+	//Finds valid tokens where the token name is the same as the name passed in
 	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
-		JOIN st_users stu ON stu.ID=stt.User_ID
+		--JOIN st_users stu ON stu.ID=stt.User_ID
 		WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid AND stt.Valid_From < CURRENT_TIMESTAMP AND stt.Valid_To > CURRENT_TIMESTAMP`
 	//WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid AND stt.Valid_To < CURRENT_TIMESTAMP AND stt.Valid_From > CURRENT_TIMESTAMP`
 )
@@ -248,11 +249,11 @@ func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, acc
 
 const (
 	sqlUserFind      = `SELECT id FROM st_users WHERE id = $1`
-	sqlUserRead      = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE id = $1`
-	sqlUserNameRead  = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE username = $1`
-	sqlUserEmailRead = `SELECT id, name, username, email, webauthn_user_id, user_account_status_id FROM st_users WHERE email = $1`
-	sqlUserInsert    = `INSERT INTO st_users (name, username, email, webauthn_user_id) VALUES ($1, $2, $3, $4) RETURNING id`
-	sqlUserUpdate    = `UPDATE st_users SET name = $1, username = $2, email = $3, webauthn_user_id = $4 WHERE id = $5`
+	sqlUserRead      = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id FROM st_users WHERE id = $1`
+	sqlUserNameRead  = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id FROM st_users WHERE username = $1`
+	sqlUserEmailRead = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id FROM st_users WHERE email = $1`
+	sqlUserInsert    = `INSERT INTO st_users (name, username, email, user_birth_date, webauthn_user_id) VALUES ($1, $2, $3, $4) RETURNING id`
+	sqlUserUpdate    = `UPDATE st_users SET name = $1, username = $2, email = $3, user_birth_date = $4, webauthn_user_id = $5 WHERE id = $6`
 )
 
 func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
@@ -305,7 +306,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.WebAuthnUserID).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
@@ -314,7 +315,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 }
 
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
-	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.WebAuthnUserID, record.ID)
+	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID, record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx()1 - ", "err =", err, "record =", record)
 	}
