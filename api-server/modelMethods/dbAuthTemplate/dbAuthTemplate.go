@@ -252,7 +252,7 @@ const (
 	sqlUserRead      = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id FROM st_users WHERE id = $1`
 	sqlUserNameRead  = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id FROM st_users WHERE username = $1`
 	sqlUserEmailRead = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id FROM st_users WHERE email = $1`
-	sqlUserInsert    = `INSERT INTO st_users (name, username, email, user_birth_date, webauthn_user_id) VALUES ($1, $2, $3, $4) RETURNING id`
+	sqlUserInsert    = `INSERT INTO st_users (name, username, email, user_birth_date, webauthn_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`
 	sqlUserUpdate    = `UPDATE st_users SET name = $1, username = $2, email = $3, user_birth_date = $4, webauthn_user_id = $5 WHERE id = $6`
 )
 
