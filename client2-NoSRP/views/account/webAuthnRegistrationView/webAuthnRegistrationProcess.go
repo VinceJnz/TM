@@ -2,6 +2,7 @@ package webAuthnRegistrationView
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"log"
 	"strings"
 	"syscall/js"
@@ -62,16 +63,23 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		log.Printf(debugTag+"WebAuthnRegistration()0 Starting WebAuthn registration process. item: %+v", item)
 		// Marshal editor.CurrentRecord to JSON
 		// Prepare user data as JSON string for the request body
-		userData := js.Global().Get("JSON").Call("stringify", map[string]any{
-			"name":         item.Name,
-			"username":     item.Username,
-			"email":        item.Email,
-			"user_address": item.Address,
-			//"user_birth_date": item.BirthDate.Format(viewHelpers.DateLayout),
-			"device_name": item.DeviceName,
-			// Add other fields as needed
-		})
-		log.Printf(debugTag + "WebAuthnRegistration()1 Preparing to send registration begin request to server.")
+		itemJSON, err := json.Marshal(item)
+		if err != nil {
+			log.Printf(debugTag+"WebAuthnRegistration()1 Error marshalling user data to JSON: %v", err)
+			// Handle error
+			return
+		}
+		userData := string(itemJSON)
+		//userData := js.Global().Get("JSON").Call("stringify", map[string]any{
+		//	"name":            item.Name,
+		//	"username":        item.Username,
+		//	"email":           item.Email,
+		//	"user_address":    item.Address,
+		//	"user_birth_date": item.BirthDate.Format(viewHelpers.DateLayout),
+		//	"device_name":     item.DeviceName,
+		//	// Add other fields as needed
+		//})
+		log.Printf(debugTag+"WebAuthnRegistration()2 Preparing to send registration begin request to server. userData: %+v", userData)
 		// Send POST request to /register/begin/ to get registration options
 		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]any{
 			"method": "POST",
@@ -80,23 +88,23 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				"Content-Type": "application/json",
 			},
 		})
-		log.Printf(debugTag + "WebAuthnRegistration()2 Sent registration begin request to server.")
+		log.Printf(debugTag + "WebAuthnRegistration()3 Sent registration begin request to server.")
 
 		// Handle the server response for registration options
 		then := js.FuncOf(func(this js.Value, args []js.Value) any {
-			log.Printf(debugTag + "WebAuthnRegistration()3 Received response for registration options.")
+			log.Printf(debugTag + "WebAuthnRegistration()4 Received response for registration options.")
 			resp := args[0]
 			// Parse the JSON body of the response
 			jsonPromise := resp.Call("json")
 			then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
-				log.Printf(debugTag + "WebAuthnRegistration()4 Parsed JSON response for registration options.")
+				log.Printf(debugTag + "WebAuthnRegistration()5 Parsed JSON response for registration options.")
 				options := args[0]
 				publicKey := options.Get("publicKey")
 
 				// 2. Convert challenge and user.id from base64url to Uint8Array, the correct format for WebAuthn
-				publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()1", publicKey.Get("challenge").String()))
+				publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()6", publicKey.Get("challenge").String()))
 				user := publicKey.Get("user")
-				user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()2", user.Get("id").String()))
+				user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()7", user.Get("id").String()))
 				publicKey.Set("user", user)
 
 				// 3. Call the browser WebAuthn API to create credentials
@@ -106,7 +114,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 
 				// Handle the result of the credentials creation
 				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
-					log.Printf(debugTag + "WebAuthnRegistration()5 Created credentials using WebAuthn API.")
+					log.Printf(debugTag + "WebAuthnRegistration()8 Created credentials using WebAuthn API.")
 					cred := args[0]
 					ShowTokenDialog(
 						func(token string) {
