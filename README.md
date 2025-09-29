@@ -158,12 +158,6 @@ wsl --status
 wsl --update
 ```
 
-```powershell
-# After each few builds, run:
-docker builder prune -af
-docker system prune -af
-```
-
 This is often the most reliable fix for repeated build failures with complex Dockerfiles 
 * Disable Docker BuildKit and switche to the legacy Docker builder
 
