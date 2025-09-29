@@ -142,7 +142,7 @@ There’s no single right answer—choose the approach that makes your code clea
 
 Use the following command steps to compact the docker vhdx (vdisk)
 
-```cmd
+```powershell
 wsl --shutdown
 
 docker system prune
@@ -153,6 +153,45 @@ compact vdisk
 exit
 ```
 
+```powershell
+wsl --status
+wsl --update
+```
+
+```powershell
+# After each few builds, run:
+docker builder prune -af
+docker system prune -af
+```
+
+This is often the most reliable fix for repeated build failures with complex Dockerfiles 
+* Disable Docker BuildKit and switche to the legacy Docker builder
+
+```powershell
+# Set the environment variable
+set DOCKER_BUILDKIT=0
+
+# Then run your build
+docker compose --profile prod up --build
+
+# Optional: Reset back to BuildKit when done
+set DOCKER_BUILDKIT=1
+```
+
+
+Create a Build Script `build.ps1`
+```powershell
+# Clear cache every 3rd build or so
+docker builder prune -af
+docker system prune -f
+
+# Use legacy builder for stability
+$env:DOCKER_BUILDKIT="0"
+docker compose --profile prod up --build
+
+# Reset BuildKit setting
+$env:DOCKER_BUILDKIT=$null
+```
 
 ## Connect to a docker image
 `docker exec -it <container_name_or_id> /bin/bash`

@@ -2,13 +2,20 @@
 # STAGE1: Use a lightweight Go image to build the WASM binary
 #FROM golang:1.23.4-alpine AS wasmbuilder
 FROM tinygo/tinygo:latest AS wasmbuilder
+#FROM golang:1.23.4-alpine AS wasmbuilder
+#RUN apk add --no-cache git
+#RUN go install github.com/tinygo-org/tinygo@latest
+#ENV PATH="/root/go/bin:$PATH"
 
 # Set the working directory inside the container
-#WORKDIR /app
 WORKDIR /app
 
 # Copy the Go source code into the container
 #COPY ./client1/ .
+# Copy only go.mod and go.sum first (better layer caching)
+COPY ./client2-NoSRP/go.mod ./client2-NoSRP/go.sum ./
+RUN go mod download
+
 COPY ./client2-NoSRP/ .
 
 # Build the Go WASM binary
@@ -26,6 +33,10 @@ FROM golang:1.23.4-alpine AS apibuilder
 # Set working directory in the container
 WORKDIR /app
 
+# Copy dependency files first
+COPY ./api-server/go.mod ./api-server/go.sum ./
+RUN go mod download
+
 # Copy the Go API server source code to the container
 COPY ./api-server/ .
 COPY ./certs/api-server/ ./certs/ssl/
@@ -33,7 +44,7 @@ COPY ./certs/gmail/ ./certs/gmail/
 COPY ./certs/stripe/ ./certs/stripe/
 
 # Build the Go API server
-RUN go mod download
+#RUN go mod download
 # Normal build
 RUN go build -o apiserver .
 
@@ -46,11 +57,12 @@ COPY --from=wasmbuilder /app/main.wasm ./static/
 COPY --from=wasmbuilder /app/wasm_exec.js ./static/
 
 # Copy the static files from the builder stage to the static folder
-COPY --from=apibuilder /app/static/*.html ./static/
-COPY --from=apibuilder /app/static/*.css ./static/
-COPY --from=apibuilder /app/static/*.txt ./static/
-COPY --from=apibuilder /app/static/favicon.ico ./static/
-COPY --from=apibuilder /app/static/favicon.png ./static/
+COPY --from=apibuilder /app/static/ ./static/
+#COPY --from=apibuilder /app/static/*.html ./static/
+#COPY --from=apibuilder /app/static/*.css ./static/
+#COPY --from=apibuilder /app/static/*.txt ./static/
+#COPY --from=apibuilder /app/static/favicon.ico ./static/
+#COPY --from=apibuilder /app/static/favicon.png ./static/
 
 # Copy the compiled webserver binary from the builder stage
 COPY --from=apibuilder /app/apiserver .
