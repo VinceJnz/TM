@@ -53,6 +53,8 @@ type TableData struct {
 	LastUsed       time.Time       `json:"last_used"`       // Timestamp of the last time the credential was used
 	DeviceName     string          `json:"device_name"`     // User-defined name for the device/browser used for registration or authentication
 	DeviceMetadata json.RawMessage `json:"device_metadata"` // JSON-encoded device metadata. Stores information about the device used for authentication so that it can be referenced later, e.g. by the user to delete an expired credential.
+	Username       string          `json:"username"`        // Username of the user associated with the credential
+	Email          string          `json:"email"`           // Email of the user associated with the credential
 	//Created        time.Time       `json:"created"`         // Timestamp of when the credential was created
 	//Modified       time.Time       `json:"modified"`        // Timestamp of when the credential was last modified
 }
@@ -64,6 +66,8 @@ type UI struct {
 	LastUsed       js.Value
 	DeviceName     js.Value
 	DeviceMetadata js.Value
+	Username       js.Value
+	Email          js.Value
 }
 
 type children struct {
@@ -218,10 +222,20 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.LastUsed, editor.UiComponents.LastUsed = viewHelpers.StringEdit(editor.CurrentRecord.LastUsed.Format(viewHelpers.DateTimeLayout), editor.document, "Last Used", "datetime-local", "itemLastUsed")
 	editor.UiComponents.LastUsed.Call("setAttribute", "required", "true")
 
+	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	editor.UiComponents.Username.Call("setAttribute", "required", "true")
+
+	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
+	editor.UiComponents.Email.Call("setAttribute", "required", "true")
+	editor.UiComponents.Email.Call("setAttribute", "pattern", `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	editor.UiComponents.Email.Call("setAttribute", "title", "Please enter a valid email address")
+
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.DeviceName)
 	form.Call("appendChild", localObjs.DeviceMetadata)
 	form.Call("appendChild", localObjs.LastUsed)
+	form.Call("appendChild", localObjs.Username)
+	form.Call("appendChild", localObjs.Email)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "mgntSubmitEditBtn")
@@ -351,8 +365,8 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
-	editor.ListDiv.Call("appendChild", addNewItemButton)
+	//addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	//editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
@@ -364,18 +378,18 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.DeviceName+" last used:"+record.LastUsed.Format(viewHelpers.DateTimeLayout))
+		itemDiv.Set("innerHTML", record.Username+" ("+record.Email+") "+record.DeviceName+" last used:"+record.LastUsed.Format(viewHelpers.DateTimeLayout))
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button
-		editButton := editor.document.Call("createElement", "button")
-		editButton.Set("innerHTML", "Edit")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentRecord = record
-			editor.updateStateDisplay(ItemStateEditing)
-			editor.populateEditForm()
-			return nil
-		}))
+		//editButton := editor.document.Call("createElement", "button")
+		//editButton.Set("innerHTML", "Edit")
+		//editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		//	editor.CurrentRecord = record
+		//	editor.updateStateDisplay(ItemStateEditing)
+		//	editor.populateEditForm()
+		//	return nil
+		//}))
 
 		// Create a delete button
 		deleteButton := editor.document.Call("createElement", "button")
@@ -385,7 +399,7 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		}))
 
-		itemDiv.Call("appendChild", editButton)
+		//itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
 
 		editor.ListDiv.Call("appendChild", itemDiv)

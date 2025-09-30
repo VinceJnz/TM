@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"syscall/js"
+	"time"
 )
 
 //********************************************************************
@@ -102,9 +103,11 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				publicKey := options.Get("publicKey")
 
 				// 2. Convert challenge and user.id from base64url to Uint8Array, the correct format for WebAuthn
+				displayName := item.Name + " (" + time.Now().Format("2006-01-02 15:04:05") + ")"
 				publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()6", publicKey.Get("challenge").String()))
 				user := publicKey.Get("user")
 				user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()7", user.Get("id").String()))
+				user.Set("displayName", displayName) // <-- Add this line to set the nickname. If this is provided, browser shows it in UI and the existing credential is updated.
 				publicKey.Set("user", user)
 
 				// 3. Call the browser WebAuthn API to create credentials
