@@ -26,15 +26,15 @@ services:
     networks:
       - mynetwork
 
-  webserver:
-    build:
-      context: .
-      dockerfile: Dockerfile.webbuild
-    container_name: webserver
-    ports:
-      - "8081:8081"
-    networks:
-      - mynetwork
+  #webserver:
+  #  build:
+  #    context: .
+  #    dockerfile: Dockerfile.webbuild
+  #  container_name: webserver
+  #  ports:
+  #    - "8081:8081"
+  #  networks:
+  #    - mynetwork
 
   apiserver:
     profiles: ["prod"]
