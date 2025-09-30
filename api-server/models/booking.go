@@ -11,6 +11,7 @@ import (
 type Booking struct {
 	ID              int                 `json:"id" db:"id"`
 	OwnerID         int                 `json:"owner_id" db:"owner_id"`
+	OwnerName       zero.String         `json:"owner_username" db:"owner_username"`
 	TripID          zero.Int            `json:"trip_id" db:"trip_id"`
 	Notes           string              `json:"notes" db:"notes"`
 	FromDate        time.Time           `json:"from_date" db:"from_date"`
