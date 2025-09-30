@@ -39,6 +39,7 @@ const ApiURL = "/bookings"
 type TableData struct {
 	ID              int             `json:"id"`
 	OwnerID         int             `json:"owner_id"`
+	OwnerName       string          `json:"owner_username"` // Report generated field
 	TripID          int             `json:"trip_id"`
 	Notes           string          `json:"notes"`
 	FromDate        time.Time       `json:"from_date"`
@@ -420,7 +421,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Notes+" (Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.DateLayout)+" - To:"+record.ToDate.Format(viewHelpers.DateLayout)+", Participants:"+strconv.Itoa(record.Participants)+", Cost:$"+record.BookingCost.StringFixedBank(2)+")")
+		itemDiv.Set("innerHTML", record.OwnerName+": "+record.Notes+" (Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.DateLayout)+" - To:"+record.ToDate.Format(viewHelpers.DateLayout)+", Participants:"+strconv.Itoa(record.Participants)+", Cost:$"+record.BookingCost.StringFixedBank(2)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.User.AdminFlag {
