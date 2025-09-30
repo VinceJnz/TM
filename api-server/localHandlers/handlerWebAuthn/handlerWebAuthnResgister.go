@@ -180,7 +180,14 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", webAuthnCredential)
 			return
 		}
-
+	} else {
+		// Update existing credential
+		webAuthnCredential.ID = deviceCredential.ID // Ensure we set the ID for the update
+		err = dbAuthTemplate.UpdateCredential(debugTag+"Handler.FinishRegistration()8 ", h.appConf.Db, webAuthnCredential)
+		if err != nil {
+			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()9: Failed to update credential", "err =", err, "record =", webAuthnCredential)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
