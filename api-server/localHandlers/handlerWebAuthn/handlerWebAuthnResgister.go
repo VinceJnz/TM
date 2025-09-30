@@ -20,8 +20,9 @@ import (
 
 // BeginRegistration
 // This process must first check if the user is already registered.
-// If the user is registered then the existing user record should be used.
-// If not then a new user record can be added.
+// If the user is registered then the existing user record should be used. If not then a new user record can be added.
+// If the user is registering an additional device, the existing user record should be used and a new device credential added.
+// If the user is re-registering a device, the existing user record should be used and the existing device credential updated.
 func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	var user *models.User //webauthn.User
 	// Get the user details from the request
@@ -171,10 +172,15 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		//Modified:       time.Now(),
 	}
 
-	_, err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, &webAuthnCredential)
+	deviceCredential, err := dbAuthTemplate.GetUserDeviceCredential(debugTag+"Handler.BeginRegistration()3a ", h.appConf.Db, user.ID, deviceName)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", webAuthnCredential)
-		return
+		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()3b: Failed to get existing device credential", "err =", err, "userDeviceRegistration =", userDeviceRegistration, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
+		_, err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, &webAuthnCredential)
+		if err != nil {
+			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", webAuthnCredential)
+			return
+		}
+
 	}
 
 	w.WriteHeader(http.StatusOK)
