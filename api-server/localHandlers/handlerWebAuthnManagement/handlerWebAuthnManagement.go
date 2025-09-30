@@ -21,10 +21,17 @@ const debugTag = "handlerWebAuthnManagement."
 //)
 
 const (
-	qryGetAll = `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, created, modified FROM st_webauthn_credentials
-	WHERE (true=$1 OR user_id = $2)`
-	qryGet = `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, created, modified FROM st_webauthn_credentials
-	WHERE id = $1 AND (true=$2 OR user_id = $3)`
+	//qryGetAll = `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, created, modified FROM st_webauthn_credentials
+	//WHERE (true=$1 OR user_id = $2)`
+
+	qryGetAll = `SELECT stwc.id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, username, email
+		FROM st_webauthn_credentials stwc
+		JOIN st_users stu ON stu.id = stwc.user_id
+		WHERE (true=$1 OR user_id = $2)`
+	qryGet = `SELECT stwc.id, user_id, credential_id, credential_data, last_used, device_name, device_metadata, username, email
+		FROM st_webauthn_credentials stwc
+		JOIN st_users stu ON stu.id = stwc.user_id
+		WHERE id = $1 AND (true=$2 OR user_id = $3)`
 	qryCreate = `INSERT INTO st_webauthn_credentials (user_id, credential_id, credential_data, last_used, device_name, device_metadata) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	qryUpdate = `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential_data, last_used, device_name, device_metadata) = ($3, $4, $5, $6, $7, $8) WHERE id = $1
 	AND (true=$2 OR user_id = $3)`

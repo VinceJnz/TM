@@ -82,6 +82,8 @@ type WebAuthnCredential struct {
 	LastUsed       zero.Time           `json:"last_used" db:"last_used"`             // Timestamp of the last time the credential was used
 	DeviceName     string              `json:"device_name" db:"device_name"`         // User-defined name for the device/browser used for registration or authentication
 	DeviceMetadata JSONBDeviceMetadata `json:"device_metadata" db:"device_metadata"` // JSON-encoded device metadata. Stores information about the device used for authentication so that it can be referenced later, e.g. by the user to delete an expired credential.
-	Created        time.Time           `json:"created" db:"created"`
-	Modified       time.Time           `json:"modified" db:"modified"`
+	Username       string              `json:"username" db:"username"`               // Username of the user associated with the credential
+	Email          string              `json:"email" db:"email"`                     // Email of the user associated with the credential
+	//Created        time.Time           `json:"created" db:"created"`
+	//Modified       time.Time           `json:"modified" db:"modified"`
 }

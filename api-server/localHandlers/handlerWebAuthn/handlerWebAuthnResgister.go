@@ -167,8 +167,8 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		Credential:     models.JSONBCredential{Credential: *credential},
 		DeviceName:     deviceMetadata.UserAssignedDeviceName,
 		DeviceMetadata: deviceMetadata,
-		Created:        time.Now(),
-		Modified:       time.Now(),
+		//Created:        time.Now(),
+		//Modified:       time.Now(),
 	}
 
 	_, err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, &webAuthnCredential)
