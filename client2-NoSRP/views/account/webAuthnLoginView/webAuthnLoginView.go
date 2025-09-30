@@ -5,7 +5,6 @@ import (
 	"client2-NoSRP/v2/app/eventProcessor"
 	"client2-NoSRP/v2/app/httpProcessor"
 	"client2-NoSRP/v2/views/account/webAuthnRegistrationView"
-	"client2-NoSRP/v2/views/account/webAuthnResetView"
 	"client2-NoSRP/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
@@ -227,26 +226,26 @@ func (editor *ItemEditor) populateEditForm() {
 	// Need more work here to handle the webAuthnEmailResetView
 	// We could simply make an additional field appear on the current page????
 	// or we could create a new view for the email reset????
-	webAuthnEmailResetView := webAuthnResetView.New(editor.document, editor.events, editor.appCore, webAuthnResetView.ParentData{})
+	//webAuthnEmailResetView := webAuthnResetView.New(editor.document, editor.events, editor.appCore, webAuthnResetView.ParentData{})
 	// Create a toggle child button
-	webAuthnEmailResetButton := editor.document.Call("createElement", "button")
-	webAuthnEmailResetButton.Set("innerHTML", "WebAuthnEmailReset")
-	webAuthnEmailResetButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		webAuthnEmailResetView.NewItemData(this, args) // WARNING ... this is different for the page ...
-		webAuthnEmailResetView.Toggle()
-		return nil
-	}))
-
-	// Append child components to editor div
-	editor.elements.EditDiv.Call("appendChild", webAuthnRegisterButton)
-	editor.elements.EditDiv.Call("appendChild", webAuthnRegisterView.Div)
+	//webAuthnEmailResetButton := editor.document.Call("createElement", "button")
+	//webAuthnEmailResetButton.Set("innerHTML", "WebAuthnEmailReset")
+	//webAuthnEmailResetButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	//	webAuthnEmailResetView.NewItemData(this, args) // WARNING ... this is different for the page ...
+	//	webAuthnEmailResetView.Toggle()
+	//	return nil
+	//}))
 
 	// Append form to editor div
 	editor.elements.EditDiv.Call("appendChild", form)
 
 	// Append child components to editor div
-	editor.elements.EditDiv.Call("appendChild", webAuthnEmailResetButton)
-	editor.elements.EditDiv.Call("appendChild", webAuthnEmailResetView.Div)
+	editor.elements.EditDiv.Call("appendChild", webAuthnRegisterButton)
+	editor.elements.EditDiv.Call("appendChild", webAuthnRegisterView.Div)
+
+	// Append child components to editor div
+	//editor.elements.EditDiv.Call("appendChild", webAuthnEmailResetButton)
+	//editor.elements.EditDiv.Call("appendChild", webAuthnEmailResetView.Div)
 
 	// Make sure the form is visible
 	editor.elements.EditDiv.Get("style").Set("display", "block")
