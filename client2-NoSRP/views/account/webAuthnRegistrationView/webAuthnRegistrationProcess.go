@@ -33,22 +33,40 @@ type WebAuthnAttestation struct {
 // decodeBase64URLToUint8Array Decode base64 URL-encoded string to Uint8Array
 // This function replaces '-' with '+' and '_' with '/' to make it compatible with base64 decoding
 // It also pads the string with '=' if necessary to make its length a multiple of 4
-func decodeBase64URLToUint8Array(callerTag, b64 string) js.Value {
+func decodeBase64URLToUint8Array(debugPrefix, b64 string) js.Value {
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()1.%s: %s", debugPrefix, b64)
 	b64init := b64 // Save the initial value for logging/debugging
-	// Pad the string if necessary
-	missing := len(b64) % 4
-	if missing != 0 {
-		b64 += strings.Repeat("=", 4-missing)
-	}
-	b64 = strings.ReplaceAll(b64, "-", "+")
-	b64 = strings.ReplaceAll(b64, "_", "/")
-	decoded, err := base64.StdEncoding.DecodeString(b64)
+
+	decoded, err := base64.RawURLEncoding.DecodeString(b64) // Use RawURLEncoding to avoid padding issues
 	if err != nil {
-		log.Printf(debugTag+"decodeBase64URLToUint8Array()1.%s Error decoding challenge: %v, input: %s, result: %s", callerTag, err, b64init, b64)
-		return js.Undefined()
+		log.Printf(debugTag+"decodeBase64URLToUint8Array()2.%s Error decoding challenge: %v: (trying standard base64), b64: %s, adjusted b64: %s, decoded: %v", debugPrefix, err, b64init, b64, decoded)
+
+		// Try standard base64 decoding as a fallback
+
+		// Pad the string if necessary
+		missing := len(b64) % 4
+		if missing != 0 {
+			b64 += strings.Repeat("=", 4-missing)
+		}
+		b64 = strings.ReplaceAll(b64, "-", "+")
+		b64 = strings.ReplaceAll(b64, "_", "/")
+
+		decoded, err = base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			log.Printf(debugTag+"decodeBase64URLToUint8Array()3.%s Error decoding standard base64: %v", debugPrefix, err)
+			return js.Undefined()
+		}
 	}
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()4.%s Decoded base64url to bytes: %v, decoded: %v", debugPrefix, len(decoded), decoded)
+
 	uint8Array := js.Global().Get("Uint8Array").New(len(decoded))
 	js.CopyBytesToJS(uint8Array, decoded)
+
+	// Verify it's actually a Uint8Array (for debugging)
+	isUint8Array := uint8Array.InstanceOf(js.Global().Get("Uint8Array"))
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()5.%s Created Uint8Array, length=%d, isUint8Array=%v", debugPrefix, uint8Array.Get("length").Int(), isUint8Array)
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()6.%s b64=%v, decoded=%s, uint8Array=%s", debugPrefix, b64, decoded, js.Global().Get("JSON").Call("stringify", uint8Array, js.Null(), 2).String())
+
 	return uint8Array
 }
 
@@ -57,7 +75,7 @@ func decodeBase64URLToUint8Array(callerTag, b64 string) js.Value {
 // 2. Convert challenge and user ID to the correct format for WebAuthn.
 // 3. Call browser WebAuthn API to create credentials.
 // 4. Send credentials back to server to finish registration.
-func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
+func (editor *ItemEditor) WebAuthnRegistration0(item TableData) {
 	go func() {
 		// 1. Fetch registration options from the server
 		fetch := js.Global().Get("fetch")
@@ -110,34 +128,41 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 				user.Set("displayName", displayName) // <-- Add this line to set the nickname. If this is provided, browser shows it in UI and the existing credential is updated.
 				publicKey.Set("user", user)
 
+				log.Printf(debugTag+"WebAuthnRegistration()8a Converted Convert challenge and user.id from base64url to Uint8Array: displayName: %+v, user: %+v", displayName, user.String())
+
 				// 3. Call the browser WebAuthn API to create credentials
 				credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
 					"publicKey": publicKey,
 				})
 
+				log.Printf(debugTag+"WebAuthnRegistration()8b Called WebAuthn API to create credentials. credPromise: %+v", credPromise)
+
 				// Handle the result of the credentials creation
 				then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
-					log.Printf(debugTag + "WebAuthnRegistration()8 Created credentials using WebAuthn API.")
+					log.Printf(debugTag + "WebAuthnRegistration()9 Created credentials using WebAuthn API.")
 					cred := args[0]
-					ShowTokenDialog(
-						func(token string) {
-							if token == "" {
-								log.Printf("Registration cancelled: No token provided.")
-								return
-							}
-							credJSON := js.Global().Get("JSON").Call("stringify", cred)
-							js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/"+token, map[string]any{
-								"method": "POST",
-								"body":   credJSON,
-								"headers": map[string]any{
-									"Content-Type": "application/json",
-								},
-							})
-						},
-						func() {
-							log.Printf("Registration cancelled by user.")
-						},
-					)
+					js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any { // ????
+						ShowTokenDialog(
+							func(token string) {
+								if token == "" {
+									log.Printf("Registration cancelled: No token provided.")
+									return
+								}
+								credJSON := js.Global().Get("JSON").Call("stringify", cred)
+								js.Global().Get("fetch").Invoke(ApiURL+"/register/finish/"+token, map[string]any{
+									"method": "POST",
+									"body":   credJSON,
+									"headers": map[string]any{
+										"Content-Type": "application/json",
+									},
+								})
+							},
+							func() {
+								log.Printf("Registration cancelled by user.")
+							},
+						)
+						return nil // ????
+					}), 10) // ????
 					return nil
 				})
 				credPromise.Call("then", then3)
@@ -152,7 +177,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 
 // ShowTokenDialog displays a popup dialog for token input and calls onSubmit with the token string.
 // onCancel is called if the user cancels.
-func ShowTokenDialog(onSubmit func(token string), onCancel func()) {
+func ShowTokenDialog1(onSubmit func(token string), onCancel func()) {
 	document := js.Global().Get("document")
 	dialog := document.Call("createElement", "div")
 	dialog.Set("style", "position:fixed;top:30%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:2em;border:1px solid #ccc;z-index:10000;")
