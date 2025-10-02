@@ -19,11 +19,26 @@ type Handler struct {
 }
 
 func New(appConf *appCore.Config) *Handler {
-	webAuthnInstance, err := webauthn.New(&webauthn.Config{
-		RPDisplayName: appConf.Settings.AppTitle,
-		RPID:          appConf.Settings.Host,
-		RPOrigins:     []string{"https://" + appConf.Settings.Host + ":" + appConf.Settings.PortHttps},
-	})
+	wconfig := &webauthn.Config{
+		RPDisplayName: appConf.Settings.AppTitle,                                                       // Display name for your app
+		RPID:          appConf.Settings.Host,                                                           // Your domain (no https://, just domain)
+		RPOrigins:     []string{"https://" + appConf.Settings.Host + ":" + appConf.Settings.PortHttps}, // Full origin URLs
+		// Correct timeout configuration for newer library versions
+		Timeouts: webauthn.TimeoutsConfig{
+			Login: webauthn.TimeoutConfig{
+				Timeout:    60000, // 60 seconds in milliseconds
+				Enforce:    true,
+				TimeoutUVD: 60000, // User verification device timeout
+			},
+			Registration: webauthn.TimeoutConfig{
+				Timeout:    60000, // 60 seconds in milliseconds
+				Enforce:    true,
+				TimeoutUVD: 60000, // User verification device timeout
+			},
+		},
+	}
+
+	webAuthnInstance, err := webauthn.New(wconfig)
 	if err != nil {
 		panic("failed to create WebAuthn from config: " + err.Error())
 	}

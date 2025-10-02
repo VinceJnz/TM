@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/guregu/null/v5/zero"
 )
@@ -80,6 +81,18 @@ func (u User) WebAuthnName() string                       { return u.Username }
 func (u User) WebAuthnDisplayName() string                { return u.Name }
 func (u User) WebAuthnIcon() string                       { return "" }
 func (u User) WebAuthnCredentials() []webauthn.Credential { return u.Credentials }
+
+// Add a new method for exclusions
+func (u User) WebAuthnCredentialDescriptors() []protocol.CredentialDescriptor {
+	credentials := make([]protocol.CredentialDescriptor, len(u.Credentials))
+	for i, cred := range u.Credentials {
+		credentials[i] = protocol.CredentialDescriptor{
+			Type:         protocol.PublicKeyCredentialType,
+			CredentialID: cred.ID,
+		}
+	}
+	return credentials
+}
 
 // func (u User) WebAuthnEnabled() bool                       { return u.WebAuthnUserID != nil && len(u.Credentials) > 0 }
 func (u User) WebAuthnEnabled() bool { return u.WebAuthnUserID != nil }

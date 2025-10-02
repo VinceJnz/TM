@@ -87,3 +87,12 @@ type WebAuthnCredential struct {
 	//Created        time.Time           `json:"created" db:"created"`
 	//Modified       time.Time           `json:"modified" db:"modified"`
 }
+
+// Example of JSONBDeviceMetadata content
+//{
+//  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+//  "device_fingerprint": "",
+//  "registration_timestamp": "2025-09-30T09:13:21.114515992Z",
+//  "user_assigned_device_name": "Dell1",
+//  "last_successful_auth_timestamp": "2025-09-30T22:48:35.861451938Z"
+//}

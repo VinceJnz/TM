@@ -3,6 +3,7 @@ package handlerWebAuthn
 import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
 )
@@ -66,12 +68,52 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	// Begin the registration process for both new and existing users
 	log.Printf(debugTag+"Handler.BeginRegistration()5a: user = %+v", user)
-	options, sessionData, err := h.webAuthn.BeginRegistration(user)
+	//options, sessionData, err := h.webAuthn.BeginRegistration(user)
+
+	// ========================================================================
+	// CRITICAL: Configure for Passkeys (Platform Authenticators)
+	// ========================================================================
+
+	// Convert existing credentials to exclusion list
+	credentials := user.WebAuthnCredentials()
+	exclusions := make([]protocol.CredentialDescriptor, len(credentials))
+	for i, cred := range credentials {
+		exclusions[i] = protocol.CredentialDescriptor{
+			Type:         protocol.PublicKeyCredentialType,
+			CredentialID: cred.ID,
+		}
+	}
+
+	options, sessionData, err := h.webAuthn.BeginRegistration(
+		user,
+		// Configure authenticator selection for passkeys
+		webauthn.WithAuthenticatorSelection(protocol.AuthenticatorSelection{
+			// Use "platform" for passkeys (Face ID, Touch ID, Windows Hello)
+			// Use "cross-platform" for USB security keys
+			// Omit AuthenticatorAttachment to allow both
+			AuthenticatorAttachment: protocol.Platform,
+
+			// Require a resident key (discoverable credential) for true passkey behavior
+			ResidentKey: protocol.ResidentKeyRequirementRequired,
+
+			// This is the legacy field for older clients
+			RequireResidentKey: protocol.ResidentKeyRequired(),
+
+			// Require user verification (biometric/PIN)
+			UserVerification: protocol.VerificationRequired,
+		}),
+		// Optional: Exclude already registered credentials to prevent re-registration
+		webauthn.WithExclusions(exclusions),
+		// Use "none" attestation for better privacy and compatibility
+		webauthn.WithConveyancePreference(protocol.PreferNoAttestation),
+	)
 	if err != nil {
 		http.Error(w, "Failed to begin registration", http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5: Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5a Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
+	optionsJSON, _ := json.MarshalIndent(options, "", "  ")
+	log.Printf(debugTag+"BeginRegistration()5b Options being sent to client: %s", string(optionsJSON))
 
 	// Create token to send via email and store in the DB
 	tempEmailToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()6 ", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, WebAuthnEmailTokenName)
@@ -99,6 +141,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 
 // FinishRegistration handles the completion of the WebAuthn registration process
 func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
+	log.Printf(debugTag + "Handler.FinishRegistration()0: Processing registration response")
 	var sessionData webauthn.SessionData
 	var user *models.User //webauthn.User
 	var deviceName string
@@ -121,6 +164,10 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
 	user = poolItem.User                // Set the user data from the pool
 	deviceName = poolItem.DeviceName
+	userAgent := r.UserAgent()
+	if deviceName == "" {
+		deviceName = "Unknown device - " + userAgent
+	}
 
 	tempEmailToken, err := dbAuthTemplate.FindToken(debugTag, h.appConf.Db, WebAuthnEmailTokenName, tempEmailTokenStr)
 	if err != nil {
@@ -130,31 +177,31 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	// Check if the emailToken matches registrationToken
 	if tempEmailToken.UserID != user.ID {
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()2: Invalid token", "tempEmailToken =", tempEmailToken, "userID =", user.ID)
+		log.Printf("%v %v %v %v %v", debugTag+"Handler.FinishRegistration()3: Invalid token", "tempEmailToken =", tempEmailToken, "userID =", user.ID)
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
 	}
-	//log.Printf("%sHandler.FinishRegistration()2: token = %v, user = %+v, sessionData = %+v", debugTag, tempSessionToken.Value, poolItem.User, poolItem.SessionData)
+	log.Printf("%sHandler.FinishRegistration()4 token = %v, user = %+v, sessionData = %+v", debugTag, tempRegistrationToken.Value, poolItem.User, poolItem.SessionData)
 
 	credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)
 	if err != nil {
 		body, _ := io.ReadAll(r.Body)
 		log.Printf("FinishRegistration: challenge=%s", sessionData.Challenge)
-		log.Printf("%v Handler.FinishRegistration()3: FinishRegistration failed, err=%v, user=%+v, sessionData=%+v, r.Body=%s", debugTag, err, user, sessionData, string(body))
+		log.Printf("%v Handler.FinishRegistration()5: FinishRegistration failed, err=%v, user=%+v, sessionData=%+v, r.Body=%s", debugTag, err, user, sessionData, string(body))
 		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
 		return
 	}
 
 	// At this point the user is registered and the credential is created.
 	//saveUser to the database
-	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"Handler.FinishRegistration()4 ", h.appConf.Db, *user)
+	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, *user)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.FinishRegistration()5: Failed to save user", "err =", err, "record =", user, "userID =", userID)
+		log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.FinishRegistration()7: Failed to save user", "err =", err, "record =", user, "userID =", userID)
 		return
 	}
 
 	deviceMetadata := models.JSONBDeviceMetadata{
-		UserAgent:                   r.UserAgent(),
+		UserAgent:                   userAgent,
 		RegistrationTimestamp:       time.Now(),
 		LastSuccessfulAuthTimestamp: time.Now(),
 		UserAssignedDeviceName:      deviceName, // User-defined name for the device
@@ -172,22 +219,26 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		//Modified:       time.Now(),
 	}
 
-	deviceCredential, err := dbAuthTemplate.GetUserDeviceCredential(debugTag+"Handler.BeginRegistration()3a ", h.appConf.Db, user.ID, deviceName)
-	if err != nil {
-		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()3b: Failed to get existing device credential", "err =", err, "userDeviceRegistration =", userDeviceRegistration, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
-		_, err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()6 ", h.appConf.Db, userID, &webAuthnCredential)
+	deviceCredential, err := dbAuthTemplate.GetUserDeviceCredential(debugTag+"Handler.FinishRegistration()7a ", h.appConf.Db, user.ID, deviceName, userAgent)
+	switch {
+	case err == nil && deviceCredential != nil: // Existing credential found for this device
+		webAuthnCredential.ID = deviceCredential.ID // Ensure we set the ID so that the existing record is updated with the new credential data
+		err = dbAuthTemplate.UpdateCredential(debugTag+"Handler.FinishRegistration()7b ", h.appConf.Db, webAuthnCredential)
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7: Failed to save credential", "err =", err, "record =", webAuthnCredential)
+			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7c: Failed to update credential", "err =", err, "record =", webAuthnCredential)
 			return
 		}
-	} else {
-		// Update existing credential
-		webAuthnCredential.ID = deviceCredential.ID // Ensure we set the ID for the update
-		err = dbAuthTemplate.UpdateCredential(debugTag+"Handler.FinishRegistration()8 ", h.appConf.Db, webAuthnCredential)
+	case err == sql.ErrNoRows: // No existing credential for this device. This should only apply if the error is sql.ErrNoRows
+		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()8a: Failed to get existing device credential", "err =", err, "deviceName =", deviceName, "r.RemoteAddr =", r.RemoteAddr, "user =", user)
+		_, err = dbAuthTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()8b ", h.appConf.Db, userID, &webAuthnCredential)
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()9: Failed to update credential", "err =", err, "record =", webAuthnCredential)
+			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()6c: Failed to save credential", "err =", err, "record =", webAuthnCredential)
 			return
 		}
+	default: // Some other error occurred while trying to get the existing credential
+		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()9a: Failed to get existing device credential", "err =", err, "deviceName =", deviceName, "r.RemoteAddr =", r.RemoteAddr, "user =", user)
+		http.Error(w, "Failed to get existing device credential", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
