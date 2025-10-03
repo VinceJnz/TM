@@ -51,13 +51,15 @@ func decodeBase64URLToUint8Array(debugPrefix, b64 string) js.Value {
 		b64 = strings.ReplaceAll(b64, "-", "+")
 		b64 = strings.ReplaceAll(b64, "_", "/")
 
+		// You can use the 'decoded' byte slice directly in your Go code
+		// It's the equivalent of Uint8Array in JavaScript
 		decoded, err = base64.StdEncoding.DecodeString(b64)
 		if err != nil {
 			log.Printf(debugTag+"decodeBase64URLToUint8Array()3.%s Error decoding standard base64: %v", debugPrefix, err)
 			return js.Undefined()
 		}
 	}
-	log.Printf(debugTag+"decodeBase64URLToUint8Array()4.%s Decoded base64url to bytes: %v, decoded: %v", debugPrefix, len(decoded), decoded)
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()4.%s Decoded base64url to bytes: %v, decoded: (%s) %v", debugPrefix, len(decoded), decoded, decoded)
 
 	uint8Array := js.Global().Get("Uint8Array").New(len(decoded))
 	js.CopyBytesToJS(uint8Array, decoded)
@@ -65,7 +67,9 @@ func decodeBase64URLToUint8Array(debugPrefix, b64 string) js.Value {
 	// Verify it's actually a Uint8Array (for debugging)
 	isUint8Array := uint8Array.InstanceOf(js.Global().Get("Uint8Array"))
 	log.Printf(debugTag+"decodeBase64URLToUint8Array()5.%s Created Uint8Array, length=%d, isUint8Array=%v", debugPrefix, uint8Array.Get("length").Int(), isUint8Array)
-	log.Printf(debugTag+"decodeBase64URLToUint8Array()6.%s b64=%v, decoded=%s, uint8Array=%s", debugPrefix, b64, decoded, js.Global().Get("JSON").Call("stringify", uint8Array, js.Null(), 2).String())
+	//log.Printf(debugTag+"decodeBase64URLToUint8Array()6.%s b64=%v, decoded=%s, uint8Array=%s", debugPrefix, b64, decoded, js.Global().Get("JSON").Call("stringify", uint8Array, js.Null(), 2).String())
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()6.%s b64=%v, decoded=%s, uint8Array=%s", debugPrefix, b64, decoded, safeStringifyPublicKey(uint8Array))
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()7.%s Created Uint8Array, length=%d, hasBuffer=%v", debugPrefix, uint8Array.Length(), !uint8Array.Get("buffer").IsUndefined())
 
 	return uint8Array
 }

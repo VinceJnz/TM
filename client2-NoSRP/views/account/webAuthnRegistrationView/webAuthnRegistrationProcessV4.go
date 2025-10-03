@@ -2,6 +2,7 @@ package webAuthnRegistrationView
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"syscall/js"
 	"time"
@@ -10,6 +11,7 @@ import (
 // WebAuthnRegistration handles the registration process for WebAuthn
 // Firefox-compatible version that maintains user gesture context
 func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
+	log.Printf(debugTag+"WebAuthnRegistration()0 Starting WebAuthn registration. item: %+v", item)
 	// Marshal item to JSON
 	itemJSON, err := json.Marshal(item)
 	if err != nil {
@@ -26,8 +28,8 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		reject := args[1]
 
 		// Step 1: Fetch registration options
-		fetch := js.Global().Get("fetch")
-		respPromise := fetch.Invoke(ApiURL+"/register/begin/", map[string]any{
+		fetchOptions := js.Global().Get("fetch")
+		respPromiseOptions := fetchOptions.Invoke(ApiURL+"/register/begin/", map[string]any{
 			"method": "POST",
 			"body":   userData,
 			"headers": map[string]any{
@@ -36,9 +38,11 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		})
 
 		// Chain the promises properly
-		respPromise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		respPromiseOptions.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
 			resp := args[0]
-			log.Printf(debugTag+"WebAuthnRegistration()3a Received response from server: %v", js.Global().Get("JSON").Call("stringify", resp, js.Null(), 2).String())
+			//log.Printf(debugTag+"WebAuthnRegistration()3a Received response from server: %v", js.Global().Get("JSON").Call("stringify", resp, js.Null(), 2).String())
+			log.Printf(debugTag+"WebAuthnRegistration()3a Received response from server: %v", safeStringifyPublicKey(resp))
+
 			if !resp.Get("ok").Bool() {
 				status := resp.Get("status").Int()
 				log.Printf(debugTag+"WebAuthnRegistration()3b Server error: %d", status)
@@ -50,51 +54,72 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		})).Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
 			options := args[0]
 			publicKey := options.Get("publicKey")
-
-			log.Printf(debugTag+"WebAuthnRegistration()4 Received options from server: %s", js.Global().Get("JSON").Call("stringify", options, js.Null(), 2).String())
+			//log.Printf(debugTag+"WebAuthnRegistration()4a Received options from server: %s", js.Global().Get("JSON").Call("stringify", options, js.Null(), 2).String())
+			log.Printf(debugTag+"WebAuthnRegistration()4a Received response from server: %v", safeStringifyPublicKey(options))
 
 			// Step 2: Convert challenge and user.id from base64url to Uint8Array
 			//publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()5", publicKey.Get("challenge").String()))
 			challenge := publicKey.Get("challenge")
 			if challenge.Type() == js.TypeString {
-				publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()6", challenge.String()))
+				challengeUint8Array := decodeBase64URLToUint8Array("WebAuthnRegistration()4b", challenge.String())
+				arrayBuffer := challengeUint8Array.Get("buffer")
+				log.Printf(debugTag+"WebAuthnRegistration()4c Challenge is a string (%s), converting to Uint8Array: %v, arrayBuffer: %v", challenge.String(), challengeUint8Array.String(), arrayBuffer.String())
+				//publicKey.Set("challenge", challengeUint8Array)
+				publicKey.Set("challenge", arrayBuffer)
 			} else if challenge.InstanceOf(js.Global().Get("Uint8Array")) {
-				log.Printf(debugTag + "WebAuthnRegistration()6 Challenge is already Uint8Array")
+				log.Printf(debugTag+"WebAuthnRegistration()4d Challenge is already Uint8Array: %v", challenge.String())
+				arrayBuffer := challenge.Get("buffer")
+				publicKey.Set("challenge", arrayBuffer)
 			} else {
 				// It's an array-like object, convert it properly
+				log.Printf(debugTag+"WebAuthnRegistration()4e Challenge is array-like (%s), converting to Uint8Array", challenge.String())
 				length := challenge.Length()
 				uint8Array := js.Global().Get("Uint8Array").New(length)
 				for i := 0; i < length; i++ {
 					uint8Array.SetIndex(i, challenge.Index(i))
 				}
-				publicKey.Set("challenge", uint8Array)
+				//publicKey.Set("challenge", uint8Array)
+				arrayBuffer := uint8Array.Get("buffer")
+				publicKey.Set("challenge", arrayBuffer)
 			}
+			log.Printf(debugTag+"WebAuthnRegistration()4f Received response from server: %v", safeStringifyPublicKey(options))
 
 			// Same for user.id
 			//user := publicKey.Get("user")
-			//user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()6", user.Get("id").String()))
+			//user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()5a", user.Get("id").String()))
 			user := publicKey.Get("user")
 			userID := user.Get("id")
 			if userID.Type() == js.TypeString {
-				user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()7", userID.String()))
+				userIDUint8Array := decodeBase64URLToUint8Array("WebAuthnRegistration()5b", userID.String())
+				log.Printf(debugTag+"WebAuthnRegistration()5c UserID is a string (%s), converting to Uint8Array: %v", userID.String(), userIDUint8Array.String())
+				//user.Set("id", userIDUint8Array)
+				arrayBuffer := userIDUint8Array.Get("buffer")
+				user.Set("id", arrayBuffer)
+
 			} else if userID.InstanceOf(js.Global().Get("Uint8Array")) {
-				log.Printf(debugTag + "WebAuthnRegistration()8 User ID is already Uint8Array")
+				log.Printf(debugTag+"WebAuthnRegistration()5d User ID is already Uint8Array: %v", userID.String())
+				arrayBuffer := userID.Get("buffer")
+				user.Set("id", arrayBuffer)
 			} else {
 				// Convert array-like object to proper Uint8Array
+				log.Printf(debugTag+"WebAuthnRegistration()5e UserID is array-like (%s), converting to Uint8Array", userID.String())
 				length := userID.Length()
 				uint8Array := js.Global().Get("Uint8Array").New(length)
 				for i := 0; i < length; i++ {
 					uint8Array.SetIndex(i, userID.Index(i))
 				}
-				user.Set("id", uint8Array)
+				//user.Set("id", uint8Array)
+				arrayBuffer := uint8Array.Get("buffer")
+				user.Set("id", arrayBuffer)
 			}
 			displayName := item.Name + " (" + time.Now().Format("2006-01-02 15:04:05") + ")"
 			user.Set("displayName", displayName)
 			publicKey.Set("user", user)
 
 			// Debug: Log the publicKey object
-			log.Printf(debugTag+"WebAuthnRegistration()9 publicKey: %s",
-				js.Global().Get("JSON").Call("stringify", publicKey, js.Null(), 2).String())
+			//log.Printf(debugTag+"WebAuthnRegistration()9 publicKey: %s",
+			//	js.Global().Get("JSON").Call("stringify", publicKey, js.Null(), 2).String())
+			log.Printf(debugTag+"WebAuthnRegistration()5f publicKey (safe log): %s", safeStringifyPublicKey(publicKey))
 
 			// Ensure authenticatorSelection allows platform authenticators (passkeys)
 			authSelection := publicKey.Get("authenticatorSelection")
@@ -109,8 +134,9 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 			authSelection.Set("userVerification", "required")
 			publicKey.Set("authenticatorSelection", authSelection)
 
-			log.Printf(debugTag+"WebAuthnRegistration()10 Final publicKey options: %s",
-				js.Global().Get("JSON").Call("stringify", publicKey, js.Null(), 2).String())
+			//log.Printf(debugTag+"WebAuthnRegistration()10 Final publicKey options: %s",
+			//	js.Global().Get("JSON").Call("stringify", publicKey, js.Null(), 2).String())
+			log.Printf(debugTag+"WebAuthnRegistration()10 publicKey (safe log): %s", safeStringifyPublicKey(publicKey))
 
 			log.Printf(debugTag + "WebAuthnRegistration()11 Calling navigator.credentials.create()")
 
@@ -310,4 +336,22 @@ func ShowTokenDialog(onSubmit func(token string), onCancel func()) {
 		onCancel()
 		return nil
 	}))
+}
+
+func safeStringifyPublicKey(publicKey js.Value) string {
+	// Create a copy for safe stringification
+	safeCopy := js.Global().Get("Object").Call("assign", js.Global().Get("Object").New(), publicKey)
+
+	// Convert Uint8Arrays to descriptive strings for logging
+	if user := safeCopy.Get("user"); !user.IsUndefined() && !user.IsNull() {
+		if userID := user.Get("id"); !userID.IsUndefined() && !userID.IsNull() && userID.InstanceOf(js.Global().Get("Uint8Array")) {
+			user.Set("id", fmt.Sprintf("Uint8Array(%d bytes)", userID.Length()))
+		}
+	}
+
+	if challenge := safeCopy.Get("challenge"); !challenge.IsUndefined() && !challenge.IsNull() && challenge.InstanceOf(js.Global().Get("Uint8Array")) {
+		safeCopy.Set("challenge", fmt.Sprintf("Uint8Array(%d bytes)", challenge.Length()))
+	}
+
+	return js.Global().Get("JSON").Call("stringify", safeCopy, js.Null(), 2).String()
 }

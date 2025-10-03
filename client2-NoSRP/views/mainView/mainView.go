@@ -4,30 +4,8 @@ import (
 	"client2-NoSRP/v2/app/appCore"
 	"client2-NoSRP/v2/app/eventProcessor"
 	"client2-NoSRP/v2/app/httpProcessor"
-	"client2-NoSRP/v2/views/accessLevelView"
-	"client2-NoSRP/v2/views/accessTypeView"
 	"client2-NoSRP/v2/views/account/logoutView"
 	"client2-NoSRP/v2/views/account/webAuthnLoginView"
-	"client2-NoSRP/v2/views/account/webAuthnMgntView"
-	"client2-NoSRP/v2/views/bookingStatusView"
-	"client2-NoSRP/v2/views/bookingView"
-	"client2-NoSRP/v2/views/groupBookingView"
-	"client2-NoSRP/v2/views/myBookingsView"
-	"client2-NoSRP/v2/views/resourceView"
-	"client2-NoSRP/v2/views/seasonView"
-	"client2-NoSRP/v2/views/securityGroupResourceView"
-	"client2-NoSRP/v2/views/securityGroupView"
-	"client2-NoSRP/v2/views/securityUserGroupView"
-	"client2-NoSRP/v2/views/tripCostGroupView"
-	"client2-NoSRP/v2/views/tripDifficultyView"
-	"client2-NoSRP/v2/views/tripParticipantStatusReport"
-	"client2-NoSRP/v2/views/tripStatusView"
-	"client2-NoSRP/v2/views/tripTypeView"
-	"client2-NoSRP/v2/views/tripView"
-	"client2-NoSRP/v2/views/userAccountStatusView"
-	"client2-NoSRP/v2/views/userAgeGroupView"
-	"client2-NoSRP/v2/views/userMemberStatusView"
-	"client2-NoSRP/v2/views/userView"
 	"client2-NoSRP/v2/views/utils/viewHelpers"
 	"strings"
 	"syscall/js"
@@ -172,28 +150,30 @@ func (v *View) Setup() {
 	v.AddViewItem("Home", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("About", "", true, nil, true, false, v.elements.sidemenu)
 	v.AddViewItem("Contact", "", true, nil, true, false, v.elements.sidemenu)
-	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
-	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
-	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Trip Status", tripStatusView.ApiURL, true, tripStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Trip Type", tripTypeView.ApiURL, true, tripTypeView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Trip Participant", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
-	v.AddViewItem("Season", seasonView.ApiURL, true, seasonView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("User Member Status", userMemberStatusView.ApiURL, true, userMemberStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
-	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
-	v.AddViewItem("My Authn Devices", webAuthnMgntView.ApiURL, true, webAuthnMgntView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+	/*
+		v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+		v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+		v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Trip Status", tripStatusView.ApiURL, true, tripStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Trip Type", tripTypeView.ApiURL, true, tripTypeView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Trip Participant", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+		v.AddViewItem("Season", seasonView.ApiURL, true, seasonView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("User Member Status", userMemberStatusView.ApiURL, true, userMemberStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
+		v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+		v.AddViewItem("My Authn Devices", webAuthnMgntView.ApiURL, true, webAuthnMgntView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+	*/
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput = v.document.Call("createElement", "div")
