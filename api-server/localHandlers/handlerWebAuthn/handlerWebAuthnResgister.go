@@ -64,7 +64,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		// User is not webAuthn registered, so we can proceed with registration
 		log.Printf(debugTag+"Handler.BeginRegistration()4: user is not webAuthn registered, proceeding with webAuthn registration, user = %+v", user)
 		// Generate a temporary UUID for WebAuthnUserID (user handle). If registration is successful, this will be saved to the user record in the database.
-		user.WebAuthnUserID = []byte(dbAuthTemplate.GenerateSecureToken())
+		user.WebAuthnUserID = dbAuthTemplate.GenerateSecureTokenBytes()
 	}
 	// Begin the registration process for both new and existing users
 	log.Printf(debugTag+"Handler.BeginRegistration()5a: user = %+v", user)
