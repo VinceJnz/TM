@@ -9,7 +9,8 @@ import (
 func GenerateSecureToken() string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
-	return base64.URLEncoding.EncodeToString(bytes)
+	//return base64.URLEncoding.EncodeToString(bytes)
+	return base64.RawURLEncoding.EncodeToString(bytes)
 }
 
 // Generate cryptographically secure token
