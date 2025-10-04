@@ -112,7 +112,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()5a Failed to begin registration", "err =", err, "user =", user, "r.RemoteAddr =", r.RemoteAddr)
 		return
 	}
-	optionsJSON, _ := json.MarshalIndent(options, "", "  ")
+	optionsJSON, _ := json.MarshalIndent(options, "", "  ") // For logging/debugging purposes only
 	log.Printf(debugTag+"BeginRegistration()5b Options being sent to client: %s", string(optionsJSON))
 
 	// Create token to send via email and store in the DB
