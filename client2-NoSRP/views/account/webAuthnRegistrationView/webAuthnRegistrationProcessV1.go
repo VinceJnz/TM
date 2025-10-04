@@ -13,7 +13,7 @@ import (
 // WebAuthn Registration process
 //********************************************************************
 
-type WebAuthnAttestation struct {
+type WebAuthnAttestationV1 struct {
 	ID             string `json:"id"`
 	RawID          string `json:"rawId"`
 	Type           string `json:"type"`
@@ -33,7 +33,7 @@ type WebAuthnAttestation struct {
 // decodeBase64URLToUint8Array Decode base64 URL-encoded string to Uint8Array
 // This function replaces '-' with '+' and '_' with '/' to make it compatible with base64 decoding
 // It also pads the string with '=' if necessary to make its length a multiple of 4
-func decodeBase64URLToUint8Array(debugPrefix, b64 string) js.Value {
+func decodeBase64URLToUint8ArrayV1(debugPrefix, b64 string) js.Value {
 	log.Printf(debugTag+"decodeBase64URLToUint8Array()1.%s: %s", debugPrefix, b64)
 	b64init := b64 // Save the initial value for logging/debugging
 
@@ -79,7 +79,7 @@ func decodeBase64URLToUint8Array(debugPrefix, b64 string) js.Value {
 // 2. Convert challenge and user ID to the correct format for WebAuthn.
 // 3. Call browser WebAuthn API to create credentials.
 // 4. Send credentials back to server to finish registration.
-func (editor *ItemEditor) WebAuthnRegistration0(item TableData) {
+func (editor *ItemEditor) WebAuthnRegistrationV1(item TableData) {
 	go func() {
 		// 1. Fetch registration options from the server
 		fetch := js.Global().Get("fetch")

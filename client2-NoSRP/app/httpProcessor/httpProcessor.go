@@ -118,6 +118,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 			err = fmt.Errorf(debugTag+"NewRequest().MethodDelete.3 failed to create request: %w", err)
 			return err
 		}
+		req.Header.Set("Content-Type", "application/json")
 	case http.MethodGet:
 		log.Printf("%v %v %v", debugTag+"NewRequest() Get.1a ", "url =", url)
 		req, err = http.NewRequest(http.MethodGet, url, nil)
@@ -125,6 +126,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 			err = fmt.Errorf(debugTag+"NewRequest().MethodGet.1 failed to create request: %w", err)
 			return err
 		}
+		req.Header.Set("Content-Type", "application/json")
 	case http.MethodPut:
 		itemJSON, err := json.Marshal(txDataStru)
 		if err != nil {
@@ -156,9 +158,9 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 
 	//req.Header.Set("Authorization", "Bearer your_token_here")
 	req.Header.Set("Access-Control-Allow-Credentials", "true")
-	req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Content-Type", "application/json")
 	//req.Header.Set("Origin", "http://localhost:8081") // Set the Origin header
-	req.Header.Set("Origin", "https://localhost:8081") // Set the Origin header
+	req.Header.Set("Origin", "https://localhost:8081") // Set the Origin header ????
 
 	log.Printf("%v %v %+v %v %+v", debugTag+"NewRequest()4a ", "req =", req, "c.httpClient =", c.HTTPClient)
 

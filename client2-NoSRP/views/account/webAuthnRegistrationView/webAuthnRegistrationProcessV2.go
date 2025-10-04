@@ -12,7 +12,7 @@ import (
 // 2. Convert challenge and user ID to the correct format for WebAuthn.
 // 3. Call browser WebAuthn API to create credentials.
 // 4. Send credentials back to server to finish registration.
-func (editor *ItemEditor) WebAuthnRegistration1(item TableData) {
+func (editor *ItemEditor) WebAuthnRegistration2(item TableData) {
 	// CRITICAL: Don't wrap in go func() - this breaks the user gesture chain in Firefox
 
 	// 1. Fetch registration options from the server
