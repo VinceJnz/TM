@@ -28,7 +28,6 @@ import (
 func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	var user *models.User //webauthn.User
 	// Get the user details from the request
-	//
 	userDeviceRegistration, err := h.getDataFromRegistrationRequest(r)
 	if err != nil {
 		http.Error(w, "Failed to get data from request", http.StatusBadRequest)
