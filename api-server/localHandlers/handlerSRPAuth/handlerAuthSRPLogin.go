@@ -181,7 +181,7 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 
 	//Authentication successful
 	//Create and store a new cookie
-	sessionToken, err = h.createSessionToken(userID, r.RemoteAddr)
+	sessionToken, err = dbAuthTemplate.CreateSessionToken(debugTag, h.appConf.Db, userID, r.RemoteAddr, time.Time{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to create cookie"))
@@ -217,54 +217,3 @@ func (h *Handler) AuthCheckClientProof(w http.ResponseWriter, r *http.Request) {
 //		log.Printf(debugTag + "Handler.AuthCancel()1 ****** Auth timed out: Pool server deleted ********")
 //	}
 //}
-
-// createSessionToken store it in the DB and in the session struct and return *http.Token
-func (h *Handler) createSessionToken(userID int, host string) (*http.Cookie, error) {
-	var err error
-	//expiration := time.Now().Add(365 * 24 * time.Hour)
-	sessionToken := &http.Cookie{
-		Name:  "session",
-		Value: dbAuthTemplate.GenerateSecureToken(),
-		Path:  "/",
-		//Domain: "localhost",
-		//Expires:    time.Time{},
-		//RawExpires: "",
-		//MaxAge:     0,
-		//Secure:   false,
-		Secure:   true,  //https --> true,
-		HttpOnly: false, //https --> true, http --> false
-		SameSite: http.SameSiteNoneMode,
-		//SameSite: http.SameSiteLaxMode,
-		//SameSite: http.SameSiteStrictMode,
-		//Raw:        "",
-		//Unparsed:   []string{},
-	}
-	// Store the session cookie for the user in the database
-	tokenItem := models.Token{}
-	tokenItem.UserID = userID
-	tokenItem.Name.SetValid(sessionToken.Name)
-	tokenItem.Host.SetValid(host)
-	tokenItem.TokenStr.SetValid(sessionToken.Value)
-	tokenItem.Valid.SetValid(true)
-	tokenItem.ValidFrom.SetValid(time.Now())
-	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
-
-	//tokenItem.ID, err = h.TokenWriteQry(tokenItem)
-	tokenItem.ID, err = dbAuthTemplate.TokenWriteQry(debugTag+"Handler.createSessionToken()1 ", h.appConf.Db, tokenItem)
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-	} else {
-		//err = h.TokenCleanOld(tokenItem.ID)
-		err = dbAuthTemplate.TokenCleanOld(debugTag+"Handler.createSessionToken()2 ", h.appConf.Db, tokenItem.ID)
-		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-		}
-		//h.TokenCleanExpired()
-		dbAuthTemplate.TokenCleanExpired(debugTag+"Handler.createSessionToken()3 ", h.appConf.Db) // Clean expired tokens for the user
-		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()3: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-		}
-	}
-	log.Printf("%v %v %v %v %v %v %v %v %v", debugTag+"Handler.createSessionToken()4: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
-	return sessionToken, err
-}

@@ -70,7 +70,7 @@ func (h *Handler) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Carry this session token through the whole login session, consider using a seperate token for auth????????
-	tempSessionToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginLogin()6 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName)
+	tempSessionToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginLogin()6 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, WebAuthnSessionTokenName, time.Time{})
 	if err != nil {
 		log.Printf("%sHandler.BeginLogin()6 Error: err = %+v, WebAuthnSessionTokenName = %v, Host = %v", debugTag, err, WebAuthnSessionTokenName, h.appConf.Settings.Host)
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
@@ -163,7 +163,7 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) setUserAuthenticated(w http.ResponseWriter, r *http.Request, user *models.User) {
 	//Authentication successful
 	//Create and store a new cookie
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"Handler.AuthCheckClientProof()1 ", h.appConf.Db, user.ID, r.RemoteAddr)
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"Handler.AuthCheckClientProof()1 ", h.appConf.Db, user.ID, r.RemoteAddr, time.Time{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to create cookie"))

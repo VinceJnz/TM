@@ -346,76 +346,42 @@ func UserWriteQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, erro
 }
 
 // CreateSessionToken store it in the DB in the session struct and return *http.Cookie
-func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string) (*http.Cookie, error) {
+func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string, expiration time.Time) (*http.Cookie, error) {
 	var err error
-	//expiration := time.Now().Add(365 * 24 * time.Hour)
-	sessionToken := &http.Cookie{
-		Name:  "session",
-		Value: GenerateSecureToken(),
-		Path:  "/",
-		//Domain: "localhost",
-		//Expires:    time.Time{},
-		//RawExpires: "",
-		//MaxAge:     0,
-		//Secure:   false,
-		Secure:   true,  //https --> true,
-		HttpOnly: false, //https --> true, http --> false
-		SameSite: http.SameSiteNoneMode,
-		//SameSite: http.SameSiteLaxMode,
-		//SameSite: http.SameSiteStrictMode,
-		//Raw:        "",
-		//Unparsed:   []string{},
-	}
-	// Store the session cookie for the user in the database
-	tokenItem := models.Token{}
-	tokenItem.UserID = userID
-	tokenItem.Name.SetValid(sessionToken.Name)
-	tokenItem.Host.SetValid(host)
-	tokenItem.TokenStr.SetValid(sessionToken.Value)
-	tokenItem.SessionData.SetValid("")
-	tokenItem.Valid.SetValid(true)
-	tokenItem.ValidFrom.SetValid(time.Now())
-	tokenItem.ValidTo.SetValid(time.Now().Add(24 * time.Hour))
-
-	tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-	} else {
-		err = TokenCleanOld(debugStr, Db, tokenItem.ID)
-		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.createSessionToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
-		}
-	}
+	sessionToken, err := CreateNamedToken(debugStr, Db, true, userID, host, "session", expiration)
 	return sessionToken, err
 }
 
 // CreateNamedToken and return *http.Token, and store it in the DB if storeToken is true
-func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int, host, name string) (*http.Cookie, error) {
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies
+func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int, host, name string, expiration time.Time) (*http.Cookie, error) {
 	var err error
 	if name == "" {
 		name = "temp_session_token"
 	}
-	expiration := time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
+	if expiration.IsZero() {
+		expiration = time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
+	}
 	sessionToken := &http.Cookie{
 		Name:    name,
 		Value:   GenerateSecureToken(),
 		Path:    "/",
 		Domain:  host,
 		Expires: expiration,
-		Secure:  true, // Always true for HTTPS
 		//RawExpires: "",
 		//MaxAge:     0,
-		HttpOnly: false, //https --> true, http --> false
+		Secure:   true,  // A cookie with the Secure attribute is only sent to the server with an encrypted request over the HTTPS protocol
+		HttpOnly: false, //https --> true, http --> false // A cookie with the HttpOnly attribute can't be accessed by JavaScript
 		SameSite: http.SameSiteNoneMode,
 		//SameSite: http.SameSiteLaxMode,
-		//SameSite: http.SameSiteStrictMode,
+		//SameSite: http.SameSiteStrictMode, //Strict causes the browser to only send the cookie in response to requests originating from the cookie's origin site
 		//Raw:        "",
 		//Unparsed:   []string{},
 	}
 
+	tokenItem := models.Token{}
 	if storeToken {
 		// Store the session cookie for the user in the database
-		tokenItem := models.Token{}
 		tokenItem.UserID = userID
 		tokenItem.Name.SetValid(sessionToken.Name)
 		tokenItem.Host.SetValid(host)
@@ -427,13 +393,18 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 
 		tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.CreateNamedToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		} else {
 			err = TokenCleanOld(debugStr, Db, tokenItem.ID)
 			if err != nil {
-				log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.CreateNamedToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+			}
+			err = TokenCleanExpired(debugTag+"CreateNamedToken()3 ", Db) // Clean expired tokens for the user
+			if err != nil {
+				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken()4: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 			}
 		}
 	}
+	log.Printf("%v %v %v %v %v %v %v %v %v", debugTag+"CreateNamedToken()5: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
 	return sessionToken, err
 }
