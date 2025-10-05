@@ -359,15 +359,15 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 	if name == "" {
 		name = "temp_session_token"
 	}
-	if expiration.IsZero() {
-		expiration = time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
-	}
+	//if expiration.IsZero() {
+	//	expiration = time.Now().Add(3 * time.Minute) // Token valid for 3 minutes
+	//}
 	sessionToken := &http.Cookie{
 		Name:    name,
 		Value:   GenerateSecureToken(),
 		Path:    "/",
 		Domain:  host,
-		Expires: expiration,
+		Expires: expiration, // Session cookies — cookies without a Max-Age or Expires attribute – are deleted when the current session ends.
 		//RawExpires: "",
 		//MaxAge:     0,
 		Secure:   true,  // A cookie with the Secure attribute is only sent to the server with an encrypted request over the HTTPS protocol
