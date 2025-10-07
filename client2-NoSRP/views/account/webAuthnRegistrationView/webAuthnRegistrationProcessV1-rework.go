@@ -51,6 +51,7 @@ func decodeBase64URLToUint8Array(debugPrefix, b64 string) js.Value {
 
 	uint8Array := js.Global().Get("Uint8Array").New(len(decoded)) // Create a new Uint8Array of the correct length
 	js.CopyBytesToJS(uint8Array, decoded)                         // Copy the decoded bytes into the Uint8Array
+	log.Printf(debugTag+"decodeBase64URLToUint8Array()2.%s: %s", debugPrefix, uint8Array.String())
 
 	return uint8Array
 }
@@ -177,11 +178,11 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		return nil
 	})
 
-	// Handle the result of the credentials creation. This function is called when the credentials are created. (then2)
+	// 4. Handle the result of the credentials creation. This function is called when the credentials are created.
 	// Show the token dialog to get the emailed token from the user.
 	// Send the credentials to the server to finish the registration.
 	then3 := js.FuncOf(func(this js.Value, args []js.Value) any {
-		log.Printf(debugTag + "WebAuthnRegistration()10 Created credentials using WebAuthn API.")
+		log.Printf(debugTag + "WebAuthnRegistration()10 Retreive Created credentials")
 		cred := args[0]
 		js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any { // ????
 			ShowTokenDialog(
@@ -219,22 +220,72 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		return nil
 	})
 
-	// Handle the server response for parsing JSON registration options then call the browser API to create credentials
+	// 3. Handle the server response for parsing JSON registration options then call the browser API to create credentials
 	then2 := js.FuncOf(func(this js.Value, args []js.Value) any {
 		log.Printf(debugTag + "WebAuthnRegistration()5 Parsed JSON response for registration options.")
 		options := args[0]
 		publicKey := options.Get("publicKey")
+		LogOptions(options)
 
-		// 2. Convert challenge and user.id from base64url to Uint8Array, the correct format for WebAuthn
-		publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()6", publicKey.Get("challenge").String()))
+		// Convert challenge and user.id from base64url to Uint8Array, the correct format for WebAuthn
+		LogPublicKey(publicKey, "*******1")
+		publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()6.Challenge", publicKey.Get("challenge").String()))
 		user := publicKey.Get("user")
 		userID := user.Get("id").String()
-		log.Printf(debugTag+"WebAuthnRegistration()7a User ID before conversion: %s", userID)
-
-		user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()7", userID))
+		LogPublicKey(publicKey, "*******2")
+		user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()7,UserID", userID))
 		displayName := item.Name + " (" + time.Now().Format("2006-01-02 15:04:05") + ")"
 		user.Set("displayName", displayName) // <-- Add this line to set the nickname. If this is provided, browser shows it in UI and the existing credential is updated.
 		publicKey.Set("user", user)
+
+		//Firefox requirements - this works but insists on a usb key for firefox and chrome
+		//publicKey.Set("authenticatorSelection", map[string]any{
+		//	"authenticatorAttachment": "cross-platform",
+		//	"requireResidentKey":      false,
+		//	"residentKey":             "preferred",
+		//	"userVerification":        "preferred",
+		//})
+
+		//Firefox requirements - Fails on firefox. Works on chrome with an error in the browser log.
+		//publicKey.Set("authenticatorSelection", map[string]any{
+		//	//"authenticatorAttachment": "cross-platform",
+		//	"requireResidentKey": true,
+		//	"residentKey":        "required",
+		//	"userVerification":   "preferred",
+		//})
+
+		//Firefox requirements - Fails on firefox. Works on chrome with an error in the browser log.
+		//publicKey.Set("authenticatorSelection", map[string]any{
+		//	//"authenticatorAttachment": "cross-platform",
+		//	//"requireResidentKey": true,
+		//	"residentKey":      "preferred",
+		//	"userVerification": "preferred",
+		//})
+
+		//Firefox requirements - Fails on firefox. Works on chrome with an error in the browser log.
+		//publicKey.Set("authenticatorSelection", map[string]any{
+		//	//"authenticatorAttachment": "cross-platform",
+		//	"requireResidentKey": false,
+		//	"residentKey":        "preferred",
+		//	"userVerification":   "preferred",
+		//})
+
+		//Firefox requirements - Firefox The operation failed for an unknown transient reason
+		publicKey.Set("authenticatorSelection", map[string]any{
+			"authenticatorAttachment": "platform",
+			"requireResidentKey":      false,
+			"residentKey":             "discouraged",
+			"userVerification":        "preferred",
+		})
+
+		//Default settings - This works for chrome but not firefox
+		//publicKey.Set("authenticatorSelection", map[string]any{
+		//	"authenticatorAttachment": "platform",
+		//	"requireResidentKey":      true,
+		//	"residentKey":             "required",
+		//	"userVerification":        "required",
+		//})
+		LogPublicKey(publicKey, "*******3")
 
 		// ******************************** debug logging ********************************
 		log.Printf(debugTag+"WebAuthnRegistration()8a Converted Convert challenge and user.id from base64url to Uint8Array: displayName: %+v, user: %+v", displayName, user.String())
@@ -273,15 +324,22 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		}
 
 		// Add authenticator selection if not present
-		if publicKey.Get("authenticatorSelection").IsUndefined() {
-			log.Printf(debugTag + "WebAuthnRegistration()8i Setting authenticatorSelection to default values")
-			//authenticatorSelection := map[string]any{
-			//	"authenticatorAttachment": "cross-platform",
-			//	"residentKey":             "preferred", // Use 'residentKey' instead of 'requireResidentKey'
-			//	"userVerification":        "preferred",
-			//}
-			//publicKey.Set("authenticatorSelection", authenticatorSelection)
-		}
+		//if publicKey.Get("authenticatorSelection").IsUndefined() {
+		//	log.Printf(debugTag + "WebAuthnRegistration()8i Setting authenticatorSelection to default values")
+		//	authenticatorSelection := map[string]any{
+		//		"authenticatorAttachment": "cross-platform",
+		//		"residentKey":             "preferred", // Use 'residentKey' instead of 'requireResidentKey'
+		//		"userVerification":        "preferred",
+		//	}
+		//
+		//	firefoxCompatibleSelection := map[string]any{
+		//		"authenticatorAttachment": "cross-platform", // Allow both platform and cross-platform
+		//		"requireResidentKey":      false,            // Don't require resident keys
+		//		"residentKey":             "preferred",      // Prefer but don't require
+		//		"userVerification":        "preferred",      // Prefer but don't require
+		//	}
+		//	//publicKey.Set("authenticatorSelection", authenticatorSelection)
+		//}
 
 		if publicKey.Get("attestation").IsUndefined() {
 			log.Printf(debugTag + "WebAuthnRegistration()8j Setting attestation to none")
@@ -289,11 +347,10 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		}
 		// Also log the publicKey options that were used
 		//log.Printf(debugTag+"WebAuthnRegistration()8k Logging PublicKey options: %+v", safeStringifyPublicKey(publicKey))
-		log.Printf(debugTag+"WebAuthnRegistration()8k Logging PublicKey options: %+v", publicKey.String())
-
+		//log.Printf(debugTag+"WebAuthnRegistration()8k Logging PublicKey options: %+v", publicKey.String())
 		// ******************************** end debug logging ********************************
 
-		// 3. Call the browser WebAuthn API to create credentials
+		// Call the browser WebAuthn API to create credentials
 		credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
 			"publicKey": publicKey,
 		})
@@ -304,18 +361,18 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		//log.Printf(debugTag+"WebAuthnRegistration()9b Logging PublicKey options: %+v", safeStringifyPublicKey(publicKey))
 		// ******************************** end debug logging ********************************
 
-		credPromise.Call("then", then3).Call("catch", catch3)
+		credPromise.Call("then", then3).Call("catch", catch3) // Wait for created credentials to be returned, catch and deal with any errors.
 		return nil
 	})
 
-	// Receive the server response for registration options and send it to the browser to parse it as JSON
+	// 2. Receive the server response for registration options and send it to the browser to parse it as JSON
 	then1 := js.FuncOf(func(this js.Value, args []js.Value) any {
 		log.Printf(debugTag + "WebAuthnRegistration()4 Received response for registration options.")
 		resp := args[0]
 		// Parse the JSON body of the response
 		jsonPromise := resp.Call("json")
 
-		jsonPromise.Call("then", then2)
+		jsonPromise.Call("then", then2) // Wait for json response
 		return nil
 	})
 
@@ -343,6 +400,6 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 	})
 	log.Printf(debugTag + "WebAuthnRegistration()3 Sent registration begin request to server.")
 
-	respPromise.Call("then", then1)
+	respPromise.Call("then", then1) // Wait for response from server
 	//}()
 }
