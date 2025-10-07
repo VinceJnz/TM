@@ -3,7 +3,6 @@ package webAuthnRegistrationView
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"log"
 	"syscall/js"
 	"time"
@@ -19,24 +18,6 @@ type WebAuthnAttestation struct {
 	Type           string `json:"type"`
 	ClientDataJSON string `json:"clientDataJSON"`
 	AttestationObj string `json:"attestationObject"`
-}
-
-func safeStringifyPublicKey(publicKey js.Value) string {
-	// Create a copy for safe stringification
-	safeCopy := js.Global().Get("Object").Call("assign", js.Global().Get("Object").New(), publicKey)
-
-	// Convert Uint8Arrays to descriptive strings for logging
-	if user := safeCopy.Get("user"); !user.IsUndefined() && !user.IsNull() {
-		if userID := user.Get("id"); !userID.IsUndefined() && !userID.IsNull() && userID.InstanceOf(js.Global().Get("Uint8Array")) {
-			user.Set("id", fmt.Sprintf("Uint8Array(%d bytes)", userID.Length()))
-		}
-	}
-
-	if challenge := safeCopy.Get("challenge"); !challenge.IsUndefined() && !challenge.IsNull() && challenge.InstanceOf(js.Global().Get("Uint8Array")) {
-		safeCopy.Set("challenge", fmt.Sprintf("Uint8Array(%d bytes)", challenge.Length()))
-	}
-
-	return js.Global().Get("JSON").Call("stringify", safeCopy, js.Null(), 2).String()
 }
 
 // decodeBase64URLToUint8Array Decode base64 URL-encoded string to Uint8Array
@@ -232,7 +213,7 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		publicKey.Set("challenge", decodeBase64URLToUint8Array("WebAuthnRegistration()6.Challenge", publicKey.Get("challenge").String()))
 		user := publicKey.Get("user")
 		userID := user.Get("id").String()
-		LogPublicKey(publicKey, "*******2")
+		//LogPublicKey(publicKey, "*******2")
 		user.Set("id", decodeBase64URLToUint8Array("WebAuthnRegistration()7,UserID", userID))
 		displayName := item.Name + " (" + time.Now().Format("2006-01-02 15:04:05") + ")"
 		user.Set("displayName", displayName) // <-- Add this line to set the nickname. If this is provided, browser shows it in UI and the existing credential is updated.
@@ -287,79 +268,10 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		//})
 		LogPublicKey(publicKey, "*******3")
 
-		// ******************************** debug logging ********************************
-		log.Printf(debugTag+"WebAuthnRegistration()8a Converted Convert challenge and user.id from base64url to Uint8Array: displayName: %+v, user: %+v", displayName, user.String())
-		// Ensure these critical fields are present for Firefox
-		if publicKey.Get("rp").IsUndefined() {
-			log.Printf(debugTag + "WebAuthnRegistration()8b ERROR: Missing required 'rp' field")
-			return nil
-		} //else {
-		//	rp := publicKey.Get("rp")
-		//	log.Printf(debugTag+"WebAuthnRegistration()8c RP info - id: %s, name: %s", rp.Get("id").String(), rp.Get("name").String())
-		//}
-
-		if publicKey.Get("pubKeyCredParams").IsUndefined() {
-			log.Printf(debugTag + "WebAuthnRegistration()8d ERROR: Missing required 'pubKeyCredParams' field")
-			return nil
-		} // else {
-		//	// Log the supported algorithms
-		//	params := publicKey.Get("pubKeyCredParams")
-		//	length := params.Length()
-		//	log.Printf(debugTag+"WebAuthnRegistration()8e pubKeyCredParams count: %d", length)
-		//	for i := 0; i < length; i++ {
-		//		param := params.Index(i)
-		//		log.Printf(debugTag+"WebAuthnRegistration()8f Algorithm %d: type=%s, alg=%v",
-		//			i, param.Get("type").String(), param.Get("alg").Int())
-		//	}
-		//}
-
-		// Add timeout (Firefox often needs this)
-		if publicKey.Get("timeout").IsUndefined() {
-			log.Printf(debugTag + "WebAuthnRegistration()8g ERROR: Missing required 'timeout' field")
-			publicKey.Set("timeout", 120000) // 120 seconds
-		}
-		if publicKey.Get("pubKeyCredParams").IsUndefined() {
-			log.Printf(debugTag + "WebAuthnRegistration()8h ERROR: Missing required 'pubKeyCredParams' field")
-			return nil
-		}
-
-		// Add authenticator selection if not present
-		//if publicKey.Get("authenticatorSelection").IsUndefined() {
-		//	log.Printf(debugTag + "WebAuthnRegistration()8i Setting authenticatorSelection to default values")
-		//	authenticatorSelection := map[string]any{
-		//		"authenticatorAttachment": "cross-platform",
-		//		"residentKey":             "preferred", // Use 'residentKey' instead of 'requireResidentKey'
-		//		"userVerification":        "preferred",
-		//	}
-		//
-		//	firefoxCompatibleSelection := map[string]any{
-		//		"authenticatorAttachment": "cross-platform", // Allow both platform and cross-platform
-		//		"requireResidentKey":      false,            // Don't require resident keys
-		//		"residentKey":             "preferred",      // Prefer but don't require
-		//		"userVerification":        "preferred",      // Prefer but don't require
-		//	}
-		//	//publicKey.Set("authenticatorSelection", authenticatorSelection)
-		//}
-
-		if publicKey.Get("attestation").IsUndefined() {
-			log.Printf(debugTag + "WebAuthnRegistration()8j Setting attestation to none")
-			//publicKey.Set("attestation", "none")
-		}
-		// Also log the publicKey options that were used
-		//log.Printf(debugTag+"WebAuthnRegistration()8k Logging PublicKey options: %+v", safeStringifyPublicKey(publicKey))
-		//log.Printf(debugTag+"WebAuthnRegistration()8k Logging PublicKey options: %+v", publicKey.String())
-		// ******************************** end debug logging ********************************
-
 		// Call the browser WebAuthn API to create credentials
 		credPromise := js.Global().Get("navigator").Get("credentials").Call("create", map[string]any{
 			"publicKey": publicKey,
 		})
-
-		// ******************************** debug logging ********************************
-		log.Printf(debugTag+"WebAuthnRegistration()9a Called WebAuthn API to create credentials. credPromise: %+v, displayName: %+v", credPromise, displayName)
-		// Also log the publicKey options that were used
-		//log.Printf(debugTag+"WebAuthnRegistration()9b Logging PublicKey options: %+v", safeStringifyPublicKey(publicKey))
-		// ******************************** end debug logging ********************************
 
 		credPromise.Call("then", then3).Call("catch", catch3) // Wait for created credentials to be returned, catch and deal with any errors.
 		return nil
