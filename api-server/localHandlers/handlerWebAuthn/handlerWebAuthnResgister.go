@@ -51,13 +51,6 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()3: Passed check for existing user", "err =", err, "userDeviceRegistration =", userDeviceRegistration, "r.RemoteAddr =", r.RemoteAddr, "existingUser =", existingUser)
 		user = &existingUser // User is already registered and wants to register (or re-register) a device
 	}
-	//if existingUser.ID != 0 { // If the user already exists in the database
-	//	// User is already registered and wants to register (or re-register) a device
-	//	log.Printf(debugTag+"Handler.BeginRegistration()3: user is already registered and is registering an additional device, user = %+v, existingUser = %+v", user, existingUser)
-	//	user = &existingUser
-	//} else {
-	//	user = userDeviceRegistration.User() // Create a new user record
-	//}
 
 	if len(user.WebAuthnUserID) == 0 {
 		// User is not webAuthn registered, so we can proceed with registration
@@ -67,7 +60,6 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	// Begin the registration process for both new and existing users
 	log.Printf(debugTag+"Handler.BeginRegistration()5a: user = %+v", user)
-	//options, sessionData, err := h.webAuthn.BeginRegistration(user)
 
 	// ========================================================================
 	// CRITICAL: Configure for Passkeys (Platform Authenticators)
@@ -114,7 +106,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	optionsJSON, _ := json.MarshalIndent(options, "", "  ") // For logging/debugging purposes only
 	log.Printf(debugTag+"BeginRegistration()5b Options being sent to client: %s", string(optionsJSON))
 
-	// Create token to send via email and store in the DB
+	// Create token to send via email. Store in the DB
 	tempEmailToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()6 ", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, WebAuthnEmailTokenName, time.Now().Add(3*time.Minute))
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
@@ -132,7 +124,7 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	h.Pool.Add(tempRegistrationToken.Value, user, sessionData, userDeviceRegistration.DeviceName, 5*time.Minute) // Assuming you have a pool to manage session data
 
-	// add the session token to the response and send the RegistrationOptions to the client
+	// Add the session token to the response and send the RegistrationOptions to the client
 	http.SetCookie(w, tempRegistrationToken)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(options)
@@ -161,7 +153,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
-	user = poolItem.User                // Set the user data from the pool
+	user = poolItem.User                // Retrieve the user data from the pool
 	deviceName = poolItem.DeviceName
 	userAgent := r.UserAgent()
 	if deviceName == "" {

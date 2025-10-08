@@ -94,8 +94,6 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	var sessionData webauthn.SessionData
 	var user *models.User //webauthn.User
 
-	//t := r.GetBody // For client requests to make a copy of the io reader.
-
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
@@ -122,13 +120,6 @@ func (h *Handler) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	sessionData = *poolItem.SessionData // Retrieve session data from the pool
 	user = poolItem.User                // Set the user data from the pool
 
-	// Fetch the users webAuthn credentials from the database
-	//user.Credentials, err = dbAuthTemplate.GetUserCredentials(debugTag+"Handler.FinishLogin()3 ", h.appConf.Db, user.ID)
-	//if err != nil {
-	//	log.Printf("%sHandler.FinishLogin()4: Failed to fetch user credentials, err = %+v, user = %+v", debugTag, err, user)
-	//	http.Error(w, "Failed to fetch user credentials", http.StatusInternalServerError)
-	//	return
-	//}
 	if len(user.Credentials) == 0 {
 		log.Printf("%sHandler.FinishLogin()5: No credentials found for user %d", debugTag, user.ID)
 		http.Error(w, "No credentials found for user", http.StatusForbidden)
