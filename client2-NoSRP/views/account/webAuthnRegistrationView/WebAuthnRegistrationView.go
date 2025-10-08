@@ -229,6 +229,9 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.DeviceName, editor.UiComponents.DeviceName = viewHelpers.StringEdit(editor.CurrentRecord.DeviceName, editor.document, "Device Name", "text", "regItemDeviceName")
 	editor.UiComponents.DeviceName.Call("setAttribute", "required", "true")
 
+	localObjs.DeviceName, editor.UiComponents.DeviceName = viewHelpers.StringEdit(editor.CurrentRecord.DeviceName, editor.document, "Device Name", "text", "regItemDeviceName")
+	editor.UiComponents.DeviceName.Call("setAttribute", "required", "true")
+
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
