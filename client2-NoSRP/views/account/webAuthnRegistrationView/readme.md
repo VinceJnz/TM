@@ -325,7 +325,7 @@ Would you like help inspecting a specific snippet of your code (e.g., your `User
 
 
 
-## Client code explanation notes from deekseek
+## Client code explanation notes from deepseek
 
 This Go code is part of a WebAssembly (Wasm) client that implements the WebAuthn registration flow. It interacts with JavaScript APIs from Go using the syscall/js package. Here's a step-by-step explanation:
 
@@ -425,6 +425,11 @@ This is a typical pattern for WebAuthn in Wasm, where Go manages the flow but de
 
 
 ## Firefox webAuthn requirements
+
+*****************************************************************************
+For firefox to work with soft passkeys, Windows hello need to be enabled.
+This is also required for Edge.
+*****************************************************************************
 
 ```log
 2025/10/03 12:24:29 webAuthnRegisterView.WebAuthnRegistration()11 Calling navigator.credentials.create() 

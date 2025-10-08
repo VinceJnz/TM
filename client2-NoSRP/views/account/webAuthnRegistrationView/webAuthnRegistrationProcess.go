@@ -197,7 +197,9 @@ func (editor *ItemEditor) WebAuthnRegistration(item TableData) {
 		errMsg := err.Get("message").String()
 		errName := err.Get("name").String()
 		log.Printf(debugTag+"WebAuthnRegistration()12a ERROR creating credentials: %s: %s", errName, errMsg)
-
+		if errMsg == "UnknownError" && errName == "The operation failed for an unknown transient reason" {
+			// Need to try an alternative registration mechanism ??????????????????????
+		}
 		return nil
 	})
 
