@@ -8,7 +8,6 @@ import (
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"time"
@@ -69,6 +68,18 @@ func (h *Handler) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	// need some more code in here...
 	//
 
+	sessionData := &models.BffSessionData{
+		Challenge: "",
+	}
+
+	tempRegistrationToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()7 ", h.appConf.Db, false, user.ID, h.appConf.Settings.Host, BFFSessionTokenName, time.Now().Add(3*time.Minute))
+	if err != nil {
+		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
+		log.Printf("%v %v %v %v %v %v %v", debugTag+"Handler.BeginRegistration()8: Failed to create session token", "err =", err, "BffSessionTokenName =", BFFSessionTokenName, "host =", h.appConf.Settings.Host)
+		return
+	}
+	h.Pool.Add(tempRegistrationToken.Value, user, sessionData, userDeviceRegistration.DeviceName, 5*time.Minute) // Assuming you have a pool to manage session data
+
 	tempEmailToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"Handler.BeginRegistration()6 ", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, BFFEmailTokenName, time.Now().Add(3*time.Minute))
 	if err != nil {
 		http.Error(w, "Failed to create session token", http.StatusInternalServerError)
@@ -119,16 +130,16 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
 	}
-	log.Printf("%sHandler.FinishRegistration()4 token = %v, user = %+v, sessionData = %+v", debugTag, tempRegistrationToken.Value, poolItem.User, poolItem.SessionData)
+	log.Printf("%sHandler.FinishRegistration()4 token = %v, user = %+v, sessionData = %+v, %+v", debugTag, tempRegistrationToken.Value, poolItem.User, poolItem.SessionData, sessionData)
 
 	//credential, err := h.webAuthn.FinishRegistration(user, sessionData, r)
-	if err != nil {
-		body, _ := io.ReadAll(r.Body)
-		log.Printf("FinishRegistration: challenge=%s", sessionData.Challenge)
-		log.Printf("%v Handler.FinishRegistration()5: FinishRegistration failed, err=%v, user=%+v, sessionData=%+v, r.Body=%s", debugTag, err, user, sessionData, string(body))
-		http.Error(w, "Failed to finish registration", http.StatusBadRequest)
-		return
-	}
+	//if err != nil {
+	//	body, _ := io.ReadAll(r.Body)
+	//	log.Printf("FinishRegistration: challenge=%s", sessionData.Challenge)
+	//	log.Printf("%v Handler.FinishRegistration()5: FinishRegistration failed, err=%v, user=%+v, sessionData=%+v, r.Body=%s", debugTag, err, user, sessionData, string(body))
+	//	http.Error(w, "Failed to finish registration", http.StatusBadRequest)
+	//	return
+	//}
 
 	// At this point the user is registered and the credential is created.
 	//saveUser to the database
