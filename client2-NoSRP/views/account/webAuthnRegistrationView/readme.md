@@ -163,10 +163,10 @@ Example response:
 ### Summary Table
 
 | Step | Who	            | Action           	    | Data Exchanged                                                |
-|---   |---               |---                    |---                                                            |
-| 1	   | Client → Server  | Begin login	          | Username (or user reference)                                  |
-| 2	   | Server → Client  | Send login options    | PublicKeyCredentialRequestOptions + temp session token/cookie |
-| 3	   | Client (browser) | Call WebAuthn API     | -                                                             |
+|---   |---               |---                      |---                                                            |
+| 1	   | Client → Server  | Begin login	            | Username (or user reference)                                  |
+| 2	   | Server → Client  | Send login options      | PublicKeyCredentialRequestOptions + temp session token/cookie |
+| 3	   | Client (browser) | Call WebAuthn API       | -                                                             |
 | 4	   | Client → Server  | Finish login	        | Assertion response (+ temp session token/cookie)              |
 | 5	   | Server           | Verify & authenticate	| Issues session/auth token (cookie/JWT)                        |
 
