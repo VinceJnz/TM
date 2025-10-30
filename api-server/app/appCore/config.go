@@ -2,6 +2,7 @@ package appCore
 
 import (
 	"api-server/v2/app/gateways/gmail"
+	"api-server/v2/app/gateways/stripe"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -16,9 +17,9 @@ func GenerateSessionIDContextKey() ContextKey { // User for generating the conte
 }
 
 type Config struct {
-	Db       *sqlx.DB
-	EmailSvc *gmail.Gateway
-	//PaymentSvc   *stripeGW.Handler
+	Db           *sqlx.DB
+	EmailSvc     *gmail.Gateway
+	PaymentSvc   *stripe.Gateway
 	SessionIDKey ContextKey // User for passing the user id value via the context (ctx)
 	Settings     settings
 	TestMode     bool
@@ -29,7 +30,7 @@ func New(testMode bool) *Config {
 	return &Config{
 		Db:       &sqlx.DB{},
 		EmailSvc: &gmail.Gateway{},
-		//PaymentSvc:   &stripeGW.Handler{},
+		//PaymentSvc:   &stripe.Gateway{},
 		SessionIDKey: sessionIDKey,
 		TestMode:     testMode,
 	}
@@ -50,8 +51,8 @@ func (c *Config) Run() {
 	c.EmailSvc = gmail.New(c.Settings.EmailSecret, c.Settings.EmailToken, c.Settings.EmailAddr)
 
 	// Start the payment service
-	//paymentSvc := stripeGW.New(a.Db, a.WsPool, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
-	//paymentSvc := stripeGW.New(a.Db, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
+	//paymentSvc := stripe.New(a.Db, a.WsPool, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
+	//paymentSvc := stripe.New(a.Db, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
 	//go c.PaymentSvc.Start()
 }
 

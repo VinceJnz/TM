@@ -1,7 +1,6 @@
 package stripe
 
 import (
-	"api-server/v2/app/appCore"
 	"encoding/json"
 	"log"
 	"os"
@@ -29,16 +28,17 @@ type Charge struct {
 }
 
 type Gateway struct {
-	appConf    *appCore.Config
+	//appConf    *appCore.Config
 	PaymentSvc *client.API
 	domain     string
 }
 
-func New(appConf *appCore.Config, keyFile, domain string) *Gateway {
+// func New(appConf *appCore.Config, keyFile, domain string) *Gateway {
+func New(keyFile, domain string) *Gateway {
 	return &Gateway{
 		PaymentSvc: client.New(KeyFromFile(keyFile), nil),
 		domain:     domain,
-		appConf:    appConf,
+		//appConf:    appConf,
 	}
 }
 
