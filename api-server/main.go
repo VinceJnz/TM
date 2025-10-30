@@ -62,6 +62,13 @@ func main() {
 	subR1.HandleFunc("/srpAuth/reset/{token}/token/", SRPauth.AuthUpdate).Methods("Post")
 	//subR1.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
 
+	// OAuth Google handlers
+	//oauthHandler := oAuthGateway.New(app)
+	//subR1.HandleFunc("/oauth/google/login", oauthHandler.LoginHandler).Methods("GET")
+	//subR1.HandleFunc("/oauth/google/callback", oauthHandler.CallbackHandler).Methods("GET")
+	//subR1.HandleFunc("/oauth/google/logout", oauthHandler.LogoutHandler).Methods("GET")
+	//subR1.HandleFunc("/oauth/google/me", oauthHandler.MeHandler).Methods("GET")
+
 	// WebAuthn handlers
 	WebAuthn := handlerWebAuthn.New(app)
 	subR1.HandleFunc("/webauthn/register/begin/", WebAuthn.BeginRegistration).Methods("POST")
