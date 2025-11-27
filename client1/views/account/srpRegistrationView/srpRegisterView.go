@@ -6,7 +6,6 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
-	"math/big"
 	"net/http"
 	"syscall/js"
 	"time"
@@ -57,7 +56,7 @@ type TableData struct {
 	UserStatusID    int       `json:"user_status_id"`
 	Password        string    `json:"user_password"` //This will probably not be used (see: salt, verifier)
 	Salt            []byte    `json:"salt"`
-	Verifier        *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
+	Verifier        []byte    `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode() //	Verifier        *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
 	AccountStatusID int       `json:"user_account_status_id"`
 	Created         time.Time `json:"created"`
 	Modified        time.Time `json:"modified"`

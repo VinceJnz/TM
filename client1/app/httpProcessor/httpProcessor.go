@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/http/cookiejar"
 	"time"
 )
 
@@ -32,13 +31,13 @@ type ReturnData struct {
 
 func New(baseURL string) *Client {
 	// Create a cookie jar
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		log.Fatalf(debugTag+"New() Error creating cookie jar: %v", err)
-	}
+	//jar, err := cookiejar.New(nil)
+	//if err != nil {
+	//	log.Fatalf(debugTag+"New() Error creating cookie jar: %v", err)
+	//}
 
 	httpClient := &http.Client{
-		Jar: jar,
+		//Jar: jar,
 		//Timeout: time.Minute,
 		Timeout: 5 * time.Second,
 		//Transport: &http.Transport{

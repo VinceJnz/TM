@@ -4,6 +4,7 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
@@ -96,11 +97,28 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	// The server will get A (clients ephemeral public key) from the client
 	// which the server will set using SetOthersPublic
 
-	// Server MUST check error status here as defense against
-	// a malicious A sent by client.
-	A.UnmarshalText([]byte(strA))
+	//A.UnmarshalText([]byte(strA))
+
+	// Decode A from base64url (expecting base64url without padding)
+	decodedA, err := base64.RawURLEncoding.DecodeString(strA)
+	if err != nil {
+		// Try with StdEncoding as a fallback if input has padding (robustness)
+		decodedAStd, err2 := base64.StdEncoding.DecodeString(strA)
+		if err2 != nil {
+			log.Printf(debugTag+"Handler.AuthGetKeyB()7 Invalid client A (base64) %v", err)
+			http.Error(w, "invalid client public key", http.StatusBadRequest)
+			return
+		}
+		decodedA = decodedAStd
+	}
+
+	// Set big.Int A from decoded bytes (big-endian)
+	A.SetBytes(decodedA)
+
+	// Server MUST check error status here as defense against a malicious A sent by client.
 	if err = server.SetOthersPublic(A); err != nil {
 		log.Printf(debugTag+"Handler.AuthGetKeyB()7 Fatal: getting client key: %s\n", err)
+		http.Error(w, "invalid client public key", http.StatusBadRequest)
 		return
 	}
 
@@ -108,6 +126,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	// The key needs to be sent to the client and the client sets it as others public key.
 	if ServerVerify.B = server.EphemeralPublic(); ServerVerify.B == nil {
 		log.Printf(debugTag + "Handler.AuthGetKeyB()8 server couldn't make B")
+		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -115,6 +134,7 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	serverKey, err := server.Key()
 	if err != nil || serverKey == nil {
 		log.Printf(debugTag+"Handler.AuthGetKeyB()9 Fatal: something went wrong making server key: %s\n", err)
+		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -122,13 +142,34 @@ func (h *Handler) AuthGetKeyB(w http.ResponseWriter, r *http.Request) {
 	ServerVerify.Proof, err = server.M(user.Salt, user.Username)
 	if err != nil {
 		log.Fatalf(debugTag+"Handler.AuthGetKeyB()10 Fatal: something went wrong making server proof: %s\n", err)
+		http.Error(w, "server error", http.StatusInternalServerError)
 		return
+	}
+
+	// Prepare JSON response with base64url (no padding) encoded fields
+	type serverVerifyResponse struct {
+		B     string `json:"B"`
+		Proof string `json:"proof"`
+		Token string `json:"token"`
+	}
+
+	resp := serverVerifyResponse{
+		B:     base64.RawURLEncoding.EncodeToString(ServerVerify.B.Bytes()),
+		Proof: base64.RawURLEncoding.EncodeToString(ServerVerify.Proof),
+		Token: ServerVerify.Token,
 	}
 
 	log.Printf(debugTag+"Handler.AuthGetKeyB()11: err=%v, user=%+v, group=%v, ServerVerify=%+v, strA=%+v, A=%v\n", err, user, group, ServerVerify, strA, A)
 
 	//server publicKey(B), Proof and a Token is sent to client
-	json.NewEncoder(w).Encode(ServerVerify)
+	//json.NewEncoder(w).Encode(ServerVerify)
+	//json.NewEncoder(w).Encode(resp)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf(debugTag+"Handler.AuthGetKeyB()11 encode response failed: %v", err)
+		http.Error(w, "server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // AuthCheckClientProof (step3) checks the client proof against the server's stored info

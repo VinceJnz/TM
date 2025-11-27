@@ -14,13 +14,13 @@ import "math/big"
 //ServerVerify contains the verify info sent from the server
 type ServerVerify struct {
 	B     *big.Int `json:"B"`
-	Proof []byte   `json:"Proof"`
+	Proof string   `json:"Proof"`
 	Token string   `json:"Token"`
 }
 
 //ClientVerify contains the clinet SRP verify info and is sent to the server
 type ClientVerify struct {
 	UserName string `json:"UserName"`
-	Proof    []byte `json:"Proof"`
+	Proof    string `json:"Proof"`
 	Token    string `json:"Token"`
 }
