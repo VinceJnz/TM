@@ -40,7 +40,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/auth"
+const ApiURL = "/webauthn"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {

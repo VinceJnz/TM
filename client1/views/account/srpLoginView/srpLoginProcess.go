@@ -178,7 +178,7 @@ func (editor *ItemEditor) getSalt(username string) {
 
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
-			log.Printf("%v LogonForm.getSalt() error: %v, username=%s", debugTag, err, username)
+			log.Printf("%vgetSalt() error: %v, username=%s", debugTag, err, username)
 			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 			return
 		}
@@ -187,7 +187,7 @@ func (editor *ItemEditor) getSalt(username string) {
 	}
 
 	fail := func(err error, data *httpProcessor.ReturnData) {
-		log.Printf("%v LogonForm.getSalt() fail: %v, username=%s", debugTag, err, username)
+		log.Printf("%vgetSalt() fail: %v, username=%s", debugTag, err, username)
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 	}
 
@@ -204,7 +204,7 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
-			log.Printf("%v getServerVerify success callback error: %v", debugTag, err)
+			log.Printf("%vgetServerVerify() success callback error: %v", debugTag, err)
 			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 			return
 		}
@@ -215,7 +215,7 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 		// Call JS to compute client proof and verify server proof
 		jsFn := js.Global().Get("srpComputeClientProof")
 		if jsFn.IsUndefined() || jsFn.IsNull() {
-			log.Printf("%v srpComputeClientProof JS function not found", debugTag)
+			log.Printf("%vgetServerVerify() srpComputeClientProof JS function not found", debugTag)
 			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed (client SRP not available)"})
 			return
 		}
@@ -223,7 +223,7 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 		// Invoke JS: (username, password, saltB64, B_b64, serverProof_b64)
 		res := jsFn.Invoke(username, password, saltB64, ServerVerifyRecord.B, ServerVerifyRecord.Proof)
 		if res.IsUndefined() || res.IsNull() {
-			log.Printf("%v srpComputeClientProof returned null", debugTag)
+			log.Printf("%vgetServerVerify() srpComputeClientProof returned null", debugTag)
 			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed (SRP computation error)"})
 			return
 		}
@@ -231,7 +231,7 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 		clientProof := res.Get("proof").String()
 		validServer := res.Get("validServer").Bool()
 		if !validServer {
-			log.Printf("%v srp: server proof invalid", debugTag)
+			log.Printf("%vgetServerVerify() srp: server proof invalid", debugTag)
 			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed (bad server proof)"})
 			return
 		}
@@ -245,14 +245,14 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 		// send client proof to server
 		doneSuccess := func(err error, data *httpProcessor.ReturnData) {
 			if err != nil {
-				log.Printf("%v send proof success callback error: %v", debugTag, err)
+				log.Printf("%vgetServerVerify() send proof success callback error: %v", debugTag, err)
 				editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 				return
 			}
 			editor.loginComplete(username)
 		}
 		doneFail := func(err error, data *httpProcessor.ReturnData) {
-			log.Printf("%v send proof fail: %v", debugTag, err)
+			log.Printf("%vgetServerVerify() send proof fail: %v", debugTag, err)
 			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 		}
 
@@ -264,7 +264,7 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 	}
 
 	fail := func(err error, data *httpProcessor.ReturnData) {
-		log.Printf("%v getServerVerify fail: %v", debugTag, err)
+		log.Printf("%vgetServerVerify() fail: %v", debugTag, err)
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
 	}
 
@@ -272,13 +272,13 @@ func (editor *ItemEditor) getServerVerify(username string, password string, salt
 	saltB64 := encodeBase64URL(salt)
 	jsA := js.Global().Get("srpComputeA")
 	if jsA.IsUndefined() || jsA.IsNull() {
-		log.Printf("%v srpComputeA JS function not found", debugTag)
+		log.Printf("%vgetServerVerify() srpComputeA JS function not found", debugTag)
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed (client SRP not available)"})
 		return
 	}
 	A_b64 := jsA.Invoke(username, password, saltB64).String()
 	if A_b64 == "" {
-		log.Printf("%v srpComputeA returned empty A", debugTag)
+		log.Printf("%vgetServerVerify() srpComputeA returned empty A", debugTag)
 		editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed (SRP computation error)"})
 		return
 	}

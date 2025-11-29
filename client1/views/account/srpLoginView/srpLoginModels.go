@@ -1,7 +1,5 @@
 package srpLoginView
 
-import "math/big"
-
 //SrpItem contains the user SRP info
 //type SrpItem struct {
 //	Salt     []byte   `json:"Salt"`     //Not user editable
@@ -13,9 +11,10 @@ import "math/big"
 
 //ServerVerify contains the verify info sent from the server
 type ServerVerify struct {
-	B     *big.Int `json:"B"`
-	Proof string   `json:"Proof"`
-	Token string   `json:"Token"`
+	//B     *big.Int `json:"B"`
+	B     string `json:"B"`
+	Proof string `json:"Proof"`
+	Token string `json:"Token"`
 }
 
 //ClientVerify contains the clinet SRP verify info and is sent to the server
