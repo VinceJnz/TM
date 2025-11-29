@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
+	"syscall/js"
 	"time"
 )
 
@@ -157,7 +159,8 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 	//req.Header.Set("Origin", "http://localhost:8081") // Set the Origin header
 	req.Header.Set("Origin", "https://localhost:8081") // Set the Origin header
 
-	res, err = c.HTTPClient.Do(req) // This is the call to send the https request and receive the response
+	//res, err = c.HTTPClient.Do(req) // This is the call to send the https request and receive the response
+	res, err = c.doRequest(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)
 		callBackFail(err, nil)
@@ -229,8 +232,7 @@ func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) 
 		return fieldNames, err
 	}
 
-	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&rxDataStru)
-	if err != nil {
+	if err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&rxDataStru); err != nil {
 		fmt.Println("Error:", err)
 		return fieldNames, err
 	}
@@ -250,4 +252,82 @@ func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) 
 	}
 
 	return fieldNames, nil
+}
+
+// Replace the problematic Do() call with this function
+func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
+	// Create fetch options
+	fetchOptions := map[string]interface{}{
+		"method":  req.Method,
+		"headers": make(map[string]interface{}),
+	}
+
+	// Copy headers
+	headers := fetchOptions["headers"].(map[string]interface{})
+	for key, values := range req.Header {
+		if len(values) > 0 {
+			headers[key] = values[0] // Take first value
+		}
+	}
+
+	// Add body for POST/PUT/DELETE
+	if req.Body != nil {
+		// Read body
+		bodyBytes := make([]byte, req.ContentLength)
+		req.Body.Read(bodyBytes)
+		fetchOptions["body"] = string(bodyBytes)
+	}
+
+	// Call JavaScript fetch
+	promise := js.Global().Call("fetch", req.URL.String(), fetchOptions)
+
+	// Create a channel to wait for the promise
+	done := make(chan *http.Response, 1)
+	errChan := make(chan error, 1)
+
+	// Handle promise resolution
+	promise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		response := args[0]
+
+		// Create Go http.Response
+		resp := &http.Response{
+			StatusCode: response.Get("status").Int(),
+			Status:     response.Get("statusText").String(),
+			Header:     make(http.Header),
+		}
+
+		// Get response text
+		textPromise := response.Call("text")
+		textPromise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			text := args[0].String()
+			resp.Body = &stringReadCloser{strings.NewReader(text)}
+			done <- resp
+			return nil
+		}))
+
+		return nil
+	}))
+
+	// Handle promise rejection
+	promise.Call("catch", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		errChan <- fmt.Errorf("fetch failed: %v", args[0].Get("message").String())
+		return nil
+	}))
+
+	// Wait for completion
+	select {
+	case resp := <-done:
+		return resp, nil
+	case err := <-errChan:
+		return nil, err
+	}
+}
+
+// Helper type for response body
+type stringReadCloser struct {
+	*strings.Reader
+}
+
+func (s *stringReadCloser) Close() error {
+	return nil
 }

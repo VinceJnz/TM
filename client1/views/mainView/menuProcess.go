@@ -35,6 +35,7 @@ func (editor *View) getMenuUser() {
 		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 		// Next process step
 		editor.getMenuList()
+		log.Printf("%v %v", debugTag+"getMenuUser()", "Menu user fetch complete")
 	}
 
 	fail := func(err error, data *httpProcessor.ReturnData) {
@@ -42,6 +43,7 @@ func (editor *View) getMenuUser() {
 		//Don't display message to user
 	}
 
+	log.Printf("%v %v client = %+v httpClient = %+v", debugTag+"getMenuUser()", "Fetching menu user from server.", editor.client, editor.client.HTTPClient)
 	editor.ItemState.UpdateStatus(viewHelpers.ItemStateFetching, debugTag)
 	go func() {
 		editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil, success, fail)
@@ -64,6 +66,7 @@ func (editor *View) getMenuList() {
 		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 		// Next process step
 		editor.menuComplete()
+		log.Printf("%v %v", debugTag+"getMenuList()", "Menu list fetch complete")
 	}
 
 	fail := func(err error, data *httpProcessor.ReturnData) {

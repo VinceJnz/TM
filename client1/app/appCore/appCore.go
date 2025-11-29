@@ -28,17 +28,14 @@ type AppCore struct {
 	User       User
 }
 
-func New(httpClient *httpProcessor.Client) *AppCore {
+func New(apiURL string) *AppCore {
 	ac := &AppCore{}
-	//ac.HttpClient = httpProcessor.New("https://localhost:8086/api/v1")
-	ac.HttpClient = httpClient
+	ac.HttpClient = httpProcessor.New(apiURL)
 	ac.Events = eventProcessor.New()
 	ac.Document = js.Global().Get("document")
 
 	window := js.Global().Get("window")
 	window.Call("addEventListener", "onbeforeunload", js.FuncOf(ac.BeforeUnload))
-
-	log.Printf("%v %v", debugTag+"New()", "AppCore created")
 	return ac
 }
 

@@ -28,6 +28,7 @@ import (
 	"client1/v2/views/userMemberStatusView"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
+	"log"
 	"strings"
 	"syscall/js"
 )
@@ -109,6 +110,7 @@ func New(appCore *appCore.AppCore) *View {
 	v.events.AddEventHandler("updateMenu", v.updateMenu)
 	v.events.AddEventHandler("loginComplete", v.loginComplete)
 	v.events.AddEventHandler("logoutComplete", v.logoutComplete)
+	log.Printf("%v %v", debugTag+"New()", "Main view created")
 	return v
 }
 
@@ -192,6 +194,7 @@ func (v *View) Setup() {
 	v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, true, v.elements.sidemenu)
 	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, false, v.elements.sidemenu)
+	log.Printf("%v %v", debugTag+"Setup()", "Menu items added")
 
 	// append statusOutput to the mainContent
 	v.elements.statusOutput = v.document.Call("createElement", "div")
