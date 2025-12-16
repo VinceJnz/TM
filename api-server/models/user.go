@@ -40,6 +40,8 @@ type User struct {
 	AccountHidden   zero.Bool             `json:"user_account_hidden" db:"user_account_hidden"`
 	WebAuthnUserID  []byte                `json:"webauthn_user_id" db:"webauthn_user_id"` // This is the WebAuthn ID (user handle), which is a byte slice representation of the user ID. This does not change.
 	Credentials     []webauthn.Credential `json:"credentials" db:"credentials"`           // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
+	Provider        zero.String           `json:"provider" db:"provider"`                 // OAuth provider name (e.g., "google", "facebook")
+	ProviderID      zero.String           `json:"provider_id" db:"provider_id"`           // OAuth provider user ID
 	Created         time.Time             `json:"created" db:"created"`
 	Modified        time.Time             `json:"modified" db:"modified"`
 }

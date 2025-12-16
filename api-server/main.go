@@ -2,6 +2,8 @@ package main
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/app/gateways/oAuthGoogle/oAuthGateway"
+	"api-server/v2/app/gateways/oAuthGoogle/oAuthHandler"
 	"api-server/v2/localHandlers/handlerAccessLevel"
 	"api-server/v2/localHandlers/handlerAccessType"
 	"api-server/v2/localHandlers/handlerAuth"
@@ -46,8 +48,15 @@ func main() {
 	app.Run()
 	defer app.Close()
 	log.Printf("%smain() App settings: %+v, os Env: %+v\n", debugTag, app.Settings, os.Environ())
-	r := mux.NewRouter()
 
+	// oAuth Google Gateway and Handler setup
+	gw, err := oAuthGateway.NewFromEnv()
+	if err != nil {
+		log.Fatalf("Failed to initialize oAuth Gateway: %v", err)
+	}
+	oauthH := oAuthHandler.New(gw)
+
+	r := mux.NewRouter()
 	// Setup your API subrouter with CORS middleware
 	subR1 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 
@@ -63,11 +72,8 @@ func main() {
 	//subR1.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
 
 	// OAuth Google handlers
-	//oauthHandler := oAuthGateway.New(app)
-	//subR1.HandleFunc("/oauth/google/login", oauthHandler.LoginHandler).Methods("GET")
-	//subR1.HandleFunc("/oauth/google/callback", oauthHandler.CallbackHandler).Methods("GET")
-	//subR1.HandleFunc("/oauth/google/logout", oauthHandler.LogoutHandler).Methods("GET")
-	//subR1.HandleFunc("/oauth/google/me", oauthHandler.MeHandler).Methods("GET")
+	authR := r.PathPrefix(os.Getenv("API_PATH_PREFIX") + "/auth/google").Subrouter()
+	oauthH.RegisterRoutes(authR)
 
 	// WebAuthn handlers
 	WebAuthn := handlerWebAuthn.New(app)
