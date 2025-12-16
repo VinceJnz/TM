@@ -38,7 +38,7 @@ func New(appConf *appCore.Config) *Handler {
 // RequireRestAuth checks that the request is authorised, i.e. the user has been given a cookie by loging on.
 func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var resource restResource
+		var resource RestResource
 		var token models.Token
 		var accessCheck models.AccessCheck
 		var err error
@@ -99,7 +99,7 @@ func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 	})
 }
 
-type restResource struct {
+type RestResource struct {
 	PrevURL      string
 	AccessMethod string
 	ResourceName string
@@ -108,18 +108,18 @@ type restResource struct {
 // SetRestResource Splits the request url and extracts the resource being accessed and what level of access is being requested
 // This is used to determine if a user is permitted to access the resource
 // func setRestResource(session *mdlSession.Session, r *http.Request) error {
-func (h *Handler) setRestResource(r *http.Request) (restResource, error) {
+func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 	var err error
 	var urlSplit []string
 	var apiVersion string
-	var control restResource
+	var control RestResource
 
 	control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
 	urlSplit = strings.Split(control.PrevURL, "/")
 	if len(urlSplit) == 0 {
 		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()2 ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
 		err = errors.New(debugTag + "SetRestResource()1 - Resource info not found") //this is the error returned if a valid resource is not identified
-		return restResource{}, err
+		return RestResource{}, err
 	}
 	control.AccessMethod = r.Method // get, put, post, del, ...
 	switch urlSplit[1] {
@@ -140,15 +140,15 @@ func (h *Handler) setRestResource(r *http.Request) (restResource, error) {
 				control.ResourceName = urlSplit[5]
 			default:
 				log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()4 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
-				return restResource{}, errors.New(debugTag + "setRestResource()4 invalid url")
+				return RestResource{}, errors.New(debugTag + "setRestResource()4 invalid url")
 			}
 		default:
 			log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()5 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
-			return restResource{}, errors.New(debugTag + "setRestResource()5 invalid url")
+			return RestResource{}, errors.New(debugTag + "setRestResource()5 invalid url")
 		}
 	default:
 		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()6 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
-		return restResource{}, errors.New(debugTag + "setRestResource()6 invalid url")
+		return RestResource{}, errors.New(debugTag + "setRestResource()6 invalid url")
 	}
 	return control, err
 }
