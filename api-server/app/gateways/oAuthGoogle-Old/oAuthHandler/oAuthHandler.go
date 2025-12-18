@@ -12,7 +12,7 @@ import (
 
 	// Replace the import path below with your module path + gateway package location.
 	//oauthgw "your/module/path/app/gateways/oAuthGateway"
-	oauthgw "api-server/v2/app/gateways/oAuth/oAuthGateway"
+	oauthgw "api-server/v2/app/gateways/oAuthGoogle-Old/oAuthGateway"
 )
 
 // Handler exposes OAuth HTTP handlers backed by an oAuthGateway.Gateway.

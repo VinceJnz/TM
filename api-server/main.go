@@ -2,8 +2,6 @@ package main
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/app/gateways/oAuthGoogle/oAuthGateway"
-	"api-server/v2/app/gateways/oAuthGoogle/oAuthHandler"
 	"api-server/v2/localHandlers/handlerAccessLevel"
 	"api-server/v2/localHandlers/handlerAccessType"
 	"api-server/v2/localHandlers/handlerAuth"
@@ -13,6 +11,7 @@ import (
 	"api-server/v2/localHandlers/handlerGroupBooking"
 	"api-server/v2/localHandlers/handlerMemberStatus"
 	"api-server/v2/localHandlers/handlerMyBookings"
+	"api-server/v2/localHandlers/handlerOAuth"
 	"api-server/v2/localHandlers/handlerResource"
 	"api-server/v2/localHandlers/handlerSRPAuth"
 	"api-server/v2/localHandlers/handlerSeasons"
@@ -49,13 +48,6 @@ func main() {
 	defer app.Close()
 	log.Printf("%smain() App settings: %+v, os Env: %+v\n", debugTag, app.Settings, os.Environ())
 
-	// oAuth Google Gateway and Handler setup
-	gw, err := oAuthGateway.NewFromEnv()
-	if err != nil {
-		log.Fatalf("Failed to initialize oAuth Gateway: %v", err)
-	}
-	oauthH := oAuthHandler.New(gw)
-
 	r := mux.NewRouter()
 	// Setup your API subrouter with CORS middleware
 	subR1 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
@@ -71,10 +63,6 @@ func main() {
 	subR1.HandleFunc("/srpAuth/reset/{token}/token/", SRPauth.AuthUpdate).Methods("Post")
 	//subR1.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
 
-	// OAuth Google handlers
-	authR := r.PathPrefix(os.Getenv("API_PATH_PREFIX") + "/auth/google").Subrouter()
-	oauthH.RegisterRoutes(authR)
-
 	// WebAuthn handlers
 	WebAuthn := handlerWebAuthn.New(app)
 	subR1.HandleFunc("/webauthn/register/begin/", WebAuthn.BeginRegistration).Methods("POST")
@@ -82,14 +70,24 @@ func main() {
 	subR1.HandleFunc("/webauthn/login/begin/{username}", WebAuthn.BeginLogin).Methods("POST")
 	subR1.HandleFunc("/webauthn/login/finish/", WebAuthn.FinishLogin).Methods("POST")
 
+	// OAuth Google handlers
+	oauthH := handlerOAuth.New(app)
+	authR := subR1.PathPrefix("/auth/google").Subrouter()
+	oauthH.RegisterRoutes(authR)
+
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	//subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 	auth := handlerAuth.New(app)
-	//subR2.Use(auth.RequireOAuthOrSessionAuth(gw))
-	subR2.Use(auth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	subR2.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
+	subR2.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
 	subR2.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Get")
 	subR2.HandleFunc("/auth/menuUser/", auth.MenuUserGet).Methods("Get")
 	subR2.HandleFunc("/auth/menuList/", auth.MenuListGet).Methods("Get")
+
+	// Provide a lightweight endpoint that will trigger OAuth->DB user upsert and create a DB session cookie.
+	// This endpoint is protected by RequireOAuthOrSessionAuth so calling it after OAuth login will cause
+	// the middleware to create an internal session and set the "session" cookie for subsequent API calls.
+	subR2.HandleFunc("/auth/ensure", oauthH.OAuthEnsure).Methods("GET")
 
 	// Add route groups
 	addRouteGroup(subR2, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes

@@ -1,4 +1,4 @@
-package oAuthHandler
+package handlerOAuth
 
 import (
 	"context"
@@ -11,20 +11,20 @@ import (
 	// replace with your module path
 	//oauthgw "your/module/path/app/gateways/oAuthGateway"
 
-	oauthgw "api-server/v2/app/gateways/oAuthGoogle/oAuthGateway"
+	"api-server/v2/app/appCore"
+	oauthgw "api-server/v2/app/gateways/oAuthGateway/oAuthGateway"
+	"api-server/v2/modelMethods/dbAuthTemplate"
+	"api-server/v2/models"
 )
 
+const debugTag = "handlerOAuth."
+
 type Handler struct {
-	Gateway *oauthgw.Gateway
-	//appConf *appCore.Config
+	appConf *appCore.Config
 }
 
-//func New(appConf *appCore.Config) *Handler {
-//	return &Handler{appConf: appConf}
-//}
-
-func New(g *oauthgw.Gateway) *Handler {
-	return &Handler{Gateway: g}
+func New(appConf *appCore.Config) *Handler {
+	return &Handler{appConf: appConf}
 }
 
 // RegisterRoutes registers handler routes on the provided router.
@@ -36,7 +36,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 }
 
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := h.Gateway.Store.Get(r, "auth-session")
+	session, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	if err != nil {
 		http.Error(w, "failed to get session", http.StatusInternalServerError)
 		return
@@ -54,12 +54,12 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := h.Gateway.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"))
+	url := h.appConf.OAuthSvc.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"))
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
 func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := h.Gateway.Store.Get(r, "auth-session")
+	session, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	if err != nil {
 		http.Error(w, "failed to get session", http.StatusInternalServerError)
 		return
@@ -79,13 +79,13 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.Gateway.OAuthConfig.Exchange(context.Background(), code)
+	token, err := h.appConf.OAuthSvc.OAuthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		http.Error(w, "failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	client := h.Gateway.OAuthConfig.Client(context.Background(), token)
+	client := h.appConf.OAuthSvc.OAuthConfig.Client(context.Background(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
 		http.Error(w, "failed to get userinfo: "+err.Error(), http.StatusInternalServerError)
@@ -114,17 +114,17 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, h.Gateway.ClientRedirect, http.StatusFound)
+	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect, http.StatusFound)
 }
 
 func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.Gateway.Store.Get(r, "auth-session")
+	session, _ := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	uid, ok := session.Values["user_id"]
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	resp := map[string]interface{}{
+	resp := map[string]any{
 		"user_id": uid,
 		"email":   session.Values["email"],
 		"name":    session.Values["name"],
@@ -133,8 +133,32 @@ func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) logoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.Gateway.Store.Get(r, "auth-session")
+	session, _ := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	session.Options.MaxAge = -1
 	_ = session.Save(r, w)
-	http.Redirect(w, r, h.Gateway.ClientRedirect, http.StatusFound)
+	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect, http.StatusFound)
+}
+
+// OAuthEnsure is a convenience endpoint that triggers the OAuth->DB upsert and creates a server-side
+// session cookie (so subsequent API calls use the standard DB-based session). It is protected by
+// RequireOAuthOrSessionAuth and will return the current user object.
+func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
+	// Session should have been attached by the middleware (RequireOAuthOrSessionAuth).
+	sessI := r.Context().Value(h.appConf.SessionIDKey)
+	if sessI == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	sess, ok := sessI.(*models.Session)
+	if !ok {
+		http.Error(w, "invalid session", http.StatusInternalServerError)
+		return
+	}
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"OAuthEnsure ", h.appConf.Db, sess.UserID)
+	if err != nil {
+		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }

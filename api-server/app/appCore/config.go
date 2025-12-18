@@ -2,6 +2,7 @@ package appCore
 
 import (
 	"api-server/v2/app/gateways/gmail"
+	"api-server/v2/app/gateways/oAuthGateway/oAuthGateway"
 	"api-server/v2/app/gateways/stripe"
 	"log"
 
@@ -20,6 +21,7 @@ type Config struct {
 	Db           *sqlx.DB
 	EmailSvc     *gmail.Gateway
 	PaymentSvc   *stripe.Gateway
+	OAuthSvc     *oAuthGateway.Gateway
 	SessionIDKey ContextKey // User for passing the user id value via the context (ctx)
 	Settings     settings
 	TestMode     bool
@@ -31,6 +33,7 @@ func New(testMode bool) *Config {
 		Db:       &sqlx.DB{},
 		EmailSvc: &gmail.Gateway{},
 		//PaymentSvc:   &stripe.Gateway{},
+		OAuthSvc:     &oAuthGateway.Gateway{},
 		SessionIDKey: sessionIDKey,
 		TestMode:     testMode,
 	}
@@ -54,6 +57,12 @@ func (c *Config) Run() {
 	//paymentSvc := stripe.New(a.Db, a.WsPool, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
 	//paymentSvc := stripe.New(a.Db, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
 	//go c.PaymentSvc.Start()
+
+	c.OAuthSvc, err = oAuthGateway.NewFromEnv()
+	if err != nil {
+		log.Fatalf("Failed to initialize oAuth Gateway: %v", err)
+	}
+
 }
 
 func (c *Config) Close() {
