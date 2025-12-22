@@ -3,7 +3,9 @@ package handlerOAuth
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/oauth2"
@@ -29,15 +31,21 @@ func New(appConf *appCore.Config) *Handler {
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router) {
+	log.Printf("%v Registering OAuth routes\n", debugTag)
 	r.HandleFunc("/login", h.loginHandler).Methods("GET")
 	r.HandleFunc("/callback", h.callbackHandler).Methods("GET")
 	r.HandleFunc("/logout", h.logoutHandler).Methods("GET")
 	r.HandleFunc("/me", h.meHandler).Methods("GET")
+	// Temporary debug route (DEV only)
+	r.HandleFunc("/debug", h.debugHandler).Methods("GET")
+	log.Printf("%v OAuth routes registered\n", debugTag)
 }
 
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%v loginHandler called: host=%s remote=%s cookies=%q", debugTag, r.Host, r.RemoteAddr, r.Header.Get("Cookie"))
 	session, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	if err != nil {
+		log.Printf("%v failed to get session: %v; cookies=%q; host=%s; remote=%s", debugTag, err, r.Header.Get("Cookie"), r.Host, r.RemoteAddr)
 		http.Error(w, "failed to get session", http.StatusInternalServerError)
 		return
 	}
@@ -55,6 +63,7 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := h.appConf.OAuthSvc.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"))
+	log.Printf("%voAuth login: clientID=%s redirectURL=%s authURL=%s", debugTag, h.appConf.OAuthSvc.OAuthConfig.ClientID, h.appConf.OAuthSvc.OAuthConfig.RedirectURL, url)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
@@ -81,6 +90,12 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.appConf.OAuthSvc.OAuthConfig.Exchange(context.Background(), code)
 	if err != nil {
+		// If the error includes the provider response, log status and body for diagnosis
+		if re, ok := err.(*oauth2.RetrieveError); ok {
+			log.Printf("%v token exchange failed: status=%d body=%s", debugTag, re.Response.StatusCode, string(re.Body))
+		} else {
+			log.Printf("%v token exchange failed: %v", debugTag, err)
+		}
 		http.Error(w, "failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -114,6 +129,28 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Attempt to create an internal DB-backed session immediately so the client
+	// (popup) will receive the standard 'session' cookie without needing to call /auth/ensure
+	emailStr, _ := session.Values["email"].(string)
+	nameStr, _ := session.Values["name"].(string)
+	user := models.User{}
+	user.Name = nameStr
+	user.Email.SetValid(emailStr)
+	user.Provider.SetValid("google")
+	user.ProviderID.SetValid(sub)
+	userID, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
+	if err != nil {
+		log.Printf("%v failed to upsert user: %v", debugTag, err)
+	} else {
+		sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"callbackHandler:", h.appConf.Db, userID, r.RemoteAddr, time.Time{})
+		if err != nil {
+			log.Printf("%v failed to create session token: %v", debugTag, err)
+		} else {
+			http.SetCookie(w, sessionToken)
+			log.Printf("%v created DB session for user %v", debugTag, userID)
+		}
+	}
+
 	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect, http.StatusFound)
 }
 
@@ -137,6 +174,25 @@ func (h *Handler) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	session.Options.MaxAge = -1
 	_ = session.Save(r, w)
 	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect, http.StatusFound)
+}
+
+// Temporary debug handler that returns non-secret OAuth config information (client_id, redirect_url, etc.)
+// Useful to verify what the running server is actually using. Only add in DEV/test environments.
+func (h *Handler) debugHandler(w http.ResponseWriter, r *http.Request) {
+	info := map[string]interface{}{
+		"client_id":       h.appConf.OAuthSvc.OAuthConfig.ClientID,
+		"redirect_url":    h.appConf.OAuthSvc.OAuthConfig.RedirectURL,
+		"client_redirect": h.appConf.OAuthSvc.ClientRedirect,
+		"has_secret":      h.appConf.OAuthSvc.OAuthConfig.ClientSecret != "",
+		"store_options": map[string]interface{}{
+			"secure":    h.appConf.OAuthSvc.Store.Options.Secure,
+			"path":      h.appConf.OAuthSvc.Store.Options.Path,
+			"max_age":   h.appConf.OAuthSvc.Store.Options.MaxAge,
+			"same_site": h.appConf.OAuthSvc.Store.Options.SameSite,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(info)
 }
 
 // OAuthEnsure is a convenience endpoint that triggers the OAuth->DB upsert and creates a server-side

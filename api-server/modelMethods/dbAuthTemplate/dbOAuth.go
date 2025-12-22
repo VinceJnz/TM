@@ -2,6 +2,7 @@ package dbAuthTemplate
 
 import (
 	"api-server/v2/models"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -15,10 +16,17 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		return userID, nil
 	}
 
-	userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider ", Db, user)
-	//err = Db.QueryRow(`INSERT INTO users (provider, provider_id, email, name) VALUES ($1, $2, $3, $4) RETURNING id`, provider, providerID, email, name).Scan(&userID)
-	if err != nil {
-		return 0, err
+	userFromDB, err := UserEmailReadQry(debugStr+"FindOrCreateUserByProvider ", Db, user.Email.String)
+	if err == nil {
+		// found existing user by email, update provider info
+		log.Printf("%vFindOrCreateUserByProvider - user found by email, updating provider info: user = %+v, userFromDB = %+v", debugStr, user, userFromDB)
+		user.ID = userFromDB.ID
+		user.Provider = userFromDB.Provider
+		user.ProviderID = userFromDB.ProviderID
+		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider ", Db, user)
+		if err != nil {
+			return 0, err
+		}
 	}
 	return userID, nil
 }

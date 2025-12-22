@@ -34,16 +34,16 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 
 				resource, err = h.setRestResource(r)
 				if err != nil {
-					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()3", "err =", err, "resource =", resource, "r =", r)
+					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()1", "err =", err, "resource =", resource, "r =", r)
 					w.WriteHeader(http.StatusUnauthorized)
 					w.Write([]byte("Not authorised - You don't have access to the requested resource."))
 					return
 				} else {
 					// check access to resource
 					//accessCheck, err = h.UserCheckAccess(token.UserID, resource.ResourceName, resource.AccessMethod)
-					accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireRestAuth()3a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
+					accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireOAuth()1a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
 					if err != nil {
-						log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()4", "err =", err, "resource =", resource, "r =", r)
+						log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()2", "err =", err, "resource =", resource, "r =", r)
 						w.WriteHeader(http.StatusUnauthorized)
 						w.Write([]byte("Not authorised - You don't have access to the requested resource."))
 						return
@@ -108,16 +108,16 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 
 		resource, err = h.setRestResource(r)
 		if err != nil {
-			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()3", "err =", err, "resource =", resource, "r =", r)
+			log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()3", "err =", err, "resource =", resource, "r =", r)
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("Not authorised - You don't have access to the requested resource."))
 			return
 		} else {
 			// check access to resource
 			//accessCheck, err = h.UserCheckAccess(token.UserID, resource.ResourceName, resource.AccessMethod)
-			accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireRestAuth()3a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
+			accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireOAuth()3a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
 			if err != nil {
-				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireRestAuth()4", "err =", err, "resource =", resource, "r =", r)
+				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()4", "err =", err, "resource =", resource, "r =", r)
 				w.WriteHeader(http.StatusUnauthorized)
 				w.Write([]byte("Not authorised - You don't have access to the requested resource."))
 				return

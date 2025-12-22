@@ -49,7 +49,7 @@ func New(document js.Value, ev *eventProcessor.EventProcessor, appCore *appCore.
 	btn.Set("innerText", "Register with Google")
 	btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		// Open OAuth login in a popup; the server flow will set auth-session and the popup will postMessage back
-		js.Global().Call("open", "/auth/google/login", "oauth", "width=600,height=800")
+		js.Global().Call("open", "https://localhost:8086/api/v1"+"/auth/google/login", "oauth", "width=600,height=800") // this needs to be passed as a value "https://localhost:8086/api/v1" or we should be using the http processor.
 		return nil
 	}))
 	div.Call("appendChild", btn)

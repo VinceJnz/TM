@@ -306,7 +306,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
@@ -315,7 +315,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 }
 
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
-	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID, record.ID)
+	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID, record.Provider, record.ProviderID, record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx()1 - ", "err =", err, "record =", record)
 	}

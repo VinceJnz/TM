@@ -78,7 +78,7 @@ func main() {
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	//subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 	auth := handlerAuth.New(app)
-	subR2.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
+	//subR2.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
 	subR2.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
 	subR2.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Get")
 	subR2.HandleFunc("/auth/menuUser/", auth.MenuUserGet).Methods("Get")
@@ -128,12 +128,18 @@ func main() {
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
 	// For debugging: Log all registered routes
-	//subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-	//	path, _ := route.GetPathTemplate()
-	//	methods, _ := route.GetMethods()
-	//	log.Printf("Registered routes for subR2: %s %v", path, methods)
-	//	return nil
-	//})
+	subR1.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		path, _ := route.GetPathTemplate()
+		methods, _ := route.GetMethods()
+		log.Printf("Registered routes for subR1: %s %v", path, methods)
+		return nil
+	})
+	subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		path, _ := route.GetPathTemplate()
+		methods, _ := route.GetMethods()
+		log.Printf("Registered routes for subR2: %s %v", path, methods)
+		return nil
+	})
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
