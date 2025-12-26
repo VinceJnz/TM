@@ -139,12 +139,8 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 		return err
 	}
 
-	//req.Header.Set("Authorization", "Bearer your_token_here")
-	req.Header.Set("Access-Control-Allow-Credentials", "true")
-	req.Header.Set("Content-Type", "application/json")
-	//req.Header.Set("Origin", "http://localhost:8081") // Set the Origin header
-	req.Header.Set("Origin", "https://localhost:8081") // Set the Origin header
-
+	// Do not set response-only or browser-controlled headers (e.g. Access-Control-Allow-Credentials, Origin).
+	// Use fetch credentials instead so cookies are sent: this is handled in doRequest.
 	res, err = c.doRequest(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)
@@ -207,9 +203,6 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 
 // decodeJSON decodes the JSON data in the body and puts it in the supplied structure, and returns the field names.
 func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) {
-	// Read the body into a byte slice
-	//fieldNames := make(viewHelpers.FieldNames)
-	//var fieldNames map[string]string
 	fieldNames := make(FieldNames)
 
 	bodyBytes, err := io.ReadAll(res.Body)
@@ -217,25 +210,32 @@ func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) 
 		return fieldNames, err
 	}
 
-	if err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&rxDataStru); err != nil {
-		fmt.Println("Error:", err)
-		return fieldNames, err
+	// Unmarshal into the provided structure.
+	if err := json.Unmarshal(bodyBytes, rxDataStru); err != nil {
+		// Provide a helpful error; return it so the caller can decide how to proceed.
+		return fieldNames, fmt.Errorf("%vdecodeJSON: failed to unmarshal response body: %w", debugTag, err)
 	}
 
-	// Decode the body into a map to get field names
-	var result []map[string]interface{}
-	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&result)
-	if err != nil {
-		log.Println(debugTag+"decodeJSON()3 Warning: failed to get field names, probably because there are none to retreive, Error:", err) // Don't return an error here. Just log it. The error is not fatal. The data has already been decoded and the field names are not critical.
-	} else if len(result) > 0 {
-		record := result[0]
+	// Try to extract field names. The response might be an array of objects or a single object.
+	var arr []map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &arr); err == nil && len(arr) > 0 {
+		record := arr[0]
 		for key := range record {
 			fieldNames[key] = key
 		}
-	} else {
-		log.Println(debugTag+"decodeJSON()4 Warning: failed to get field names, probably because there is no data, Error:", err) // Don't return an error here. Just log it. The error is not fatal. The data has already been decoded and the field names are not critical.
+		return fieldNames, nil
 	}
 
+	var obj map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &obj); err == nil {
+		for key := range obj {
+			fieldNames[key] = key
+		}
+		return fieldNames, nil
+	}
+
+	// No usable fields found; log and return empty map.
+	log.Println(debugTag + "decodeJSON(): warning: no object/array fields detected in response body")
 	return fieldNames, nil
 }
 
@@ -243,11 +243,13 @@ func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) 
 func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	// Create fetch options
 	fetchOptions := map[string]interface{}{
-		"method":  req.Method,
-		"headers": make(map[string]interface{}),
+		"method":      req.Method,
+		"headers":     make(map[string]interface{}),
+		"mode":        "cors",    // allow CORS
+		"credentials": "include", // ensure cookies are sent
 	}
 
-	// Copy headers
+	// Copy headers (but do not attempt to set Origin or other forbidden headers)
 	headers := fetchOptions["headers"].(map[string]interface{})
 	for key, values := range req.Header {
 		if len(values) > 0 {
@@ -257,10 +259,24 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 
 	// Add body for POST/PUT/DELETE
 	if req.Body != nil {
-		// Read body
-		bodyBytes := make([]byte, req.ContentLength)
-		req.Body.Read(bodyBytes)
+		// Read body safely (do not rely on ContentLength)
+		bodyBytes, _ := io.ReadAll(req.Body)
 		fetchOptions["body"] = string(bodyBytes)
+	}
+
+	// Use AbortController to support timeouts and cancellation when available
+	var controller js.Value
+	var timer *time.Timer
+	if !js.Global().Get("AbortController").IsUndefined() {
+		controller = js.Global().Get("AbortController").New()
+		fetchOptions["signal"] = controller.Get("signal")
+		if c != nil && c.HTTPClient != nil && c.HTTPClient.Timeout > 0 {
+			d := c.HTTPClient.Timeout
+			// start a timer that aborts the fetch when timeout expires
+			timer = time.AfterFunc(d, func() {
+				controller.Call("abort")
+			})
+		}
 	}
 
 	// Call JavaScript fetch
@@ -270,8 +286,20 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	done := make(chan *http.Response, 1)
 	errChan := make(chan error, 1)
 
+	// Prepare handlers so we can Release them after use
+	var thenHandler js.Func
+	var catchHandler js.Func
+	var thenHandlerSet bool
+	var catchHandlerSet bool
+
 	// Handle promise resolution
-	promise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	thenHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		// Release catch handler if set
+		if catchHandlerSet {
+			catchHandler.Release()
+			catchHandlerSet = false
+		}
+
 		response := args[0]
 
 		// Create Go http.Response
@@ -281,23 +309,80 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 			Header:     make(http.Header),
 		}
 
+		// Copy response headers
+		headersJS := response.Get("headers")
+		if !headersJS.IsUndefined() && !headersJS.IsNull() {
+			headersHandler := js.FuncOf(func(this js.Value, a []js.Value) interface{} {
+				// headers.forEach callback signature: (value, key)
+				value := a[0].String()
+				key := a[1].String()
+				resp.Header.Set(key, value)
+				return nil
+			})
+			// Run forEach and release handler immediately
+			headersJS.Call("forEach", headersHandler)
+			headersHandler.Release()
+		}
+
 		// Get response text
 		textPromise := response.Call("text")
-		textPromise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			text := args[0].String()
-			resp.Body = &stringReadCloser{strings.NewReader(text)}
+		var textHandler js.Func
+		textHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			// Stop abort timer if running
+			if timer != nil {
+				timer.Stop()
+			}
+			if len(args) > 0 {
+				text := args[0].String()
+				resp.Body = &stringReadCloser{strings.NewReader(text)}
+			}
 			done <- resp
+			// Release handlers
+			textHandler.Release()
+			if thenHandlerSet {
+				thenHandler.Release()
+				thenHandlerSet = false
+			}
 			return nil
-		}))
+		})
+		textPromise.Call("then", textHandler)
 
 		return nil
-	}))
+	})
 
 	// Handle promise rejection
-	promise.Call("catch", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		errChan <- fmt.Errorf("fetch failed: %v", args[0].Get("message").String())
+	catchHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		// Stop abort timer if running
+		if timer != nil {
+			timer.Stop()
+		}
+		// Release thenHandler if set
+		if thenHandlerSet {
+			thenHandler.Release()
+			thenHandlerSet = false
+		}
+		// Attempt to read message
+		msg := "fetch failed"
+		if len(args) > 0 {
+			m := args[0]
+			if !m.IsUndefined() && !m.IsNull() {
+				if m.Get("message").Truthy() {
+					msg = m.Get("message").String()
+				}
+			}
+		}
+		errChan <- fmt.Errorf("fetch failed: %v", msg)
+		if catchHandlerSet {
+			catchHandler.Release()
+			catchHandlerSet = false
+		}
 		return nil
-	}))
+	})
+
+	promise.Call("then", thenHandler)
+	thenHandlerSet = true
+	promise.Call("catch", catchHandler)
+	catchHandlerSet = true
 
 	// Wait for completion
 	select {
@@ -351,10 +436,9 @@ func (c *Client) Destroy() {
 		return
 	}
 	if c.HTTPClient != nil {
-		// Close any idle connections and release the client
-		c.HTTPClient.CloseIdleConnections()
+		// Not all platforms implement CloseIdleConnections; simply clear the client reference.
 		c.HTTPClient = nil
-		log.Printf(debugTag + "Destroy() closed HTTP client connections")
+		log.Printf(debugTag + "Destroy() cleared HTTP client")
 	}
 }
 

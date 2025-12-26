@@ -18,13 +18,14 @@ type viewElements struct {
 }
 
 type ItemEditor struct {
-	appCore   *appCore.AppCore
-	client    *httpProcessor.Client
-	document  js.Value
-	elements  viewElements
-	events    *eventProcessor.EventProcessor
-	LoggedIn  bool
-	msgHandler js.Func // keeps reference to the JS message handler so it is not GC'd
+	appCore       *appCore.AppCore
+	client        *httpProcessor.Client
+	document      js.Value
+	elements      viewElements
+	events        *eventProcessor.EventProcessor
+	LoggedIn      bool
+	msgHandler    js.Func // keeps reference to the JS message handler so it is not GC'd
+	msgHandlerSet bool    // true when msgHandler is initialized
 }
 
 // New creates a new OAuth registration editor view
@@ -95,8 +96,34 @@ func New(document js.Value, ev *eventProcessor.EventProcessor, appCore *appCore.
 			expectedOrigin = js.Global().Get("location").Get("origin").String()
 		}
 		if evtOrigin != expectedOrigin {
-			log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
-			return nil
+			// Allow localhost-to-localhost messages when the app is running locally (dev convenience).
+			if expectedOrigin != "" {
+				if uExp, err := url.Parse(expectedOrigin); err == nil {
+					if uExp.Hostname() == "localhost" {
+						if uEvt, err := url.Parse(evtOrigin); err == nil {
+							if uEvt.Hostname() == "localhost" {
+								log.Printf("%v accepting message from localhost origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+								// accept
+							} else {
+								log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+								return nil
+							}
+						} else {
+							log.Printf("%v invalid evt origin %s; ignoring", debugTag, evtOrigin)
+							return nil
+						}
+					} else {
+						log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+						return nil
+					}
+				} else {
+					log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+					return nil
+				}
+			} else {
+				log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+				return nil
+			}
 		}
 
 		data := evt.Get("data")
@@ -118,6 +145,7 @@ func New(document js.Value, ev *eventProcessor.EventProcessor, appCore *appCore.
 		return nil
 	})
 	js.Global().Call("addEventListener", "message", editor.msgHandler)
+	editor.msgHandlerSet = true
 
 	log.Printf("%v New() created OAuth registration view", debugTag)
 	return editor
@@ -170,10 +198,11 @@ func (editor *ItemEditor) FetchItems() {
 // Destroy releases resources associated with the view (removes global event listeners).
 // Call this when the view is permanently removed to avoid leaks.
 func (e *ItemEditor) Destroy() {
-	if e.msgHandler != (js.Func{}) {
+	if e.msgHandlerSet {
 		js.Global().Call("removeEventListener", "message", e.msgHandler)
 		e.msgHandler.Release()
 		e.msgHandler = js.Func{}
+		e.msgHandlerSet = false
 		log.Printf("%v Destroy() removed message listener", debugTag)
 	}
 }
