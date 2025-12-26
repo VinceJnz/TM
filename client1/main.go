@@ -12,6 +12,7 @@ func main() {
 
 	// Set up the HTML structure
 	appCore := appCore.New("https://localhost:8086/api/v1")
+	defer appCore.Destroy() // ensure resources are cleaned up if main ever exits
 	view := mainView.New(appCore)
 	view.Setup()
 

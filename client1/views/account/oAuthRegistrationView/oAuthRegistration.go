@@ -5,6 +5,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"log"
+	"net/url"
 	"syscall/js"
 )
 
@@ -17,12 +18,13 @@ type viewElements struct {
 }
 
 type ItemEditor struct {
-	appCore  *appCore.AppCore
-	client   *httpProcessor.Client
-	document js.Value
-	elements viewElements
-	events   *eventProcessor.EventProcessor
-	LoggedIn bool
+	appCore   *appCore.AppCore
+	client    *httpProcessor.Client
+	document  js.Value
+	elements  viewElements
+	events    *eventProcessor.EventProcessor
+	LoggedIn  bool
+	msgHandler js.Func // keeps reference to the JS message handler so it is not GC'd
 }
 
 // New creates a new OAuth registration editor view
@@ -49,7 +51,12 @@ func New(document js.Value, ev *eventProcessor.EventProcessor, appCore *appCore.
 	btn.Set("innerText", "Register with Google")
 	btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		// Open OAuth login in a popup; the server flow will set auth-session and the popup will postMessage back
-		js.Global().Call("open", "https://localhost:8086/api/v1"+"/auth/google/login", "oauth", "width=600,height=800") // this needs to be passed as a value "https://localhost:8086/api/v1" or we should be using the http processor.
+		if editor.client != nil {
+			editor.client.OpenPopup("/auth/google/login", "oauth", "width=600,height=800")
+		} else {
+			// Fallback to direct open if client is not available
+			js.Global().Call("open", "https://localhost:8086/api/v1"+"/auth/google/login", "oauth", "width=600,height=800")
+		}
 		return nil
 	}))
 	div.Call("appendChild", btn)
@@ -62,6 +69,55 @@ func New(document js.Value, ev *eventProcessor.EventProcessor, appCore *appCore.
 	if ev != nil {
 		ev.AddEventHandler("loginComplete", editor.loginComplete)
 	}
+
+	// Listen for postMessage events from the OAuth popup. Expect a message of the form:
+	// { type: 'loginComplete', name: '<display name>', email: '<email>' }
+	// We validate the message origin (must match the client's BaseURL origin) before processing.
+	editor.msgHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) == 0 {
+			return nil
+		}
+		evt := args[0]
+		originVal := evt.Get("origin")
+		if originVal.IsUndefined() || originVal.IsNull() {
+			log.Printf("%v message event missing origin; ignoring", debugTag)
+			return nil
+		}
+		evtOrigin := originVal.String()
+		// Compute expected origin from the configured client BaseURL, falling back to window.location.origin
+		var expectedOrigin string
+		if editor.client != nil && editor.client.BaseURL != "" {
+			if u, err := url.Parse(editor.client.BaseURL); err == nil {
+				expectedOrigin = u.Scheme + "://" + u.Host
+			}
+		}
+		if expectedOrigin == "" {
+			expectedOrigin = js.Global().Get("location").Get("origin").String()
+		}
+		if evtOrigin != expectedOrigin {
+			log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+			return nil
+		}
+
+		data := evt.Get("data")
+		if data.IsUndefined() || data.IsNull() {
+			return nil
+		}
+		typeVal := data.Get("type")
+		if typeVal.IsUndefined() || typeVal.String() != "loginComplete" {
+			return nil
+		}
+		nameVal := data.Get("name")
+		var nameStr string
+		if !nameVal.IsUndefined() && nameVal.Type() == js.TypeString {
+			nameStr = nameVal.String()
+		}
+		if editor.events != nil {
+			editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: nameStr})
+		}
+		return nil
+	})
+	js.Global().Call("addEventListener", "message", editor.msgHandler)
 
 	log.Printf("%v New() created OAuth registration view", debugTag)
 	return editor
@@ -109,4 +165,15 @@ func (e *ItemEditor) ResetView() {
 
 func (editor *ItemEditor) FetchItems() {
 	//editor.NewItemData() // The login view is different to all the other views, there is no data to fetch.
+}
+
+// Destroy releases resources associated with the view (removes global event listeners).
+// Call this when the view is permanently removed to avoid leaks.
+func (e *ItemEditor) Destroy() {
+	if e.msgHandler != (js.Func{}) {
+		js.Global().Call("removeEventListener", "message", e.msgHandler)
+		e.msgHandler.Release()
+		e.msgHandler = js.Func{}
+		log.Printf("%v Destroy() removed message listener", debugTag)
+	}
 }

@@ -3,8 +3,10 @@ package handlerOAuth
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -67,6 +69,8 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
+// callbackHandler handles the OAuth callback, exchanges the code for a token,
+// retrieves user info, and creates a session.
 func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	if err != nil {
@@ -114,6 +118,8 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("%v userInfo: %+v", debugTag, userInfo) // for debugging
+
 	// validate minimal fields
 	sub, _ := userInfo["sub"].(string)
 	if sub == "" {
@@ -151,7 +157,21 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect, http.StatusFound)
+	// If the OAuth flow was performed in a popup, send a postMessage back to the opener and close the popup.
+	// Otherwise, navigate back to the client application.
+	payload := map[string]string{"type": "loginComplete", "name": nameStr, "email": emailStr}
+	payloadJSON, _ := json.Marshal(payload)
+	clientRedirect := h.appConf.OAuthSvc.ClientRedirect
+	origin := clientRedirect
+	if u, err := url.Parse(clientRedirect); err == nil {
+		origin = u.Scheme + "://" + u.Host
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>")
+	fmt.Fprintf(w, "<script>\n(function(){\n  var payload = %s;\n  var origin = %q;\n  if (window.opener && !window.opener.closed) {\n    try { window.opener.postMessage(payload, origin); } catch(e) { window.opener.postMessage(payload, '*'); }\n    window.close();\n  } else {\n    window.location = origin;\n  }\n})();\n</script>", payloadJSON, origin)
+	fmt.Fprintf(w, "</body></html>")
 }
 
 func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {

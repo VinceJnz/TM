@@ -71,20 +71,6 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 	var fieldNames FieldNames
 
 	url = c.BaseURL + url
-	// Create a cookie jar
-	//jar, _ := cookiejar.New(nil)
-
-	//httpClient := &http.Client{
-	//	Jar: jar,
-	//	//Timeout: time.Minute,
-	//	Timeout: 5 * time.Second,
-	//	//Transport: &http.Transport{
-	//	//	TLSClientConfig: &tls.Config{
-	//	//		//Certificates: []tls.Certificate{cert},
-	//	//		//RootCAs:      caCertPool,
-	//	//	},
-	//	//},
-	//}
 
 	callBackSuccess := func(error, *ReturnData) {
 		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: No success-callback has been provided: %w", err)
@@ -159,7 +145,6 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 	//req.Header.Set("Origin", "http://localhost:8081") // Set the Origin header
 	req.Header.Set("Origin", "https://localhost:8081") // Set the Origin header
 
-	//res, err = c.HTTPClient.Do(req) // This is the call to send the https request and receive the response
 	res, err = c.doRequest(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)
@@ -320,6 +305,56 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		return resp, nil
 	case err := <-errChan:
 		return nil, err
+	}
+}
+
+// OpenPopup opens a new browser window/tab pointing to path (relative to Client.BaseURL) with the given name and window features.
+// If an absolute URL is provided (starts with http/https), it will be used as-is.
+// Security notes:
+// - Do not include "noopener" or "noreferrer" in features if you expect the popup to use window.opener.postMessage back to the opener — those disable opener access.
+// - We sanitize features to remove noopener/noreferrer if present.
+func (c *Client) OpenPopup(path, name, features string) {
+	var urlStr string
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		urlStr = path
+	} else {
+		// Normalize slashes when joining BaseURL and path
+		if strings.HasSuffix(c.BaseURL, "/") && strings.HasPrefix(path, "/") {
+			urlStr = c.BaseURL[:len(c.BaseURL)-1] + path
+		} else if !strings.HasSuffix(c.BaseURL, "/") && !strings.HasPrefix(path, "/") {
+			urlStr = c.BaseURL + "/" + path
+		} else {
+			urlStr = c.BaseURL + path
+		}
+	}
+
+	// Sanitize features: remove noopener/noreferrer which would break postMessage to opener
+	lower := strings.ToLower(features)
+	if strings.Contains(lower, "noopener") || strings.Contains(lower, "noreferrer") {
+		sanitized := features
+		sanitized = strings.ReplaceAll(sanitized, "noopener", "")
+		sanitized = strings.ReplaceAll(sanitized, "noreferrer", "")
+		// Remove duplicate commas and trim
+		sanitized = strings.ReplaceAll(sanitized, ",,", ",")
+		sanitized = strings.Trim(sanitized, ", ")
+		log.Printf(debugTag+"OpenPopup removed unsafe feature(s) from features: original=%q sanitized=%q", features, sanitized)
+		features = sanitized
+	}
+
+	js.Global().Call("open", urlStr, name, features)
+}
+
+// Destroy releases resources associated with the Client (closes idle connections and clears HTTP client).
+// Call this when the application is shutting down or the client is no longer needed.
+func (c *Client) Destroy() {
+	if c == nil {
+		return
+	}
+	if c.HTTPClient != nil {
+		// Close any idle connections and release the client
+		c.HTTPClient.CloseIdleConnections()
+		c.HTTPClient = nil
+		log.Printf(debugTag + "Destroy() closed HTTP client connections")
 	}
 }
 
