@@ -2,7 +2,7 @@ package handlerSRPAuth
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/app/srpPool"
+	"api-server/v2/app/pools/srpPool"
 	"net/http"
 )
 
@@ -18,6 +18,6 @@ type Handler struct {
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{
 		appConf: appConf,
-		Pool:    srpPool.NewSRPPool(),
+		Pool:    srpPool.New(),
 	}
 }

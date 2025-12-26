@@ -7,7 +7,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
+
+	"github.com/guregu/null/v5/zero"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/oauth2"
@@ -144,6 +147,37 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	user.Email.SetValid(emailStr)
 	user.Provider.SetValid("google")
 	user.ProviderID.SetValid(sub)
+	// If the client supplied pending registration info before starting the OAuth flow, apply it now
+	if pu, ok := session.Values["pending_username"].(string); ok && pu != "" {
+		user.Username = pu
+		delete(session.Values, "pending_username")
+	}
+	if pa, ok := session.Values["pending_address"].(string); ok && pa != "" {
+		user.Address.SetValid(pa)
+		delete(session.Values, "pending_address")
+	}
+	if pb, ok := session.Values["pending_birth_date"].(string); ok && pb != "" {
+		// Try RFC3339 then YYYY-MM-DD
+		var parsed time.Time
+		var perr error
+		parsed, perr = time.Parse(time.RFC3339, pb)
+		if perr != nil {
+			parsed, perr = time.Parse("2006-01-02", pb)
+		}
+		if perr == nil {
+			user.BirthDate = zero.NewTime(parsed, true)
+		}
+		delete(session.Values, "pending_birth_date")
+	}
+	if ph, ok := session.Values["pending_account_hidden"].(bool); ok {
+		user.AccountHidden.SetValid(ph)
+		delete(session.Values, "pending_account_hidden")
+	}
+	// Save session after consuming pending data
+	if err := session.Save(r, w); err != nil {
+		log.Printf("%v callbackHandler: failed to save session after consuming pending registration: %v", debugTag, err)
+	}
+
 	userID, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v failed to upsert user: %v", debugTag, err)
@@ -233,6 +267,120 @@ func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
 	user, err := dbAuthTemplate.UserReadQry(debugTag+"OAuthEnsure ", h.appConf.Db, sess.UserID)
 	if err != nil {
 		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+// PendingRegistration stores registration fields in the session so they can be applied after the OAuth callback completes.
+// Client should POST these before opening the OAuth popup.
+func (h *Handler) PendingRegistration(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Username      string `json:"username"`
+		Address       string `json:"address"`
+		BirthDate     string `json:"birth_date"`
+		AccountHidden *bool  `json:"account_hidden"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	sess, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
+	if err != nil {
+		http.Error(w, "failed to get session", http.StatusInternalServerError)
+		return
+	}
+	if req.Username != "" {
+		sess.Values["pending_username"] = strings.TrimSpace(req.Username)
+	}
+	if req.Address != "" {
+		sess.Values["pending_address"] = req.Address
+	}
+	if req.BirthDate != "" {
+		sess.Values["pending_birth_date"] = req.BirthDate
+	}
+	if req.AccountHidden != nil {
+		sess.Values["pending_account_hidden"] = *req.AccountHidden
+	}
+	if err := sess.Save(r, w); err != nil {
+		http.Error(w, "failed to save session", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// CompleteRegistration updates additional profile info collected after OAuth registration.
+func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
+	// Require a session (set by RequireOAuthOrSessionAuth middleware)
+	sessI := r.Context().Value(h.appConf.SessionIDKey)
+	if sessI == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	sess, ok := sessI.(*models.Session)
+	if !ok {
+		http.Error(w, "invalid session", http.StatusInternalServerError)
+		return
+	}
+	var req struct {
+		Username      string `json:"username"`
+		Address       string `json:"address"`
+		BirthDate     string `json:"birth_date"`
+		AccountHidden *bool  `json:"account_hidden"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	// Validate username if provided
+	if req.Username != "" {
+		uname := strings.TrimSpace(req.Username)
+		if len(uname) < 3 || len(uname) > 20 {
+			http.Error(w, "invalid username", http.StatusBadRequest)
+			return
+		}
+		existing, err := dbAuthTemplate.UserNameReadQry(debugTag+"CompleteRegistration:check ", h.appConf.Db, uname)
+		if err == nil && existing.ID != sess.UserID {
+			http.Error(w, "username taken", http.StatusConflict)
+			return
+		}
+	}
+	// Load user
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration ", h.appConf.Db, sess.UserID)
+	if err != nil {
+		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		return
+	}
+	// Apply updates
+	if req.Username != "" {
+		user.Username = strings.TrimSpace(req.Username)
+	}
+	if req.Address != "" {
+		user.Address.SetValid(req.Address)
+	}
+	if req.BirthDate != "" {
+		// Try RFC3339 first, then YYYY-MM-DD
+		var parsed time.Time
+		parsed, err = time.Parse(time.RFC3339, req.BirthDate)
+		if err != nil {
+			parsed, err = time.Parse("2006-01-02", req.BirthDate)
+			if err != nil {
+				log.Printf("%v CompleteRegistration - invalid birth_date format: %v", debugTag, err)
+				http.Error(w, "invalid birth_date", http.StatusBadRequest)
+				return
+			}
+		}
+		user.BirthDate = zero.NewTime(parsed, true)
+	}
+	if req.AccountHidden != nil {
+		user.AccountHidden.SetValid(*req.AccountHidden)
+	}
+	_, err = dbAuthTemplate.UserWriteQry(debugTag+"CompleteRegistration:write ", h.appConf.Db, user)
+	if err != nil {
+		log.Printf("%v CompleteRegistration failed: %v", debugTag, err)
+		http.Error(w, "failed to update user", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

@@ -2,7 +2,6 @@ package handlerAuth
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/app/srpPool"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"context"
@@ -19,13 +18,11 @@ type HandlerFunc func(http.ResponseWriter, *http.Request)
 
 type Handler struct {
 	appConf *appCore.Config
-	Pool    *srpPool.Pool
 }
 
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{
 		appConf: appConf,
-		Pool:    srpPool.NewSRPPool(),
 	}
 }
 

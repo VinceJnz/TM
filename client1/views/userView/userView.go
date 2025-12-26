@@ -206,7 +206,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	for _, item := range editor.Records {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Name)
+		optionElement.Set("text", item.Name+" ("+item.Email+")")
 		if value == item.ID {
 			optionElement.Set("selected", true)
 		}

@@ -2,7 +2,7 @@ package handlerWebAuthn
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/app/webAuthnPool"
+	"api-server/v2/app/pools/webAuthnPool"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 )

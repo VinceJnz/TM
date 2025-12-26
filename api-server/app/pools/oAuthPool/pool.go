@@ -1,18 +1,17 @@
-package srpPool
+package oAuthPool
 
 import (
+	"api-server/v2/models"
 	"log"
 	"time"
-
-	"github.com/1Password/srp"
 )
 
-const debugTag = "srpPool."
+const debugTag = "oAuthPool."
 
 // PoolItem is used to store the SRP server and user ID in the pool.
 type PoolItem struct {
-	ServerSRP *srp.SRP
-	UserID    int
+	User   *models.User
+	UserID int
 }
 
 // PoolList is a map that holds the SRP pool items, keyed by a token (string).
@@ -23,17 +22,16 @@ type Pool struct {
 	Pool PoolList
 }
 
-func NewSRPPool() *Pool {
+func New() *Pool {
 	return &Pool{
 		Pool: make(PoolList),
 	}
 }
 
-func (p *Pool) Add(token string, userID int, srpServer *srp.SRP, attrib ...time.Duration) {
-	log.Printf(debugTag+"Handler.Add()1 - Adding SRP server to pool with token: %s, userID: %d, attrib: %+v", token, userID, attrib)
+func (p *Pool) Add(token string, userID int, user *models.User, attrib ...time.Duration) {
 	i := PoolItem{
-		ServerSRP: srpServer,
-		UserID:    userID,
+		User:   user,
+		UserID: userID,
 	}
 	p.Pool[token] = i
 

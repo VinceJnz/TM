@@ -1,0 +1,424 @@
+package oAuthRegistrationView
+
+import (
+	"client1/v2/app/appCore"
+	"client1/v2/app/eventProcessor"
+	"client1/v2/app/httpProcessor"
+	"client1/v2/views/account/srpRegistrationView"
+	"log"
+	"net/http"
+	"net/url"
+	"syscall/js"
+	"time"
+)
+
+const debugTag = "oAuthRegistrationView."
+
+// ApiURL is the base path for auth-related API calls
+const ApiURL = "/auth"
+
+// registrationPayload is the payload used for pending/complete/register endpoints
+type registrationPayload struct {
+	Username      string    `json:"username"`
+	Address       string    `json:"address,omitempty"`
+	BirthDate     time.Time `json:"birth_date,omitempty"`
+	AccountHidden bool      `json:"account_hidden,omitempty"`
+}
+
+type viewElements struct {
+	Div            js.Value
+	Status         js.Value
+	Btn            js.Value
+	Username       js.Value
+	BirthDate      js.Value
+	Address        js.Value
+	HiddenCheckbox js.Value
+}
+
+type ItemEditor struct {
+	appCore            *appCore.AppCore
+	client             *httpProcessor.Client
+	document           js.Value
+	elements           viewElements
+	events             *eventProcessor.EventProcessor
+	LoggedIn           bool
+	msgHandler         js.Func // keeps reference to the JS message handler so it is not GC'd
+	msgHandlerSet      bool    // true when msgHandler is initialized
+	usernameHandler    js.Func // input handler to enable/disable register button
+	usernameHandlerSet bool    // true when usernameHandler is initialized
+}
+
+// New creates a new OAuth registration editor view
+func New(document js.Value, ev *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
+	editor := &ItemEditor{
+		appCore:  appCore,
+		client:   appCore.HttpClient,
+		document: document,
+		events:   ev,
+	}
+
+	// Main container
+	div := document.Call("createElement", "div")
+	div.Set("id", "oauthRegistration")
+
+	// Status area
+	status := document.Call("createElement", "div")
+	status.Set("id", "oauthStatus")
+	status.Set("innerText", "Not registered")
+	div.Call("appendChild", status)
+
+	// Inputs for additional profile info (collected before starting OAuth)
+	lblUser := document.Call("createElement", "label")
+	lblUser.Set("innerText", "Username (required): ")
+	userIn := document.Call("createElement", "input")
+	userIn.Set("type", "text")
+	userIn.Set("placeholder", "username (3-20 chars)")
+	userIn.Set("id", "oauth_username")
+	div.Call("appendChild", lblUser)
+	div.Call("appendChild", userIn)
+
+	lblAddr := document.Call("createElement", "label")
+	lblAddr.Set("innerText", "Street address (optional): ")
+	addrIn := document.Call("createElement", "input")
+	addrIn.Set("type", "text")
+	addrIn.Set("placeholder", "Street address")
+	addrIn.Set("id", "oauth_address")
+	div.Call("appendChild", lblAddr)
+	div.Call("appendChild", addrIn)
+
+	lblDob := document.Call("createElement", "label")
+	lblDob.Set("innerText", "Birth date (optional): ")
+	dobIn := document.Call("createElement", "input")
+	dobIn.Set("type", "date")
+	dobIn.Set("id", "oauth_birthdate")
+	div.Call("appendChild", lblDob)
+	div.Call("appendChild", dobIn)
+
+	lblHidden := document.Call("createElement", "label")
+	checkHidden := document.Call("createElement", "input")
+	checkHidden.Set("type", "checkbox")
+	checkHidden.Set("id", "oauth_hidden")
+	lblHidden.Set("innerText", " Keep account hidden from public listings")
+	div.Call("appendChild", checkHidden)
+	div.Call("appendChild", lblHidden)
+
+	// Register button (disabled until valid username entered)
+	btn := document.Call("createElement", "button")
+	btn.Set("innerText", "Register with Google")
+	btn.Set("disabled", true)
+
+	// Enable/disable register button based on username validity
+	editor.usernameHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		val := userIn.Get("value").String()
+		if len(val) >= 3 && len(val) <= 20 {
+			btn.Set("disabled", false)
+		} else {
+			btn.Set("disabled", true)
+		}
+		return nil
+	})
+	userIn.Call("addEventListener", "input", editor.usernameHandler)
+	editor.usernameHandlerSet = true
+	// Initialize button state based on current input value
+	if v := userIn.Get("value").String(); len(v) >= 3 && len(v) <= 20 {
+		btn.Set("disabled", false)
+	} else {
+		btn.Set("disabled", true)
+	}
+
+	btn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		// Collect pending registration data
+		uname := userIn.Get("value").String()
+		if len(uname) < 3 || len(uname) > 20 {
+			js.Global().Call("alert", "Username is required and must be 3-20 characters")
+			return nil
+		}
+		addr := addrIn.Get("value").String()
+		bday := dobIn.Get("value").String()
+		hidden := checkHidden.Get("checked").Bool()
+
+		var ah *bool
+		ah = new(bool)
+		*ah = hidden
+		payload := registrationPayload{
+			Username:      uname,
+			Address:       addr,
+			BirthDate:     bday,
+			AccountHidden: ah,
+		}
+
+		// Register the account using the canonical registration endpoint, then open OAuth popup
+		if editor.client != nil {
+			// Prepare srp register payload (TableData-like)
+			var reg srpRegistrationView.TableData
+			reg.Username = uname
+			reg.Address = addr
+			if bday != "" {
+				if t, err := time.Parse("2006-01-02", bday); err == nil {
+					reg.BirthDate = t
+				} else {
+					js.Global().Call("alert", "Invalid birth date format. Use YYYY-MM-DD")
+					return nil
+				}
+			}
+			editor.client.NewRequest(http.MethodPost, ApiURL+"/register/", nil, &reg,
+				func(err error, rd *httpProcessor.ReturnData) {
+					if err != nil {
+						log.Printf("%v register failed: %v", debugTag, err)
+						js.Global().Call("alert", "Failed to register account: "+err.Error())
+						return
+					}
+					// Open popup after account is created (server may later merge provider info)
+					editor.client.OpenPopup("/auth/google/login", "oauth", "width=600,height=800")
+				},
+				func(err error, rd *httpProcessor.ReturnData) {
+					log.Printf("%v register error: %v", debugTag, err)
+					js.Global().Call("alert", "Failed to register account: "+err.Error())
+				})
+		} else {
+			// Fallback: open popup but we can't persist registration without client
+			js.Global().Call("open", "https://localhost:8086/api/v1"+"/auth/google/login", "oauth", "width=600,height=800")
+			js.Global().Call("alert", "Warning: registration info will not be saved when using fallback flow")
+		}
+		return nil
+	}))
+	div.Call("appendChild", btn)
+
+	// Store references to inputs so other methods can access them later if needed
+	editor.elements.Div = div
+	editor.elements.Status = status
+	editor.elements.Btn = btn
+	editor.elements.Username = userIn
+	editor.elements.BirthDate = dobIn
+	editor.elements.Address = addrIn
+	editor.elements.HiddenCheckbox = checkHidden
+
+	editor.elements.Div = div
+	editor.elements.Status = status
+	editor.elements.Btn = btn
+
+	// Listen for global loginComplete events
+	if editor.events != nil {
+		editor.events.AddEventHandler("loginComplete", editor.loginComplete)
+	}
+
+	// Listen for postMessage events from the OAuth popup. Expect a message of the form:
+	// { type: 'loginComplete', name: '<display name>', email: '<email>' }
+	// We validate the message origin (must match the client's BaseURL origin) before processing.
+	editor.msgHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) == 0 {
+			return nil
+		}
+		evt := args[0]
+		originVal := evt.Get("origin")
+		if originVal.IsUndefined() || originVal.IsNull() {
+			log.Printf("%v message event missing origin; ignoring", debugTag)
+			return nil
+		}
+		evtOrigin := originVal.String()
+		// Compute expected origin from the configured client BaseURL, falling back to window.location.origin
+		var expectedOrigin string
+		if editor.client != nil && editor.client.BaseURL != "" {
+			if u, err := url.Parse(editor.client.BaseURL); err == nil {
+				expectedOrigin = u.Scheme + "://" + u.Host
+			}
+		}
+		if expectedOrigin == "" {
+			expectedOrigin = js.Global().Get("location").Get("origin").String()
+		}
+		if evtOrigin != expectedOrigin {
+			// Allow localhost-to-localhost messages when the app is running locally (dev convenience).
+			if expectedOrigin != "" {
+				if uExp, err := url.Parse(expectedOrigin); err == nil {
+					if uExp.Hostname() == "localhost" {
+						if uEvt, err := url.Parse(evtOrigin); err == nil {
+							if uEvt.Hostname() == "localhost" {
+								log.Printf("%v accepting message from localhost origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+								// accept
+							} else {
+								log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+								return nil
+							}
+						} else {
+							log.Printf("%v invalid evt origin %s; ignoring", debugTag, evtOrigin)
+							return nil
+						}
+					} else {
+						log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+						return nil
+					}
+				} else {
+					log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+					return nil
+				}
+			} else {
+				log.Printf("%v ignoring message from unexpected origin %s (expected %s)", debugTag, evtOrigin, expectedOrigin)
+				return nil
+			}
+		}
+
+		data := evt.Get("data")
+		if data.IsUndefined() || data.IsNull() {
+			return nil
+		}
+		typeVal := data.Get("type")
+		if typeVal.IsUndefined() || typeVal.String() != "loginComplete" {
+			return nil
+		}
+		nameVal := data.Get("name")
+		var nameStr string
+		if !nameVal.IsUndefined() && nameVal.Type() == js.TypeString {
+			nameStr = nameVal.String()
+		}
+		if editor.events != nil {
+			editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: nameStr})
+		}
+		return nil
+	})
+	js.Global().Call("addEventListener", "message", editor.msgHandler)
+	editor.msgHandlerSet = true
+
+	log.Printf("%v New() created OAuth registration view", debugTag)
+	return editor
+}
+
+// loginComplete handles loginComplete events
+func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
+	name, ok := event.Data.(string)
+	if !ok {
+		log.Printf("%v loginComplete: invalid event data: %+v", debugTag, event.Data)
+		return
+	}
+	// Update status immediately with name
+	if e.elements.Status.Truthy() {
+		e.elements.Status.Set("innerText", "Registered as: "+name)
+	}
+	// After OAuth popup, call server to get the full user object (username may be empty)
+	user := struct {
+		Username string `json:"username"`
+	}{}
+	e.client.NewRequest(http.MethodGet, "/auth/ensure", &user, nil,
+		func(err error, rd *httpProcessor.ReturnData) {
+			if err != nil {
+				log.Printf("%voAuth ensure request failed: %v", debugTag, err)
+				return
+			}
+			// If username or other profile fields are missing, prompt the user to provide them and send a single completion request
+			if user.Username == "" || user.Username == "" {
+				// Prompt for username
+				unameRes := js.Global().Call("prompt", "Choose a username (3-20 chars):", "")
+				if unameRes.IsUndefined() || unameRes.IsNull() {
+					return // user cancelled
+				}
+				uname := unameRes.String()
+				if len(uname) < 3 || len(uname) > 20 {
+					js.Global().Call("alert", "Username must be 3-20 characters")
+					return
+				}
+				// Prompt for address (optional)
+				addrRes := js.Global().Call("prompt", "Enter your address (optional):", "")
+				var addr string
+				if !addrRes.IsUndefined() && !addrRes.IsNull() {
+					addr = addrRes.String()
+				}
+				// Prompt for birthdate (optional) - suggest YYYY-MM-DD
+				bdayRes := js.Global().Call("prompt", "Enter your birth date (YYYY-MM-DD) (optional):", "")
+				var bday string
+				if !bdayRes.IsUndefined() && !bdayRes.IsNull() {
+					bday = bdayRes.String()
+				}
+				// Prompt for account hidden (confirm)
+				hidden := js.Global().Call("confirm", "Keep account hidden from public listings?")
+				var ah *bool
+				ah = new(bool)
+				*ah = hidden.Bool()
+				var reg srpRegistrationView.TableData
+				reg.Username = uname
+				reg.Address = addr
+				if bday != "" {
+					if t, err := time.Parse("2006-01-02", bday); err == nil {
+						reg.BirthDate = t
+					} else {
+						js.Global().Call("alert", "Invalid birth date format. Use YYYY-MM-DD")
+						return
+					}
+				}
+				// Send the completion request to canonical registration endpoint
+				e.client.NewRequest(http.MethodPost, ApiURL+"/register/", nil, &reg,
+					func(err error, rd *httpProcessor.ReturnData) {
+						if err != nil {
+							log.Printf("%v register failed: %v", debugTag, err)
+							js.Global().Call("alert", "Failed to register account: "+err.Error())
+							return
+						}
+						// Update UI to include username
+						if e.elements.Status.Truthy() {
+							e.elements.Status.Set("innerText", "Registered as: "+name+" ("+uname+")")
+						}
+					},
+					func(err error, rd *httpProcessor.ReturnData) {
+						log.Printf("%v register error: %v", debugTag, err)
+						js.Global().Call("alert", "Failed to register account: "+err.Error())
+					})
+			} else {
+				// username already set
+				if e.elements.Status.Truthy() {
+					e.elements.Status.Set("innerText", "Registered as: "+name+" ("+user.Username+")")
+				}
+			}
+		},
+		func(err error, rd *httpProcessor.ReturnData) {
+			log.Printf("%voAuth ensure request failed (fail callback): %v", debugTag, err)
+		})
+	e.LoggedIn = true
+}
+
+// Display shows the editor
+func (e *ItemEditor) Display() {
+	if e.elements.Div.Truthy() {
+		e.elements.Div.Get("style").Call("setProperty", "display", "block")
+	}
+}
+
+// Hide hides the editor
+func (e *ItemEditor) Hide() {
+	if e.elements.Div.Truthy() {
+		e.elements.Div.Get("style").Call("setProperty", "display", "none")
+	}
+}
+
+// GetDiv returns the root div for the editor
+func (e *ItemEditor) GetDiv() js.Value {
+	return e.elements.Div
+}
+
+// ResetView clears status
+func (e *ItemEditor) ResetView() {
+	if e.elements.Status.Truthy() {
+		e.elements.Status.Set("innerText", "Not registered")
+	}
+	e.LoggedIn = false
+}
+
+func (editor *ItemEditor) FetchItems() {
+	//editor.NewItemData() // The login view is different to all the other views, there is no data to fetch.
+}
+
+// Destroy releases resources associated with the view (removes global event listeners).
+// Call this when the view is permanently removed to avoid leaks.
+func (e *ItemEditor) Destroy() {
+	if e.msgHandlerSet {
+		js.Global().Call("removeEventListener", "message", e.msgHandler)
+		e.msgHandler.Release()
+		e.msgHandler = js.Func{}
+		e.msgHandlerSet = false
+		log.Printf("%v Destroy() removed message listener", debugTag)
+	}
+	if e.usernameHandlerSet && e.elements.Username.Truthy() {
+		e.elements.Username.Call("removeEventListener", "input", e.usernameHandler)
+		e.usernameHandler.Release()
+		e.usernameHandler = js.Func{}
+		e.usernameHandlerSet = false
+		log.Printf("%v Destroy() removed username input handler", debugTag)
+	}
+}
