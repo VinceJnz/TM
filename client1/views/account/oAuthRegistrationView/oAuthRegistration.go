@@ -5,6 +5,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"log"
+	"net/http"
 	"net/url"
 	"syscall/js"
 )
@@ -157,10 +158,60 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 		log.Printf("%v loginComplete: invalid event data: %+v", debugTag, event.Data)
 		return
 	}
-	// Update status
+	// Update status immediately with name
 	if e.elements.Status.Truthy() {
 		e.elements.Status.Set("innerText", "Registered as: "+name)
 	}
+	// After OAuth popup, call server to get the full user object (username may be empty)
+	user := struct {
+		Username string `json:"username"`
+	}{}
+	e.client.NewRequest(http.MethodGet, "/auth/ensure", &user, nil,
+		func(err error, rd *httpProcessor.ReturnData) {
+			if err != nil {
+				log.Printf("%voAuth ensure request failed: %v", debugTag, err)
+				return
+			}
+			// If username is missing, prompt the user to choose one
+			if user.Username == "" {
+				res := js.Global().Call("prompt", "Choose a username (3-20 chars):", "")
+				if res.IsUndefined() || res.IsNull() {
+					// user cancelled
+					return
+				}
+				uname := res.String()
+				if len(uname) < 3 || len(uname) > 20 {
+					js.Global().Call("alert", "Username must be 3-20 characters")
+					return
+				}
+				// Post new username to server
+				payload := map[string]string{"username": uname}
+				e.client.NewRequest(http.MethodPost, "/users/set-username", nil, payload,
+					func(err error, rd *httpProcessor.ReturnData) {
+						if err != nil {
+							log.Printf("%v set-username failed: %v", debugTag, err)
+							js.Global().Call("alert", "Failed to set username: "+err.Error())
+							return
+						}
+						// Update UI to include username
+						if e.elements.Status.Truthy() {
+							e.elements.Status.Set("innerText", "Registered as: "+name+" ("+uname+")")
+						}
+					},
+					func(err error, rd *httpProcessor.ReturnData) {
+						log.Printf("%v set-username error: %v", debugTag, err)
+						js.Global().Call("alert", "Failed to set username: "+err.Error())
+					})
+			} else {
+				// username already set
+				if e.elements.Status.Truthy() {
+					e.elements.Status.Set("innerText", "Registered as: "+name+" ("+user.Username+")")
+				}
+			}
+		},
+		func(err error, rd *httpProcessor.ReturnData) {
+			log.Printf("%voAuth ensure request failed (fail callback): %v", debugTag, err)
+		})
 	e.LoggedIn = true
 }
 

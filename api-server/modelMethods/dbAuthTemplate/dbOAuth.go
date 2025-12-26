@@ -18,12 +18,34 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 
 	userFromDB, err := UserEmailReadQry(debugStr+"FindOrCreateUserByProvider ", Db, user.Email.String)
 	if err == nil {
-		// found existing user by email, update provider info
-		log.Printf("%vFindOrCreateUserByProvider - user found by email, updating provider info: user = %+v, userFromDB = %+v", debugStr, user, userFromDB)
+		// found existing user by email, merge provider info into the existing user
+		log.Printf("%vFindOrCreateUserByProvider - user found by email, merging provider info: incoming user = %+v, userFromDB = %+v", debugStr, user, userFromDB)
 		user.ID = userFromDB.ID
-		user.Provider = userFromDB.Provider
-		user.ProviderID = userFromDB.ProviderID
+		// Preserve existing fields when incoming values are empty.
+		if user.Name == "" {
+			user.Name = userFromDB.Name
+		}
+		if user.Username == "" {
+			user.Username = userFromDB.Username
+		}
+		if user.Email.String == "" {
+			user.Email = userFromDB.Email
+		}
+		// For provider fields, prefer incoming (new) values; fall back to existing DB values if incoming is empty
+		if !user.Provider.Valid || user.Provider.String == "" {
+			user.Provider = userFromDB.Provider
+		}
+		if !user.ProviderID.Valid || user.ProviderID.String == "" {
+			user.ProviderID = userFromDB.ProviderID
+		}
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider ", Db, user)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		// No existing user found by provider or email: insert a new user so provider info is persisted
+		log.Printf("%vFindOrCreateUserByProvider - no existing user found; inserting new user: %+v", debugStr, user)
+		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider:insert ", Db, user)
 		if err != nil {
 			return 0, err
 		}

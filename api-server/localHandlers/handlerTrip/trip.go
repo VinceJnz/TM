@@ -9,6 +9,8 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+
+	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerTrip."
@@ -39,6 +41,14 @@ type Handler struct {
 
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
+}
+
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router) {
+	log.Printf("%v Registering OAuth routes\n", debugTag)
+	dbStandardTemplate.AddRouteGroup(r, "/trips", h)
+	r.HandleFunc("/tripsReport", h.GetParticipantStatus).Methods("GET") // Trip routes
+	log.Printf("%v OAuth routes registered\n", debugTag)
 }
 
 // GetAll: retrieves and returns all records

@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"api-server/v2/app/appCore"
+	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+
+	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerUser."
@@ -26,6 +30,14 @@ type Handler struct {
 
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
+}
+
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router) {
+	log.Printf("%v Registering OAuth routes\n", debugTag)
+	dbStandardTemplate.AddRouteGroup(r, "/users", h)
+	r.HandleFunc("/users/set-username", h.SetUsername).Methods("POST")
+	log.Printf("%v OAuth routes registered\n", debugTag)
 }
 
 // GetAll: retrieves and returns all records
@@ -69,4 +81,56 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+}
+
+// SetUsername allows the authenticated user to set their username (unique).
+func (h *Handler) SetUsername(w http.ResponseWriter, r *http.Request) {
+	// Require a session (set by RequireOAuthOrSessionAuth middleware)
+	sessI := r.Context().Value(h.appConf.SessionIDKey)
+	if sessI == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	sess, ok := sessI.(*models.Session)
+	if !ok {
+		http.Error(w, "invalid session", http.StatusInternalServerError)
+		return
+	}
+	// Parse request body
+	var req struct {
+		Username string `json:"username"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	uname := strings.TrimSpace(req.Username)
+	if uname == "" || len(uname) < 3 || len(uname) > 20 {
+		http.Error(w, "invalid username", http.StatusBadRequest)
+		return
+	}
+	// Check uniqueness
+	existing, err := dbAuthTemplate.UserNameReadQry(debugTag+"SetUsername:check ", h.appConf.Db, uname)
+	if err == nil {
+		if existing.ID != sess.UserID {
+			http.Error(w, "username taken", http.StatusConflict)
+			return
+		}
+		// If it is the same user, continue (no-op)
+	}
+	// Load user and update
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"SetUsername ", h.appConf.Db, sess.UserID)
+	if err != nil {
+		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		return
+	}
+	user.Username = uname
+	_, err = dbAuthTemplate.UserWriteQry(debugTag+"SetUsername ", h.appConf.Db, user)
+	if err != nil {
+		log.Printf("%v failed to set username: %v", debugTag, err)
+		http.Error(w, "failed to update username", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "username": uname})
 }

@@ -88,8 +88,9 @@ func main() {
 
 	// Add route groups
 	//addRouteGroup(subR2, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes
-	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))                             // Seasons routes
-	addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
+	addRouteGroup(subR2, "seasons", handlerSeasons.New(app)) // Seasons routes
+	//addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
+	handlerUser.New(app).RegisterRoutes(subR2)
 	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserAgeGroup routes
 	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))                   // UserPayments routes
 	addRouteGroup(subR2, "userMemberStatus", handlerMemberStatus.New(app))               // UserMemberStatus routes
@@ -117,9 +118,10 @@ func main() {
 	addRouteGroup(subR2, "bookingPeople", bookingPeople)                                          // BookingPeople routes
 	subR2.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET") // BookingPeople routes
 
-	trip := handlerTrip.New(app)                                               // Trip routes
-	addRouteGroup(subR2, "trips", trip)                                        // Trip routes
-	subR2.HandleFunc("/tripsReport", trip.GetParticipantStatus).Methods("GET") // Trip routes
+	handlerTrip.New(app).RegisterRoutes(subR2) // Trip routes
+	//trip := handlerTrip.New(app)                                               // Trip routes
+	//addRouteGroup(subR2, "trips", trip)                                        // Trip routes
+	//subR2.HandleFunc("/tripsReport", trip.GetParticipantStatus).Methods("GET") // Trip routes
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
