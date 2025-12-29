@@ -1,17 +1,12 @@
 .git/
 .vscode/
-api-server/
-certs/
-client1/
 client1_rust/
 client2-NoSRP/
 db-server/
 web-server/
-.env
 .gitignore
 *.cmd
 *.log
-*.json
 *.md
 *.txt
 *.zip

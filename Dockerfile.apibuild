@@ -15,14 +15,16 @@ WORKDIR /app
 # Copy only go.mod and go.sum first (better layer caching)
 COPY ./client1/go.mod ./client1/go.sum ./
 # COPY ./client2-NoSRP/go.mod ./client2-NoSRP/go.sum ./
-RUN go mod download
+#RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
 COPY ./client1/ .
 #COPY ./client2-NoSRP/ .
 
 # Build the Go WASM binary
 #RUN GOOS=js GOARCH=wasm go build -o ./main.wasm
-RUN tinygo build -o main.wasm -target wasm ./ 
+#RUN tinygo build -o main.wasm -target wasm ./ 
+RUN --mount=type=cache,target=/root/.cache/tinygo tinygo build -o main.wasm -target wasm ./
 
 # Copy wasm_exec.js to target directory
 #RUN cp /usr/local/go/misc/wasm/wasm_exec.js .
