@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const debugTag = "srpLoginView."
+const debugTag = "oAuthRegistrationView."
 
 type ItemState int
 
@@ -41,7 +41,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/oAuth"
+const ApiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -81,7 +81,7 @@ type viewElements struct {
 type children struct {
 	//Add child structures as necessary
 	//SrpClient *srp.SRP
-	SrpGroup int
+	//SrpGroup int
 }
 
 type ItemEditor struct {
@@ -102,6 +102,12 @@ type ItemEditor struct {
 
 	LoggedIn  bool
 	FormValid bool
+
+	// JS handlers that must be retained to avoid garbage collection
+	msgHandler         js.Func
+	msgHandlerSet      bool
+	usernameHandler    js.Func
+	usernameHandlerSet bool
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -146,13 +152,16 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	// Create child editors here
 	//..........
 	//editor.Children.SrpGroup = srp.RFC5054Group3072
-	editor.Children.SrpGroup = 0
+	//editor.Children.SrpGroup = 0
 	editor.RecordState = RecordStateReloadRequired
 
 	// Listen for global loginComplete events
 	if editor.events != nil {
 		editor.events.AddEventHandler("loginComplete", editor.loginComplete)
 	}
+
+	// set up message listener for OAuth popup postMessage events
+	editor.setupMessageListener()
 
 	return editor
 }
@@ -224,7 +233,9 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
 	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Account Hidden", "checkbox", "itemAccountHidden")
-	editor.UiComponents.AccountHidden.Call("setAttribute", "required", "true")
+	//editor.UiComponents.AccountHidden.Call("setAttribute", "required", "true")
+	editor.UiComponents.AccountHidden.Set("defaultChecked", true)
+	editor.UiComponents.AccountHidden.Set("Checked", editor.CurrentRecord.AccountHidden)
 
 	//localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "itemPassword")
 	//editor.UiComponents.Password.Call("setAttribute", "required", "true")
@@ -239,7 +250,9 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create form buttons
 	//submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
 	//cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
-	submitBtn := viewHelpers.SubmitValidateButton(editor.authProcess, editor.document, "Submit", "submitEditBtn")
+	//submitBtn := viewHelpers.SubmitValidateButton(editor.authProcess, editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitValidateButton2(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
+	//submitBtn := viewHelpers.SubmitValidateButton2(editor.authProcess, editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
@@ -271,7 +284,7 @@ func (editor *ItemEditor) resetEditForm() {
 }
 
 // SubmitItemEdit handles the submission of the item edit form
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	var err error
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
@@ -281,24 +294,29 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
+	if len(editor.CurrentRecord.Username) < 3 || len(editor.CurrentRecord.Username) > 20 {
+		js.Global().Call("alert", "Username is required and must be 3-20 characters")
+		return nil
+	}
 	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
 	editor.CurrentRecord.BirthDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BirthDate.Get("value").String())
 	if err != nil {
 		log.Printf(debugTag+"SubmitItemEdit() error parsing date %v", err)
+		js.Global().Call("alert", "Invalid birth date format. Use YYYY-MM-DD")
+		return nil
 	}
 	editor.CurrentRecord.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
 	//editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
+	log.Printf(debugTag+"SubmitItemEdit()2 CurrentRecord = %+v", editor.CurrentRecord)
 
-	//log.Printf(debugTag+"SubmitItemEdit()2 Username %v, Password %v", editor.CurrentRecord.Username, editor.CurrentRecord.Password)
-
-	editor.authProcess()
+	editor.authProcess(this, p)
 
 	editor.resetEditForm()
 	return nil
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	editor.resetEditForm()
 	return nil
 }
@@ -326,56 +344,55 @@ func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	editor.ItemState = newState
 }
 
-func (editor *ItemEditor) authProcess() {
+func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 	// Collect input elements
-	js.FuncOf(func(this js.Value, args []js.Value) any {
-		// Collect pending registration data
-		var payload TableData
-		var err error
+	//js.FuncOf(func(this js.Value, args []js.Value) any {
+	// Collect pending registration data
+	//var payload TableData
+	//var err error
+	/*
 		payload.Username = editor.UiComponents.Username.Get("value").String()
 		if len(payload.Username) < 3 || len(payload.Username) > 20 {
 			js.Global().Call("alert", "Username is required and must be 3-20 characters")
 			return nil
 		}
-		payload.Address = editor.UiComponents.Address.Get("value").String()
 		payload.BirthDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BirthDate.Get("value").String())
 		if err != nil {
 			js.Global().Call("alert", "Invalid birth date format. Use YYYY-MM-DD")
 			return nil
 		}
 		payload.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
-
-		// Register the account using the canonical registration endpoint, then open OAuth popup
-		if editor.client != nil {
-			editor.client.NewRequest(http.MethodPost, ApiURL+"/register/", nil, &payload,
-				func(err error, rd *httpProcessor.ReturnData) {
-					if err != nil {
-						log.Printf("%v register failed: %v", debugTag, err)
-						js.Global().Call("alert", "Failed to register account: "+err.Error())
-						return
-					}
-					// Open popup after account is created (server may later merge provider info)
-					editor.client.OpenPopup("/auth/google/login", "oauth", "width=600,height=800")
-				},
-				func(err error, rd *httpProcessor.ReturnData) {
-					log.Printf("%v register error: %v", debugTag, err)
-					js.Global().Call("alert", "Failed to register account: "+err.Error())
-				})
-		} else {
-			// Fallback: open popup but we can't persist registration without client
-			js.Global().Call("open", "https://localhost:8086/api/v1"+"/auth/google/login", "oauth", "width=600,height=800")
-			js.Global().Call("alert", "Warning: registration info will not be saved when using fallback flow")
-		}
-		return nil
-	})
+	*/
+	// Register the account using the canonical registration endpoint, then open OAuth popup
+	if editor.client != nil {
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/pending-registration", nil, &editor.CurrentRecord,
+			func(err error, rd *httpProcessor.ReturnData) {
+				if err != nil {
+					log.Printf("%v pending-registration failed: %v", debugTag, err)
+					js.Global().Call("alert", "Failed to save registration data: "+err.Error())
+					return
+				}
+				// Open popup after pending data saved (server may later merge provider info)
+				editor.client.OpenPopup("/auth/google/login", "oauth", "width=600,height=800")
+			},
+			func(err error, rd *httpProcessor.ReturnData) {
+				log.Printf("%v pending-registration error: %v", debugTag, err)
+				js.Global().Call("alert", "Failed to save registration data: "+err.Error())
+			})
+	} else {
+		// Fallback: open popup but we can't persist registration without client
+		js.Global().Call("open", "https://localhost:8086/api/v1"+"/auth/google/login", "oauth", "width=600,height=800")
+		js.Global().Call("alert", "Warning: registration info will not be saved when using fallback flow")
+	}
+	return nil
 }
 
 // Listen for postMessage events from the OAuth popup. Expect a message of the form:
 // { type: 'loginComplete', name: '<display name>', email: '<email>' }
 // We validate the message origin (must match the client's BaseURL origin) before processing.
 func (editor *ItemEditor) setupMessageListener() {
-	//editor.msgHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-	js.FuncOf(func(this js.Value, args []js.Value) any {
+	// Keep a reference to the handler so it isn't GC'd
+	editor.msgHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) == 0 {
 			return nil
 		}
@@ -446,6 +463,8 @@ func (editor *ItemEditor) setupMessageListener() {
 		return nil
 	})
 
+	js.Global().Call("addEventListener", "message", editor.msgHandler)
+	editor.msgHandlerSet = true
 }
 
 // Event handlers and event data types
@@ -474,7 +493,20 @@ type LoginComplete struct {
 // loginComplete handles loginComplete events
 func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 	var user TableData
-	name := event.Data.(LoginComplete).User.Name
+	var name string
+
+	// Accept either a simple string or the LoginComplete struct (backwards compatibility)
+	switch v := event.Data.(type) {
+	case string:
+		name = v
+	case LoginComplete:
+		user = v.User
+	case *LoginComplete:
+		user = v.User
+	default:
+		log.Printf("%v loginComplete: unsupported event data type %T", debugTag, event.Data)
+		return
+	}
 
 	success := func(err error, rd *httpProcessor.ReturnData) {
 		if err != nil {
@@ -507,28 +539,29 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 			}
 			// Prompt for account hidden (confirm)
 			hidden := js.Global().Call("confirm", "Keep account hidden from public listings?")
-			var ah *bool
-			ah = new(bool)
-			*ah = hidden.Bool()
+			var ah bool
+			ah = hidden.Bool()
 
 			var reg TableData
 			reg.Username = uname
 			reg.Address = addr
 			reg.Name = name
 			if bday != "" {
-				if t, err := time.Parse("2006-01-02", bday); err == nil {
+				if t, err := time.Parse(viewHelpers.Layout, bday); err == nil {
 					reg.BirthDate = t
 				} else {
-					js.Global().Call("alert", "Invalid birth date format. Use YYYY-MM-DD")
+					js.Global().Call("alert", "Invalid birth date format. Use "+viewHelpers.Layout)
 					return
 				}
 			}
-			// Send the completion request to canonical registration endpoint
-			e.client.NewRequest(http.MethodPost, ApiURL+"/register/", nil, &reg,
+			reg.AccountHidden = ah
+
+			// Send the completion request to OAuth complete-registration endpoint
+			e.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
 				func(err error, rd *httpProcessor.ReturnData) { // success callback
 					if err != nil {
-						log.Printf("%v register failed: %v", debugTag, err)
-						js.Global().Call("alert", "Failed to register account: "+err.Error())
+						log.Printf("%v complete-registration failed: %v", debugTag, err)
+						js.Global().Call("alert", "Failed to complete registration: "+err.Error())
 						return
 					}
 					// Update UI to include username
@@ -537,8 +570,8 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 					}
 				},
 				func(err error, rd *httpProcessor.ReturnData) { // failure callback
-					log.Printf("%v register error: %v", debugTag, err)
-					js.Global().Call("alert", "Failed to register account: "+err.Error())
+					log.Printf("%v complete-registration error: %v", debugTag, err)
+					js.Global().Call("alert", "Failed to complete registration: "+err.Error())
 				})
 		} else {
 			// username already set
@@ -557,6 +590,6 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 		e.elements.Status.Set("innerText", "Registered as: "+name)
 	}
 	// After OAuth popup, call server to get the full user object (username may be empty)
-	e.client.NewRequest(http.MethodGet, "/auth/ensure", &user, nil, success, failure)
+	e.client.NewRequest(http.MethodGet, ApiURL+"/ensure", &user, nil, success, failure)
 	e.LoggedIn = true
 }

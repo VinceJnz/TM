@@ -47,10 +47,10 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 }
 
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%v loginHandler called: host=%s remote=%s cookies=%q", debugTag, r.Host, r.RemoteAddr, r.Header.Get("Cookie"))
+	log.Printf("%vloginHandler()0 called: host=%s remote=%s cookies=%q", debugTag, r.Host, r.RemoteAddr, r.Header.Get("Cookie"))
 	session, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	if err != nil {
-		log.Printf("%v failed to get session: %v; cookies=%q; host=%s; remote=%s", debugTag, err, r.Header.Get("Cookie"), r.Host, r.RemoteAddr)
+		log.Printf("%vloginHandler()1 failed to get session: %v; cookies=%q; host=%s; remote=%s", debugTag, err, r.Header.Get("Cookie"), r.Host, r.RemoteAddr)
 		http.Error(w, "failed to get session", http.StatusInternalServerError)
 		return
 	}
@@ -68,7 +68,7 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := h.appConf.OAuthSvc.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"))
-	log.Printf("%voAuth login: clientID=%s redirectURL=%s authURL=%s", debugTag, h.appConf.OAuthSvc.OAuthConfig.ClientID, h.appConf.OAuthSvc.OAuthConfig.RedirectURL, url)
+	log.Printf("%vloginHandler()2 oAuth login: clientID=%s redirectURL=%s authURL=%s", debugTag, h.appConf.OAuthSvc.OAuthConfig.ClientID, h.appConf.OAuthSvc.OAuthConfig.RedirectURL, url)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
@@ -99,9 +99,9 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// If the error includes the provider response, log status and body for diagnosis
 		if re, ok := err.(*oauth2.RetrieveError); ok {
-			log.Printf("%v token exchange failed: status=%d body=%s", debugTag, re.Response.StatusCode, string(re.Body))
+			log.Printf("%vcallbackHandler()5 token exchange failed: status=%d body=%s", debugTag, re.Response.StatusCode, string(re.Body))
 		} else {
-			log.Printf("%v token exchange failed: %v", debugTag, err)
+			log.Printf("%vcallbackHandler()6 token exchange failed: %v", debugTag, err)
 		}
 		http.Error(w, "failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -115,13 +115,13 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	var userInfo map[string]interface{}
+	var userInfo map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		http.Error(w, "failed to decode userinfo: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("%v userInfo: %+v", debugTag, userInfo) // for debugging
+	log.Printf("%vcallbackHandler()7 userInfo: %+v", debugTag, userInfo) // for debugging
 
 	// validate minimal fields
 	sub, _ := userInfo["sub"].(string)
@@ -175,8 +175,10 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Save session after consuming pending data
 	if err := session.Save(r, w); err != nil {
-		log.Printf("%v callbackHandler: failed to save session after consuming pending registration: %v", debugTag, err)
+		log.Printf("%vcallbackHandler()8 callbackHandler: failed to save session after consuming pending registration: %v", debugTag, err)
 	}
+
+	log.Printf("%vcallbackHandler()9 creating/upserting user: %+v", debugTag, user)
 
 	userID, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
 	if err != nil {
@@ -286,6 +288,8 @@ func (h *Handler) PendingRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	log.Printf("%vPendingRegistration()1: req = %+v\n", debugTag, req)
+
 	sess, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
 	if err != nil {
 		http.Error(w, "failed to get session", http.StatusInternalServerError)
@@ -334,6 +338,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	log.Printf("%vCompleteRegistration()1: req = %+v\n", debugTag, req)
 	// Validate username if provided
 	if req.Username != "" {
 		uname := strings.TrimSpace(req.Username)
@@ -377,6 +382,8 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	if req.AccountHidden != nil {
 		user.AccountHidden.SetValid(*req.AccountHidden)
 	}
+	log.Printf("%vCompleteRegistration()2: updated user = %+v\n", debugTag, user)
+	// Save user
 	_, err = dbAuthTemplate.UserWriteQry(debugTag+"CompleteRegistration:write ", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v CompleteRegistration failed: %v", debugTag, err)

@@ -87,7 +87,7 @@ func Button2(onClick func() interface{}, doc js.Value, displayText, htmlID strin
 	return button
 }
 
-// func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+// func SubmitButton(listner func(this js.Value, args []js.Value) any, doc js.Value, displayText, htmlID string) js.Value {
 func SubmitButton(doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
@@ -96,15 +96,30 @@ func SubmitButton(doc js.Value, displayText, htmlID string) js.Value {
 	return button
 }
 
-// func SubmitButton(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
+// func SubmitButton(listner func(this js.Value, args []js.Value) any, doc js.Value, displayText, htmlID string) js.Value {
 func SubmitValidateButton(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "submit")
 	button.Set("innerHTML", displayText)
 	if onClick != nil {
-		f := func(this js.Value, args []js.Value) interface{} {
+		f := func(this js.Value, args []js.Value) any {
 			onClick()
+			return nil
+		}
+		button.Call("addEventListener", "click", js.FuncOf(f))
+	}
+	return button
+}
+
+func SubmitValidateButton2(onClick func(this js.Value, args []js.Value) any, doc js.Value, displayText, htmlID string) js.Value {
+	button := doc.Call("createElement", "button")
+	button.Set("id", htmlID)
+	button.Set("type", "submit")
+	button.Set("innerHTML", displayText)
+	if onClick != nil {
+		f := func(this js.Value, args []js.Value) any {
+			onClick(this, args)
 			return nil
 		}
 		button.Call("addEventListener", "click", js.FuncOf(f))

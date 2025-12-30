@@ -249,11 +249,11 @@ func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, acc
 
 const (
 	sqlUserFind      = `SELECT id FROM st_users WHERE id = $1`
-	sqlUserRead      = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id, provider, provider_id FROM st_users WHERE id = $1`
-	sqlUserNameRead  = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id, provider, provider_id FROM st_users WHERE username = $1`
-	sqlUserEmailRead = `SELECT id, name, username, email, user_birth_date, webauthn_user_id, user_account_status_id, provider, provider_id FROM st_users WHERE email = $1`
-	sqlUserInsert    = `INSERT INTO st_users (name, username, email, user_birth_date, webauthn_user_id, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	sqlUserUpdate    = `UPDATE st_users SET name = $1, username = $2, email = $3, user_birth_date = $4, webauthn_user_id = $5, provider = $6, provider_id = $7 WHERE id = $8`
+	sqlUserRead      = `SELECT id, name, username, email, user_address, user_birth_date, webauthn_user_id, user_account_status_id, provider, provider_id FROM st_users WHERE id = $1`
+	sqlUserNameRead  = `SELECT id, name, username, email, user_address, user_birth_date, webauthn_user_id, user_account_status_id, provider, provider_id FROM st_users WHERE username = $1`
+	sqlUserEmailRead = `SELECT id, name, username, email, user_address, user_birth_date, webauthn_user_id, user_account_status_id, provider, provider_id FROM st_users WHERE email = $1`
+	sqlUserInsert    = `INSERT INTO st_users (name, username, email, user_address, user_birth_date, webauthn_user_id, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	sqlUserUpdate    = `UPDATE st_users SET name = $1, username = $2, email = $3 , user_address = $4 , user_birth_date = $5 , webauthn_user_id = $6 , provider = $7 , provider_id = $8 WHERE id = $9`
 )
 
 func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
@@ -306,7 +306,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID, record.Provider, record.ProviderID).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.WebAuthnUserID, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
@@ -315,7 +315,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 }
 
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
-	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.BirthDate, record.WebAuthnUserID, record.Provider, record.ProviderID, record.ID)
+	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.WebAuthnUserID, record.Provider, record.ProviderID, record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx()1 - ", "err =", err, "record =", record)
 	}

@@ -84,11 +84,11 @@ func main() {
 	// Provide a lightweight endpoint that will trigger OAuth->DB user upsert and create a DB session cookie.
 	// This endpoint is protected by RequireOAuthOrSessionAuth so calling it after OAuth login will cause
 	// the middleware to create an internal session and set the "session" cookie for subsequent API calls.
-	subR2.HandleFunc("/auth/ensure", oauthH.OAuthEnsure).Methods("GET")
+	subR1.HandleFunc("/auth/ensure", oauthH.OAuthEnsure).Methods("GET")
 	// Endpoint used to collect additional registration info from OAuth-first-time users (username, address, birthdate, accountHidden)
 	subR2.HandleFunc("/auth/complete-registration", oauthH.CompleteRegistration).Methods("POST")
-	// Endpoint to set pending registration data in the session before starting OAuth flow
-	subR2.HandleFunc("/auth/pending-registration", oauthH.PendingRegistration).Methods("POST")
+	// Endpoint to set pending registration data in the session before starting OAuth flow (UNPROTECTED)
+	subR1.HandleFunc("/auth/pending-registration", oauthH.PendingRegistration).Methods("POST")
 
 	// Add route groups
 	//addRouteGroup(subR2, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes
