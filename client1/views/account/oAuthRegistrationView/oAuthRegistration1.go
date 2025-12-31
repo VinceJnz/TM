@@ -88,7 +88,7 @@ type ItemEditor struct {
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
-	elements viewElements
+	Elements viewElements
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
@@ -121,28 +121,28 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor
-	editor.elements.Div = editor.document.Call("createElement", "div")
-	editor.elements.Div.Set("id", debugTag+"Div")
+	editor.Elements.Div = editor.document.Call("createElement", "div")
+	editor.Elements.Div.Set("id", debugTag+"Div")
 
 	// Create a div for displaying the editor
-	editor.elements.EditDiv = editor.document.Call("createElement", "div")
-	editor.elements.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.elements.Div.Call("appendChild", editor.elements.EditDiv)
+	editor.Elements.EditDiv = editor.document.Call("createElement", "div")
+	editor.Elements.EditDiv.Set("id", debugTag+"itemEditDiv")
+	editor.Elements.Div.Call("appendChild", editor.Elements.EditDiv)
 
 	// Create a div for displaying the list
-	editor.elements.ListDiv = editor.document.Call("createElement", "div")
-	editor.elements.ListDiv.Set("id", debugTag+"itemListDiv")
-	editor.elements.Div.Call("appendChild", editor.elements.ListDiv)
+	editor.Elements.ListDiv = editor.document.Call("createElement", "div")
+	editor.Elements.ListDiv.Set("id", debugTag+"itemListDiv")
+	editor.Elements.Div.Call("appendChild", editor.Elements.ListDiv)
 
 	// Create a div for displaying ItemState
-	editor.elements.StateDiv = editor.document.Call("createElement", "div")
-	editor.elements.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	editor.elements.Div.Call("appendChild", editor.elements.StateDiv)
+	editor.Elements.StateDiv = editor.document.Call("createElement", "div")
+	editor.Elements.StateDiv.Set("id", debugTag+"ItemStateDiv")
+	editor.Elements.Div.Call("appendChild", editor.Elements.StateDiv)
 
 	// Create a div for displaying status
-	editor.elements.Status = editor.document.Call("createElement", "div")
-	editor.elements.Status.Set("id", debugTag+"Status")
-	editor.elements.Div.Call("appendChild", editor.elements.Status)
+	editor.Elements.Status = editor.document.Call("createElement", "div")
+	editor.Elements.Status.Set("id", debugTag+"Status")
+	editor.Elements.Div.Call("appendChild", editor.Elements.Status)
 
 	// Store supplied parent value
 	if len(idList) == 1 {
@@ -167,12 +167,12 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 }
 
 func (editor *ItemEditor) ResetView() {
-	editor.elements.EditDiv.Set("innerHTML", "")
-	editor.elements.ListDiv.Set("innerHTML", "")
+	editor.Elements.EditDiv.Set("innerHTML", "")
+	editor.Elements.ListDiv.Set("innerHTML", "")
 }
 
 func (editor *ItemEditor) GetDiv() js.Value {
-	return editor.elements.Div
+	return editor.Elements.Div
 }
 
 func (editor *ItemEditor) Toggle() {
@@ -186,12 +186,12 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
-	editor.elements.Div.Get("style").Call("setProperty", "display", "none")
+	editor.Elements.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
 
 func (editor *ItemEditor) Display() {
-	editor.elements.Div.Get("style").Call("setProperty", "display", "block")
+	editor.Elements.Div.Get("style").Call("setProperty", "display", "block")
 	editor.ViewState = ViewStateBlock
 }
 
@@ -217,7 +217,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
-	editor.elements.EditDiv.Set("innerHTML", "") // Clear existing content
+	editor.Elements.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
@@ -263,15 +263,15 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create and add child views and buttons to Item
 
 	// Append form to editor div
-	editor.elements.EditDiv.Call("appendChild", form)
+	editor.Elements.EditDiv.Call("appendChild", form)
 
 	// Make sure the form is visible
-	editor.elements.EditDiv.Get("style").Set("display", "block")
+	editor.Elements.EditDiv.Get("style").Set("display", "block")
 }
 
 func (editor *ItemEditor) resetEditForm() {
 	// Clear existing content
-	editor.elements.EditDiv.Set("innerHTML", "")
+	editor.Elements.EditDiv.Set("innerHTML", "")
 
 	// Reset CurrentItem
 	//editor.CurrentRecord = TableData{}
@@ -491,7 +491,7 @@ type LoginComplete struct {
 }
 
 // loginComplete handles loginComplete events
-func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
+func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 	var user TableData
 	var name string
 
@@ -557,7 +557,7 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 			reg.AccountHidden = ah
 
 			// Send the completion request to OAuth complete-registration endpoint
-			e.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
+			editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
 				func(err error, rd *httpProcessor.ReturnData) { // success callback
 					if err != nil {
 						log.Printf("%v complete-registration failed: %v", debugTag, err)
@@ -565,8 +565,8 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 						return
 					}
 					// Update UI to include username
-					if e.elements.Status.Truthy() {
-						e.elements.Status.Set("innerText", "Registered as: "+name+" ("+uname+")")
+					if editor.Elements.Status.Truthy() {
+						editor.Elements.Status.Set("innerText", "Registered as: "+name+" ("+uname+")")
 					}
 				},
 				func(err error, rd *httpProcessor.ReturnData) { // failure callback
@@ -575,8 +575,8 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 				})
 		} else {
 			// username already set
-			if e.elements.Status.Truthy() {
-				e.elements.Status.Set("innerText", "Registered as: "+name+" ("+user.Username+")")
+			if editor.Elements.Status.Truthy() {
+				editor.Elements.Status.Set("innerText", "Registered as: "+name+" ("+user.Username+")")
 			}
 		}
 	}
@@ -586,10 +586,10 @@ func (e *ItemEditor) loginComplete(event eventProcessor.Event) {
 	}
 
 	// Update status immediately with name
-	if e.elements.Status.Truthy() {
-		e.elements.Status.Set("innerText", "Registered as: "+name)
+	if editor.Elements.Status.Truthy() {
+		editor.Elements.Status.Set("innerText", "Registered as: "+name)
 	}
 	// After OAuth popup, call server to get the full user object (username may be empty)
-	e.client.NewRequest(http.MethodGet, ApiURL+"/ensure", &user, nil, success, failure)
-	e.LoggedIn = true
+	editor.client.NewRequest(http.MethodGet, ApiURL+"/ensure", &user, nil, success, failure)
+	editor.LoggedIn = true
 }
