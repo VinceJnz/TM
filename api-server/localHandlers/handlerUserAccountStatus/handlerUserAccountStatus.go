@@ -7,6 +7,8 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+
+	"github.com/gorilla/mux"
 )
 
 //const debugTag = "handlerUserAccountStatus."
@@ -31,6 +33,11 @@ func New(appConf *appCore.Config) *Handler {
 			{ID: int(models.AccountWebAuthnResetResetRequired), Status: "Account WebAuthn Reset Required", Description: "The account is flagged for a WebAuthn reset. The user will be sent an email to reset the login."},
 		},
 	}
+}
+
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	dbStandardTemplate.AddRouteGroup(r, baseURL, h)
 }
 
 // GetAll: retrieves and returns all records

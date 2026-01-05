@@ -48,53 +48,33 @@ func main() {
 	r := mux.NewRouter()
 	// Setup your API subrouter with CORS middleware
 	subR1 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	// The following routes are unprotected, i.e. do not require authentication to use.
 
 	//SRP authentication and registration process handlers
-	//SRPauth := handlerSRPAuth.New(app)
-	//subR1.HandleFunc("/srpAuth/register/", SRPauth.AccountCreate).Methods("Post")
-	//subR1.HandleFunc("/srpAuth/{username}/salt/", SRPauth.AuthGetSalt).Methods("Get", "Options")
-	//subR1.HandleFunc("/srpAuth/{username}/key/{A}", SRPauth.AuthGetKeyB).Methods("Get")
-	//subR1.HandleFunc("/srpAuth/proof/", SRPauth.AuthCheckClientProof).Methods("Post")
-	//subR1.HandleFunc("/srpAuth/validate/{token}", SRPauth.AccountValidate).Methods("Get")
-	//subR1.HandleFunc("/srpAuth/reset/{username}/password/", SRPauth.AuthReset).Methods("Get")
-	//subR1.HandleFunc("/srpAuth/reset/{token}/token/", SRPauth.AuthUpdate).Methods("Post")
+	//handlerSRPAuth.New(app).RegisterRoutes(subR1, "/srpAuth")
 	//subR1.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
 
 	// WebAuthn handlers
-	//WebAuthn := handlerWebAuthn.New(app)
-	//subR1.HandleFunc("/webauthn/register/begin/", WebAuthn.BeginRegistration).Methods("POST")
-	//subR1.HandleFunc("/webauthn/register/finish/{token}", WebAuthn.FinishRegistration).Methods("POST")
-	//subR1.HandleFunc("/webauthn/login/begin/{username}", WebAuthn.BeginLogin).Methods("POST")
-	//subR1.HandleFunc("/webauthn/login/finish/", WebAuthn.FinishLogin).Methods("POST")
+	//handlerWebAuthn.New(app).RegisterRoutes(subR1, "/webauthn")
 
-	// OAuth Google handlers
-	oauthH := handlerOAuth.New(app)
-	authR := subR1.PathPrefix("/auth/google").Subrouter()
-	oauthH.RegisterRoutes(authR)
+	// OAuth handlers
+	oauth := handlerOAuth.New(app)
+	oauth.RegisterRoutes(subR1, "/auth/oauth") // OAuth handlers
 
 	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
-	//subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 	auth := handlerAuth.New(app)
+	auth.RegisterRoutes(subR2, "/auth")
+	//subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 	//subR2.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
 	subR2.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
-	subR2.HandleFunc("/auth/logout/", auth.AuthLogout).Methods("Get")
-	subR2.HandleFunc("/auth/menuUser/", auth.MenuUserGet).Methods("Get")
-	subR2.HandleFunc("/auth/menuList/", auth.MenuListGet).Methods("Get")
 
-	// Provide a lightweight endpoint that will trigger OAuth->DB user upsert and create a DB session cookie.
-	// This endpoint is protected by RequireOAuthOrSessionAuth so calling it after OAuth login will cause
-	// the middleware to create an internal session and set the "session" cookie for subsequent API calls.
-	subR1.HandleFunc("/auth/ensure", oauthH.OAuthEnsure).Methods("GET")
-	// Endpoint used to collect additional registration info from OAuth-first-time users (username, address, birthdate, accountHidden)
-	subR2.HandleFunc("/auth/complete-registration", oauthH.CompleteRegistration).Methods("POST")
-	// Endpoint to set pending registration data in the session before starting OAuth flow (UNPROTECTED)
-	subR1.HandleFunc("/auth/pending-registration", oauthH.PendingRegistration).Methods("POST")
+	// The following routes are protected, i.e. require authentication to use.
+	oauth.RegisterRoutesProtected(subR2, "/auth/oauth") // Protected OAuth handlers
 
-	// Add route groups
+	// Add route groups (protected)
 	//addRouteGroup(subR2, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes
-	addRouteGroup(subR2, "seasons", handlerSeasons.New(app)) // Seasons routes
-	//addRouteGroup(subR2, "users", handlerUser.New(app))                                  // User routes
-	handlerUser.New(app).RegisterRoutes(subR2)
+	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))                             // Seasons routes
+	handlerUser.New(app).RegisterRoutes(subR2, "/users")                                 // User routes
 	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserAgeGroup routes
 	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))                   // UserPayments routes
 	addRouteGroup(subR2, "userMemberStatus", handlerMemberStatus.New(app))               // UserMemberStatus routes
@@ -122,10 +102,7 @@ func main() {
 	addRouteGroup(subR2, "bookingPeople", bookingPeople)                                          // BookingPeople routes
 	subR2.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET") // BookingPeople routes
 
-	handlerTrip.New(app).RegisterRoutes(subR2) // Trip routes
-	//trip := handlerTrip.New(app)                                               // Trip routes
-	//addRouteGroup(subR2, "trips", trip)                                        // Trip routes
-	//subR2.HandleFunc("/tripsReport", trip.GetParticipantStatus).Methods("GET") // Trip routes
+	handlerTrip.New(app).RegisterRoutes(subR2, "/trips") // Trip routes
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"

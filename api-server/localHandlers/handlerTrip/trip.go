@@ -44,11 +44,9 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 // RegisterRoutes registers handler routes on the provided router.
-func (h *Handler) RegisterRoutes(r *mux.Router) {
-	log.Printf("%v Registering OAuth routes\n", debugTag)
-	dbStandardTemplate.AddRouteGroup(r, "/trips", h)
-	r.HandleFunc("/tripsReport", h.GetParticipantStatus).Methods("GET") // Trip routes
-	log.Printf("%v OAuth routes registered\n", debugTag)
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	dbStandardTemplate.AddRouteGroup(r, baseURL, h)
+	r.HandleFunc(baseURL+"Report", h.GetParticipantStatus).Methods("GET") // Trip routes
 }
 
 // GetAll: retrieves and returns all records

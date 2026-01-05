@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerUserPayments."
@@ -32,6 +34,11 @@ type Handler struct {
 
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
+}
+
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	dbStandardTemplate.AddRouteGroup(r, baseURL, h)
 }
 
 // GetAll: retrieves and returns all records

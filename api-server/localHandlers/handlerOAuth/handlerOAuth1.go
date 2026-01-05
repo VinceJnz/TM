@@ -35,15 +35,25 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 // RegisterRoutes registers handler routes on the provided router.
-func (h *Handler) RegisterRoutes(r *mux.Router) {
-	log.Printf("%v Registering OAuth routes\n", debugTag)
-	r.HandleFunc("/login", h.loginHandler).Methods("GET")
-	r.HandleFunc("/callback", h.callbackHandler).Methods("GET")
-	r.HandleFunc("/logout", h.logoutHandler).Methods("GET")
-	r.HandleFunc("/me", h.meHandler).Methods("GET")
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL+"/login", h.loginHandler).Methods("GET")
+	r.HandleFunc(baseURL+"/callback", h.callbackHandler).Methods("GET")
+	r.HandleFunc(baseURL+"/logout", h.logoutHandler).Methods("GET")
+	r.HandleFunc(baseURL+"/me", h.meHandler).Methods("GET")
 	// Temporary debug route (DEV only)
-	r.HandleFunc("/debug", h.debugHandler).Methods("GET")
-	log.Printf("%v OAuth routes registered\n", debugTag)
+	r.HandleFunc(baseURL+"/debug", h.debugHandler).Methods("GET")
+}
+
+// RegisterRoutesProtected registers handler routes on the provided router.
+// Provide a lightweight endpoint that will trigger OAuth->DB user upsert and create a DB session cookie.
+// This endpoint is protected by RequireOAuthOrSessionAuth so calling it after OAuth login will cause
+// the middleware to create an internal session and set the "session" cookie for subsequent API calls.
+func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL+"/ensure", h.OAuthEnsure).Methods("GET")
+	// Endpoint used to collect additional registration info from OAuth-first-time users (username, address, birthdate, accountHidden)
+	r.HandleFunc(baseURL+"/complete-registration", h.CompleteRegistration).Methods("POST")
+	// Endpoint to set pending registration data in the session before starting OAuth flow (UNPROTECTED)
+	r.HandleFunc(baseURL+"/pending-registration", h.PendingRegistration).Methods("POST")
 }
 
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {

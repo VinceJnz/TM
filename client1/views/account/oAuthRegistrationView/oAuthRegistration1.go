@@ -41,7 +41,10 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/auth"
+// const ApiURL = "/auth"
+// const ApiURL = "/oauth/google/"
+const ApiURL = "/auth/oauth/"
+const ApiURL2 = "/api/v1" + ApiURL
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -365,7 +368,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 	*/
 	// Register the account using the canonical registration endpoint, then open OAuth popup
 	if editor.client != nil {
-		editor.client.NewRequest(http.MethodPost, ApiURL+"/pending-registration", nil, &editor.CurrentRecord,
+		editor.client.NewRequest(http.MethodPost, ApiURL2+"/pending-registration", nil, &editor.CurrentRecord,
 			func(err error, rd *httpProcessor.ReturnData) {
 				if err != nil {
 					log.Printf("%v pending-registration failed: %v", debugTag, err)
@@ -373,7 +376,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 					return
 				}
 				// Open popup after pending data saved (server may later merge provider info)
-				editor.client.OpenPopup("/auth/google/login", "oauth", "width=600,height=800")
+				editor.client.OpenPopup(ApiURL+"/login", "oauth", "width=600,height=800")
 			},
 			func(err error, rd *httpProcessor.ReturnData) {
 				log.Printf("%v pending-registration error: %v", debugTag, err)
@@ -381,7 +384,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 			})
 	} else {
 		// Fallback: open popup but we can't persist registration without client
-		js.Global().Call("open", "https://localhost:8086/api/v1"+"/auth/google/login", "oauth", "width=600,height=800")
+		js.Global().Call("open", "https://localhost:8086"+ApiURL2+"/login", "oauth", "width=600,height=800")
 		js.Global().Call("alert", "Warning: registration info will not be saved when using fallback flow")
 	}
 	return nil
@@ -557,7 +560,7 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 			reg.AccountHidden = ah
 
 			// Send the completion request to OAuth complete-registration endpoint
-			editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
+			editor.client.NewRequest(http.MethodPost, ApiURL2+"/complete-registration", nil, &reg,
 				func(err error, rd *httpProcessor.ReturnData) { // success callback
 					if err != nil {
 						log.Printf("%v complete-registration failed: %v", debugTag, err)
@@ -590,6 +593,6 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 		editor.Elements.Status.Set("innerText", "Registered as: "+name)
 	}
 	// After OAuth popup, call server to get the full user object (username may be empty)
-	editor.client.NewRequest(http.MethodGet, ApiURL+"/ensure", &user, nil, success, failure)
+	editor.client.NewRequest(http.MethodGet, ApiURL2+"/ensure", &user, nil, success, failure)
 	editor.LoggedIn = true
 }

@@ -39,7 +39,9 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/srpAuth"
+// const ApiURL = "/oAuth"
+// const ApiURL = "/api/v1/auth/google/"
+const ApiURL = "/api/v1/auth/oauth/"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -226,7 +228,7 @@ func (editor *ItemEditor) populateEditForm() {
 	loginButton.Set("innerHTML", "Login with Google")
 	loginButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 		// Open OAuth popup; server will set cookies on completion
-		js.Global().Call("open", "/api/v1/auth/google/login", "oauth", "width=600,height=800")
+		js.Global().Call("open", ApiURL+"/login", "oauth", "width=600,height=800")
 		return nil
 	}))
 

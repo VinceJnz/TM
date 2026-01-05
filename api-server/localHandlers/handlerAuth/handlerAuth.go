@@ -10,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerAuth."
@@ -24,6 +26,14 @@ func New(appConf *appCore.Config) *Handler {
 	return &Handler{
 		appConf: appConf,
 	}
+}
+
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	//r.Use(h.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
+	r.HandleFunc(baseURL+"/logout/", h.AuthLogout).Methods("Get")
+	r.HandleFunc(baseURL+"/menuUser/", h.MenuUserGet).Methods("Get")
+	r.HandleFunc(baseURL+"/menuList/", h.MenuListGet).Methods("Get")
 }
 
 //RequireUserAuth The input to this is a function of the form "fn(Session, ResponseWriter, Request)"

@@ -8,6 +8,8 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+
+	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerTripStatus."
@@ -30,6 +32,11 @@ type Handler struct {
 
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
+}
+
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router) {
+	dbStandardTemplate.AddRouteGroup(r, "/tripStatus", h)
 }
 
 // GetAll: retrieves and returns all records

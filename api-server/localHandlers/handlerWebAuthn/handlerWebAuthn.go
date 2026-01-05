@@ -5,6 +5,7 @@ import (
 	"api-server/v2/app/pools/webAuthnPool"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerWebAuthn."
@@ -48,4 +49,12 @@ func New(appConf *appCore.Config) *Handler {
 		appConf:  appConf,
 		Pool:     webAuthnPool.New(),
 	}
+}
+
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL+"/register/begin/", h.BeginRegistration).Methods("POST")
+	r.HandleFunc(baseURL+"/register/finish/{token}", h.FinishRegistration).Methods("POST")
+	r.HandleFunc(baseURL+"/login/begin/{username}", h.BeginLogin).Methods("POST")
+	r.HandleFunc(baseURL+"/login/finish/", h.FinishLogin).Methods("POST")
 }

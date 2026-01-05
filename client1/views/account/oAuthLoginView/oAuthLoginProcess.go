@@ -43,7 +43,7 @@ func (editor *ItemEditor) authProcess() {
 		}
 		// Not authenticated via DB session; try OAuth session
 		// Fall through to next step
-		mePromise := js.Global().Call("fetch", "/api/v1/auth/google/me", map[string]any{"method": "GET", "credentials": "include"})
+		mePromise := js.Global().Call("fetch", ApiURL+"/me", map[string]any{"method": "GET", "credentials": "include"})
 		mePromise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
 			meResp := args[0]
 			if meResp.Get("ok").Bool() {
@@ -88,7 +88,7 @@ func (editor *ItemEditor) authProcess() {
 	})
 	menuCatch := js.FuncOf(func(this js.Value, args []js.Value) any {
 		// If fetch fails, try the OAuth flow directly
-		mePromise := js.Global().Call("fetch", "/api/v1/auth/google/me", map[string]any{"method": "GET", "credentials": "include"})
+		mePromise := js.Global().Call("fetch", ApiURL+"/me", map[string]any{"method": "GET", "credentials": "include"})
 		mePromise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
 			meResp := args[0]
 			if meResp.Get("ok").Bool() {
