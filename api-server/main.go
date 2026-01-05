@@ -101,19 +101,21 @@ func main() {
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
-	// For debugging: Log all registered routes
-	public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		path, _ := route.GetPathTemplate()
-		methods, _ := route.GetMethods()
-		log.Printf("Registered routes for public: %s %v", path, methods)
-		return nil
-	})
-	protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		path, _ := route.GetPathTemplate()
-		methods, _ := route.GetMethods()
-		log.Printf("Registered routes for protected: %s %v", path, methods)
-		return nil
-	})
+	/*
+		// For debugging: Log all registered routes
+		public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+			path, _ := route.GetPathTemplate()
+			methods, _ := route.GetMethods()
+			log.Printf("Registered routes for public: %s %v", path, methods)
+			return nil
+		})
+		protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+			path, _ := route.GetPathTemplate()
+			methods, _ := route.GetMethods()
+			log.Printf("Registered routes for protected: %s %v", path, methods)
+			return nil
+		})
+	*/
 
 	// Define CORS options
 	corsOpts := handlers.CORS(
