@@ -47,77 +47,71 @@ func main() {
 
 	r := mux.NewRouter()
 	// Setup your API subrouter with CORS middleware
-	subR1 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	public := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	// The following routes are unprotected, i.e. do not require authentication to use.
 
 	//SRP authentication and registration process handlers
-	//handlerSRPAuth.New(app).RegisterRoutes(subR1, "/srpAuth")
-	//subR1.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
+	//handlerSRPAuth.New(app).RegisterRoutes(public, "/srpAuth")
+	//public.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
 
 	// WebAuthn handlers
-	//handlerWebAuthn.New(app).RegisterRoutes(subR1, "/webauthn")
+	//handlerWebAuthn.New(app).RegisterRoutes(public, "/webauthn")
 
 	// OAuth handlers
 	oauth := handlerOAuth.New(app)
-	oauth.RegisterRoutes(subR1, "/auth/oauth") // OAuth handlers
+	oauth.RegisterRoutes(public, "/auth/oauth") // OAuth handlers
 
-	subR2 := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	auth := handlerAuth.New(app)
-	auth.RegisterRoutes(subR2, "/auth")
-	//subR2.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
-	//subR2.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
-	subR2.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
+	auth.RegisterRoutes(protected, "/auth")
+	//protected.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
+	//protected.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
+	protected.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
 
 	// The following routes are protected, i.e. require authentication to use.
-	oauth.RegisterRoutesProtected(subR2, "/auth/oauth") // Protected OAuth handlers
+	oauth.RegisterRoutesProtected(protected, "/auth/oauth") // Protected OAuth handlers
 
 	// Add route groups (protected)
-	//addRouteGroup(subR2, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes
-	addRouteGroup(subR2, "seasons", handlerSeasons.New(app))                             // Seasons routes
-	handlerUser.New(app).RegisterRoutes(subR2, "/users")                                 // User routes
-	addRouteGroup(subR2, "userAgeGroups", handlerUserAgeGroups.New(app))                 // UserAgeGroup routes
-	addRouteGroup(subR2, "userPayments", handlerUserPayments.New(app))                   // UserPayments routes
-	addRouteGroup(subR2, "userMemberStatus", handlerMemberStatus.New(app))               // UserMemberStatus routes
-	addRouteGroup(subR2, "userAccountStatus", handlerUserAccountStatus.New(app))         // UserAccountStatus routes
-	addRouteGroup(subR2, "groupBooking", handlerGroupBooking.New(app))                   // GroupBookings routes
-	addRouteGroup(subR2, "bookingStatus", handlerBookingStatus.New(app))                 // BookingStatus routes
-	addRouteGroup(subR2, "tripType", handlerTripType.New(app))                           // TripType routes
-	addRouteGroup(subR2, "tripStatus", handlerTripStatus.New(app))                       // TripStatus routes
-	addRouteGroup(subR2, "tripDifficulty", handlerTripDifficulty.New(app))               // TripDifficulty routes
-	addRouteGroup(subR2, "tripCosts", handlerTripCost.New(app))                          // TripCost routes
-	addRouteGroup(subR2, "tripCostGroups", handlerTripCostGroup.New(app))                // TripCostGroup routes
-	addRouteGroup(subR2, "securityGroup", handlerSecurityGroup.New(app))                 // SecurityGroup routes
-	addRouteGroup(subR2, "securityGroupResource", handlerSecurityGroupResource.New(app)) // SecurityGroupResource routes
-	addRouteGroup(subR2, "securityUserGroup", handlerSecurityUserGroup.New(app))         // SecurityUserGroup routes
-	addRouteGroup(subR2, "securityAccessLevel", handlerAccessLevel.New(app))             // AccessLevel routes
-	addRouteGroup(subR2, "securityAccessType", handlerAccessType.New(app))               // AccessType routes
-	addRouteGroup(subR2, "securityResource", handlerResource.New(app))                   // Resource routes
-	addRouteGroup(subR2, "myBookings", handlerMyBookings.New(app))                       // Resource routes
-
-	booking := handlerBooking.New(app)                                              // Booking routes
-	addRouteGroup(subR2, "bookings", booking)                                       // Booking routes
-	subR2.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET") // Booking routes
-
-	bookingPeople := handlerBookingPeople.New(app)                                                // BookingPeople routes
-	addRouteGroup(subR2, "bookingPeople", bookingPeople)                                          // BookingPeople routes
-	subR2.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", bookingPeople.GetList).Methods("GET") // BookingPeople routes
-
-	handlerTrip.New(app).RegisterRoutes(subR2, "/trips") // Trip routes
+	//addRouteGroup(protected, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes
+	handlerSeasons.New(app).RegisterRoutes(protected, "/seasons")                             // Seasons routes
+	handlerUser.New(app).RegisterRoutes(protected, "/users")                                  // User routes
+	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups")                 // UserAgeGroup routes
+	handlerUserPayments.New(app).RegisterRoutes(protected, "/userPayments")                   // UserPayments routes
+	handlerMemberStatus.New(app).RegisterRoutes(protected, "/userMemberStatus")               // UserMemberStatus routes
+	handlerUserAccountStatus.New(app).RegisterRoutes(protected, "/userAccountStatus")         // UserAccountStatus routes
+	handlerGroupBooking.New(app).RegisterRoutes(protected, "/groupBooking")                   // GroupBookings routes
+	handlerBookingStatus.New(app).RegisterRoutes(protected, "/bookingStatus")                 // BookingStatus routes
+	handlerTripType.New(app).RegisterRoutes(protected, "/tripType")                           // TripType routes
+	handlerTripStatus.New(app).RegisterRoutes(protected, "/tripStatus")                       // TripStatus routes
+	handlerTripDifficulty.New(app).RegisterRoutes(protected, "/tripDifficulty")               // TripDifficulty routes
+	handlerTripCost.New(app).RegisterRoutes(protected, "/tripCosts")                          // TripCost routes
+	handlerTripCostGroup.New(app).RegisterRoutes(protected, "/tripCostGroups")                // TripCostGroup routes
+	handlerSecurityGroup.New(app).RegisterRoutes(protected, "/securityGroup")                 // SecurityGroup routes
+	handlerSecurityGroupResource.New(app).RegisterRoutes(protected, "/securityGroupResource") // SecurityGroupResource routes
+	handlerSecurityUserGroup.New(app).RegisterRoutes(protected, "/securityUserGroup")         // SecurityUserGroup routes
+	handlerAccessLevel.New(app).RegisterRoutes(protected, "/securityAccessLevel")             // AccessLevel routes
+	handlerAccessType.New(app).RegisterRoutes(protected, "/securityAccessType")               // AccessType routes
+	handlerResource.New(app).RegisterRoutes(protected, "/securityResource")                   // Resource routes
+	handlerMyBookings.New(app).RegisterRoutes(protected, "/myBookings")                       // Resource routes
+	handlerBooking.New(app).RegisterRoutes(protected, "/bookings")                            // Booking routes
+	handlerBookingPeople.New(app).RegisterRoutes(protected, "/bookingPeople")                 // BookingPeople routes
+	handlerTrip.New(app).RegisterRoutes(protected, "/trips")                                  // Trip routes
+	//subR2.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET") // Booking routes
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
 	// For debugging: Log all registered routes
-	subR1.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+	public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		path, _ := route.GetPathTemplate()
 		methods, _ := route.GetMethods()
-		log.Printf("Registered routes for subR1: %s %v", path, methods)
+		log.Printf("Registered routes for public: %s %v", path, methods)
 		return nil
 	})
-	subR2.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+	protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		path, _ := route.GetPathTemplate()
 		methods, _ := route.GetMethods()
-		log.Printf("Registered routes for subR2: %s %v", path, methods)
+		log.Printf("Registered routes for protected: %s %v", path, methods)
 		return nil
 	})
 
@@ -152,21 +146,4 @@ func main() {
 
 	// Block the main goroutine to keep the servers running
 	select {}
-}
-
-type genericHandler interface {
-	GetAll(w http.ResponseWriter, r *http.Request)
-	Get(w http.ResponseWriter, r *http.Request)
-	Create(w http.ResponseWriter, r *http.Request)
-	Update(w http.ResponseWriter, r *http.Request)
-	Delete(w http.ResponseWriter, r *http.Request)
-}
-
-func addRouteGroup(r *mux.Router, resourcePath string, handler genericHandler) {
-	r.HandleFunc("/"+resourcePath, handler.GetAll).Methods("GET")
-	r.HandleFunc("/"+resourcePath+"/{id:[0-9]+}", handler.Get).Methods("GET")
-	r.HandleFunc("/"+resourcePath, handler.Create).Methods("POST")
-	r.HandleFunc("/"+resourcePath+"/{id:[0-9]+}", handler.Update).Methods("PUT")
-	r.HandleFunc("/"+resourcePath+"/{id:[0-9]+}", handler.Delete).Methods("DELETE")
-	// Add some code to register the route resource for managing security access
 }

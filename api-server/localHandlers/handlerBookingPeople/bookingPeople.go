@@ -44,6 +44,12 @@ func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
 }
 
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	dbStandardTemplate.AddRouteGroup(r, baseURL, h)
+	r.HandleFunc("/bookings/{id:[0-9]+}/bookingPeople", h.GetList).Methods("GET")
+}
+
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll)

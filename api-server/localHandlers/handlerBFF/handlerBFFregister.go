@@ -31,6 +31,12 @@ func New(appConf *appCore.Config) *Handler {
 	}
 }
 
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL+"/register/begin", h.BeginRegistration).Methods("POST")
+	r.HandleFunc(baseURL+"/register/finish/{token}", h.FinishRegistration).Methods("POST")
+}
+
 // BeginRegistration
 // This process must first check if the user is already registered.
 // If the user is registered then the existing user record should be used. If not then a new user record can be added.
