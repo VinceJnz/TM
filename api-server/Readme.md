@@ -195,3 +195,56 @@ go mod tidy
 
 `chown root:root wasm_exec.js main.wasm`
 
+
+
+## Environment file
+.env
+
+
+```conf
+# api-server .env file
+
+# Application configuration
+APP_TITLE=Trip Manager
+
+# Database configuration
+DB_TYPE=postgres
+DB_USER=api_user
+DB_PASSWORD=api_password
+DB_NAME=mydatabase
+DB_HOST=dbserver
+DB_PORT=5432
+
+# Server configuration
+HOST=localhost
+HTTP_PORT=8085
+HTTPS_PORT=8086
+CORE_ORIGINS=http://localhost:8086
+API_PATH_PREFIX=/api/v1
+SERVER_CA_CERT=
+CLIENT_CA_CERT=
+SERVER_KEY=/etc/certs/ssl/localhost.key
+SERVER_CERT=/etc/certs/ssl/localhost.crt
+CERT_OPTION=
+LOG_FILE=
+
+# Email configuration
+EMAIL_ADDR=apptesting@gmail.com
+EMAIL_TOKEN=/etc/certs/gmail/client_token.json
+EMAIL_SECRET=/etc/certs/gmail/client_secret.json
+
+# Payment configuration
+PAYMENT_KEY=/etc/certs/stripe/payment_key.json
+
+# oAuth configuration
+# your_google_client_id    
+GOOGLE_CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com
+# your_google_client_secret
+GOOGLE_CLIENT_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+GOOGLE_REDIRECT_URL=https://localhost:8086/api/v1/auth/oauth/callback
+# your_session_key
+SESSION_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CLIENT_REDIRECT_URL=https://localhost:8086
+DEV=true
+```
+
