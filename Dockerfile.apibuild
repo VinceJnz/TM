@@ -72,8 +72,16 @@ COPY --from=apibuilder /app/static/ ./static/
 COPY --from=apibuilder /app/apiserver .
 COPY --from=apibuilder /app/.env .
 COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
-COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
+# comment out if credentials are loaded manually at runtime from mounted volume
+#COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
 COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
+
+# Create directory for runtime OAuth tokens
+#RUN mkdir -p /etc/certs/gmail-tokens && chmod 755 /etc/certs/gmail-tokens
+#RUN mkdir -p /etc/certs/gmail-credentials && chmod 755 /etc/certs/gmail-credentials
+# Windows hosts may have issues with chmod, so just create the directories
+RUN mkdir -p /etc/certs/gmail-tokens
+RUN mkdir -p /etc/certs/gmail-credentials
 
 # Expose the port the API server listens on
 EXPOSE 8085 8086

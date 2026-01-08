@@ -55,6 +55,12 @@ services:
     depends_on:
 ##      - postgres
       - dbserver
+    volumes:
+      - ./data/gmail-tokens:/etc/certs/gmail-tokens
+      - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
+      #- gmail-tokens:/etc/certs/gmail-tokens
+      # - gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
+
 
   apiserver-debug:
     profiles: ["debug"]
@@ -81,6 +87,8 @@ services:
 ##      - postgres
       - dbserver
     volumes:
+      - gmail-tokens:/etc/certs/gmail
+      # - gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
       ##- ./api-server/app    # <-- mount local code to /app in container
       - D:/Users/Vince/Documents/GitHub/TM:/src
 
@@ -90,3 +98,4 @@ networks:
 
 volumes:
   db_data:
+  #gmail-tokens:

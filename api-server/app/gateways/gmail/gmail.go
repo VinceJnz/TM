@@ -49,17 +49,22 @@ func getClient(tokenFile string, config *oauth2.Config) *http.Client {
 		saveToken(tokenFile, tok)
 	}
 
-	//It is possible something else is need to to auto renew tokens. (See sub-folder demo)
-	if tok.Expiry.Before(time.Now()) {
-		log.Printf(debugTag + "getClient()2 need to renew new access token\n")
-		//According to <https://github.com/googleapis/google-api-go-client/issues/111> the following can be used for refreshing the token
-		config.TokenSource(context.TODO(), tok)
-		//if tok.Expiry.Before(time.Now()) {
-		//tok = RenewToken(config, tok, cacheFile)
-		//tok = RenewToken(config, tok, tokenFile)
-	}
+	//It is possible something else is needed to to auto renew tokens. (See sub-folder demo)
+	//if tok.Expiry.Before(time.Now()) {
+	//	log.Printf(debugTag + "getClient()2 need to renew new access token\n")
+	//According to <https://github.com/googleapis/google-api-go-client/issues/111> the following can be used for refreshing the token
+	//config.TokenSource(context.TODO(), tok)
+	//if tok.Expiry.Before(time.Now()) {
+	//tok = RenewToken(config, tok, cacheFile)
+	//tok = RenewToken(config, tok, tokenFile)
+	//}
 	// The config.Client should renew tokens when they expire.
-	return config.Client(context.Background(), tok)
+	//return config.Client(context.Background(), tok)
+
+	// The config.Client will automatically renew tokens when they expire
+	// as long as the refresh token is valid
+	client := config.Client(context.Background(), tok)
+	return client
 }
 
 // Request a token from the web, then returns the retrieved token.
@@ -74,8 +79,15 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 	//The following waits for the user to paste a token into stdin
 	//The token is obtained in the previous step
 	var authCode string
-	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf(debugTag+"Handler.getTokenFromWeb()2 ... Unable to read authorization code %v", err)
+
+	// Check if auth code is provided via environment variable
+	authCode = os.Getenv("GMAIL_AUTH_CODE")
+
+	if authCode == "" {
+		// Fall back to stdin
+		if _, err := fmt.Scan(&authCode); err != nil {
+			log.Fatalf(debugTag+"Handler.getTokenFromWeb()2 ... Unable to read authorization code %v", err)
+		}
 	}
 
 	tok, err := config.Exchange(context.TODO(), authCode, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
@@ -86,7 +98,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 }
 
 // RenewToken renew the token ???????
-func RenewToken(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oauth2.Token {
+func RenewToken1(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oauth2.Token {
 
 	urlValue := url.Values{"client_id": {config.ClientID}, "client_secret": {config.ClientSecret}, "refresh_token": {tok.RefreshToken}, "grant_type": {"refresh_token"}}
 	log.Printf(debugTag+"RenewToken()1 urlValue = %v\n", urlValue)
@@ -118,6 +130,23 @@ func RenewToken(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oau
 	saveToken(cacheFile, tok)
 
 	return tok
+}
+
+func RenewToken(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oauth2.Token {
+	log.Printf(debugTag + "RenewToken()1 Attempting to refresh token\n")
+
+	// Use the oauth2 library's built-in token refresh
+	tokenSource := config.TokenSource(context.Background(), tok)
+	newToken, err := tokenSource.Token()
+	if err != nil {
+		log.Printf(debugTag+"RenewToken()2 Error refreshing token: %v\n", err)
+		log.Printf(debugTag + "RenewToken()3 You may need to re-authorize. Delete the token file and restart.\n")
+		return tok // Return original token, let the caller handle the failure
+	}
+
+	log.Printf(debugTag + "RenewToken()4 Token refreshed successfully\n")
+	saveToken(cacheFile, newToken)
+	return newToken
 }
 
 // Retrieves a token from a local file.
@@ -167,6 +196,8 @@ func New(credentialsFile, tokenFile, from string) *Gateway {
 	if err != nil {
 		log.Fatalln(debugTag+"New()3 ... Unable to retrieve Gmail client:", err)
 	}
+
+	log.Println(debugTag + "New()4 ... Gmail client created")
 	return &Gateway{
 		srv:  gmailService,
 		from: from,

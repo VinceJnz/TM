@@ -98,7 +98,7 @@ func (s *settings) LoadEnv() error {
 	s.CertOpt, err = strconv.Atoi(os.Getenv("CERT_OPTION"))
 	if err != nil {
 		s.CertOpt = 0 // Default value if conversion fails
-		log.Printf("%sLoadEnv() Warning: converting CERT_OPTION to int: %v, using default value 0\n", debugTag, err)
+		log.Printf("%sLoadEnv() Warning: converting CERT_OPTION to int: %v, supplied value is not an integer, using default value 0\n", debugTag, err)
 	}
 	s.LogFile = os.Getenv("LOG_FILE")
 	s.EmailAddr = os.Getenv("EMAIL_ADDR")
