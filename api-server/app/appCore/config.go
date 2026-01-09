@@ -30,9 +30,9 @@ type Config struct {
 func New(testMode bool) *Config {
 	sessionIDKey := GenerateSessionIDContextKey()
 	return &Config{
-		Db:       &sqlx.DB{},
-		EmailSvc: &gmail.Gateway{},
-		//PaymentSvc:   &stripe.Gateway{},
+		Db:           &sqlx.DB{},
+		EmailSvc:     &gmail.Gateway{},
+		PaymentSvc:   &stripe.Gateway{},
 		OAuthSvc:     &oAuthGateway.Gateway{},
 		SessionIDKey: sessionIDKey,
 		TestMode:     testMode,
@@ -54,9 +54,10 @@ func (c *Config) Run() {
 	c.EmailSvc = gmail.New(c.Settings.EmailSecret, c.Settings.EmailToken, c.Settings.EmailAddr)
 
 	// Start the payment service
-	//paymentSvc := stripe.New(a.Db, a.WsPool, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
-	//paymentSvc := stripe.New(a.Db, a.Settings.PaymentKey, "https://"+a.Settings.Host+":"+a.Settings.PortHttps+a.Settings.APIprefix)
-	//go c.PaymentSvc.Start()
+	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
+	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain)
+	log.Printf(debugTag+"Run() Stripe gateway initialized with domain: %s", domain)
+	//go c.PaymentSvc.Start() // No longer needed as we are not using webhooks ??????
 
 	c.OAuthSvc, err = oAuthGateway.NewFromEnv()
 	if err != nil {

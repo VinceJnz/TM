@@ -1,117 +1,63 @@
-package stripe
+package handlerBooking
 
 import (
+	"api-server/v2/models"
 	"encoding/json"
+	"errors"
 	"log"
-	"os"
+	"net/http"
+	"strconv"
+	"time"
 
-	"github.com/stripe/stripe-go/v72/client"
+	"github.com/gorilla/mux"
+	"github.com/stripe/stripe-go/v72"
 )
 
-const debugTag = "stripe."
-
-//https://dashboard.stripe.com/test/dashboard
-//https://stripe.com/docs/checkout/quickstart
-//https://stripe.com/docs/api/checkout/sessions/create#create_checkout_session-line_items-price_data
-//https://stripe.com/docs/api/payment_intents
-
-/*
-Payment succeeds  4242 4242 4242 4242
-Payment requires authentication  4000 0025 0000 3155
-Payment is declined  4000 0000 0000 9995
-*/
-
-type Charge struct {
-	Amount       int64  `json:"amount"`
-	ReceiptEmail string `json:"receiptMail"`
-	ProductName  string `json:"productName"`
-}
-
-type Gateway struct {
-	//appConf    *appCore.Config
-	PaymentSvc *client.API
-	domain     string
-}
-
-// func New(appConf *appCore.Config, keyFile, domain string) *Gateway {
-func New(keyFile, domain string) *Gateway {
-	return &Gateway{
-		PaymentSvc: client.New(KeyFromFile(keyFile), nil),
-		domain:     domain,
-		//appConf:    appConf,
-	}
-}
-
-/*
-const (
-	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, created, modified
-					FROM at_bookings WHERE id = $1`
-
-	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id)
-        			VALUES ($1, $2, $3, $4, $5, $6)
-					RETURNING id`
-)
-
-// Get: retrieves and returns a single record identified by id
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id)
-}
-
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.Booking
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Create()2 err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.RecordValidation(record); err != nil {
-		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-
-	//log.Printf(debugTag+"Create()3 record = %+v, query = %+v", record, qryCreate)
-
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
-}
-
-func (h *Handler) RecordValidation(record models.Booking) error {
-	if err := helpers.ValidateDatesFromLtTo(record.FromDate, record.ToDate); err != nil {
-		return err
-	}
-	if err := h.ParentRecordValidation(record); err != nil {
-		return err
-	}
-	return nil
-}
+//const debugTag = "handlerBooking."
 
 const (
-	sqlBookingParentRecordValidation = `SELECT * FROM at_trips WHERE id = $1`
+	qryGetBookingForPayment = `SELECT 
+		atb.id, atb.owner_id, atb.trip_id, atb.from_date, atb.to_date, 
+		atb.booking_status_id, atb.stripe_session_id, atb.amount_paid,
+		att.trip_name, att.description, att.max_people,
+		COUNT(atbp.id) as participants,
+		SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
+		(SELECT COUNT(*) FROM at_booking_people atbp2 
+			JOIN at_bookings atb2 ON atbp2.booking_id = atb2.id 
+			WHERE atb2.trip_id = att.id AND atb2.booking_status_id = 2) as trip_person_count
+	FROM at_bookings atb
+	JOIN at_trips att ON att.id = atb.trip_id
+	LEFT JOIN at_booking_people atbp ON atbp.booking_id = atb.id
+	LEFT JOIN st_users stu ON stu.id = atbp.person_id
+	LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id = att.trip_cost_group_id
+		AND attc.member_status_id = stu.member_status_id
+		AND attc.user_age_group_id = stu.user_age_group_id
+	WHERE atb.id = $1
+	GROUP BY atb.id, att.id, att.trip_name, att.description, att.max_people`
+
+	qryUpdateStripeSession = `UPDATE at_bookings 
+		SET stripe_session_id = $2, booking_price = $3, modified = NOW()
+		WHERE id = $1`
+
+	qryUpdatePaymentComplete = `UPDATE at_bookings 
+		SET booking_status_id = $2, amount_paid = $3, payment_date = $4, modified = NOW()
+		WHERE id = $1`
 )
 
-func (h *Handler) ParentRecordValidation(record models.Booking) error {
-	parentID := record.TripID
+//type Handler struct {
+//	appConf *appCore.Config
+//}
 
-	validationRecord := models.Trip{}
-	err := h.appConf.Db.Get(&validationRecord, sqlBookingParentRecordValidation, parentID)
-	if err == sql.ErrNoRows {
-		return fmt.Errorf(debugTag+"ParentRecordValidation()1 - Record not found: error message = %s, parentID = %v", err.Error(), parentID)
-	} else if err != nil {
-		return fmt.Errorf(debugTag+"ParentRecordValidation()2 - Internal Server Error:  error message = %s, parentID = %v", err.Error(), parentID)
-	}
+//func New(appConf *appCore.Config) *Handler {
+//	return &Handler{appConf: appConf}
+//}
 
-	if record.FromDate.Before(validationRecord.FromDate) {
-		return fmt.Errorf("dateError: Booking From-date is before Trip From-date")
-	}
-
-	if record.ToDate.After(validationRecord.ToDate) {
-		return fmt.Errorf("dateError: Booking To-date is after Trip To-date")
-	}
-
-	return nil
+// RegisterRoutes registers handler routes on the provided router.
+func (h *Handler) RegisterRoutesStripe(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL+"/checkout/create/{id:[0-9]+}", h.CheckoutCreate).Methods("POST")
+	r.HandleFunc(baseURL+"/checkout/check/{id:[0-9]+}", h.CheckoutCheck).Methods("GET")
+	r.HandleFunc(baseURL+"/checkout/success/{id:[0-9]+}", h.CheckoutSuccess).Methods("GET")
+	r.HandleFunc(baseURL+"/checkout/cancel/{id:[0-9]+}", h.CheckoutCancel).Methods("GET")
 }
 
 // CheckoutCreate This handler collects the data from the client and creates a payment intent.
@@ -131,10 +77,19 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		return
 	}
 
-	h.Get(recordID, h.Table)
-	bookingItem := h.Table.(*mdlBooking.Item)
+	//id := dbStandardTemplate.GetID(w, r)
+	//dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id)
+
+	// Need to create a structure and queries here to get the booking and trip details
+	// which neeeds to be passed to stripe to create the checkout session
+	// Trip details include trip name, trip cost, trip Max Participants etc.
+	// Booking details include booking id, booking person, place in booking queue etc.
+	// compare with Participant Status query in tripParticipantStatus.go ????
+	//h.Get(recordID, h.Table)
+	//bookingItem := h.Table.(*mdlBooking.Item)
+	bookingItem := &models.BookingPaymentInfo{}
 	//If the number of paid up people on the trip exceeds the trip capacity then do not allow the payment.
-	if (bookingItem.TripPersonCount.Int64 + bookingItem.BookingPersonCount.Int64) > bookingItem.TripMaxPeople.Int64 {
+	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxPeople.Int64 {
 		//Need to return some sort of error message to the client
 		msg := "payment disallowed: The booking will exceed the trip capacity"
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()1", "msg =", msg, "bookingItem", bookingItem)
@@ -142,7 +97,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		return
 	}
 
-	if bookingItem.Cost.Float64 == 0 {
+	if bookingItem.BookingCost.Float64 == 0 {
 		//Need to return some sort of error message to the client
 		msg := "payment disallowed: The booking cost is zero"
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()1", "msg =", msg, "bookingItem", bookingItem)
@@ -158,7 +113,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 					Currency: stripe.String(string(stripe.CurrencyNZD)),
 					//Product:  stripe.String("BookingID:" + strconv.FormatInt(bookingItem.ID, 10)), //This could be a booking reference that can be used to find all the payment records associated with a booking record
 					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-						Description: stripe.String("Trip description: " + bookingItem.TripDescription.String),
+						Description: stripe.String("Trip description: " + bookingItem.Description.String),
 						//Images:      []*string{},
 						//Metadata:    map[string]string{},
 						Name: stripe.String("Trip name = " + bookingItem.TripName.String),
@@ -166,7 +121,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 					},
 					//Recurring:         &stripe.CheckoutSessionLineItemPriceDataRecurringParams{},
 					//TaxBehavior:       new(string),
-					UnitAmount: stripe.Int64(int64(bookingItem.Cost.ValueOrZero() * 100)), //Amount in cents
+					UnitAmount: stripe.Int64(int64(bookingItem.BookingCost.ValueOrZero() * 100)), //Amount in cents
 					//UnitAmountDecimal: new(float64),
 				},
 				Quantity: stripe.Int64(1),
@@ -177,18 +132,18 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
 		//SuccessURL:    stripe.String(h.domain + "/checkoutSession/success/"),
 		//CancelURL:     stripe.String(h.domain + "/checkoutSession/cancel/"),
-		SuccessURL: stripe.String(h.domain + "/checkoutSession/success/" + strconv.FormatInt(recordID, 10)),
-		CancelURL:  stripe.String(h.domain + "/checkoutSession/cancel/" + strconv.FormatInt(recordID, 10)),
+		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.FormatInt(recordID, 10)),
+		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.FormatInt(recordID, 10)),
 	}
-	CheckoutSession, err = h.PaymentSvc.CheckoutSessions.New(params)
+	CheckoutSession, err = h.appConf.PaymentSvc.Client.CheckoutSessions.New(params)
 	if err != nil {
 		log.Printf("session.New: %v", err)
 	}
 	log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.CheckoutCreate()2", "CheckoutSession.ID =", CheckoutSession.ID, "CheckoutSession =", CheckoutSession, "recordID =", recordID)
 
 	//Update the Booking record with the stripe checkout session id
-	bookingItem.PaymentToken.SetValid(CheckoutSession.ID)
-	bookingItem.TotalFee.SetValid(bookingItem.Cost.Float64)
+	bookingItem.StripeSessionID.SetValid(CheckoutSession.ID)
+	bookingItem.TotalFee.SetValid(bookingItem.Cost.Float64) //??????? is this recording the amount paid or is it just a flag???
 	h.Put(recordID, bookingItem)
 
 	//*******************************************************
@@ -220,10 +175,11 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 		return
 	}
 
-	h.Get(recordID, h.Table)
-	bookingItem := h.Table.(*mdlBooking.Item)
+	//h.Get(recordID, h.Table)
+	//bookingItem := h.Table.(*mdlBooking.Item)
+	bookingItem := &models.BookingPaymentInfo{}
 
-	CheckoutSession, err := h.PaymentSvc.CheckoutSessions.Get(bookingItem.PaymentToken.String, nil) //get the active stripe checkout session from the stripe server
+	CheckoutSession, err := h.appConf.PaymentSvc.Client.CheckoutSessions.Get(bookingItem.StripeSessionID.String, nil) //get the active stripe checkout session from the stripe server
 	if err != nil {
 		log.Printf("session.Update: %v", err)
 	}
@@ -236,7 +192,7 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 		json.NewEncoder(w).Encode("open")
 	case "complete":
 		//Update the booking record to show that the payment is complete
-		bookingItem.PaidStatusID.SetValid(mdlBooking.Full_amount)
+		bookingItem.PaymentStatusID.SetValid(int64(models.Full_amountPaid))
 		bookingItem.AmountPaid.SetValid(float64(CheckoutSession.AmountTotal) / 100) //???????
 		bookingItem.DatePaid.SetValid(time.Now())
 		h.Put(recordID, bookingItem)
@@ -315,27 +271,4 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 		</body>
 		</html>`
 	w.Write([]byte(html))
-}
-*/
-
-// KeyFromFile Get the stripe authentication token from a local file.
-func KeyFromFile(file string) string {
-	f, err := os.Open(file)
-	if err != nil {
-		//log.Fatalf("%v %v %v", debugTag+"main()1", "err =", err)
-		log.Printf("%v %v %v", debugTag+"KeyFromFile(()1", "err =", err)
-		return ""
-	}
-	defer f.Close()
-	var key map[string]string
-	err = json.NewDecoder(f).Decode(&key)
-	if err != nil {
-		//log.Fatalf("%v %v %v", debugTag+"main()1", "err =", err)
-		log.Printf("%v %v %+v %v %v", debugTag+"KeyFromFile(()2", "key =", key, "err =", err)
-	}
-	if keyValue, ok := key["key"]; ok {
-		return keyValue
-	}
-	log.Printf("%v %v %+v %v %v", debugTag+"KeyFromFile(()3", "key =", key, "err =", err)
-	return ""
 }

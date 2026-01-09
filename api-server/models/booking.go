@@ -8,6 +8,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type BookingStatusID int
+
+const (
+	Not_paid BookingStatusID = iota
+	Full_amountPaid
+	Partial_amountPaid
+)
+
 type Booking struct {
 	ID              int                 `json:"id" db:"id"`
 	OwnerID         int                 `json:"owner_id" db:"owner_id"`
@@ -78,4 +86,25 @@ type MyBooking struct {
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
+}
+
+type BookingPaymentInfo struct {
+	ID                  int64       `db:"id"`
+	OwnerID             int64       `db:"owner_id"`
+	TripID              int64       `db:"trip_id"`
+	FromDate            time.Time   `db:"from_date"`
+	ToDate              time.Time   `db:"to_date"`
+	BookingStatusID     int         `db:"booking_status_id"`
+	BookingStatus       zero.String `json:"booking_status" db:"booking_status"`
+	StripeSessionID     zero.String `db:"stripe_session_id"`
+	AmountPaid          zero.Float  `db:"amount_paid"`
+	TripName            zero.String `db:"trip_name"`
+	Description         zero.String `db:"description"`
+	MaxPeople           zero.Int    `db:"max_people"`                               // Maximum number of people allowed on the trip
+	BookingParticipants zero.Int    `db:"participants"`                             // Number of people in the booking
+	BookingCost         zero.Float  `db:"booking_cost"`                             // Total cost of the booking
+	TripPersonCount     zero.Int    `db:"trip_person_count"`                        // Number of people already booked on the trip
+	BookingPosition     zero.Int    `json:"booking_position" db:"booking_position"` // Position in the trip booking list
+	PaymentStatusID     zero.Int    `json:"payment_status_id" db:"payment_status_id"`
+	DatePaid            zero.Time   `json:"date_paid" db:"date_paid"`
 }
