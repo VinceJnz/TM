@@ -1,6 +1,7 @@
 package handlerBooking
 
 import (
+	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"errors"
@@ -10,7 +11,11 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v84"
+	"github.com/stripe/stripe-go/v84/checkout/session"
+	//"github.com/stripe/stripe-go/v84/billingportal/session"
+	//"github.com/stripe/stripe-go/v72"
+	//"github.com/stripe/stripe-go/v72/billingportal/session"
 )
 
 //const debugTag = "handlerBooking."
@@ -36,11 +41,11 @@ const (
 	GROUP BY atb.id, att.id, att.trip_name, att.description, att.max_people`
 
 	qryUpdateStripeSession = `UPDATE at_bookings 
-		SET stripe_session_id = $2, booking_price = $3, modified = NOW()
+		SET stripe_session_id = $2, booking_price = $3
 		WHERE id = $1`
 
 	qryUpdatePaymentComplete = `UPDATE at_bookings 
-		SET booking_status_id = $2, amount_paid = $3, payment_date = $4, modified = NOW()
+		SET booking_status_id = $2, amount_paid = $3, payment_date = $4
 		WHERE id = $1`
 )
 
@@ -77,17 +82,16 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		return
 	}
 
-	//id := dbStandardTemplate.GetID(w, r)
-	//dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id)
-
 	// Need to create a structure and queries here to get the booking and trip details
 	// which neeeds to be passed to stripe to create the checkout session
 	// Trip details include trip name, trip cost, trip Max Participants etc.
 	// Booking details include booking id, booking person, place in booking queue etc.
 	// compare with Participant Status query in tripParticipantStatus.go ????
-	//h.Get(recordID, h.Table)
-	//bookingItem := h.Table.(*mdlBooking.Item)
 	bookingItem := &models.BookingPaymentInfo{}
+	bookingID := dbStandardTemplate.GetID(w, r)
+	Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
+	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCreate()1", "bookingItem =", bookingItem)
+
 	//If the number of paid up people on the trip exceeds the trip capacity then do not allow the payment.
 	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxPeople.Int64 {
 		//Need to return some sort of error message to the client
@@ -100,7 +104,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	if bookingItem.BookingCost.Float64 == 0 {
 		//Need to return some sort of error message to the client
 		msg := "payment disallowed: The booking cost is zero"
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()1", "msg =", msg, "bookingItem", bookingItem)
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()2", "msg =", msg, "bookingItem", bookingItem)
 		http.Error(w, msg, http.StatusConflict)
 		return
 	}
@@ -135,16 +139,20 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.FormatInt(recordID, 10)),
 		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.FormatInt(recordID, 10)),
 	}
-	CheckoutSession, err = h.appConf.PaymentSvc.Client.CheckoutSessions.New(params)
+
+	// NEW WAY: Use session.New with the client
+	CheckoutSession, err = session.New(params)
 	if err != nil {
 		log.Printf("session.New: %v", err)
+		http.Error(w, "Error creating checkout session", http.StatusInternalServerError)
+		return
 	}
 	log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.CheckoutCreate()2", "CheckoutSession.ID =", CheckoutSession.ID, "CheckoutSession =", CheckoutSession, "recordID =", recordID)
 
 	//Update the Booking record with the stripe checkout session id
 	bookingItem.StripeSessionID.SetValid(CheckoutSession.ID)
-	bookingItem.TotalFee.SetValid(bookingItem.Cost.Float64) //??????? is this recording the amount paid or is it just a flag???
-	h.Put(recordID, bookingItem)
+	//bookingItem.TotalFee.SetValid(bookingItem.Cost.Float64) //??????? is this recording the amount paid or is it just a flag???
+	Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdateStripeSession, bookingItem.ID, bookingItem.StripeSessionID, bookingItem.BookingCost)
 
 	//*******************************************************
 	r.Header.Set("Access-Control-Allow-Origin", "stripe.com, 111.stripe.com")
@@ -163,25 +171,20 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 // or do nothing and continue to wait for the payment to complete
 func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s *mdlSession.Item) {
 	var err error
-	var recordID int64
 
 	log.Printf("%v", debugTag+"Handler.CheckoutCheck()1")
 
-	vars := mux.Vars(r)
-	recordID, err = strconv.ParseInt(vars["recordID"], 10, 64)
-	if err != nil {
-		err = errors.New("invalid or missing record id")
-		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//h.Get(recordID, h.Table)
-	//bookingItem := h.Table.(*mdlBooking.Item)
 	bookingItem := &models.BookingPaymentInfo{}
+	bookingID := dbStandardTemplate.GetID(w, r)
+	Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
+	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCheck()1", "bookingItem =", bookingItem)
 
-	CheckoutSession, err := h.appConf.PaymentSvc.Client.CheckoutSessions.Get(bookingItem.StripeSessionID.String, nil) //get the active stripe checkout session from the stripe server
+	// NEW WAY: Use session.New with the client
+	CheckoutSession, err := session.Get(bookingItem.StripeSessionID.String, nil)
 	if err != nil {
-		log.Printf("session.Update: %v", err)
+		log.Printf("session.New: %v", err)
+		http.Error(w, "Error creating checkout session", http.StatusInternalServerError)
+		return
 	}
 	log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.CheckoutCheck()2", "bookingItem.ID =", bookingItem.ID, "CheckoutSession.ID =", CheckoutSession.ID, "CheckoutSession =", CheckoutSession) //, "h.wsPool =", h.wsPool)
 
@@ -194,8 +197,9 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 		//Update the booking record to show that the payment is complete
 		bookingItem.PaymentStatusID.SetValid(int64(models.Full_amountPaid))
 		bookingItem.AmountPaid.SetValid(float64(CheckoutSession.AmountTotal) / 100) //???????
+		bookingItem.PaymentStatusID.SetValid(int64(models.Full_amountPaid))
 		bookingItem.DatePaid.SetValid(time.Now())
-		h.Put(recordID, bookingItem)
+		Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdatePaymentComplete, bookingItem.ID, bookingItem.PaymentStatusID, bookingItem.AmountPaid, bookingItem.DatePaid)
 
 		//send completed info to browser client
 		json.NewEncoder(w).Encode("complete")

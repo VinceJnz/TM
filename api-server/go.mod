@@ -15,7 +15,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/shopspring/decimal v1.4.0
-	github.com/stripe/stripe-go/v72 v72.122.0
+	github.com/stripe/stripe-go/v84 v84.1.0
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.247.0
 )

@@ -97,7 +97,7 @@ type BookingPaymentInfo struct {
 	BookingStatusID     int         `db:"booking_status_id"`
 	BookingStatus       zero.String `json:"booking_status" db:"booking_status"`
 	StripeSessionID     zero.String `db:"stripe_session_id"`
-	AmountPaid          zero.Float  `db:"amount_paid"`
+	AmountPaid          zero.Float  `db:"amount_paid"` // Percentage of the total booking cost paid
 	TripName            zero.String `db:"trip_name"`
 	Description         zero.String `db:"description"`
 	MaxPeople           zero.Int    `db:"max_people"`                               // Maximum number of people allowed on the trip

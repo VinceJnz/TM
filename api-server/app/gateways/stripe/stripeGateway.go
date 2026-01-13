@@ -5,7 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/stripe/stripe-go/v72/client"
+	"github.com/stripe/stripe-go/v84"
+	//"github.com/stripe/stripe-go/v84/customer"
 )
 
 const debugTag = "stripe."
@@ -29,7 +30,8 @@ type Charge struct {
 
 type Gateway struct {
 	//appConf    *appCore.Config
-	Client *client.API
+	//Client *client.API
+	Client *stripe.Client
 	Domain string
 }
 
@@ -38,11 +40,16 @@ func New(keyFile, domain string) *Gateway {
 	key := KeyFromFile(keyFile)
 	if key == "" {
 		log.Printf(debugTag + "New() WARNING: Stripe key is empty, payment features will not work")
+		// Return a gateway with nil client if no key
+		return &Gateway{
+			Client: nil,
+			Domain: domain,
+		}
 	}
 
 	return &Gateway{
 		//appConf:    appConf,
-		Client: client.New(key, nil),
+		Client: stripe.NewClient(key),
 		Domain: domain,
 	}
 }
@@ -51,11 +58,16 @@ func New(keyFile, domain string) *Gateway {
 func NewFromKey(apiKey, domain string) *Gateway {
 	if apiKey == "" {
 		log.Printf(debugTag + "NewFromKey() WARNING: Stripe key is empty, payment features will not work")
+		// Return a gateway with nil client if no key
+		return &Gateway{
+			Client: nil,
+			Domain: domain,
+		}
 	}
 
 	return &Gateway{
 		//appConf:    appConf,
-		Client: client.New(apiKey, nil),
+		Client: stripe.NewClient(apiKey),
 		Domain: domain,
 	}
 }
