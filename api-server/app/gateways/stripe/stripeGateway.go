@@ -36,9 +36,9 @@ type Gateway struct {
 }
 
 // New creates a new Stripe gateway with the API key from a file
-func New(keyFile, domain string) *Gateway {
-	key := KeyFromFile(keyFile)
-	if key == "" {
+func New(keyFile, domain string, testMode bool) *Gateway {
+	apiKey := KeyFromFile(keyFile)
+	if apiKey == "" {
 		log.Printf(debugTag + "New() WARNING: Stripe key is empty, payment features will not work")
 		// Return a gateway with nil client if no key
 		return &Gateway{
@@ -46,16 +46,20 @@ func New(keyFile, domain string) *Gateway {
 			Domain: domain,
 		}
 	}
-
+	if testMode {
+		apiKey = "sk_test_" + apiKey
+	} else {
+		apiKey = "sk_live_" + apiKey
+	}
 	return &Gateway{
 		//appConf:    appConf,
-		Client: stripe.NewClient(key),
+		Client: stripe.NewClient(apiKey),
 		Domain: domain,
 	}
 }
 
 // NewFromKey creates a new Stripe gateway with a direct API key
-func NewFromKey(apiKey, domain string) *Gateway {
+func NewFromKey(apiKey, domain string, testMode bool) *Gateway {
 	if apiKey == "" {
 		log.Printf(debugTag + "NewFromKey() WARNING: Stripe key is empty, payment features will not work")
 		// Return a gateway with nil client if no key
@@ -64,7 +68,11 @@ func NewFromKey(apiKey, domain string) *Gateway {
 			Domain: domain,
 		}
 	}
-
+	if testMode {
+		apiKey = "sk_test_" + apiKey
+	} else {
+		apiKey = "sk_live_" + apiKey
+	}
 	return &Gateway{
 		//appConf:    appConf,
 		Client: stripe.NewClient(apiKey),

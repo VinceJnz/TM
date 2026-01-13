@@ -55,7 +55,7 @@ func (c *Config) Run() {
 
 	// Start the payment service
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
-	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain)
+	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain, c.TestMode)
 	log.Printf(debugTag+"Run() Stripe gateway initialized with domain: %s", domain)
 	//go c.PaymentSvc.Start() // No longer needed as we are not using webhooks ??????
 
