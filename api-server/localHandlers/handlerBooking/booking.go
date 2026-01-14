@@ -145,6 +145,7 @@ func New(appConf *appCore.Config) *Handler {
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h)
 	//r.HandleFunc("/trips/{id:[0-9]+}"+baseURL, booking.GetList).Methods("GET") // Is this still needed???
+	h.RegisterRoutesStripe(r, baseURL)
 }
 
 // GetAll: retrieves and returns all records
