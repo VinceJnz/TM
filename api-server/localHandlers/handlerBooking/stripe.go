@@ -13,9 +13,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/checkout/session"
-	//"github.com/stripe/stripe-go/v84/billingportal/session"
-	//"github.com/stripe/stripe-go/v72"
-	//"github.com/stripe/stripe-go/v72/billingportal/session"
 )
 
 //const debugTag = "handlerBooking."
@@ -48,14 +45,6 @@ const (
 		SET booking_status_id = $2, amount_paid = $3, payment_date = $4
 		WHERE id = $1`
 )
-
-//type Handler struct {
-//	appConf *appCore.Config
-//}
-
-//func New(appConf *appCore.Config) *Handler {
-//	return &Handler{appConf: appConf}
-//}
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutesStripe(r *mux.Router, baseURL string) {
@@ -245,7 +234,7 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(html))
 }
 
-// CheckoutClose this handler is called by the payment window if the payment session has been cancelled.
+// CheckoutCancel this handler is called by the payment window if the payment session has been cancelled.
 // All it does is provide a message to the payment window to say it can be closed.
 // When the browser client detects that it has focus or if the payment window has been closed the client can take further action
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
