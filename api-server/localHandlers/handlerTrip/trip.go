@@ -45,7 +45,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	dbStandardTemplate.AddRouteGroup(r, baseURL, h)
+	helpers.AddRouteGroup(r, baseURL, h)
 	r.HandleFunc(baseURL+"Report", h.GetParticipantStatus).Methods("GET") // Trip routes
 	//r.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET") // Booking routes
 }
