@@ -47,7 +47,6 @@ func New(appConf *appCore.Config) *Handler {
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h)
 	r.HandleFunc(baseURL+"Report", h.GetParticipantStatus).Methods("GET") // Trip routes
-	//r.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET") // Booking routes
 }
 
 // GetAll: retrieves and returns all records

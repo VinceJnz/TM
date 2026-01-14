@@ -39,8 +39,8 @@ import (
 const debugTag = "main."
 
 func main() {
-	app := appCore.New(true)
-	//app.Settings.LoadEnv()
+	debugFlag := true
+	app := appCore.New(debugFlag)
 	app.Run()
 	defer app.Close()
 	log.Printf("%smain() App settings: %+v, os Env: %+v\n", debugTag, app.Settings, os.Environ())
@@ -64,15 +64,15 @@ func main() {
 	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	auth := handlerAuth.New(app)
 	auth.RegisterRoutes(protected, "/auth")
-	//protected.Use(SRPauth.RequireRestAuth) // Add some middleware, e.g. an auth handler
 	//protected.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
 	protected.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
+	//protected.Use(SRPauth.RequireRestAuth)        // Add some middleware, e.g. an auth handler
 
 	// The following routes are protected, i.e. require authentication to use.
 	oauth.RegisterRoutesProtected(protected, "/auth/oauth") // Protected OAuth handlers
 
 	// Add route groups (protected)
-	//addRouteGroup(protected, "webauthn", handlerWebAuthnManagement.New(app))                 // WebAuthn routes
+	//handlerWebAuthnManagement.New(app).RegisterRoutes(protected, "/webauthn")                // WebAuthn routes
 	handlerSeasons.New(app).RegisterRoutes(protected, "/seasons")                             // Seasons routes
 	handlerUser.New(app).RegisterRoutes(protected, "/users")                                  // User routes
 	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups")                 // UserAgeGroup routes
@@ -96,25 +96,33 @@ func main() {
 	handlerBooking.New(app).RegisterRoutes(protected, "/bookings")                            // Booking routes
 	handlerBookingPeople.New(app).RegisterRoutes(protected, "/bookingPeople")                 // BookingPeople routes
 	handlerTrip.New(app).RegisterRoutes(protected, "/trips")                                  // Trip routes
-	//subR2.HandleFunc("/trips/{id:[0-9]+}/bookings", booking.GetList).Methods("GET") // Booking routes
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
 	/*
-		// For debugging: Log all registered routes
-		public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-			path, _ := route.GetPathTemplate()
-			methods, _ := route.GetMethods()
-			log.Printf("Registered routes for public: %s %v", path, methods)
-			return nil
-		})
-		protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-			path, _ := route.GetPathTemplate()
-			methods, _ := route.GetMethods()
-			log.Printf("Registered routes for protected: %s %v", path, methods)
-			return nil
-		})
+		if debugFlag {
+			// For debugging: Log all registered routes
+			r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+				path, _ := route.GetPathTemplate()
+				methods, _ := route.GetMethods()
+				log.Printf("Registered routes for r: %s %v", path, methods)
+				return nil
+			})
+			// For debugging: Log all registered routes
+			public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+				path, _ := route.GetPathTemplate()
+				methods, _ := route.GetMethods()
+				log.Printf("Registered routes for public: %s %v", path, methods)
+				return nil
+			})
+			protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+				path, _ := route.GetPathTemplate()
+				methods, _ := route.GetMethods()
+				log.Printf("Registered routes for protected: %s %v", path, methods)
+				return nil
+			})
+		}
 	*/
 
 	// Define CORS options
