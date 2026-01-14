@@ -25,10 +25,10 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-type FieldNames map[string]string
+type FieldNames map[string]string // This needs to be removed it is not needed ???
 
 type ReturnData struct {
-	FieldNames FieldNames
+	FieldNames FieldNames // This needs to be removed it is not needed ??? // Iy sould br delt with by having different api calls for different data views
 }
 
 func New(baseURL string) *Client {
