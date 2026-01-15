@@ -25,6 +25,14 @@ type CheckoutStatusResponse struct {
 //*************************************************************
 // Manage the opening and closing of the payment gateway page
 //*************************************************************
+// Sequence:
+// 1. User clicks "Make Payment" button -> MakePayment()
+// 2. MakePayment() calls API to create checkout session -> receives checkout URL
+// 3. openPaymentPage() opens new browser tab with payment URL
+// 4. Event listeners monitor window focus/blur
+// 5. On focus, checkPayment() checks payment status via API
+// 6. If payment complete/canceled/expired, close payment window and cleanup
+//*************************************************************
 
 // Store event listener cleanup functions
 type eventCleanup struct {
