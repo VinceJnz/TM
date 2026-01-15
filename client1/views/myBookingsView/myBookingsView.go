@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/views/bookingPaymentView"
 	"client1/v2/views/bookingPeopleView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/tripView"
@@ -459,6 +460,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create and add child views to Item
 		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.appCore, record.ID)
 		//editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
+		paymentView := bookingPaymentView.New(editor.document, editor.events, editor.appCore, bookingPaymentView.ParentData{ID: record.ID})
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
@@ -497,6 +499,15 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		}))
 		itemDiv.Call("appendChild", peopleButton)
+
+		bookingPayment := editor.document.Call("createElement", "button")
+		bookingPayment.Set("innerHTML", "Payment")
+		bookingPayment.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			paymentView.FetchItems()
+			paymentView.MakePayment(int64(record.ID))
+			return nil
+		}))
+		itemDiv.Call("appendChild", bookingPayment)
 
 		itemDiv.Call("appendChild", bookingPeople.Div)
 

@@ -31,7 +31,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/checkout"
+const ApiURL = "/booking"
 
 // ********************* This needs to be changed for each api **********************
 
@@ -47,7 +47,7 @@ type UI struct {
 }
 
 type ParentData struct {
-	//ID       int       `json:"id"`
+	ID int `json:"id"`
 	//FromDate time.Time `json:"from_date"`
 	//ToDate   time.Time `json:"to_date"`
 }

@@ -46,19 +46,19 @@ func (p *ItemEditor) MakePayment(ItemID int64) {
 
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
-			log.Printf("%vMakePayment() error: %v", debugTag, err)
+			log.Printf("%vMakePayment()1 error: %v", debugTag, err)
 			p.updateStateDisplay(viewHelpers.ItemStateNone)
 			return
 		}
 
 		// Extract payment URL from response and Validate checkout URL
 		if checkoutResp.CheckoutURL == "" {
-			log.Printf("%vMakePayment() no checkout URL received", debugTag)
+			log.Printf("%vMakePayment()2 no checkout URL received", debugTag)
 			p.updateStateDisplay(viewHelpers.ItemStateNone)
 			return
 		}
 
-		log.Printf("%vMakePayment() received checkout URL: %s", debugTag, checkoutResp.CheckoutURL)
+		log.Printf("%vMakePayment()3 received checkout URL: %s", debugTag, checkoutResp.CheckoutURL)
 
 		p.populateItemList()
 		p.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -66,14 +66,14 @@ func (p *ItemEditor) MakePayment(ItemID int64) {
 	}
 
 	fail := func(err error, data *httpProcessor.ReturnData) {
-		log.Printf("%vMakePayment() failed: %v", debugTag, err)
+		log.Printf("%vMakePayment()4 failed: %v", debugTag, err)
 		p.updateStateDisplay(viewHelpers.ItemStateNone)
 	}
 
 	// POST request to create checkout session
 	p.client.NewRequest(
 		http.MethodPost,
-		ApiURL+"/create/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
+		ApiURL+"/checkout/create/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
 		&checkoutResp,
 		nil,
 		success,
@@ -188,7 +188,7 @@ func (p *ItemEditor) paymentWindowDestroy() {
 	// Check final payment status
 	p.client.NewRequest(
 		http.MethodGet,
-		ApiURL+"/check/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
+		ApiURL+"/checkout/close/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
 		nil,
 		nil,
 		success,
@@ -240,7 +240,7 @@ func (p *ItemEditor) checkPayment() {
 
 	p.client.NewRequest(
 		http.MethodGet,
-		ApiURL+"/check/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
+		ApiURL+"/checkout/check/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
 		&statusResp,
 		nil,
 		success,
