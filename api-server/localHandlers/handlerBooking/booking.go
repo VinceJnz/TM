@@ -91,7 +91,7 @@ const (
 									AND attc.member_status_id=stu.member_status_id
 									AND attc.user_age_group_id=stu.user_age_group_id
 			JOIN st_users stu2 ON stu2.id=atb.owner_id
-		WHERE atb.trip_id = 2
+		WHERE atb.trip_id = $1
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id`
 
@@ -144,7 +144,7 @@ func New(appConf *appCore.Config) *Handler {
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h)
-	//r.HandleFunc("/trips/{id:[0-9]+}"+baseURL, booking.GetList).Methods("GET") // Is this still needed???
+	r.HandleFunc("/trips/{id:[0-9]+}"+baseURL, h.GetList).Methods("GET") // Is this still needed???
 	h.RegisterRoutesStripe(r, baseURL)
 }
 
