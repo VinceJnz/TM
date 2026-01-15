@@ -46,6 +46,19 @@ const (
 		WHERE id = $1`
 )
 
+// Response structures for consistent API responses
+type CheckoutCreateResponse struct {
+	CheckoutURL string `json:"checkout_url"`
+	SessionID   string `json:"session_id"`
+	Status      string `json:"status"`
+}
+
+type CheckoutStatusResponse struct {
+	Status      string     `json:"status"`
+	AmountTotal float64    `json:"amount_total,omitempty"`
+	PaymentDate *time.Time `json:"payment_date,omitempty"`
+}
+
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutesStripe(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/checkout/create/{id:[0-9]+}", h.CheckoutCreate).Methods("POST")
@@ -59,45 +72,36 @@ func (h *Handler) RegisterRoutesStripe(r *mux.Router, baseURL string) {
 // This sets up a checkout session with stripe and sends the stripe checkout url to the client
 func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s *mdlSession.Item) {
 	var err error
-	var recordID int64
+	//var recordID int64
 	var CheckoutSession *stripe.CheckoutSession
 	log.Printf("%v", debugTag+"Handler.CheckoutCreate()1")
-
-	vars := mux.Vars(r)
-	recordID, err = strconv.ParseInt(vars["recordID"], 10, 64)
-	if err != nil {
-		err = errors.New("invalid or missing record id")
-		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	// Need to create a structure and queries here to get the booking and trip details
 	// which neeeds to be passed to stripe to create the checkout session
 	// Trip details include trip name, trip cost, trip Max Participants etc.
 	// Booking details include booking id, booking person, place in booking queue etc.
 	// compare with Participant Status query in tripParticipantStatus.go ????
-	bookingItem := &models.BookingPaymentInfo{}
+
+	// Get booking ID from URL parameter
 	bookingID := dbStandardTemplate.GetID(w, r)
+	if bookingID == 0 {
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch booking details
+	bookingItem := &models.BookingPaymentInfo{}
 	Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
 	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCreate()1", "bookingItem =", bookingItem)
 
-	//If the number of paid up people on the trip exceeds the trip capacity then do not allow the payment.
-	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxPeople.Int64 {
-		//Need to return some sort of error message to the client
-		msg := "payment disallowed: The booking will exceed the trip capacity"
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()1", "msg =", msg, "bookingItem", bookingItem)
-		http.Error(w, msg, http.StatusConflict)
+	// Validate booking can be paid
+	if err := h.validateBookingForPayment(bookingItem); err != nil {
+		log.Printf("%v validation error: %v", debugTag+"Handler.CheckoutCreate()3", err)
+		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
 
-	if bookingItem.BookingCost.Float64 == 0 {
-		//Need to return some sort of error message to the client
-		msg := "payment disallowed: The booking cost is zero"
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()2", "msg =", msg, "bookingItem", bookingItem)
-		http.Error(w, msg, http.StatusConflict)
-		return
-	}
-
+	// Create Stripe checkout session
 	params := &stripe.CheckoutSessionParams{
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			//&stripe.CheckoutSessionLineItemParams{
@@ -123,20 +127,18 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		//CustomerEmail: stripe.String(s.User.Email.String),
 		CustomerEmail: stripe.String("vince.jennings@gmail.com"),
 		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
-		//SuccessURL:    stripe.String(h.domain + "/checkoutSession/success/"),
-		//CancelURL:     stripe.String(h.domain + "/checkoutSession/cancel/"),
-		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.FormatInt(recordID, 10)),
-		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.FormatInt(recordID, 10)),
+		SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
+		CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
 	}
 
 	// NEW WAY: Use session.New with the client
 	CheckoutSession, err = session.New(params)
 	if err != nil {
-		log.Printf("session.New: %v", err)
+		log.Printf("%v session.New error: %v", debugTag+"Handler.CheckoutCreate()4", err)
 		http.Error(w, "Error creating checkout session", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("%v %v %v %v %+v %v %v", debugTag+"Handler.CheckoutCreate()2", "CheckoutSession.ID =", CheckoutSession.ID, "CheckoutSession =", CheckoutSession, "recordID =", recordID)
+	log.Printf("%v CheckoutSession.ID = %v, CheckoutSession = %+v, bookingID = %v", debugTag+"Handler.CheckoutCreate()5", CheckoutSession.ID, CheckoutSession, bookingID)
 
 	//Update the Booking record with the stripe checkout session id
 	bookingItem.StripeSessionID.SetValid(CheckoutSession.ID)
@@ -149,11 +151,19 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.CheckoutCreate()3", "w.Header() =", w.Header(), "r =", r)
 	log.Printf("%v %v %v", debugTag+"Handler.CheckoutCreate()4", "CheckoutSession.URL", CheckoutSession.URL)
 
+	// Return structured JSON response
+	response := CheckoutCreateResponse{
+		CheckoutURL: CheckoutSession.URL,
+		SessionID:   CheckoutSession.ID,
+		Status:      "created",
+	}
+
 	//send the stripe checkout session url to the browser client
 	//http.Redirect(w, r, CheckoutSession.URL, http.StatusSeeOther)
-	json.NewEncoder(w).Encode(CheckoutSession.URL)
+	json.NewEncoder(w).Encode(response)
 }
 
+// CheckoutCheck verifies the current status of a Stripe checkout session
 // CheckoutCheck is called when the browser client receives focus or some other appropriate trigger.
 // This checks the status of the stripe checkout session with the stripe server
 // The browser client can then take action, e.g. close the payment window and update the payment report.
@@ -163,36 +173,54 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 
 	log.Printf("%v", debugTag+"Handler.CheckoutCheck()1")
 
-	bookingItem := &models.BookingPaymentInfo{}
 	bookingID := dbStandardTemplate.GetID(w, r)
+
+	// Fetch booking details
+	bookingItem := &models.BookingPaymentInfo{}
 	Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
 	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCheck()1", "bookingItem =", bookingItem)
+	if !bookingItem.StripeSessionID.Valid || bookingItem.StripeSessionID.String == "" {
+		log.Printf("%v No Stripe session found for booking %d", debugTag+"Handler.CheckoutCheck()2", bookingID)
+		response := CheckoutStatusResponse{Status: "no_session"}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
+	// Get checkout session from Stripe
 	// NEW WAY: Use session.New with the client
 	CheckoutSession, err := session.Get(bookingItem.StripeSessionID.String, nil)
 	if err != nil {
-		log.Printf("session.New: %v", err)
-		http.Error(w, "Error creating checkout session", http.StatusInternalServerError)
+		log.Printf("%v session.Get error: %v", debugTag+"Handler.CheckoutCheck()3", err)
+		http.Error(w, "Error retrieving checkout session", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("%v %v %v %v %v %v %+v", debugTag+"Handler.CheckoutCheck()2", "bookingItem.ID =", bookingItem.ID, "CheckoutSession.ID =", CheckoutSession.ID, "CheckoutSession =", CheckoutSession) //, "h.wsPool =", h.wsPool)
+	log.Printf("%v CheckoutSession = %+v, bookingID = %d", debugTag+"Handler.CheckoutCheck()4", CheckoutSession, bookingItem.ID)
 
+	// Build response based on session status
+	response := CheckoutStatusResponse{
+		Status: string(CheckoutSession.Status),
+	}
+
+	// Handle payment completion
 	//Check the payment status
 	switch CheckoutSession.Status {
-	case "open":
+	case stripe.CheckoutSessionStatusOpen: //"open":
 		//send open info to browser client
 		json.NewEncoder(w).Encode("open")
-	case "complete":
+	case stripe.CheckoutSessionStatusComplete: //"complete":
 		//Update the booking record to show that the payment is complete
 		bookingItem.PaymentStatusID.SetValid(int64(models.Full_amountPaid))
 		bookingItem.AmountPaid.SetValid(float64(CheckoutSession.AmountTotal) / 100) //???????
-		bookingItem.PaymentStatusID.SetValid(int64(models.Full_amountPaid))
 		bookingItem.DatePaid.SetValid(time.Now())
 		Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdatePaymentComplete, bookingItem.ID, bookingItem.PaymentStatusID, bookingItem.AmountPaid, bookingItem.DatePaid)
 
+		response.AmountTotal = float64(CheckoutSession.AmountTotal) / 100
+		response.PaymentDate = &bookingItem.DatePaid.Time
 		//send completed info to browser client
-		json.NewEncoder(w).Encode("complete")
-	case "expired":
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	case stripe.CheckoutSessionStatusExpired: // "expired", "canceled":
 		//send expired info to browser client
 		json.NewEncoder(w).Encode("expired")
 	}
@@ -202,66 +230,184 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 	//h.wsPool.FindKey(strconv.FormatInt(bookingItem.ID, 10)).Write([]byte("complete"))
 }
 
+// CheckoutSuccess handles successful payment redirect
 // CheckoutSuccess this handler is called by the payment window if the payment session has been successful.
 // All it does is provide a message to the payment window to say it can be closed.
 // When the browser client detects that it has focus or if the payment window has been closed the client can take further action
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
 func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
-	var err error
-	var recordID int64
-	//var wsToken string
+	log.Printf("%v", debugTag+"CheckoutSuccess()1")
 
-	log.Printf("%v", debugTag+"CheckoutClose()1")
-
-	vars := mux.Vars(r)
-	recordID, err = strconv.ParseInt(vars["recordID"], 10, 64)
-	if err != nil {
-		err = errors.New("invalid or missing record id")
-		//http.Error(ws, "Error: "+err.Error(), http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.Websocket()1", "err =", err, "recordID =", recordID)
+	// Get booking ID from URL parameter
+	recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
+	if recordID == 0 {
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("%v Payment successful for booking %d", debugTag+"CheckoutSuccess()3", recordID)
+
 	//Send a completed page to the payment window/tab
+	// Return HTML page with success message
 	html := `<!DOCTYPE html>
-		<html>
-		<head></head>
-		<body>
-		<div>Payment completed successfully</Div>
-		<div>You can now close this payment tab</Div>
-		</body>
-		</html>`
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Payment Successful</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			margin: 0;
+			background-color: #f5f5f5;
+		}
+		.container {
+			text-align: center;
+			padding: 40px;
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+		}
+		.success-icon {
+			color: #4caf50;
+			font-size: 48px;
+			margin-bottom: 20px;
+		}
+		h1 {
+			color: #333;
+			margin-bottom: 10px;
+		}
+		p {
+			color: #666;
+			margin-bottom: 20px;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="success-icon">✓</div>
+		<h1>Payment Completed Successfully</h1>
+		<p>Your booking has been confirmed.</p>
+		<p>You can now close this window.</p>
+	</div>
+</body>
+</html>`
 	w.Write([]byte(html))
 }
 
+// CheckoutCancel handles cancelled payment redirect
 // CheckoutCancel this handler is called by the payment window if the payment session has been cancelled.
 // All it does is provide a message to the payment window to say it can be closed.
 // When the browser client detects that it has focus or if the payment window has been closed the client can take further action
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
 func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
-	var err error
-	var recordID int64
-	//var wsToken string
+	log.Printf("%v", debugTag+"CheckoutCancel()1")
 
-	log.Printf("%v", debugTag+"CheckoutClose()1")
-
-	vars := mux.Vars(r)
-	recordID, err = strconv.ParseInt(vars["recordID"], 10, 64)
-	if err != nil {
-		err = errors.New("invalid or missing record id")
-		//http.Error(ws, "Error: "+err.Error(), http.StatusInternalServerError)
-		log.Printf("%v %v %v %v %v", debugTag+"Handler.Websocket()1", "err =", err, "recordID =", recordID)
+	// Get booking ID from URL parameter
+	recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
+	if recordID == 0 {
+		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
 		return
 	}
 
-	//Send a completed page to the payment window/tab
+	log.Printf("%v Payment cancelled for booking %d", debugTag+"CheckoutCancel()3", recordID)
+
+	// Return HTML page with cancellation message
 	html := `<!DOCTYPE html>
-		<html>
-		<head></head>
-		<body>
-		<div>Payment cancelled</Div>
-		<div>You can now close this payment tab</Div>
-		</body>
-		</html>`
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Payment Cancelled</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			margin: 0;
+			background-color: #f5f5f5;
+		}
+		.container {
+			text-align: center;
+			padding: 40px;
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+		}
+		.cancel-icon {
+			color: #ff9800;
+			font-size: 48px;
+			margin-bottom: 20px;
+		}
+		h1 {
+			color: #333;
+			margin-bottom: 10px;
+		}
+		p {
+			color: #666;
+			margin-bottom: 20px;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="cancel-icon">✕</div>
+		<h1>Payment Cancelled</h1>
+		<p>Your payment was not completed.</p>
+		<p>You can now close this window.</p>
+	</div>
+</body>
+</html>`
+	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(html))
 }
+
+// validateBookingForPayment checks if booking can proceed to payment
+func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentInfo) error {
+	// Check if booking will exceed trip capacity
+	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxPeople.Int64 {
+		return errors.New("payment disallowed: the booking will exceed the trip capacity")
+	}
+
+	// Check if booking cost is valid
+	if bookingItem.BookingCost.Float64 == 0 {
+		return errors.New("payment disallowed: the booking cost is zero")
+	}
+
+	return nil
+}
+
+/*
+
+	//vars := mux.Vars(r)
+	//recordID, err = strconv.ParseInt(vars["id"], 10, 64)
+	//if err != nil {
+	//	err = errors.New("invalid or missing record id")
+	//	http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+
+
+    //If the number of paid up people on the trip exceeds the trip capacity then do not allow the payment.
+	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxPeople.Int64 {
+		//Need to return some sort of error message to the client
+		msg := "payment disallowed: The booking will exceed the trip capacity"
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()1", "msg =", msg, "bookingItem", bookingItem)
+		http.Error(w, msg, http.StatusConflict)
+		return
+	}
+
+	if bookingItem.BookingCost.Float64 == 0 {
+		//Need to return some sort of error message to the client
+		msg := "payment disallowed: The booking cost is zero"
+		log.Printf("%v %v %v %v %+v", debugTag+"Handler.CheckoutCreate()2", "msg =", msg, "bookingItem", bookingItem)
+		http.Error(w, msg, http.StatusConflict)
+		return
+	}
+*/

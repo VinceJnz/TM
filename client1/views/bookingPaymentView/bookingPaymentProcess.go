@@ -1,5 +1,428 @@
 package bookingPaymentView
 
+import (
+	"client1/v2/app/httpProcessor"
+	"client1/v2/views/utils/viewHelpers"
+	"log"
+	"net/http"
+	"strconv"
+	"syscall/js"
+)
+
+// PaymentResponse represents the response from the checkout create endpoint
+type CheckoutCreateResponse struct {
+	CheckoutURL string `json:"checkout_url"`
+	SessionID   string `json:"session_id"`
+	Status      string `json:"status"`
+}
+
+// PaymentCheckResponse represents the response from the checkout check endpoint
+type CheckoutStatusResponse struct {
+	Status      string  `json:"status"`
+	AmountTotal float64 `json:"amount_total,omitempty"`
+}
+
+//*************************************************************
+// Manage the opening and closing of the payment gateway page
+//*************************************************************
+
+// Store event listener cleanup functions
+type eventCleanup struct {
+	blurFunc  js.Func
+	focusFunc js.Func
+}
+
+// MakePayment initiates the payment session
+func (p *ItemEditor) MakePayment(ItemID int64) {
+	var checkoutResp CheckoutCreateResponse
+
+	success := func(err error, data *httpProcessor.ReturnData) {
+		if err != nil {
+			log.Printf("%vMakePayment() error: %v", debugTag, err)
+			p.updateStateDisplay(viewHelpers.ItemStateNone)
+			return
+		}
+
+		// Extract payment URL from response and Validate checkout URL
+		if checkoutResp.CheckoutURL == "" {
+			log.Printf("%vMakePayment() no checkout URL received", debugTag)
+			p.updateStateDisplay(viewHelpers.ItemStateNone)
+			return
+		}
+
+		log.Printf("%vMakePayment() received checkout URL: %s", debugTag, checkoutResp.CheckoutURL)
+
+		p.populateItemList()
+		p.updateStateDisplay(viewHelpers.ItemStateNone)
+		p.openPaymentPage(checkoutResp.CheckoutURL)
+	}
+
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%vMakePayment() failed: %v", debugTag, err)
+		p.updateStateDisplay(viewHelpers.ItemStateNone)
+	}
+
+	// POST request to create checkout session
+	p.client.NewRequest(
+		http.MethodPost,
+		ApiURL+"/create/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
+		&checkoutResp,
+		nil,
+		success,
+		fail,
+	)
+}
+
+// openPaymentPage opens a new browser tab with the payment page URL
+func (p *ItemEditor) openPaymentPage(paymentURL string) {
+	if paymentURL == "" {
+		log.Printf("%vopenPaymentPage() called with empty URL", debugTag)
+		return
+	}
+	p.paymentWindowCreate(paymentURL)
+}
+
+// windowBlur triggered when window loses focus
+func (p *ItemEditor) windowBlur(this js.Value, args []js.Value) interface{} {
+	if !p.UiComponents.paymentWindow.IsNull() && !p.UiComponents.paymentWindow.IsUndefined() {
+		log.Println(debugTag+"windowBlur() payment window closed =",
+			p.UiComponents.paymentWindow.Get("closed").Bool())
+	}
+	return nil
+}
+
+// windowFocus triggered when focus is received
+func (p *ItemEditor) windowFocus(this js.Value, args []js.Value) interface{} {
+	if p.UiComponents.paymentWindow.IsNull() || p.UiComponents.paymentWindow.IsUndefined() {
+		return nil
+	}
+
+	if p.UiComponents.paymentWindow.Get("closed").Bool() {
+		p.paymentWindowDestroy()
+		return nil
+	}
+
+	p.checkPayment()
+	return nil
+}
+
+// paymentWindowCreate creates the new payment window and sets up event listeners
+func (p *ItemEditor) paymentWindowCreate(url string) {
+	global := js.Global()
+	window := global.Get("window")
+
+	// Create cleanup functions that can be removed later
+	blurFunc := js.FuncOf(p.windowBlur)
+	focusFunc := js.FuncOf(p.windowFocus)
+
+	// Store cleanup functions
+	if p.UiComponents.eventCleanup == nil {
+		p.UiComponents.eventCleanup = &eventCleanup{}
+	}
+	p.UiComponents.eventCleanup.blurFunc = blurFunc
+	p.UiComponents.eventCleanup.focusFunc = focusFunc
+
+	window.Call("addEventListener", "blur", blurFunc)
+	window.Call("addEventListener", "focus", focusFunc)
+
+	p.UiComponents.paymentWindow = window.Call("open", url, "_blank")
+
+	if p.UiComponents.paymentWindow.IsNull() || p.UiComponents.paymentWindow.IsUndefined() {
+		log.Printf("%vpaymentWindowCreate() failed to open payment window - popup may be blocked", debugTag)
+		p.cleanupEventListeners()
+	} else {
+		log.Printf("%vpaymentWindowCreate() payment window opened successfully", debugTag)
+	}
+}
+
+// cleanupEventListeners removes event listeners and releases js.Func
+func (p *ItemEditor) cleanupEventListeners() {
+	if p.UiComponents.eventCleanup == nil {
+		return
+	}
+
+	global := js.Global()
+	window := global.Get("window")
+
+	if !p.UiComponents.eventCleanup.blurFunc.IsNull() {
+		window.Call("removeEventListener", "blur", p.UiComponents.eventCleanup.blurFunc)
+		p.UiComponents.eventCleanup.blurFunc.Release()
+	}
+
+	if !p.UiComponents.eventCleanup.focusFunc.IsNull() {
+		window.Call("removeEventListener", "focus", p.UiComponents.eventCleanup.focusFunc)
+		p.UiComponents.eventCleanup.focusFunc.Release()
+	}
+
+	p.UiComponents.eventCleanup = nil
+}
+
+// paymentWindowDestroy handles cleanup after payment window closes
+func (p *ItemEditor) paymentWindowDestroy() {
+	// Clean up event listeners first
+	p.cleanupEventListeners()
+
+	// Note: The server doesn't have a /closed endpoint
+	// Instead, we should call /check to get the final status
+	// Or rely on the /success and /cancel callbacks from Stripe
+
+	success := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%vpaymentWindowDestroy() success", debugTag)
+		// Refresh the booking list to show updated payment status
+		p.RecordState = RecordStateReloadRequired
+		p.FetchItems()
+	}
+
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%vpaymentWindowDestroy() error: %v", debugTag, err)
+	}
+
+	// Check final payment status
+	p.client.NewRequest(
+		http.MethodGet,
+		ApiURL+"/check/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
+		nil,
+		nil,
+		success,
+		fail,
+	)
+}
+
+// checkPayment triggers payment status check
+func (p *ItemEditor) checkPayment() {
+	var statusResp CheckoutStatusResponse
+
+	success := func(err error, data *httpProcessor.ReturnData) {
+		if err != nil {
+			log.Printf("%vcheckPayment() error: %v", debugTag, err)
+			return
+		}
+
+		log.Printf("%vcheckPayment() status: %s", debugTag, statusResp.Status)
+
+		switch statusResp.Status {
+		case "open":
+			// Payment still in progress, do nothing
+			log.Printf("%vcheckPayment() payment still open", debugTag)
+
+		case "complete":
+			// Payment completed successfully
+			log.Printf("%vcheckPayment() payment complete", debugTag)
+			if !p.UiComponents.paymentWindow.IsNull() && !p.UiComponents.paymentWindow.IsUndefined() {
+				p.UiComponents.paymentWindow.Call("close")
+			}
+			p.paymentWindowDestroy()
+
+		case "expired", "canceled":
+			// Payment expired or was canceled
+			log.Printf("%vcheckPayment() payment %s", debugTag, statusResp.Status)
+			if !p.UiComponents.paymentWindow.IsNull() && !p.UiComponents.paymentWindow.IsUndefined() {
+				p.UiComponents.paymentWindow.Call("close")
+			}
+			p.paymentWindowDestroy()
+
+		default:
+			log.Printf("%vcheckPayment() unknown status: %s", debugTag, statusResp.Status)
+		}
+	}
+
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%vcheckPayment() failed: %v", debugTag, err)
+	}
+
+	p.client.NewRequest(
+		http.MethodGet,
+		ApiURL+"/check/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
+		&statusResp,
+		nil,
+		success,
+		fail,
+	)
+}
+
+/*
+
+//*************************************************************
+// Manage the opening and closing of the pament gateway page
+//*************************************************************
+
+// paymentOpen opens a new browser tab with the payment page url provided from the server
+// Once the payment is complete the payment page is directed back to the server to advise it is complete (success or cancelled)
+// it continiously checks for closure of the payment page and calls the windowClose if it has been closed
+func (p *ItemEditor) openPaymentPage(paymentURL string, err error) {
+	p.paymentWindowCreate(paymentURL)
+	//p.Callback()
+}
+
+func (p *ItemEditor) windowBlur(this js.Value, args []js.Value) interface{} {
+	log.Println(debugTag+"ListView.windowBlur()1", "p.paymentWindow.Get(closed) =", p.UiComponents.paymentWindow.Get("closed").Bool())
+	return nil
+}
+
+// windowFocus triggered when focus is received
+// This is used to trigger a check on the payment window to see if the payment is complete
+// 1. Check if the payment window is still open
+// 2. Check the payment record on the payment site to see if it is complete/cancelled
+func (p *ItemEditor) windowFocus(this js.Value, args []js.Value) interface{} {
+	if p.UiComponents.paymentWindow.Get("closed").Bool() {
+		p.paymentWindowDestroy()
+		return nil
+	}
+	p.checkPayment()
+	return nil
+}
+
+// createWindow creates the new payment page and directs it to the payment url
+// it sets up event listeners on the current page to determine when focus has been returned
+func (p *ItemEditor) paymentWindowCreate(url string) {
+	global := js.Global()
+	window := global.Get("window")
+	window.Call("addEventListener", "blur", js.FuncOf(p.windowBlur))
+	window.Call("addEventListener", "focus", js.FuncOf(p.windowFocus))
+	p.UiComponents.paymentWindow = window.Call("open", url, "_blank")
+}
+
+// checkWindow checks if the new browser window/tab is still open. //Not sure if we need to do this?????????
+func (p *ItemEditor) CheckWindow(window js.Value, callBack func()) {
+	checkWindow := func() {
+		for {
+			if window.Get("closed").Bool() {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+		log.Println(debugTag+"PaymentView.checkWindow()4", "window closed")
+		callBack()
+	}
+
+	go checkWindow()
+}
+
+// onMakePaymentClick is triggerd by the user clicking the make payment button
+// This triggers the start of the payment session
+func (p *ItemEditor) MakePayment(ItemID int64) {
+	var records []TableData
+	var paymentURL string
+	//var err error
+	//p.ItemID = ItemID
+	//err := p.StoreService.BookingReport.MakePayment(p.ItemID, p.openPaymentPage)
+	//if err != nil {
+	//	log.Printf("%v %v %v", debugTag+"PaymentView.onMakePaymentClick()2", "err =", err)
+	//	//return
+	//}
+	//p.Callback()
+
+	success := func(err error, data *httpProcessor.ReturnData) {
+		if data != nil {
+			p.FieldNames = data.FieldNames // Might be able to use this to filter the fields displayed on the form
+		}
+
+		if records != nil {
+			p.Records = records
+		} else {
+			p.Records = []TableData{}
+			log.Println(debugTag + "FetchItems()1 records == nil")
+		}
+
+		p.populateItemList()
+		p.updateStateDisplay(viewHelpers.ItemStateNone)
+		p.openPaymentPage(paymentURL, nil)
+	}
+
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		//log.Printf("%v %v %v %v %v", debugTag+"Store.MakePayment()4 ****Make Payment failed****", "err =", err, "len(Items) =", len(s.Items))
+		log.Printf("%vgetServerVerify() fail: %v", debugTag, err)
+		//editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Login failed, check username and password"})
+	}
+
+	//p.client.NewRequest(http.MethodGet, ApiURL+"checkoutSession/create/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10), &records, nil, success, fail)
+	p.client.NewRequest(http.MethodPost, ApiURL+"/create/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10), &records, nil, success, fail)
+
+	//err := s.Client.SendGetRequest("checkoutSession/create/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10), &paymentURL, success, fail) //Send the REST request
+	//if err != nil {
+	//	log.Printf("%v %v %v", debugTag+"Store.MakePayment()2 ", "err =", err) //Log the error in the browser
+	//	return errors.New(debugTag + "MakePayment: what is the error description?????")
+	//}
+}
+
+// windowClosed takes the next action in the payment process - advises the server that the payment page is complete
+// The server then needs to check the payment status
+func (p *ItemEditor) paymentWindowDestroy() {
+	//var err error
+	//Remove eventListners focus/blur
+	//err := p.StoreService.BookingReport.ClosePayment(p.ItemID, nil)
+	//if err != nil {
+	//	log.Printf("%v %v %v", debugTag+"PaymentView.paymentWindowDestroy()2", "err =", err)
+	//	//return
+	//}
+	//p.Callback()
+
+	//callbackSuccess := func(errIn error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%v", debugTag+"Store.ClosePayment()1")
+	}
+
+	//callbackFail := func(errIn error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		//log.Printf("%v %v %v %v %v", debugTag+"Store.MakePayment()4 ****Close Payment failed****", "err =", err, "len(Items) =", len(s.Items))
+		log.Printf("%v %v %v", debugTag+"PaymentView.paymentWindowDestroy()2", "err =", err)
+	}
+
+	p.client.NewRequest(http.MethodGet, ApiURL+"/closed/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10), nil, nil, success, fail)
+
+	//err := s.Client.SendGetRequest("checkoutSession/closed/"+strconv.FormatInt(BookingID, 10), nil, success, fail) //Send the REST request
+	//if err != nil {
+	//	log.Printf("%v %v %v", debugTag+"Store.ClosePayment()2 ", "err =", err) //Log the error in the browser
+	//	return errors.New(debugTag + "ClosePayment: what is the error description?????")
+	//}
+	//return nil
+
+}
+
+// checkPayment trigger payment check
+// This is done by calling the server (api) to tell the server we might be finished.
+// if payment complete we can close the window and do any other updates
+func (p *ItemEditor) checkPayment() {
+	//p.StoreService.BookingReport.CheckPayment(p.ParentItem.ID, callback)
+	//p.StoreService.BookingReport.CheckPayment(p.ItemID, callback)
+
+	var response string
+	//success := func(err error) {
+	success := func(err error, data *httpProcessor.ReturnData) {
+		log.Printf("%v %v %+v", debugTag+"ListView.checkPayment()2", "err =", err)
+		//switch err.Error() {
+		switch response {
+		case "open":
+			//send open info to browser client
+		case "complete":
+			//send completed info to browser client
+			p.UiComponents.paymentWindow.Call("close")
+			p.paymentWindowDestroy()
+		case "expired":
+			//send expired info to browser client
+			p.UiComponents.paymentWindow.Call("close")
+			p.paymentWindowDestroy()
+		}
+	}
+
+	//fail := func(errIn error) {
+	fail := func(err error, data *httpProcessor.ReturnData) {
+		//log.Printf("%v %v %v %v %v", debugTag+"Store.CheckPayment()4 ****Close Payment failed****", "err =", err, "len(Items) =", len(s.Items))
+		log.Printf("%v %v %v", debugTag+"Store.CheckPayment()2 ", "err =", err) //Log the error in the browser
+	}
+
+	p.client.NewRequest(http.MethodGet, ApiURL+"/check/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10), &response, nil, success, fail)
+
+	//err := s.Client.SendGetRequest("checkoutSession/check/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10), &response, success, fail) //Send the REST request
+	//if err != nil {
+	//	log.Printf("%v %v %v", debugTag+"Store.CheckPayment()2 ", "err =", err) //Log the error in the browser
+	//	return errors.New(debugTag + "ClosePayment: what is the error description?????")
+	//}
+	//return nil
+
+}
+*/
+
 /*
 
 package storeBookingReport
@@ -9,6 +432,26 @@ import (
 	"log"
 	"strconv"
 )
+
+// PaymentView displays the payment gateway page
+type PaymentView struct {
+	vecty.Core
+
+	//Properties
+	ItemID       int64          `vecty:"prop"`
+	StoreService *store.Service `vecty:"prop"`
+	Callback     func()         `vecty:"prop"`
+
+	//State
+	paymentWindow js.Value
+}
+
+func New(s *store.Service, callback func()) *PaymentView {
+	return &PaymentView{
+		StoreService: s,
+		Callback:     callback,
+	}
+}
 
 //MakePayment tells the server to contact the payment gateway with the information for setting up the payment
 //and return the payment page url to the callback function.
