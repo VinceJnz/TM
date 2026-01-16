@@ -34,6 +34,8 @@ type Booking struct {
 	BookingPrice    decimal.NullDecimal `json:"booking_price" db:"booking_price"`
 	TripName        string              `json:"trip_name" db:"trip_name"`
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
+	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
+	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
 }
@@ -84,6 +86,8 @@ type MyBooking struct {
 	TripFromDate    time.Time           `json:"trip_from_date" db:"trip_from_date"`
 	TripToDate      time.Time           `json:"trip_to_date" db:"trip_to_date"`
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
+	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
+	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
 }
@@ -100,7 +104,7 @@ type BookingPaymentInfo struct {
 	AmountPaid          zero.Float  `db:"amount_paid"` // Percentage of the total booking cost paid
 	TripName            zero.String `db:"trip_name"`
 	Description         zero.String `db:"description"`
-	MaxPeople           zero.Int    `db:"max_people"`                               // Maximum number of people allowed on the trip
+	MaxParticipants     zero.Int    `json:"max_participants" db:"max_participants"` // Maximum number of people allowed on the trip
 	BookingParticipants zero.Int    `db:"participants"`                             // Number of people in the booking
 	BookingCost         zero.Float  `db:"booking_cost"`                             // Total cost of the booking
 	TripPersonCount     zero.Int    `db:"trip_person_count"`                        // Number of people already booked on the trip

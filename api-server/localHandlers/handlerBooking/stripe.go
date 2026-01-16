@@ -21,7 +21,7 @@ const (
 	qryGetBookingForPayment = `SELECT 
 		atb.id, atb.owner_id, atb.trip_id, atb.from_date, atb.to_date, 
 		atb.booking_status_id, atb.stripe_session_id, atb.amount_paid,
-		att.trip_name, att.description, att.max_people,
+		att.trip_name, att.description, att.max_participants,
 		COUNT(atbp.id) as participants,
 		SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
 		(SELECT COUNT(*) FROM at_booking_people atbp2 
@@ -35,7 +35,7 @@ const (
 		AND attc.member_status_id = stu.member_status_id
 		AND attc.user_age_group_id = stu.user_age_group_id
 	WHERE atb.id = $1
-	GROUP BY atb.id, att.id, att.trip_name, att.description, att.max_people`
+	GROUP BY atb.id, att.id, att.trip_name, att.description, att.max_participants`
 
 	qryUpdateStripeSession = `UPDATE at_bookings 
 		SET stripe_session_id = $2, booking_price = $3
@@ -93,7 +93,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	// Fetch booking details
 	bookingItem := &models.BookingPaymentInfo{}
 	Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
-	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCreate()1", "bookingItem =", bookingItem)
+	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCreate()2", "bookingItem =", bookingItem)
 
 	// Validate booking can be paid
 	if err := h.validateBookingForPayment(bookingItem); err != nil {
@@ -132,6 +132,39 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
 	}
 
+	/*
+		params := &stripe.CheckoutSessionCreateParams{
+			LineItems: []*stripe.CheckoutSessionCreateParamsLineItem{
+				{
+					PriceData: &stripe.CheckoutSessionCreateParamsLineItemPriceData{
+						Currency: stripe.String(string(stripe.CurrencyNZD)),
+						ProductData: &stripe.CheckoutSessionCreateParamsLineItemPriceDataProductData{
+							Description: stripe.String("Trip description: " + bookingItem.Description.String),
+							Name:        stripe.String("Trip name = " + bookingItem.TripName.String),
+						},
+						UnitAmount: stripe.Int64(int64(bookingItem.BookingCost.ValueOrZero() * 100)),
+					},
+					Quantity: stripe.Int64(1),
+				},
+			},
+			CustomerEmail: stripe.String("vince.jennings@gmail.com"),
+			Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
+			SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
+			CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
+		}
+	*/
+
+	// Use the V1CheckoutSessions service on the client
+	//CheckoutSession, err = h.appConf.PaymentSvc.Client.V1CheckoutSessions.Create(
+	//	context.Background(),
+	//	params,
+	//)
+	//if err != nil {
+	//	log.Printf("%v V1CheckoutSessions.Create error: %v", debugTag+"Handler.CheckoutCreate()4", err)
+	//	http.Error(w, "Error creating checkout session", http.StatusInternalServerError)
+	//	return
+	//}
+
 	// NEW WAY: Use session.New with the client
 	CheckoutSession, err = session.New(params)
 	if err != nil {
@@ -149,8 +182,8 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	//*******************************************************
 	r.Header.Set("Access-Control-Allow-Origin", "stripe.com, 111.stripe.com")
 	w.Header().Set("Access-Control-Allow-Origin", "stripe.com, 222.stripe.com")
-	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.CheckoutCreate()3", "w.Header() =", w.Header(), "r =", r)
-	log.Printf("%v %v %v", debugTag+"Handler.CheckoutCreate()4", "CheckoutSession.URL", CheckoutSession.URL)
+	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.CheckoutCreate()6", "w.Header() =", w.Header(), "r =", r)
+	log.Printf("%v %v %v", debugTag+"Handler.CheckoutCreate()7", "CheckoutSession.URL", CheckoutSession.URL)
 
 	// Return structured JSON response
 	response := CheckoutCreateResponse{
@@ -372,7 +405,7 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 // validateBookingForPayment checks if booking can proceed to payment
 func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentInfo) error {
 	// Check if booking will exceed trip capacity
-	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxPeople.Int64 {
+	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxParticipants.Int64 {
 		return errors.New("payment disallowed: the booking will exceed the trip capacity")
 	}
 

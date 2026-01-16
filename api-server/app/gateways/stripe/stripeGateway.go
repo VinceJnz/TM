@@ -46,11 +46,16 @@ func New(keyFile, domain string, testMode bool) *Gateway {
 			Domain: domain,
 		}
 	}
-	if testMode {
-		apiKey = "sk_test_" + apiKey
-	} else {
-		apiKey = "sk_live_" + apiKey
-	}
+	//if testMode {
+	//	apiKey = "sk_test_" + apiKey
+	//} else {
+	//	apiKey = "sk_live_" + apiKey
+	//}
+
+	// DON'T add sk_test_ prefix - the key already has it!
+	// Set the global Stripe key
+	stripe.Key = apiKey
+
 	return &Gateway{
 		//appConf:    appConf,
 		Client: stripe.NewClient(apiKey),
@@ -68,11 +73,16 @@ func NewFromKey(apiKey, domain string, testMode bool) *Gateway {
 			Domain: domain,
 		}
 	}
-	if testMode {
-		apiKey = "sk_test_" + apiKey
-	} else {
-		apiKey = "sk_live_" + apiKey
-	}
+	//if testMode {
+	//	apiKey = "sk_test_" + apiKey
+	//} else {
+	//	apiKey = "sk_live_" + apiKey
+	//}
+
+	// DON'T add sk_test_ prefix - the key already has it!
+	// Set the global Stripe key
+	stripe.Key = apiKey
+
 	return &Gateway{
 		//appConf:    appConf,
 		Client: stripe.NewClient(apiKey),

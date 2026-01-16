@@ -11,7 +11,7 @@ import (
 )
 
 type HTTPInfo struct {
-	LogID         string          `json:"LogID,omitempty"`
+	LogTag        string          `json:"LogTag,omitempty"`
 	Duration      time.Duration   `json:"Duration"` // how long did it take to
 	URL           string          `json:"URL"`
 	Host          string          `json:"Host"`
@@ -30,10 +30,10 @@ type HTTPInfo struct {
 }
 
 // LogRequest This is a MiddleWare handler that logs all request to the console
-func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logID string) http.Handler {
+func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		info := &HTTPInfo{
-			LogID:         logID,
+			LogTag:        logTag,
 			Duration:      0,
 			URL:           r.URL.String(),
 			Host:          r.Host,
@@ -58,7 +58,7 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logID string
 		// Log the response status code and body
 		//log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
 		if lrw.statusCode != 0 && lrw.statusCode != 200 {
-			log.Printf(debugTag+`LogRequest()2 Response body: %v, status: %d`, lrw.body.String(), lrw.statusCode)
+			log.Printf(debugTag+`LogRequest()2 LogTag: %s, Response body: %v, status: %d`, logTag, lrw.body.String(), lrw.statusCode)
 		}
 
 		cookie, err := r.Cookie("session")
