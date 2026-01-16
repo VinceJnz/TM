@@ -31,7 +31,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/booking"
+const ApiURL = "/bookings"
 
 // ********************* This needs to be changed for each api **********************
 

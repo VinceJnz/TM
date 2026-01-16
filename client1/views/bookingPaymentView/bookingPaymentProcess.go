@@ -43,6 +43,7 @@ type eventCleanup struct {
 // MakePayment initiates the payment session
 func (p *ItemEditor) MakePayment(ItemID int64) {
 	var checkoutResp CheckoutCreateResponse
+	log.Printf("%vMakePayment() starting for BookingID=%d", debugTag, ItemID)
 
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
@@ -73,7 +74,7 @@ func (p *ItemEditor) MakePayment(ItemID int64) {
 	// POST request to create checkout session
 	p.client.NewRequest(
 		http.MethodPost,
-		ApiURL+"/checkout/create/"+strconv.FormatInt(p.CurrentRecord.BookingID, 10),
+		ApiURL+"/checkout/create/"+strconv.FormatInt(ItemID, 10),
 		&checkoutResp,
 		nil,
 		success,

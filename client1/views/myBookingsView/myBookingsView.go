@@ -472,7 +472,7 @@ func (editor *ItemEditor) populateItemList() {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
-			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 				editor.populateEditForm()
@@ -483,7 +483,7 @@ func (editor *ItemEditor) populateItemList() {
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 				editor.deleteItem(record.ID)
 				return nil
 			}))
@@ -493,7 +493,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create a toggle modify-people-list button
 		peopleButton := editor.document.Call("createElement", "button")
 		peopleButton.Set("innerHTML", "People")
-		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			bookingPeople.FetchItems()
 			bookingPeople.Toggle()
 			return nil
@@ -502,7 +502,8 @@ func (editor *ItemEditor) populateItemList() {
 
 		bookingPayment := editor.document.Call("createElement", "button")
 		bookingPayment.Set("innerHTML", "Payment")
-		bookingPayment.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		bookingPayment.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			log.Printf(debugTag+"populateItemList()1 Booking=%+v", record)
 			paymentView.FetchItems()
 			paymentView.MakePayment(int64(record.ID))
 			return nil
