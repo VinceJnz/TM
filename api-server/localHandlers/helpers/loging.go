@@ -11,6 +11,7 @@ import (
 )
 
 type HTTPInfo struct {
+	LogID         string          `json:"LogID,omitempty"`
 	Duration      time.Duration   `json:"Duration"` // how long did it take to
 	URL           string          `json:"URL"`
 	Host          string          `json:"Host"`
@@ -29,9 +30,10 @@ type HTTPInfo struct {
 }
 
 // LogRequest This is a MiddleWare handler that logs all request to the console
-func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey) http.Handler {
+func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logID string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		info := &HTTPInfo{
+			LogID:         logID,
 			Duration:      0,
 			URL:           r.URL.String(),
 			Host:          r.Host,

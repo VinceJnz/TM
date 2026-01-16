@@ -49,7 +49,7 @@ func main() {
 	// Setup your API subrouter with CORS middleware
 	public := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	public.Use(func(next http.Handler) http.Handler {
-		return helpers.LogRequest(next, app.SessionIDKey)
+		return helpers.LogRequest(next, app.SessionIDKey, "public") // First logging
 	})
 	// The following routes are unprotected, i.e. do not require authentication to use.
 
@@ -65,14 +65,14 @@ func main() {
 	oauth.RegisterRoutes(public, "/auth/oauth") // OAuth handlers
 
 	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
-	protected.Use(func(next http.Handler) http.Handler {
-		return helpers.LogRequest(next, app.SessionIDKey) // Then logging
-	})
 	auth := handlerAuth.New(app)
 	auth.RegisterRoutes(protected, "/auth")
 	//protected.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
 	protected.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
 	//protected.Use(SRPauth.RequireRestAuth)        // Add some middleware, e.g. an auth handler
+	protected.Use(func(next http.Handler) http.Handler {
+		return helpers.LogRequest(next, app.SessionIDKey, "protected") // Then logging
+	})
 
 	// The following routes are protected, i.e. require authentication to use.
 	oauth.RegisterRoutesProtected(protected, "/auth/oauth") // Protected OAuth handlers
@@ -133,7 +133,8 @@ func main() {
 	)
 
 	corsMuxHandler := corsOpts(r)
-	loggedHandler := helpers.LogRequest(corsMuxHandler, app.SessionIDKey) // Wrap the router with the logging middleware
+	//loggedHandler := helpers.LogRequest(corsMuxHandler, app.SessionIDKey, "main") // Wrap the router with the logging middleware
+	loggedHandler := corsMuxHandler
 
 	// Paths to certificate and key files
 	crtFile := app.Settings.ServerCert
