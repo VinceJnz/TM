@@ -43,11 +43,14 @@ func main() {
 	app := appCore.New(debugFlag)
 	app.Run()
 	defer app.Close()
-	log.Printf("%smain() App settings: %+v, os Env: %+v\n", debugTag, app.Settings, os.Environ())
+	log.Printf("%smain(), debug: %v, App settings: %+v, os Env: %+v\n", debugTag, debugFlag, app.Settings, os.Environ())
 
 	r := mux.NewRouter()
 	// Setup your API subrouter with CORS middleware
 	public := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	public.Use(func(next http.Handler) http.Handler {
+		return helpers.LogRequest(next, app.SessionIDKey)
+	})
 	// The following routes are unprotected, i.e. do not require authentication to use.
 
 	//SRP authentication and registration process handlers
@@ -62,6 +65,9 @@ func main() {
 	oauth.RegisterRoutes(public, "/auth/oauth") // OAuth handlers
 
 	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	protected.Use(func(next http.Handler) http.Handler {
+		return helpers.LogRequest(next, app.SessionIDKey) // Then logging
+	})
 	auth := handlerAuth.New(app)
 	auth.RegisterRoutes(protected, "/auth")
 	//protected.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
@@ -100,30 +106,23 @@ func main() {
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
-	/*
-		if debugFlag {
-			// For debugging: Log all registered routes
-			r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-				path, _ := route.GetPathTemplate()
-				methods, _ := route.GetMethods()
-				log.Printf("Registered routes for r: %s %v", path, methods)
-				return nil
-			})
-			// For debugging: Log all registered routes
-			public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-				path, _ := route.GetPathTemplate()
-				methods, _ := route.GetMethods()
-				log.Printf("Registered routes for public: %s %v", path, methods)
-				return nil
-			})
-			protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-				path, _ := route.GetPathTemplate()
-				methods, _ := route.GetMethods()
-				log.Printf("Registered routes for protected: %s %v", path, methods)
-				return nil
-			})
-		}
-	*/
+	//*
+	//if debugFlag {
+	// For debugging: Log all registered routes
+	public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		path, _ := route.GetPathTemplate()
+		methods, _ := route.GetMethods()
+		log.Printf("Registered routes for public: %s %v", path, methods)
+		return nil
+	})
+	protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		path, _ := route.GetPathTemplate()
+		methods, _ := route.GetMethods()
+		log.Printf("Registered routes for protected: %s %v", path, methods)
+		return nil
+	})
+	//}
+	//*/
 
 	// Define CORS options
 	corsOpts := handlers.CORS(

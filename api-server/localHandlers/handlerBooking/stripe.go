@@ -74,7 +74,8 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	var err error
 	//var recordID int64
 	var CheckoutSession *stripe.CheckoutSession
-	log.Printf("%v", debugTag+"Handler.CheckoutCreate()1")
+	appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	log.Printf("%v, appSession: %+v", debugTag+"Handler.CheckoutCreate()1", appSession)
 
 	// Need to create a structure and queries here to get the booking and trip details
 	// which neeeds to be passed to stripe to create the checkout session

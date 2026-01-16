@@ -62,10 +62,6 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey) http.Handler
 		cookie, err := r.Cookie("session")
 		if err == nil {
 			info.Cookie = cookie.Value
-			//token, err := h.srvc.Session.FindSessionToken(info.Cookie)
-			//if err == nil {
-			//	info.UserID = token.UserID
-			//}
 		}
 		info.StatusCode = lrw.statusCode
 		info.Protocol = r.Proto
@@ -74,6 +70,14 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey) http.Handler
 			info.TLSProtocol = r.TLS.NegotiatedProtocol
 		}
 		info.Duration = time.Since(start)
+
+		// Try to get session from context (may not exist for public routes)
+		if ctxValue := r.Context().Value(sessionIDKey); ctxValue != nil {
+			if session, ok := ctxValue.(*models.Session); ok {
+				info.UserID = int64(session.UserID)
+				//info.Session = session
+			}
+		}
 
 		infoJSON, err := json.Marshal(info)
 		if err != nil {
