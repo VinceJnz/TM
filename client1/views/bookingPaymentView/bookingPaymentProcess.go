@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"syscall/js"
+
+	"github.com/stripe/stripe-go/v84"
 )
 
 // PaymentResponse represents the response from the checkout create endpoint
@@ -199,7 +201,7 @@ func (p *ItemEditor) paymentWindowDestroy() {
 
 // checkPayment triggers payment status check
 func (p *ItemEditor) checkPayment() {
-	var statusResp CheckoutStatusResponse
+	var statusResp stripe.CheckoutSession
 
 	success := func(err error, data *httpProcessor.ReturnData) {
 		if err != nil {
@@ -210,11 +212,11 @@ func (p *ItemEditor) checkPayment() {
 		log.Printf("%vcheckPayment() status: %s", debugTag, statusResp.Status)
 
 		switch statusResp.Status {
-		case "open":
+		case stripe.CheckoutSessionStatusOpen: //"open":
 			// Payment still in progress, do nothing
 			log.Printf("%vcheckPayment() payment still open", debugTag)
 
-		case "complete":
+		case stripe.CheckoutSessionStatusComplete: // "complete":
 			// Payment completed successfully
 			log.Printf("%vcheckPayment() payment complete", debugTag)
 			if !p.UiComponents.paymentWindow.IsNull() && !p.UiComponents.paymentWindow.IsUndefined() {
@@ -222,7 +224,7 @@ func (p *ItemEditor) checkPayment() {
 			}
 			p.paymentWindowDestroy()
 
-		case "expired", "canceled":
+		case stripe.CheckoutSessionStatusExpired: //"expired":
 			// Payment expired or was canceled
 			log.Printf("%vcheckPayment() payment %s", debugTag, statusResp.Status)
 			if !p.UiComponents.paymentWindow.IsNull() && !p.UiComponents.paymentWindow.IsUndefined() {

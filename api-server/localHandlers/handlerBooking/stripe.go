@@ -92,11 +92,14 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 
 	// Fetch booking details
 	bookingItem := &models.BookingPaymentInfo{}
-	Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
-	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCreate()2", "bookingItem =", bookingItem)
+	err = Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
+	if err != nil {
+		log.Printf("%v %v %v, booking item = %+v", debugTag+"Handler.CheckoutCreate()2", "Get() error =", err, bookingItem)
+		return
+	}
 
 	// Validate booking can be paid
-	if err := h.validateBookingForPayment(bookingItem); err != nil {
+	if err := h.validateBookingForPayment(bookingItem, int64(appSession.UserID)); err != nil {
 		log.Printf("%v validation error: %v", debugTag+"Handler.CheckoutCreate()3", err)
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
@@ -126,7 +129,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 			},
 		},
 		//CustomerEmail: stripe.String(s.User.Email.String),
-		CustomerEmail: stripe.String("vince.jennings@gmail.com"), // POC only
+		CustomerEmail: stripe.String("vince.jennings@gmail.com"), // Debug/POC only
 		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
 		SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
 		CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
@@ -177,8 +180,11 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	//Update the Booking record with the stripe checkout session id
 	bookingItem.StripeSessionID.SetValid(CheckoutSession.ID)
 	//bookingItem.TotalFee.SetValid(bookingItem.Cost.Float64) //??????? is this recording the amount paid or is it just a flag???
-	Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdateStripeSession, bookingItem.ID, bookingItem.StripeSessionID, bookingItem.BookingCost)
-
+	err = Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdateStripeSession, bookingItem.ID, bookingItem.StripeSessionID, bookingItem.BookingCost)
+	if err != nil {
+		log.Printf("%v %v %v, booking item = %+v", debugTag+"Handler.CheckoutCreate()6", "Update() error =", err, bookingItem)
+		return
+	}
 	//*******************************************************
 	//r.Header.Set("Access-Control-Allow-Origin", "stripe.com, 111.stripe.com")
 	//w.Header().Set("Access-Control-Allow-Origin", "stripe.com, 222.stripe.com")
@@ -194,6 +200,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 
 	//send the stripe checkout session url to the browser client
 	//http.Redirect(w, r, CheckoutSession.URL, http.StatusSeeOther)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -211,13 +218,14 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 
 	// Fetch booking details
 	bookingItem := &models.BookingPaymentInfo{}
-	Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
-	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCheck()1", "bookingItem =", bookingItem)
+	err = Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
+	if err != nil {
+		log.Printf("%v %v %v", debugTag+"Handler.CheckoutCheck()2", "Get() error =", err)
+		return
+	}
 	if !bookingItem.StripeSessionID.Valid || bookingItem.StripeSessionID.String == "" {
-		log.Printf("%v No Stripe session found for booking %d", debugTag+"Handler.CheckoutCheck()2", bookingID)
+		log.Printf("%v No Stripe session found for booking %d", debugTag+"Handler.CheckoutCheck()3", bookingID)
 		http.Error(w, "No Stripe session found for booking", http.StatusNotFound)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w)
 		return
 	}
 
@@ -241,14 +249,19 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 	switch CheckoutSession.Status {
 	case stripe.CheckoutSessionStatusOpen: //"open":
 		//send open info to browser client
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	case stripe.CheckoutSessionStatusComplete: //"complete":
 		//Update the booking record to show that the payment is complete
-		bookingItem.BookingStatusID.SetValid(int64(models.Full_amountPaid))         //Payment status = Full amount paid (value is 2) and sould only be set if the full payment has been made
-		bookingItem.AmountPaid.SetValid(float64(CheckoutSession.AmountTotal) / 100) //???????
+		bookingItem.BookingStatusID.SetValid(int64(models.Full_amountPaid)) //Payment status = Full amount paid (value is 2) and sould only be set if the full payment has been made
+		bookingItem.AmountPaid.SetValid(CheckoutSession.AmountTotal)        //Store the amount paid
 		bookingItem.DatePaid.SetValid(time.Now())
-		Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdatePaymentComplete, bookingItem.ID, bookingItem.BookingStatusID, bookingItem.AmountPaid, bookingItem.DatePaid)
-
+		err = Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdatePaymentComplete, bookingItem.ID, bookingItem.BookingStatusID, bookingItem.AmountPaid, bookingItem.DatePaid)
+		if err != nil {
+			log.Printf("%v %v %v, booking item = %+v", debugTag+"Handler.CheckoutCheck()5", "Update() error =", err, bookingItem)
+			http.Error(w, "Error updating booking payment status", http.StatusInternalServerError)
+			return
+		}
 		response.AmountTotal = float64(CheckoutSession.AmountTotal) / 100
 		response.PaymentDate = &bookingItem.DatePaid.Time
 		//send completed info to browser client
@@ -256,6 +269,7 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 		json.NewEncoder(w).Encode(response)
 	case stripe.CheckoutSessionStatusExpired: // "expired":
 		//send expired info to browser client
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}
 
@@ -272,14 +286,17 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v", debugTag+"CheckoutSuccess()1")
 
-	// Get booking ID from URL parameter
-	recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
-	if recordID == 0 {
-		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
-		return
-	}
+	// User validation passed ????
+	//h.validateUser( &models.BookingPaymentInfo{}, 0)
 
-	log.Printf("%v Payment successful for booking %d", debugTag+"CheckoutSuccess()3", recordID)
+	// Get booking ID from URL parameter
+	//recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
+	//if recordID == 0 {
+	//	http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+	//	return
+	//}
+
+	//log.Printf("%v Payment successful for booking %d", debugTag+"CheckoutSuccess()3", recordID)
 
 	//Send a completed page to the payment window/tab
 	// Return HTML page with success message
@@ -342,13 +359,13 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v", debugTag+"CheckoutCancel()1")
 
 	// Get booking ID from URL parameter
-	recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
-	if recordID == 0 {
-		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
-		return
-	}
+	//recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
+	//if recordID == 0 {
+	//	http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+	//	return
+	//}
 
-	log.Printf("%v Payment cancelled for booking %d", debugTag+"CheckoutCancel()3", recordID)
+	//log.Printf("%v Payment cancelled for booking %d", debugTag+"CheckoutCancel()3", recordID)
 
 	// Return HTML page with cancellation message
 	html := `<!DOCTYPE html>
@@ -403,7 +420,7 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 }
 
 // validateBookingForPayment checks if booking can proceed to payment
-func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentInfo) error {
+func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentInfo, appSessionUserID int64) error {
 	// Check if booking will exceed trip capacity
 	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxParticipants.Int64 {
 		return errors.New("payment disallowed: the booking will exceed the trip capacity")
@@ -415,7 +432,19 @@ func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentIn
 	}
 
 	// User validation passed ????
+	if bookingItem.OwnerID != appSessionUserID {
+		return errors.New("unauthorized: user is not the booking owner")
+	}
 
+	return nil
+}
+
+func (h *Handler) validateUser(bookingItem *models.BookingPaymentInfo, appSessionUserID int64) error {
+
+	// User validation passed ????
+	if bookingItem.OwnerID != appSessionUserID {
+		return errors.New("unauthorized: user is not the booking owner")
+	}
 	return nil
 }
 
