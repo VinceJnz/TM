@@ -142,10 +142,10 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 // RegisterRoutes registers handler routes on the provided router.
-func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h)
-	r.HandleFunc("/trips/{id:[0-9]+}"+baseURL, h.GetList).Methods("GET") // Is this still needed???
-	h.RegisterRoutesStripe(r, baseURL)
+func (h *Handler) RegisterRoutes(r *mux.Router, baseUrlBooking, baseUrlTrip string) {
+	helpers.AddRouteGroup(r, baseUrlBooking, h)
+	h.RegisterRoutesStripe(r, baseUrlBooking)
+	r.HandleFunc(baseUrlTrip+"/{id:[0-9]+}"+baseUrlBooking, h.GetList).Methods("GET")
 }
 
 // GetAll: retrieves and returns all records

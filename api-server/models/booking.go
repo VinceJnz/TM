@@ -98,7 +98,7 @@ type BookingPaymentInfo struct {
 	TripID              int64       `db:"trip_id"`
 	FromDate            time.Time   `db:"from_date"`
 	ToDate              time.Time   `db:"to_date"`
-	BookingStatusID     int         `db:"booking_status_id"`
+	BookingStatusID     zero.Int    `db:"booking_status_id"` // The status of the booking payment (Not_paid, Full_amountPaid, Partial_amount_Paid)
 	BookingStatus       zero.String `json:"booking_status" db:"booking_status"`
 	StripeSessionID     zero.String `db:"stripe_session_id"`
 	AmountPaid          zero.Float  `db:"amount_paid"` // Percentage of the total booking cost paid
@@ -109,6 +109,5 @@ type BookingPaymentInfo struct {
 	BookingCost         zero.Float  `db:"booking_cost"`                             // Total cost of the booking
 	TripPersonCount     zero.Int    `db:"trip_person_count"`                        // Number of people already booked on the trip
 	BookingPosition     zero.Int    `json:"booking_position" db:"booking_position"` // Position in the trip booking list
-	PaymentStatusID     zero.Int    `json:"payment_status_id" db:"payment_status_id"`
 	DatePaid            zero.Time   `json:"date_paid" db:"date_paid"`
 }

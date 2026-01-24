@@ -126,7 +126,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 			},
 		},
 		//CustomerEmail: stripe.String(s.User.Email.String),
-		CustomerEmail: stripe.String("vince.jennings@gmail.com"),
+		CustomerEmail: stripe.String("vince.jennings@gmail.com"), // POC only
 		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
 		SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
 		CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
@@ -147,7 +147,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 					Quantity: stripe.Int64(1),
 				},
 			},
-			CustomerEmail: stripe.String("vince.jennings@gmail.com"),
+			CustomerEmail: stripe.String("vince.jennings@gmail.com"), // POC only
 			Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
 			SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
 			CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
@@ -180,9 +180,9 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdateStripeSession, bookingItem.ID, bookingItem.StripeSessionID, bookingItem.BookingCost)
 
 	//*******************************************************
-	r.Header.Set("Access-Control-Allow-Origin", "stripe.com, 111.stripe.com")
-	w.Header().Set("Access-Control-Allow-Origin", "stripe.com, 222.stripe.com")
-	log.Printf("%v %v %+v %v %+v", debugTag+"Handler.CheckoutCreate()6", "w.Header() =", w.Header(), "r =", r)
+	//r.Header.Set("Access-Control-Allow-Origin", "stripe.com, 111.stripe.com")
+	//w.Header().Set("Access-Control-Allow-Origin", "stripe.com, 222.stripe.com")
+	//log.Printf("%v %v %+v %v %+v", debugTag+"Handler.CheckoutCreate()6", "w.Header() =", w.Header(), "r =", r)
 	log.Printf("%v %v %v", debugTag+"Handler.CheckoutCreate()7", "CheckoutSession.URL", CheckoutSession.URL)
 
 	// Return structured JSON response
@@ -215,9 +215,9 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 	log.Printf("%v %v %+v", debugTag+"Handler.CheckoutCheck()1", "bookingItem =", bookingItem)
 	if !bookingItem.StripeSessionID.Valid || bookingItem.StripeSessionID.String == "" {
 		log.Printf("%v No Stripe session found for booking %d", debugTag+"Handler.CheckoutCheck()2", bookingID)
-		response := CheckoutStatusResponse{Status: "no_session"}
+		http.Error(w, "No Stripe session found for booking", http.StatusNotFound)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w)
 		return
 	}
 
@@ -241,22 +241,22 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 	switch CheckoutSession.Status {
 	case stripe.CheckoutSessionStatusOpen: //"open":
 		//send open info to browser client
-		json.NewEncoder(w).Encode("open")
+		json.NewEncoder(w).Encode(response)
 	case stripe.CheckoutSessionStatusComplete: //"complete":
 		//Update the booking record to show that the payment is complete
-		bookingItem.PaymentStatusID.SetValid(int64(models.Full_amountPaid))
+		bookingItem.BookingStatusID.SetValid(int64(models.Full_amountPaid))         //Payment status = Full amount paid (value is 2) and sould only be set if the full payment has been made
 		bookingItem.AmountPaid.SetValid(float64(CheckoutSession.AmountTotal) / 100) //???????
 		bookingItem.DatePaid.SetValid(time.Now())
-		Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdatePaymentComplete, bookingItem.ID, bookingItem.PaymentStatusID, bookingItem.AmountPaid, bookingItem.DatePaid)
+		Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdatePaymentComplete, bookingItem.ID, bookingItem.BookingStatusID, bookingItem.AmountPaid, bookingItem.DatePaid)
 
 		response.AmountTotal = float64(CheckoutSession.AmountTotal) / 100
 		response.PaymentDate = &bookingItem.DatePaid.Time
 		//send completed info to browser client
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
-	case stripe.CheckoutSessionStatusExpired: // "expired", "canceled":
+	case stripe.CheckoutSessionStatusExpired: // "expired":
 		//send expired info to browser client
-		json.NewEncoder(w).Encode("expired")
+		json.NewEncoder(w).Encode(response)
 	}
 
 	//poc ??????????? websocket poc stuff ??????????????????????
@@ -413,6 +413,8 @@ func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentIn
 	if bookingItem.BookingCost.Float64 == 0 {
 		return errors.New("payment disallowed: the booking cost is zero")
 	}
+
+	// User validation passed ????
 
 	return nil
 }
