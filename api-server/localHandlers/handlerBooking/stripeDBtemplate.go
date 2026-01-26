@@ -35,7 +35,7 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 	tx, err := Db.Beginx() // Start transaction
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create()1: Could not start transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Update()1: Could not start transaction", http.StatusInternalServerError)
 		return err
 	}
 
@@ -49,7 +49,7 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 	err = tx.Commit() // Commit on success
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create()3: Could not commit transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Update()3: Could not commit transaction", http.StatusInternalServerError)
 		return err
 	}
 

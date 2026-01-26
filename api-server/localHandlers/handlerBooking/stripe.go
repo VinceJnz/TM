@@ -131,8 +131,10 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		//CustomerEmail: stripe.String(s.User.Email.String),
 		CustomerEmail: stripe.String("vince.jennings@gmail.com"), // Debug/POC only
 		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
-		CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
+		//SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
+		//CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
+		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/checkout/success/" + strconv.Itoa(bookingID)),
+		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/checkout/cancel/" + strconv.Itoa(bookingID)),
 	}
 
 	/*

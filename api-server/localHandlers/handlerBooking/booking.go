@@ -181,7 +181,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.RecordValidation(record); err != nil {
-		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 

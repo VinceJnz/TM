@@ -36,6 +36,7 @@ type Booking struct {
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
 	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
 	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
+	Currency        zero.String         `json:"currency" db:"currency"` // Currency code for the booking price
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
 }
@@ -88,6 +89,7 @@ type MyBooking struct {
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
 	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
 	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
+	Currency        zero.String         `json:"currency" db:"currency"` // Currency code for the booking price
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
 }
