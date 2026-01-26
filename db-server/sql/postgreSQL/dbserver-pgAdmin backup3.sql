@@ -5,7 +5,7 @@
 -- Dumped from database version 13.22 (Debian 13.22-1.pgdg13+1)
 -- Dumped by pg_dump version 17.1
 
--- Started on 2025-12-16 17:57:42
+-- Started on 2026-01-27 11:20:53
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -186,7 +186,10 @@ CREATE TABLE public.at_bookings (
     booking_date date,
     group_booking_id integer,
     booking_price numeric(8,2),
-    payment_date date
+    payment_date date,
+    amount_paid bigint,
+    currency character(3),
+    stripe_session_id character(100)
 );
 
 
@@ -321,7 +324,8 @@ CREATE TABLE public.at_trips (
     trip_status_id integer DEFAULT 0 NOT NULL,
     trip_type_id integer DEFAULT 0 NOT NULL,
     difficulty_level_id integer,
-    trip_cost_group_id integer
+    trip_cost_group_id integer,
+    description text
 );
 
 
@@ -1408,7 +1412,7 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
--- Completed on 2025-12-16 17:57:42
+-- Completed on 2026-01-27 11:20:54
 
 --
 -- PostgreSQL database dump complete

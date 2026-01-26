@@ -31,3 +31,102 @@ Age group
 
 ## Querying trip costs
 
+
+
+## PostgreSQL back up settings
+
+3 files
+1. Full tar backup (file name: dbserver-pgAdmin backup1.sql)
+2. Full plain backup (file name: dbserver-pgAdmin backup2.sql)
+3. Schema build (file name: dbserver-pgAdmin backup3.sql)
+
+
+### 1. Settings for Full tar backup (file name: dbserver-pgAdmin backup1.sql)
+
+**General**
+* File name: dbserver-pgAdmin backup1.sql
+* Format: Tar
+
+**Data options**
+* Sections: Pre-data, Data, Post-data
+* Type of objects: defaults - all off
+* Do not save: defaults - all off
+
+**Query Options**
+* Use INSERT Commands
+* On conflict do nothing to INSERT command
+* Include CREATE DATABASE statement
+* Include DROP DATABASE statement
+* Include IF EXIST clause
+
+**Table Options**
+* defaults - all off
+
+**Options**
+* Disable: defaults - all off
+* Miscellaneous: Verbose messages, remainder defaults - all off
+
+**Objects**
+* select public (all opbjects)
+
+
+
+### 2. Settings for Full plain backup (file name: dbserver-pgAdmin backup2.sql)
+
+**General**
+* File name: dbserver-pgAdmin backup1.sql
+* Format: Plain
+
+**Data options**
+* Sections: Pre-data, Data, Post-data
+* Type of objects: defaults - all off
+* Do not save: defaults - all off
+
+**Query Options**
+* Use INSERT Commands
+* On conflict do nothing to INSERT command
+* Include CREATE DATABASE statement
+* Include DROP DATABASE statement
+* Include IF EXIST clause
+
+**Table Options**
+* defaults - all off
+
+**Options**
+* Disable: defaults - all off
+* Miscellaneous: Verbose messages, remainder defaults - all off
+
+**Objects**
+* select public (all opbjects)
+
+
+### 3. Settings for Schema build (file name: dbserver-pgAdmin backup3.sql)
+
+**General**
+* File name: dbserver-pgAdmin backup1.sql
+* Format: Plain
+
+**Data options**
+* Sections: defaults - all off
+* Type of objects: Only schemas
+* Do not save: defaults - all off
+
+**Query Options**
+* Use INSERT Commands
+* On conflict do nothing to INSERT command
+* Include CREATE DATABASE statement
+
+**Table Options**
+* defaults - all off
+
+**Options**
+* Disable: defaults - all off
+* Miscellaneous: Verbose messages, remainder defaults - all off
+
+**Objects**
+* select public (all opbjects)
+
+
+
+
+
