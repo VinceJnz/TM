@@ -133,8 +133,8 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
 		//SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
 		//CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
-		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/checkout/success/" + strconv.Itoa(bookingID)),
-		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/checkout/cancel/" + strconv.Itoa(bookingID)),
+		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/success/" + strconv.Itoa(bookingID)),
+		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(bookingID)),
 	}
 
 	/*
