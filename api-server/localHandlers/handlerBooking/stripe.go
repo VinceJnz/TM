@@ -135,6 +135,11 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		//CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
 		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/success/" + strconv.Itoa(bookingID)),
 		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(bookingID)),
+
+		// Add this for invoice emails (works in test mode):
+		InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{
+			Enabled: stripe.Bool(true),
+		},
 	}
 
 	/*
