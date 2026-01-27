@@ -131,49 +131,14 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 		//CustomerEmail: stripe.String(s.User.Email.String),
 		CustomerEmail: stripe.String("vince.jennings@gmail.com"), // Debug/POC only
 		Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
-		//SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
-		//CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
-		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/success/" + strconv.Itoa(bookingID)),
-		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(bookingID)),
+		SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/success/" + strconv.Itoa(bookingID)),
+		CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(bookingID)),
 
 		// Add this for invoice emails (works in test mode):
 		InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{
 			Enabled: stripe.Bool(true),
 		},
 	}
-
-	/*
-		params := &stripe.CheckoutSessionCreateParams{
-			LineItems: []*stripe.CheckoutSessionCreateParamsLineItem{
-				{
-					PriceData: &stripe.CheckoutSessionCreateParamsLineItemPriceData{
-						Currency: stripe.String(string(stripe.CurrencyNZD)),
-						ProductData: &stripe.CheckoutSessionCreateParamsLineItemPriceDataProductData{
-							Description: stripe.String("Trip description: " + bookingItem.Description.String),
-							Name:        stripe.String("Trip name = " + bookingItem.TripName.String),
-						},
-						UnitAmount: stripe.Int64(int64(bookingItem.BookingCost.ValueOrZero() * 100)),
-					},
-					Quantity: stripe.Int64(1),
-				},
-			},
-			CustomerEmail: stripe.String("vince.jennings@gmail.com"), // POC only
-			Mode:          stripe.String(string(stripe.CheckoutSessionModePayment)),
-			SuccessURL:    stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/success/" + strconv.Itoa(bookingID)),
-			CancelURL:     stripe.String(h.appConf.PaymentSvc.Domain + "/checkoutSession/cancel/" + strconv.Itoa(bookingID)),
-		}
-	*/
-
-	// Use the V1CheckoutSessions service on the client
-	//CheckoutSession, err = h.appConf.PaymentSvc.Client.V1CheckoutSessions.Create(
-	//	context.Background(),
-	//	params,
-	//)
-	//if err != nil {
-	//	log.Printf("%v V1CheckoutSessions.Create error: %v", debugTag+"Handler.CheckoutCreate()4", err)
-	//	http.Error(w, "Error creating checkout session", http.StatusInternalServerError)
-	//	return
-	//}
 
 	// NEW WAY: Use session.New with the client
 	CheckoutSession, err = session.New(params)
@@ -302,6 +267,11 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	//	http.Error(w, "Invalid booking ID", http.StatusBadRequest)
 	//	return
 	//}
+
+	if h.appConf.TestMode {
+		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+		h.appConf.EmailSvc.SendMail("vince.jennings@gmail.com", "Test Mode - Payment Successful", "Test mode enabled - payment successful for uers email:"+appSession.Email)
+	}
 
 	//log.Printf("%v Payment successful for booking %d", debugTag+"CheckoutSuccess()3", recordID)
 

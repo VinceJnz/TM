@@ -25,6 +25,7 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 		var resource RestResource
 		var token models.Token
 		var accessCheck models.AccessCheck
+		var user models.User
 		var err error
 
 		// 1) Try existing DB session cookie
@@ -49,7 +50,12 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 						return
 					}
 				}
-
+				user, err = dbAuthTemplate.UserReadQry(debugTag+"", h.appConf.Db, token.UserID)
+				if err != nil {
+					log.Printf("%v failed reading user record: %v", debugTag, err)
+					http.Error(w, "internal server error", http.StatusInternalServerError)
+					return
+				}
 				// 6) Attach session to context and continue
 				session := &models.Session{
 					UserID:         token.UserID,
@@ -61,6 +67,7 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 					AccessType:     "",
 					AccessTypeID:   accessCheck.AccessTypeID,
 					AdminFlag:      accessCheck.AdminFlag,
+					Email:          user.Email.String,
 				}
 
 				ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session)
@@ -82,7 +89,7 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 		email, _ := oauthSess.Values["email"].(string)
 		name, _ := oauthSess.Values["name"].(string)
 
-		user := models.User{}
+		user = models.User{}
 		user.Name = name
 		user.Email.SetValid(email)
 		user.Provider.SetValid("google")
@@ -135,6 +142,7 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 			AccessType:     "",
 			AccessTypeID:   accessCheck.AccessTypeID,
 			AdminFlag:      accessCheck.AdminFlag,
+			Email:          email,
 		}
 
 		//sess := &models.Session{UserID: userID}

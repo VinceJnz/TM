@@ -35,4 +35,5 @@ type Session struct {
 	AccessType     string
 	AccessTypeID   int
 	AdminFlag      bool
+	Email          string
 }

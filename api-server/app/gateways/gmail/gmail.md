@@ -68,8 +68,8 @@ Thanks for choosing Google OAuth.
 ## How to auth access to gmail server
 
 After authenticating in the browser, copy the code value from the URL:
-`http://localhost/?state=state-token&code=4/0AVMBsJjx3abFudmDlXIR1uBGARxW-pUdysVM40mAWauLqU9hHgrMWPqtkNpvla_2FtWpYw&scope=https://www.googleapis.com/auth/gmail.send`
+`http://localhost/?state=state-token&code=4/0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxYw&scope=https://www.googleapis.com/auth/gmail.send`
 
 
 Paste only the value after code= (up to the & or end of string) into your Docker terminal when prompted.
-`4/0AVMBsJjx3abFudmDlXIR1uBGARxW-pUdysVM40mAWauLqU9hHgrMWPqtkNpvla_2FtWpYw`
+`4/0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxYw`

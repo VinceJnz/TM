@@ -135,6 +135,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	//log.Printf(debugTag+"Create()3 record = %+v, query = %+v", record, qryCreate)
 
 	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+
+	// Send notification email to user
+	//h.appConf.EmailSvc.SendMail(session.Email, "New Booking Created", fmt.Sprintf("A new booking has been created by user ID %d for trip %d, %s.", session.UserID, record.TripID.Int64, record.TripName))
+	h.appConf.EmailSvc.SendMail("vince.jennings@gmail.com", "New Booking Created", fmt.Sprintf("A new booking has been created by user %d, %s for trip %d, %s.", session.UserID, session.Email, record.TripID.Int64, record.TripName))
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
