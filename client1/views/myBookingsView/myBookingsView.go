@@ -34,8 +34,15 @@ const (
 	RecordStateCurrent
 )
 
+type PaymentProcess struct {
+	PaymentDate   js.Value
+	paymentWindow js.Value
+	eventCleanup  *eventCleanup
+}
+
 // ********************* This needs to be changed for each api **********************
 const ApiURL = "/myBookings"
+const ApiURL1 = "/bookings"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
@@ -83,8 +90,10 @@ type ParentData struct {
 type children struct {
 	//Add child structures as necessary
 	//BookingPeople *bookingPeopleView.ItemEditor
-	BookingStatus *bookingStatusView.ItemEditor
-	TripChooser   *tripView.ItemEditor
+	BookingStatus  *bookingStatusView.ItemEditor
+	TripChooser    *tripView.ItemEditor
+	BookingPayment *bookingPaymentView.ItemEditor
+	PaymentState   PaymentProcess
 }
 
 type ItemEditor struct {
@@ -460,7 +469,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create and add child views to Item
 		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.appCore, record.ID)
 		//editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
-		paymentView := bookingPaymentView.New(editor.document, editor.events, editor.appCore, bookingPaymentView.ParentData{ID: record.ID})
+		//paymentView := bookingPaymentView.New(editor.document, editor.events, editor.appCore, bookingPaymentView.ParentData{ID: record.ID})
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
@@ -503,9 +512,11 @@ func (editor *ItemEditor) populateItemList() {
 		bookingPayment := editor.document.Call("createElement", "button")
 		bookingPayment.Set("innerHTML", "Payment")
 		bookingPayment.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			editor.CurrentRecord = record
 			log.Printf(debugTag+"populateItemList()1 Booking=%+v", record)
-			paymentView.FetchItems()
-			paymentView.MakePayment(int64(record.ID))
+			//paymentView.MakePayment(int64(record.ID))
+			editor.MakePayment()
+
 			return nil
 		}))
 		itemDiv.Call("appendChild", bookingPayment)

@@ -235,7 +235,7 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 	// NEW WAY: Use session.New with the client
 	CheckoutSession, err := session.Get(bookingItem.StripeSessionID.String, nil)
 	if err != nil {
-		log.Printf("%v session.Get error: %v", debugTag+"Handler.CheckoutCheck()3", err)
+		log.Printf("%v session.Get error: %v, bookingItem = %+v", debugTag+"Handler.CheckoutCheck()3", err, bookingItem)
 		http.Error(w, "Error retrieving checkout session", http.StatusInternalServerError)
 		return
 	}

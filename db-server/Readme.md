@@ -35,7 +35,9 @@ Age group
 
 ## PostgreSQL back up settings
 
-3 files
+Instructions: <http://127.0.0.1:65398/help/help/backup_dialog.html>
+
+**3 files**
 1. Full tar backup (file name: dbserver-pgAdmin backup1.sql)
 2. Full plain backup (file name: dbserver-pgAdmin backup2.sql)
 3. Schema build (file name: dbserver-pgAdmin backup3.sql)
