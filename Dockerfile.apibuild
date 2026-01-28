@@ -86,9 +86,9 @@ RUN mkdir -p /etc/certs/gmail-tokens /etc/certs/gmail-credentials
 EXPOSE 8085 8086
 
 # Command to run the API server
-#CMD ["./apiserver"]
+CMD ["./apiserver"]
 # Command to use to launch an interactive shell
-CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
+#CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
 
 ############################################################
 # STAGE 4: Debug image (delve enabled)
