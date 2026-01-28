@@ -58,14 +58,8 @@ services:
     volumes:
       - ./data/gmail-tokens:/etc/certs/gmail-tokens
       - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
-      #- D:/Users/Vince/Documents/GitHub/TM/data/gmail-tokens:/etc/certs/gmail-tokens
-      #- D:/Users/Vince/Documents/GitHub/TM/data/gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
-      #- /host_mnt/d/Users/Vince/Documents/GitHub/TM/data/gmail-tokens:/etc/certs/gmail-tokens
-      #- /host_mnt/d/Users/Vince/Documents/GitHub/TM/data/gmail-credentials:/etc/certs/gmail-credentials:ro
-      #- /d/Users/Vince/Documents/GitHub/TM/data/gmail-tokens:/etc/certs/gmail-tokens
-      #- /d/Users/Vince/Documents/GitHub/TM/data/gmail-credentials:/etc/certs/gmail-credentials:ro
       #- gmail-tokens:/etc/certs/gmail-tokens
-      # - gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
+      #- gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
 
 
   apiserver-debug:

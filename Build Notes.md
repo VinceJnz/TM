@@ -178,20 +178,14 @@ In summary, there are four different ways to present certificates and their comp
 
 ## Email notes
 
-**Run** the docker image interactively from the VS Code terminal
-docker run -it tm-apiserver /bin/sh
 
-## Debugging
+## Debugging/Prod
 
 The docker compose file has been reconfigured with profiles to enable debugging
 
 production: `docker compose --profile prod up --build`
 
 debugging: `docker compose --profile debug up --build`
-
-#### Run an interactive shell session:
-To connect to the running apiserver via an interactive terminal
-`docker exec -it apiserver /bin/sh`
 
 
 **Debugging workflow:**
@@ -205,3 +199,11 @@ To connect to the running apiserver via an interactive terminal
 cd /app
 go build -gcflags="all=-N -l" -o apiserver
 ```
+
+### Run/Stop/Connect demon from terminal
+`docker compose --profile prod up --build -d`
+`docker compose --profile prod up -d`
+`docker compose --profile prod down`
+
+To connect to the running apiserver via an interactive terminal
+`docker exec -it apiserver /bin/sh`
