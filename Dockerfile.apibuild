@@ -80,16 +80,15 @@ COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
 #RUN mkdir -p /etc/certs/gmail-tokens && chmod 755 /etc/certs/gmail-tokens
 #RUN mkdir -p /etc/certs/gmail-credentials && chmod 755 /etc/certs/gmail-credentials
 # Windows hosts may have issues with chmod, so just create the directories
-RUN mkdir -p /etc/certs/gmail-tokens
-RUN mkdir -p /etc/certs/gmail-credentials
+RUN mkdir -p /etc/certs/gmail-tokens /etc/certs/gmail-credentials
 
 # Expose the port the API server listens on
 EXPOSE 8085 8086
 
 # Command to run the API server
-CMD ["./apiserver"]
+#CMD ["./apiserver"]
 # Command to use to launch an interactive shell
-#CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
+CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
 
 ############################################################
 # STAGE 4: Debug image (delve enabled)
@@ -104,6 +103,9 @@ RUN apk add --no-cache git bash && \
 COPY ./certs/api-server/ /etc/certs/ssl/
 COPY ./certs/gmail/*.json /etc/certs/gmail/
 COPY ./certs/stripe/ /etc/certs/stripe/
+
+# Create empty directories for volume mounts - CRITICAL for Docker volume mounting
+RUN mkdir -p /etc/certs/gmail-tokens /etc/certs/gmail-credentials
 
 # Copy the static files from the source to the static folder
 COPY ./api-server/static/*.html /static/
