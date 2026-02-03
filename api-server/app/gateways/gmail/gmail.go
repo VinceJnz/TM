@@ -41,25 +41,12 @@ func getClient(tokenFile string, config *oauth2.Config) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
-	//
 	tok, err := tokenFromFile(tokenFile)
 	if err != nil {
 		log.Printf(debugTag+"getClient()1 ... Token file not found %v", err)
 		tok = getTokenFromWeb(config)
 		saveToken(tokenFile, tok)
 	}
-
-	//It is possible something else is needed to to auto renew tokens. (See sub-folder demo)
-	//if tok.Expiry.Before(time.Now()) {
-	//	log.Printf(debugTag + "getClient()2 need to renew new access token\n")
-	//According to <https://github.com/googleapis/google-api-go-client/issues/111> the following can be used for refreshing the token
-	//config.TokenSource(context.TODO(), tok)
-	//if tok.Expiry.Before(time.Now()) {
-	//tok = RenewToken(config, tok, cacheFile)
-	//tok = RenewToken(config, tok, tokenFile)
-	//}
-	// The config.Client should renew tokens when they expire.
-	//return config.Client(context.Background(), tok)
 
 	// The config.Client will automatically renew tokens when they expire
 	// as long as the refresh token is valid
@@ -70,8 +57,6 @@ func getClient(tokenFile string, config *oauth2.Config) *http.Client {
 // Request a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 	// The following generates a URL that the user can follow to create or renew a token
-	// According the <https://github.com/googleapis/google-api-go-client/issues/111> using "oauth2.ApprovalForce" is needed to get the token to auto renew???
-	//authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	log.Printf(debugTag+"Handler.getTokenFromWeb()1 ... Go to the following link in your browser then type the "+
 		"authorization code: \n%v\n", authURL)
@@ -98,7 +83,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 }
 
 // RenewToken renew the token ???????
-func RenewToken1(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oauth2.Token {
+func RenewToken1X(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oauth2.Token {
 
 	urlValue := url.Values{"client_id": {config.ClientID}, "client_secret": {config.ClientSecret}, "refresh_token": {tok.RefreshToken}, "grant_type": {"refresh_token"}}
 	log.Printf(debugTag+"RenewToken()1 urlValue = %v\n", urlValue)
@@ -181,18 +166,13 @@ func New(credentialsFile, tokenFile, from string) *Gateway {
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	//config, err := google.ConfigFromJSON(credential, drive.DriveMetadataReadonlyScope) //This is the config from the demo and only provides read permissions
-	//config, err := google.ConfigFromJSON(credential, `https://www.googleapis.com/auth/gmail.send`)
 	config, err := google.ConfigFromJSON(credential, gmail.GmailSendScope) //This is a non restricted scope
 	if err != nil {
 		log.Fatalf(debugTag+"New()2 ... Unable to parse client secret json file to config: %v", err)
 	}
 
 	client := getClient(tokenFile, config)
-
-	//gmailService, err := gmail.NewService(ctx, option.WithAPIKey("AIza..."))
 	gmailService, err := gmail.NewService(ctx, option.WithHTTPClient(client))
-
 	if err != nil {
 		log.Fatalln(debugTag+"New()3 ... Unable to retrieve Gmail client:", err)
 	}
@@ -212,7 +192,6 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 	gMessage := &gmail.Message{Raw: base64.URLEncoding.EncodeToString(msg)}
 
 	// Send the message
-	//_, err := srv.Users.Messages.Send("me", gMessage).Do()
 	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
 	if err != nil {
 		log.Println(debugTag+"Handler.SendMail()1 ... Could not send mail>", err)
@@ -229,7 +208,6 @@ func (s *Gateway) SendMail2(from string, to string, title string, message string
 	gMessage := &gmail.Message{Raw: base64.URLEncoding.EncodeToString(msg)}
 
 	// Send the message
-	//_, err := srv.Users.Messages.Send("me", gMessage).Do()
 	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
 	if err != nil {
 		log.Println(debugTag+"Handler.SendMail()1 ... Could not send mail>", err)

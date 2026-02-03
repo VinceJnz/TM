@@ -19,12 +19,12 @@ const debugTag = "dbBffTemplate."
 // *
 // JSONBCredential wraps webauthn.Credential for JSON marshaling/unmarshaling
 type JSONBCredential struct {
-	models.BffCredential
+	models.UserCredential
 }
 
 // Value implements the driver.Valuer interface for database storage
 func (c JSONBCredential) Value() (driver.Value, error) {
-	return json.Marshal(c.Credential)
+	return json.Marshal(c.UserCredential)
 }
 
 // Scan implements the sql.Scanner interface for database retrieval
@@ -43,7 +43,7 @@ func (c *JSONBCredential) Scan(value interface{}) error {
 		return fmt.Errorf("cannot scan %T into JSONBCredential", value)
 	}
 
-	return json.Unmarshal(bytes, &c.Credential)
+	return json.Unmarshal(bytes, &c.UserCredential)
 }
 
 // Database operations
@@ -59,7 +59,7 @@ func NewCredentialStore(db *sql.DB) *CredentialStore {
 
 // StoreCredential saves a webauthn.Credential to the database
 // func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential webauthn.Credential) error {
-func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential *models.BffCredential) (int, error) {
+func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential *models.UserCredential) (int, error) {
 	// Create JSONBCredential wrapper for automatic marshaling
 	//jsonbCred := JSONBCredential{Credential: credential}
 
@@ -67,7 +67,7 @@ func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential *model
         INSERT INTO st_webauthn_credentials (user_id, credential_id, credential_data, last_used, device_name, device_metadata)
         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 
-	err := Db.QueryRow(query, userID, credential.CredentialID, credential.Credential, credential.LastUsed, credential.DeviceName, credential.DeviceMetadata).Scan(&credential.ID)
+	err := Db.QueryRow(query, userID, credential.CredentialID, credential.LastUsed, credential.DeviceName, credential.DeviceMetadata).Scan(&credential.ID)
 	if err != nil {
 		log.Printf("%sStoreCredential()1.%s Failed to insert credential: err = %v, userID = %v, credential = %v", debugTag, debugStr, err, userID, credential)
 		return 0, err
@@ -77,11 +77,11 @@ func StoreCredential(debugStr string, Db *sqlx.DB, userID int, credential *model
 
 // GetCredential retrieves a credential by credential_id
 // credentialID is the base64url-encoded ID of the credential e.g. "base64.RawURLEncoding.EncodeToString(cred.ID)"
-func GetCredential(debugStr string, Db *sqlx.DB, credentialID string) (*models.BffCredential, error) {
-	var webAuthnCred models.BffCredential
+func GetCredential(debugStr string, Db *sqlx.DB, credentialID string) (*models.UserCredential, error) {
+	var webAuthnCred models.UserCredential
 
 	query := `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata FROM st_webauthn_credentials WHERE credential_id = $1`
-	err := Db.QueryRow(query, credentialID).Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.Credential, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata)
+	err := Db.QueryRow(query, credentialID).Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata)
 	if err != nil {
 		log.Printf("%sGetCredential()1.%s Failed to get credential: err = %v, credentialID = %v", debugTag, debugStr, err, credentialID)
 		return nil, err
@@ -91,7 +91,7 @@ func GetCredential(debugStr string, Db *sqlx.DB, credentialID string) (*models.B
 }
 
 // GetUserCredentials retrieves all credentials for a user
-func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.BffCredential, error) {
+func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.UserCredential, error) {
 	query := `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata FROM st_webauthn_credentials WHERE user_id = $1`
 
 	rows, err := Db.Query(query, userID)
@@ -102,10 +102,10 @@ func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.BffC
 	defer rows.Close()
 
 	// var credentials []webauthn.Credential
-	var credentials []models.BffCredential
+	var credentials []models.UserCredential
 	for rows.Next() {
-		var webAuthnCred models.BffCredential
-		if err := rows.Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.Credential, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata); err != nil {
+		var webAuthnCred models.UserCredential
+		if err := rows.Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata); err != nil {
 			log.Printf("%sGetUserCredentials()2.%s Failed to scan row: err = %v, userID = %v", debugTag, debugStr, err, userID)
 			return nil, err
 		}
@@ -117,11 +117,11 @@ func GetUserCredentials(debugStr string, Db *sqlx.DB, userID int) ([]models.BffC
 }
 
 // GetUserDeviceCredential retrieves the last used credential for a user for a specific device
-func GetUserDeviceCredential(debugStr string, Db *sqlx.DB, userID int, deviceName, userAgent string) (*models.BffCredential, error) {
-	var webAuthnCred models.BffCredential
+func GetUserDeviceCredential(debugStr string, Db *sqlx.DB, userID int, deviceName, userAgent string) (*models.UserCredential, error) {
+	var webAuthnCred models.UserCredential
 
 	query := `SELECT id, user_id, credential_id, credential_data, last_used, device_name, device_metadata FROM st_webauthn_credentials WHERE user_id = $1 AND device_name = $2 AND device_metadata->>'user_agent' = $3 ORDER BY last_used DESC LIMIT 1`
-	err := Db.QueryRow(query, userID, deviceName, userAgent).Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.Credential, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata)
+	err := Db.QueryRow(query, userID, deviceName, userAgent).Scan(&webAuthnCred.ID, &webAuthnCred.UserID, &webAuthnCred.CredentialID, &webAuthnCred.LastUsed, &webAuthnCred.DeviceName, &webAuthnCred.DeviceMetadata)
 	if err != nil {
 		log.Printf("%sGetUserDeviceCredential()1.%s Failed to query last used credential: err = %v, userID = %v, deviceName = %v", debugTag, debugStr, err, userID, deviceName)
 		return nil, err
@@ -131,11 +131,11 @@ func GetUserDeviceCredential(debugStr string, Db *sqlx.DB, userID int, deviceNam
 }
 
 // UpdateCredential updates an existing credential (useful for updating counters)
-func UpdateCredential(debugStr string, Db *sqlx.DB, credential models.BffCredential) error {
+func UpdateCredential(debugStr string, Db *sqlx.DB, credential models.UserCredential) error {
 	//jsonbCred := JSONBCredential{Credential: credential}
 
 	query := `UPDATE st_webauthn_credentials SET (user_id, credential_id, credential_data, last_used, device_name, device_metadata) = ($2, $3, $4, $5, $6, $7) WHERE id = $1`
-	_, err := Db.Exec(query, credential.ID, credential.UserID, credential.CredentialID, credential.Credential, credential.LastUsed, credential.DeviceName, credential.DeviceMetadata)
+	_, err := Db.Exec(query, credential.ID, credential.UserID, credential.CredentialID, credential.LastUsed, credential.DeviceName, credential.DeviceMetadata)
 	return err
 }
 
@@ -153,9 +153,9 @@ func DeleteCredentialByID(debugStr string, Db *sqlx.DB, id int) error {
 	return err
 }
 
-func ExtractWebauthnCredentials(debugStr string, Db *sqlx.DB, dbCredentials []models.BffCredential) []models.BffCredential {
+func ExtractWebauthnCredentials(debugStr string, Db *sqlx.DB, dbCredentials []models.UserCredential) []models.UserCredential {
 	// extract []webauthn.Credential from dbCredentials and set the user's credentials in the user object
-	credentials := make([]models.BffCredential, len(dbCredentials))
+	credentials := make([]models.UserCredential, len(dbCredentials))
 	//for i, c := range dbCredentials {
 	//	credentials[i] = c.Credential.Credential
 	//}

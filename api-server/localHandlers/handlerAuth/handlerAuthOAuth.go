@@ -14,12 +14,6 @@ import (
 // or an OAuth session ("auth-session") from the provided gateway. It ensures an internal session
 // context (models.Session) is available for downstream handlers.
 
-//func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-//	func (h *Handler) RequireOAuthOrSessionAuth() func(http.Handler) http.Handler {
-//		return func(next http.Handler) http.Handler {
-//			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var resource RestResource

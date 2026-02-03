@@ -82,8 +82,6 @@ func InitDB(dataSourceName string) *sql.DB {
 	dbStatus = "Db Closed"
 	for dbStatus != "" {
 		log.Println(debugTag+"DB0 ", err, dbStatus)
-		//db, err = sql.Open("mysql", "[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]")
-		//a.db, err = sql.Open("mysql", "project_mgnt_app:123@tcp(localhost:3306)/project_mgnt?parseTime=true")
 		db, err := sql.Open("mysql", dataSourceName)
 		log.Println(debugTag+"DB1 ", err, dbStatus)
 		switch {

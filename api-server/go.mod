@@ -3,7 +3,6 @@ module api-server/v2
 go 1.23.4
 
 require (
-	github.com/1Password/srp v0.2.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/go-webauthn/webauthn v0.13.4
 	github.com/gorilla/handlers v1.5.2

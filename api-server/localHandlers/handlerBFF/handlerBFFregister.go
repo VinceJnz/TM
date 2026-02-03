@@ -2,7 +2,7 @@ package handlerBFF
 
 import (
 	"api-server/v2/app/appCore"
-	"api-server/v2/app/bffPool"
+	"api-server/v2/app/pools/bffPool"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/modelMethods/dbBffTemplate"
 	"api-server/v2/models"
@@ -155,7 +155,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deviceMetadata := models.JSONBDeviceMetadata{
+	deviceMetadata := models.DeviceMetadata{
 		UserAgent:                   userAgent,
 		RegistrationTimestamp:       time.Now(),
 		LastSuccessfulAuthTimestamp: time.Now(),
@@ -163,7 +163,7 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 		//DeviceFingerprint:           sessionData.DeviceFingerprint,
 	}
 
-	bffCredential := models.BffCredential{
+	userCredential := models.UserCredential{
 		//ID:             credential.ID,
 		UserID: userID,
 		//CredentialID:   base64.RawURLEncoding.EncodeToString(credential.ID),
@@ -177,17 +177,17 @@ func (h *Handler) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	deviceCredential, err := dbAuthTemplate.GetUserDeviceCredential(debugTag+"Handler.FinishRegistration()7a ", h.appConf.Db, user.ID, deviceName, userAgent)
 	switch {
 	case err == nil && deviceCredential != nil: // Existing credential found for this device
-		bffCredential.ID = deviceCredential.ID // Ensure we set the ID so that the existing record is updated with the new credential data
-		err = dbBffTemplate.UpdateCredential(debugTag+"Handler.FinishRegistration()7b ", h.appConf.Db, bffCredential)
+		userCredential.ID = deviceCredential.ID // Ensure we set the ID so that the existing record is updated with the new credential data
+		err = dbBffTemplate.UpdateCredential(debugTag+"Handler.FinishRegistration()7b ", h.appConf.Db, userCredential)
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7c: Failed to update credential", "err =", err, "record =", bffCredential)
+			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()7c: Failed to update credential", "err =", err, "record =", userCredential)
 			return
 		}
 	case err == sql.ErrNoRows: // No existing credential for this device. This should only apply if the error is sql.ErrNoRows
 		log.Printf("%v %v %v %v %+v %v %v %v %+v", debugTag+"Handler.BeginRegistration()8a: Failed to get existing device credential", "err =", err, "deviceName =", deviceName, "r.RemoteAddr =", r.RemoteAddr, "user =", user)
-		_, err = dbBffTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()8b ", h.appConf.Db, userID, &bffCredential)
+		_, err = dbBffTemplate.StoreCredential(debugTag+"Handler.FinishRegistration()8b ", h.appConf.Db, userID, &userCredential)
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()6c: Failed to save credential", "err =", err, "record =", bffCredential)
+			log.Printf("%v %v %v %v %+v", debugTag+"Handler.FinishRegistration()6c: Failed to save credential", "err =", err, "record =", userCredential)
 			return
 		}
 	default: // Some other error occurred while trying to get the existing credential
