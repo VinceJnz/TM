@@ -179,7 +179,9 @@ In summary, there are four different ways to present certificates and their comp
 ## Email notes
 
 
-## Debugging/Prod
+## Docker instructons
+
+### Debugging/Prod
 
 The docker compose file has been reconfigured with profiles to enable debugging
 
