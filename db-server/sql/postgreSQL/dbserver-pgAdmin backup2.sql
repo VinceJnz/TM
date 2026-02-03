@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 13.22 (Debian 13.22-1.pgdg13+1)
+-- Dumped from database version 13.23 (Debian 13.23-1.pgdg13+1)
 -- Dumped by pg_dump version 17.1
 
--- Started on 2026-01-27 11:16:58
+-- Started on 2026-02-03 16:53:24
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -21,7 +21,7 @@ SET row_security = off;
 
 DROP DATABASE IF EXISTS mydatabase;
 --
--- TOC entry 3377 (class 1262 OID 16384)
+-- TOC entry 3371 (class 1262 OID 16384)
 -- Name: mydatabase; Type: DATABASE; Schema: -; Owner: myuser
 --
 
@@ -55,7 +55,7 @@ CREATE SCHEMA public;
 ALTER SCHEMA public OWNER TO myuser;
 
 --
--- TOC entry 3378 (class 0 OID 0)
+-- TOC entry 3372 (class 0 OID 0)
 -- Dependencies: 4
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: myuser
 --
@@ -64,7 +64,7 @@ COMMENT ON SCHEMA public IS 'standard public schema';
 
 
 --
--- TOC entry 251 (class 1255 OID 16726)
+-- TOC entry 250 (class 1255 OID 16726)
 -- Name: update_modified_column(); Type: FUNCTION; Schema: public; Owner: myuser
 --
 
@@ -81,7 +81,7 @@ $$;
 ALTER FUNCTION public.update_modified_column() OWNER TO myuser;
 
 --
--- TOC entry 249 (class 1255 OID 16709)
+-- TOC entry 248 (class 1255 OID 16709)
 -- Name: vj_execute_dynamic_query(text); Type: FUNCTION; Schema: public; Owner: myuser
 --
 
@@ -97,7 +97,7 @@ $$;
 ALTER FUNCTION public.vj_execute_dynamic_query(query text) OWNER TO myuser;
 
 --
--- TOC entry 250 (class 1255 OID 16710)
+-- TOC entry 249 (class 1255 OID 16710)
 -- Name: vj_execute_multiple_queries(text[]); Type: FUNCTION; Schema: public; Owner: myuser
 --
 
@@ -190,7 +190,7 @@ CREATE TABLE public.at_bookings (
     payment_date date,
     amount_paid bigint,
     currency character(3),
-    stripe_session_id character(100)
+    stripe_session_id character varying(100)
 );
 
 
@@ -807,6 +807,26 @@ CREATE TABLE public.st_token (
 ALTER TABLE public.st_token OWNER TO myuser;
 
 --
+-- TOC entry 247 (class 1259 OID 16821)
+-- Name: st_user_credentials; Type: TABLE; Schema: public; Owner: myuser
+--
+
+CREATE TABLE public.st_user_credentials (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    credential_id bytea,
+    last_used timestamp without time zone,
+    credential_data jsonb NOT NULL,
+    device_name character varying(45),
+    device_metadata jsonb,
+    created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.st_user_credentials OWNER TO myuser;
+
+--
 -- TOC entry 242 (class 1259 OID 16653)
 -- Name: st_user_group_id_seq; Type: SEQUENCE; Schema: public; Owner: myuser
 --
@@ -867,65 +887,17 @@ CREATE TABLE public.st_users (
     modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     user_birth_date date,
     user_age_group_id integer,
-    salt bytea,
-    verifier bytea,
     user_address character varying(255),
     member_code character varying(20),
     user_password character varying(45),
     user_account_status_id integer DEFAULT 0 NOT NULL,
     user_account_hidden boolean,
-    webauthn_user_id bytea,
     provider character varying(30),
     provider_id character varying(255)
 );
 
 
 ALTER TABLE public.st_users OWNER TO myuser;
-
---
--- TOC entry 248 (class 1259 OID 16787)
--- Name: st_webauthn_credentials; Type: TABLE; Schema: public; Owner: myuser
---
-
-CREATE TABLE public.st_webauthn_credentials (
-    id integer NOT NULL,
-    user_id integer NOT NULL,
-    credential_data jsonb NOT NULL,
-    created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    credential_id bytea,
-    device_name character varying(45),
-    device_metadata jsonb,
-    last_used timestamp without time zone
-);
-
-
-ALTER TABLE public.st_webauthn_credentials OWNER TO myuser;
-
---
--- TOC entry 247 (class 1259 OID 16785)
--- Name: st_webauthn_credentials_id_seq1; Type: SEQUENCE; Schema: public; Owner: myuser
---
-
-CREATE SEQUENCE public.st_webauthn_credentials_id_seq1
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.st_webauthn_credentials_id_seq1 OWNER TO myuser;
-
---
--- TOC entry 3380 (class 0 OID 0)
--- Dependencies: 247
--- Name: st_webauthn_credentials_id_seq1; Type: SEQUENCE OWNED BY; Schema: public; Owner: myuser
---
-
-ALTER SEQUENCE public.st_webauthn_credentials_id_seq1 OWNED BY public.st_webauthn_credentials.id;
-
 
 --
 -- TOC entry 246 (class 1259 OID 16703)
@@ -951,15 +923,7 @@ CREATE VIEW public.vt_trips AS
 ALTER VIEW public.vt_trips OWNER TO myuser;
 
 --
--- TOC entry 3112 (class 2604 OID 16790)
--- Name: st_webauthn_credentials id; Type: DEFAULT; Schema: public; Owner: myuser
---
-
-ALTER TABLE ONLY public.st_webauthn_credentials ALTER COLUMN id SET DEFAULT nextval('public.st_webauthn_credentials_id_seq1'::regclass);
-
-
---
--- TOC entry 3325 (class 0 OID 16419)
+-- TOC entry 3320 (class 0 OID 16419)
 -- Dependencies: 201
 -- Data for Name: at_booking_people; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -977,7 +941,7 @@ INSERT INTO public.at_booking_people VALUES (27, 17, 36, 17, 'vbbb', '2025-03-04
 
 
 --
--- TOC entry 3327 (class 0 OID 16435)
+-- TOC entry 3322 (class 0 OID 16435)
 -- Dependencies: 203
 -- Data for Name: at_bookings; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -990,11 +954,11 @@ INSERT INTO public.at_bookings VALUES (7, 16, 'A first booking', '2024-11-03 00:
 INSERT INTO public.at_bookings VALUES (34, 17, 'kkkeeeYZZZZZ', '2024-11-01 00:00:00', '2024-12-01 00:00:00', 1, '2024-12-20 09:10:07.684579', '2025-01-01 08:23:16.960475', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO public.at_bookings VALUES (36, 17, 'hhhhhhhhhhhhh', '2024-12-01 00:00:00', '2024-12-11 00:00:00', 1, '2025-03-04 07:00:43.604301', '2025-03-04 07:00:43.604301', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO public.at_bookings VALUES (37, 16, 'Vince2 Booking1', '2025-05-19 00:00:00', '2025-05-23 00:00:00', 1, '2025-03-04 08:35:44.46041', '2025-03-04 08:35:44.46041', 7, NULL, NULL, 0.00, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.at_bookings VALUES (10, 16, 'Booking 2', '2024-10-06 00:00:00', '2024-10-20 00:00:00', 1, '2024-10-06 09:14:26.265978', '2026-01-26 03:17:35.059036', 2, NULL, NULL, 364.00, NULL, NULL, NULL, 'cs_test_a1DBRG36xCuNmjuJ5etjH1oqhRycaFEvuKcTZGiwvCIFhKaEePqcqZYHDN                                  ') ON CONFLICT DO NOTHING;
+INSERT INTO public.at_bookings VALUES (10, 16, 'Booking 2', '2024-10-06 00:00:00', '2024-10-20 00:00:00', 1, '2024-10-06 09:14:26.265978', '2026-01-28 10:34:55.21241', 2, NULL, NULL, 364.00, '2026-01-28', 36400, NULL, 'cs_test_a1eL63TdEAA6dR650t6d4ap0npXlXOiZCAk6V50IHgIluo39Ab3qneoiCR') ON CONFLICT DO NOTHING;
 
 
 --
--- TOC entry 3329 (class 0 OID 16451)
+-- TOC entry 3324 (class 0 OID 16451)
 -- Dependencies: 205
 -- Data for Name: at_group_bookings; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1003,7 +967,7 @@ INSERT INTO public.at_group_bookings VALUES (1, 'Vince''s group', 0, '2024-10-29
 
 
 --
--- TOC entry 3331 (class 0 OID 16462)
+-- TOC entry 3326 (class 0 OID 16462)
 -- Dependencies: 207
 -- Data for Name: at_trip_cost_groups; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1012,7 +976,7 @@ INSERT INTO public.at_trip_cost_groups VALUES (1, 'Lodge winter rate', '2024-10-
 
 
 --
--- TOC entry 3333 (class 0 OID 16472)
+-- TOC entry 3328 (class 0 OID 16472)
 -- Dependencies: 209
 -- Data for Name: at_trip_costs; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1028,7 +992,7 @@ INSERT INTO public.at_trip_costs VALUES (9, 1, NULL, 2, 4, 2, 25.00, '2025-01-14
 
 
 --
--- TOC entry 3335 (class 0 OID 16482)
+-- TOC entry 3330 (class 0 OID 16482)
 -- Dependencies: 211
 -- Data for Name: at_trips; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1040,7 +1004,7 @@ INSERT INTO public.at_trips VALUES (7, 16, '3rd trip', NULL, '2025-05-19', '2025
 
 
 --
--- TOC entry 3337 (class 0 OID 16499)
+-- TOC entry 3332 (class 0 OID 16499)
 -- Dependencies: 213
 -- Data for Name: at_user_payments; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1048,7 +1012,7 @@ INSERT INTO public.at_trips VALUES (7, 16, '3rd trip', NULL, '2025-05-19', '2025
 
 
 --
--- TOC entry 3339 (class 0 OID 16509)
+-- TOC entry 3334 (class 0 OID 16509)
 -- Dependencies: 215
 -- Data for Name: et_access_level; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1061,7 +1025,7 @@ INSERT INTO public.et_access_level VALUES (5, 'delete', NULL, '2024-11-24 23:23:
 
 
 --
--- TOC entry 3341 (class 0 OID 16519)
+-- TOC entry 3336 (class 0 OID 16519)
 -- Dependencies: 217
 -- Data for Name: et_access_type; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1071,7 +1035,7 @@ INSERT INTO public.et_access_type VALUES (1, 'admin', NULL, '2024-11-24 23:14:57
 
 
 --
--- TOC entry 3343 (class 0 OID 16529)
+-- TOC entry 3338 (class 0 OID 16529)
 -- Dependencies: 219
 -- Data for Name: et_booking_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1082,7 +1046,7 @@ INSERT INTO public.et_booking_status VALUES (3, 'Paid', '2024-09-30 08:29:41.411
 
 
 --
--- TOC entry 3345 (class 0 OID 16539)
+-- TOC entry 3340 (class 0 OID 16539)
 -- Dependencies: 221
 -- Data for Name: et_member_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1092,7 +1056,7 @@ INSERT INTO public.et_member_status VALUES (2, 'No', '2025-01-12 08:36:12.929545
 
 
 --
--- TOC entry 3347 (class 0 OID 16549)
+-- TOC entry 3342 (class 0 OID 16549)
 -- Dependencies: 223
 -- Data for Name: et_resource; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1115,7 +1079,7 @@ INSERT INTO public.et_resource VALUES (20, 'set-username', 'For setting the user
 
 
 --
--- TOC entry 3349 (class 0 OID 16559)
+-- TOC entry 3344 (class 0 OID 16559)
 -- Dependencies: 225
 -- Data for Name: et_seasons; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1125,7 +1089,7 @@ INSERT INTO public.et_seasons VALUES (1, 'Summer', '2024-10-26 05:28:32.741256',
 
 
 --
--- TOC entry 3351 (class 0 OID 16569)
+-- TOC entry 3346 (class 0 OID 16569)
 -- Dependencies: 227
 -- Data for Name: et_trip_difficulty; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1136,7 +1100,7 @@ INSERT INTO public.et_trip_difficulty VALUES (3, 'Slow medium', '2024-10-28 06:3
 
 
 --
--- TOC entry 3353 (class 0 OID 16579)
+-- TOC entry 3348 (class 0 OID 16579)
 -- Dependencies: 229
 -- Data for Name: et_trip_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1147,7 +1111,7 @@ INSERT INTO public.et_trip_status VALUES (3, 'Completed', '2024-10-10 10:34:56.1
 
 
 --
--- TOC entry 3355 (class 0 OID 16589)
+-- TOC entry 3350 (class 0 OID 16589)
 -- Dependencies: 231
 -- Data for Name: et_trip_type; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1161,7 +1125,7 @@ INSERT INTO public.et_trip_type VALUES (6, 'Climbing', '2024-10-26 05:40:15.5662
 
 
 --
--- TOC entry 3357 (class 0 OID 16599)
+-- TOC entry 3352 (class 0 OID 16599)
 -- Dependencies: 233
 -- Data for Name: et_user_account_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1175,7 +1139,7 @@ INSERT INTO public.et_user_account_status VALUES (5, 'WebAuthnReset', '2025-08-1
 
 
 --
--- TOC entry 3359 (class 0 OID 16612)
+-- TOC entry 3354 (class 0 OID 16612)
 -- Dependencies: 235
 -- Data for Name: et_user_age_groups; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1187,7 +1151,7 @@ INSERT INTO public.et_user_age_groups VALUES (4, 'Youth', '2024-10-26 07:09:03.9
 
 
 --
--- TOC entry 3361 (class 0 OID 16622)
+-- TOC entry 3356 (class 0 OID 16622)
 -- Dependencies: 237
 -- Data for Name: st_group; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1198,7 +1162,7 @@ INSERT INTO public.st_group VALUES (2, 'User', 'app users', false, '2024-12-05 0
 
 
 --
--- TOC entry 3363 (class 0 OID 16633)
+-- TOC entry 3358 (class 0 OID 16633)
 -- Dependencies: 239
 -- Data for Name: st_group_resource; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1240,16 +1204,24 @@ INSERT INTO public.st_group_resource VALUES (41, 2, 1, 4, 2, false, '2025-12-26 
 
 
 --
--- TOC entry 3365 (class 0 OID 16644)
+-- TOC entry 3360 (class 0 OID 16644)
 -- Dependencies: 241
 -- Data for Name: st_token; Type: TABLE DATA; Schema: public; Owner: myuser
 --
 
-INSERT INTO public.st_token VALUES (397, 16, 'session', '172.18.0.1:50366', 'phW-ywf91asYhcLO4F_n_ZBR2K6QVyE3Ft6F5BjbhYw', '2026-01-26 02:48:19.687604+00', '2026-01-26 03:48:19.687604+00', '2026-01-26 02:48:19.688448', '2026-01-26 02:48:19.688448', true) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_token VALUES (416, 16, 'session', '172.18.0.1:57012', 'HRJVNSQ3k5TbW-3QII5CDHEiBxIcq7s_qSKTzcN7ZhU', '2026-02-03 02:31:07.515853+00', '2026-02-03 03:31:07.515853+00', '2026-02-03 02:31:07.516663', '2026-02-03 02:31:07.516663', true) ON CONFLICT DO NOTHING;
 
 
 --
--- TOC entry 3367 (class 0 OID 16655)
+-- TOC entry 3365 (class 0 OID 16821)
+-- Dependencies: 247
+-- Data for Name: st_user_credentials; Type: TABLE DATA; Schema: public; Owner: myuser
+--
+
+
+
+--
+-- TOC entry 3362 (class 0 OID 16655)
 -- Dependencies: 243
 -- Data for Name: st_user_group; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1269,46 +1241,28 @@ INSERT INTO public.st_user_group VALUES (15, 39, 2, '2025-09-29 01:22:01.090636'
 
 
 --
--- TOC entry 3369 (class 0 OID 16665)
+-- TOC entry 3364 (class 0 OID 16665)
 -- Dependencies: 245
 -- Data for Name: st_users; Type: TABLE DATA; Schema: public; Owner: myuser
 --
 
-INSERT INTO public.st_users VALUES (15, 'Vince Jennings', 'vince1', 'vince.jennings@gmail.com', 1, '2024-11-14 00:12:08.297532', '2026-01-05 07:47:52.098645', NULL, 1, '\x8f1a00b2822fe33d', '\x023f5f5b535a9ca04fe4bb95373f5a673103c1f033b2af4d3c8659fcff502ffea811668bd0531f976824ef1d2dbc50eb3ca9e4704e33601e081f621fd0c075d7cdd5fe49fb55ec672ee7773697dfc4e51b2682d5c349ef8368daaec799b07d62aa720eda12c198e2fcca6b860e304b1552bab7810a04fcc1e5d8e09ad61a67ae9711ed8df454347ec724a010d535723d319fda04b21747cfd1accf66efa4d9db969751c53600d58093b5b63dbc3fabadfa8d01b47077112d0039d2d162452371c77d6f7b61f9585d180109dc2ce8f0aca5d0e47cc393889e52f450678afd00de5cc691a20c920a9f9e603147b6485c2572d1f528ce7f31fb0bd634ed3359b7f5505fcc55bd6180d4877f1f08dc9da0faf7d7353b494c493d1e0f0ba3698fd8f7ab2a301e08acd9cfb4aef8e9d61ef136a91bc0de504f7f54d9b82a3498b991c5f34c79466b955e200a0ddbf66c6eaa769f4620b3fd3d5a3beda7297f039026a8197601e6fa8ca325382a26537c46b2d34569c053238df4889964d0f013b5fbb0e5', '93 Farnham Street', '1', NULL, 2, NULL, '\x', 'google', '117679618749034714503') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (2, 'Donna Jennings12', 'donna', 'dj0040@gmail.com', 1, '2024-10-04 09:08:52.345413', '2025-01-14 07:10:06.688522', NULL, 1, NULL, NULL, '93 Farnham Street', '1234B', NULL, 1, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (3, 'Dylan Jennings1', 'Dylan', 'dylan@dt.net.nz', 1, '2024-10-04 09:09:11.226469', '2025-01-14 07:11:07.063766', NULL, 4, NULL, NULL, '93 Farnham Street', '12347', NULL, 1, true, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (36, 'test1', 'test1', 'vince.jennings101@gmail.com', 0, '2025-08-13 22:25:08.509142', '2025-09-28 08:12:01.518222', NULL, 2, NULL, NULL, NULL, 'q54wggf', NULL, 2, NULL, '\x35393561663035362d393736632d343863652d393335302d313930656462623264376662', NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (51, 'Vince Jennings', 'vinceTTC', 'vince.jennings@ttc.org.nz', 0, '2025-12-30 03:39:11.502942', '2025-12-30 23:53:04.430106', '0001-02-03', NULL, NULL, NULL, '93 Farnham Street', NULL, NULL, 0, NULL, '\x', 'google', '108559076374625333492') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (16, 'vince jennings', 'vinceAPPtst', 'vince.apptesting@gmail.com', 1, '2024-11-14 10:47:04.549148', '2026-01-26 02:48:19.683437', '0001-01-26', 1, '\x6e13b8cf5c83e5ac', '\x0201163202da345a8efc7b5ed45e51f13ca1e29a266617d86ff8e7f2316ad46d064081b04939baed0174e4f01f01273800ead90b86d50aadfba5101fc6edda2d393400e5cdd369e29723a97d7c94b9a0e32c97ff84dd76f7d89a4fba3ed310dc34a49c9d4fe0ac8d2026f6e30a7ba4400f7ca2a6c95995cca8ab18aa3276dc3bee40d1e240573ab2acb91595aa51c3577ce0d93bda274029702323f30e54467b9416c0727f2f4d237812ffbaceef49c2325cc2e1c3686069d74f8bbda8799599e0283048257875f92518886497f959832e1c148839cc546aba56a8e4591653dbac879db32388a96f7fb5ab99d950883c99bf3d01df55fefa0009b2405851c99206fe9cba482931e2a42de17b62d76f500d08c16f44263434c7e762f169574035563b50c6095df438d2a9fab92c3258ccd6484795a11466d7c051ac88a26bb493fa4af4cc7d33b31864968868e0cf4c83342d6c9ed73ff87a2c9cda1a8ede587a2010d359019d7a87290023933a680b98cc0d77831bdc8760f433efcc5bcf914ac7', '93 Farnham Street', '1234', NULL, 2, NULL, '\x', 'google', '107191100686708556936') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (35, 'test2', 'test2', 'vince.jennings102@gmail.com', 1, '2025-08-10 00:26:32.902823', '2025-09-28 08:12:27.706428', NULL, 2, NULL, NULL, NULL, '5t2tgw', NULL, 2, NULL, '\x63313336643461622d383931392d343365382d393333612d643931326465653531653265', NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (1, 'vince jennings3', 'vince', 'vince.jennings1003@gmail.com', 2, '2024-09-24 07:20:41.0626', '2025-09-28 08:12:47.917242', NULL, 2, NULL, NULL, '93 Farnham Street, Mornington', '7654', NULL, 2, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (20, 'admin1', 'admin1', 'admin1@test.localhost', 1, '2025-06-19 10:07:04.161727', '2025-08-05 06:36:12.347883', NULL, 1, '\x36e51afa6205e9f2', '\x028ea57d21243757722082c6851c7de8d3eb9425170bf632e935b7a2f50fd7dd5470732423be2dcfad77e937a924dcd84379a1b31a8e0e968679babcf3b9bb7303874f7217e7277d0eff376cc9752a2e8a34c8684b11d4917c2b78279c920e700c607d44e64eb6293a2495c0110ecc4773237a73be3e1ca6f7c1f97b5280564e11938e4a7c501d96c1c9c2c29cbcde0ab7c366da100120652ac3d38c7f183fecf55e969910903079c5375b1b10f0776de1980920c37ca3643cc42cb222ec2462d0564f9d395095bdfd795587ce6dae7195d4d9eeadcae06281e07a441826b4f5623ceeb18fdd9aa1ddf52d0761f41aa3d32957d6f33ea60d9c05e385773ad9ec1ecfed7520f341d1a048f90a6585abd4fdad6c17d5b07295333263875c440b7636d4739f68d5e3359ca346beada4ff510e1f20b0aed66fdf95607fe5b782a79f244b8ddf7c9fdcc1d06c1d2ef38cefa1f36eac480105f45bf404950619812329901a4353d31f94bc0368e09e373504d2ed50d873a61757a3cb819940d0ef156d0c', '93 Farnham St', '1111', NULL, 2, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (38, 'Vince5', 'vince5', 'vince.jennings5@gmail.com', 0, '2025-09-29 01:07:41.120843', '2025-09-29 01:07:41.120843', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, '\x375466624a6d694e4b684e4d6a3176314e745161443642626b795038617a716c685262366d4f41523370343d', NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (17, 'Vince3', 'vince3', 'vince.jennings3@gmail.com', 1, '2024-11-25 03:26:18.444765', '2025-10-08 01:00:43.243508', NULL, 3, '\x9eb1c2a76444a9e3', '\x025105d39fdf717ae3f733502ca3021cdaded71e783c4d49aab09c630597f17688f9a4247bd362e2201a2c1b97f7bce2a2702afd6eff379571314c6d19426ef9f6fd1bafbe2083c5af420110ba5d7c1749d412fc95401570f0ff5e44cb23ad7fbbf7308ca882797ff5f749052a05489a599d95919d7a59ba3f2a1e99f32a067c34f947e012b65887dcc066f3cf47dfec7c4c2328bebd2e32afdfe52367a2036161e860c5b54aa70f83c271f81fc178757a1b2705657ac5bb7be79e0ca6c26733a4927602787e71850f7899a1749a9e40818d09994ecd0f60a16c03efce3fc78aaba1f06d5557eab664fc772ebcbeb315fce5bb94ca972c65ab01676784c7d2c8e3d5fbc2941209e37878f47132db8348f67a49d613dde45c57632c1a2dbb199d25b008025c543fe9cca7de85932311caa476347cf58b5b42f76dfbe836848fe5d7a9e4bb1522ea3afa9f8e6f6ef010d3a5e6be154d0b0693e2d335eceb8658d8826c153c87e4805e8bad85bc2c5547b35fab0490b5a7141c5317998ccfc06496cc', '93 Farnham Street', '1234A', NULL, 2, NULL, '\x6f303264594d64717a4a38563651327a45775a4537553259692d7342692d7770435944396d6a54533776383d', NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (39, 'Vince6', 'vince6', 'vince.jennings6@gmail.com', 0, '2025-09-29 01:21:03.126849', '2025-09-29 01:21:29.980711', '1990-06-06', NULL, NULL, NULL, NULL, NULL, NULL, 2, NULL, '\x2d4d5152305a4873785f416b41724d3839705f45653858564879506131746e686d376642496c4c577050733d', NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_users VALUES (37, 'Vince4', 'vince4', 'vince.jennings4@gmail.com', 0, '2025-09-28 23:31:54.011031', '2025-09-30 08:46:30.536594', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, NULL, '\x5173554177484c374c5277415073315042596d764b5a716745636a4f41365f7a4d4b4f344461755271656f3d', NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (15, 'Vince Jennings', 'vince1', 'vince.jennings@gmail.com', 1, '2024-11-14 00:12:08.297532', '2026-01-05 07:47:52.098645', NULL, 1, '93 Farnham Street', '1', NULL, 2, NULL, 'google', '117679618749034714503') ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (2, 'Donna Jennings12', 'donna', 'dj0040@gmail.com', 1, '2024-10-04 09:08:52.345413', '2025-01-14 07:10:06.688522', NULL, 1, '93 Farnham Street', '1234B', NULL, 1, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (3, 'Dylan Jennings1', 'Dylan', 'dylan@dt.net.nz', 1, '2024-10-04 09:09:11.226469', '2025-01-14 07:11:07.063766', NULL, 4, '93 Farnham Street', '12347', NULL, 1, true, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (36, 'test1', 'test1', 'vince.jennings101@gmail.com', 0, '2025-08-13 22:25:08.509142', '2025-09-28 08:12:01.518222', NULL, 2, NULL, 'q54wggf', NULL, 2, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (51, 'Vince Jennings', 'vinceTTC', 'vince.jennings@ttc.org.nz', 0, '2025-12-30 03:39:11.502942', '2025-12-30 23:53:04.430106', '0001-02-03', NULL, '93 Farnham Street', NULL, NULL, 0, NULL, 'google', '108559076374625333492') ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (16, 'vince jennings', 'vinceAPPtst', 'vince.apptesting@gmail.com', 1, '2024-11-14 10:47:04.549148', '2026-02-03 02:31:07.513165', '0001-01-26', 1, '93 Farnham Street', '1234', NULL, 2, NULL, 'google', '107191100686708556936') ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (35, 'test2', 'test2', 'vince.jennings102@gmail.com', 1, '2025-08-10 00:26:32.902823', '2025-09-28 08:12:27.706428', NULL, 2, NULL, '5t2tgw', NULL, 2, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (1, 'vince jennings3', 'vince', 'vince.jennings1003@gmail.com', 2, '2024-09-24 07:20:41.0626', '2025-09-28 08:12:47.917242', NULL, 2, '93 Farnham Street, Mornington', '7654', NULL, 2, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (20, 'admin1', 'admin1', 'admin1@test.localhost', 1, '2025-06-19 10:07:04.161727', '2025-08-05 06:36:12.347883', NULL, 1, '93 Farnham St', '1111', NULL, 2, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (38, 'Vince5', 'vince5', 'vince.jennings5@gmail.com', 0, '2025-09-29 01:07:41.120843', '2025-09-29 01:07:41.120843', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (17, 'Vince3', 'vince3', 'vince.jennings3@gmail.com', 1, '2024-11-25 03:26:18.444765', '2025-10-08 01:00:43.243508', NULL, 3, '93 Farnham Street', '1234A', NULL, 2, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (39, 'Vince6', 'vince6', 'vince.jennings6@gmail.com', 0, '2025-09-29 01:21:03.126849', '2025-09-29 01:21:29.980711', '1990-06-06', NULL, NULL, NULL, NULL, 2, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO public.st_users VALUES (37, 'Vince4', 'vince4', 'vince.jennings4@gmail.com', 0, '2025-09-28 23:31:54.011031', '2025-09-30 08:46:30.536594', NULL, NULL, NULL, NULL, NULL, 2, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 
 
 --
--- TOC entry 3371 (class 0 OID 16787)
--- Dependencies: 248
--- Data for Name: st_webauthn_credentials; Type: TABLE DATA; Schema: public; Owner: myuser
---
-
-INSERT INTO public.st_webauthn_credentials VALUES (6, 35, '{"id": "WHnEGpLfVw5On8sHEdQydA==", "flags": {"backupState": true, "userPresent": true, "userVerified": false, "backupEligible": true}, "publicKey": "pQECAyYgASFYIHPmbeedxW3Zid0sYYr3KICrGUw0s+Pc/KhYA+rYVjsCIlggIh3xo/+6XLGkHpLwfohRKFxtErzA+CVo6Z3w4VySOd4=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEFh5xBqS31cOTp/LBxHUMnSlAQIDJiABIVggc+Zt553FbdmJ3SxhivcogKsZTDSz49z8qFgD6thWOwIiWCAiHfGj/7pcsaQekvB+iFEoXG0SvMD4JWjpnfDhXJI53g==", "clientDataHash": "kTvCZDuKNB/2IIwItNiOaccCPSK3/JGPtfjNBtdD3bY=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiZy1rV0xnLWpnSWlxVlh0bFlheEtiLWhMVnFGMDU0YTlVcmtuOWIwb2dkNCIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEFh5xBqS31cOTp/LBxHUMnSlAQIDJiABIVggc+Zt553FbdmJ3SxhivcogKsZTDSz49z8qFgD6thWOwIiWCAiHfGj/7pcsaQekvB+iFEoXG0SvMD4JWjpnfDhXJI53g==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-08-21 23:39:31.059759', '2025-08-21 23:39:31.059759', '\x57486e4547704c665677354f6e387348456451796441', 'test1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-08-21T23:39:31.059325162Z", "user_assigned_device_name": "test1", "last_successful_auth_timestamp": "2025-09-27T07:36:03.370070623Z"}', '2025-09-27 07:36:03.370071') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (5, 36, '{"id": "3x6sXGsAwaD0nMJQ5d0cIA==", "flags": {"backupState": true, "userPresent": true, "userVerified": false, "backupEligible": true}, "publicKey": "pQECAyYgASFYIBiDxYYS0d21wN7i/LsIMJz6pMxpQnuX6vFD+1t+4rUYIlgg85RgBhETJiIAS+UZB3oWI7Xic3LMt8A60zbYOKXjF1g=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEN8erFxrAMGg9JzCUOXdHCClAQIDJiABIVggGIPFhhLR3bXA3uL8uwgwnPqkzGlCe5fq8UP7W37itRgiWCDzlGAGERMmIgBL5RkHehYjteJzcsy3wDrTNtg4peMXWA==", "clientDataHash": "j0m7cHcCu8D/Fxct7s535ULEnBRQLoc4x9KFV9Iyno4=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiNWRRZm1CcEk1NG93SVhycm1vRzJDWkVuY29iRVdFNkx3VWduSk9DUlZFOCIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2UsIm90aGVyX2tleXNfY2FuX2JlX2FkZGVkX2hlcmUiOiJkbyBub3QgY29tcGFyZSBjbGllbnREYXRhSlNPTiBhZ2FpbnN0IGEgdGVtcGxhdGUuIFNlZSBodHRwczovL2dvby5nbC95YWJQZXgifQ==", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEN8erFxrAMGg9JzCUOXdHCClAQIDJiABIVggGIPFhhLR3bXA3uL8uwgwnPqkzGlCe5fq8UP7W37itRgiWCDzlGAGERMmIgBL5RkHehYjteJzcsy3wDrTNtg4peMXWA==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-08-13 22:25:08.521068', '2025-08-13 22:25:08.521068', '\x3378367358477341776144306e4d4a51356430634941', 'test1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-08-13T22:25:08.520677351Z", "user_assigned_device_name": "test1", "last_successful_auth_timestamp": "2025-09-27T09:32:25.881832931Z"}', '2025-09-27 09:32:25.881833') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (13, 38, '{"id": "TEBBwZabneC3cULczq8M/w==", "flags": {"backupState": true, "userPresent": true, "userVerified": false, "backupEligible": true}, "publicKey": "pQECAyYgASFYIDkZMbjThR38nTZnUZEgpC1ZFjj3t7UUGEQXkKCN/1foIlggRepErMdYniS8erXXSogff9ZCjUuWahPaLphzIFapvB8=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEExAQcGWm53gt3FC3M6vDP+lAQIDJiABIVggORkxuNOFHfydNmdRkSCkLVkWOPe3tRQYRBeQoI3/V+giWCBF6kSsx1ieJLx6tddKiB9/1kKNS5ZqE9oumHMgVqm8Hw==", "clientDataHash": "CjxP3sOb0EzA2jKg9+pLPcmIu7CmhGLsssYkf+6d87I=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoieHBwdmlZNmEwUlVwdEY2TXVSbktGdjR3b3ZEQTBHaW9JVE1HUWppMU9wNCIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEExAQcGWm53gt3FC3M6vDP+lAQIDJiABIVggORkxuNOFHfydNmdRkSCkLVkWOPe3tRQYRBeQoI3/V+giWCBF6kSsx1ieJLx6tddKiB9/1kKNS5ZqE9oumHMgVqm8Hw==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-09-29 01:07:41.127048', '2025-09-29 01:07:41.127048', '\x54454242775a61626e65433363554c637a71384d5f77', 'Dell1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-09-29T01:07:41.126587642Z", "user_assigned_device_name": "Dell1", "last_successful_auth_timestamp": "2025-09-29T01:07:41.126587742Z"}', NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (14, 39, '{"id": "Jd5OVM9FDsvzfX71GH7JTQ==", "flags": {"backupState": true, "userPresent": true, "userVerified": false, "backupEligible": true}, "publicKey": "pQECAyYgASFYIHu0biSgVJVbKK+ZMShrMZMoqVPagfvnJDnl4DP8cnJlIlggs7ayVwYY4J371KJCBAy7MlbTGjNm1iIwHcT6XGgHNm8=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAECXeTlTPRQ7L831+9Rh+yU2lAQIDJiABIVgge7RuJKBUlVsor5kxKGsxkyipU9qB++ckOeXgM/xycmUiWCCztrJXBhjgnfvUokIEDLsyVtMaM2bWIjAdxPpcaAc2bw==", "clientDataHash": "oLWOMH/U9MfYh+8pydugDYHBWt5sBmvPOvX2HaET5KI=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiYTRqVVdRcUc4NHVPZ0p2QmFDa1JEblV5THBqUXh5YTdfUl9pd3BLWmxxRSIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAECXeTlTPRQ7L831+9Rh+yU2lAQIDJiABIVgge7RuJKBUlVsor5kxKGsxkyipU9qB++ckOeXgM/xycmUiWCCztrJXBhjgnfvUokIEDLsyVtMaM2bWIjAdxPpcaAc2bw==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-09-29 01:21:03.135379', '2025-09-29 01:21:03.135379', '\x4a64354f564d39464473767a665837314748374a5451', 'Dell1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-09-29T01:21:03.134629298Z", "user_assigned_device_name": "Dell1", "last_successful_auth_timestamp": "2025-09-29T01:22:14.196313524Z"}', '2025-09-29 01:22:14.196314') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (16, 37, '{"id": "fgT/sVRMO93eouYSYWDcIA==", "flags": {"backupState": true, "userPresent": true, "userVerified": false, "backupEligible": true}, "publicKey": "pQECAyYgASFYIFrBAmj2D9Jzm3UGgOYnQSiMuzgraPQyzRt+en/g0LC5IlggNtnyReO9x5QmZQSrBaUAS/+972G/hIrM+IUYmy3CKEA=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEH4E/7FUTDvd3qLmEmFg3CClAQIDJiABIVggWsECaPYP0nObdQaA5idBKIy7OCto9DLNG356f+DQsLkiWCA22fJF473HlCZlBKsFpQBL/73vYb+Eisz4hRibLcIoQA==", "clientDataHash": "E8zz1RRfM/+BdDjaVEw5WY6ArdQJEd6D/qeXmMoCTro=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiRjB6ZFk3RW44RnBhaThqTFp6NHhZYXg3ZVh1RGt4TUE2Y1MtaXRMSmpiSSIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEH4E/7FUTDvd3qLmEmFg3CClAQIDJiABIVggWsECaPYP0nObdQaA5idBKIy7OCto9DLNG356f+DQsLkiWCA22fJF473HlCZlBKsFpQBL/73vYb+Eisz4hRibLcIoQA==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-09-30 08:46:30.545376', '2025-09-30 08:46:30.545376', '\x6667545f7356524d4f3933656f755953595744634941', 'Dell1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-09-30T08:46:30.544955697Z", "user_assigned_device_name": "Dell1", "last_successful_auth_timestamp": "2025-09-30T09:11:59.789372731Z"}', '2025-09-30 09:11:59.789373') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (12, 17, '{"id": "k7JutHXZLl+ZeT8DqIOSjA==", "flags": {"backupState": true, "userPresent": true, "userVerified": false, "backupEligible": true}, "publicKey": "pQECAyYgASFYIJ9Xaip6q8cvIg3mP6YD5KH/UhYyjEMeTwl3wejjZbsdIlggIiTZRDiziqlmmFzaro/bbrygdGtmc28KVTn/7F7hhOQ=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEJOybrR12S5fmXk/A6iDkoylAQIDJiABIVggn1dqKnqrxy8iDeY/pgPkof9SFjKMQx5PCXfB6ONlux0iWCAiJNlEOLOKqWaYXNquj9tuvKB0a2ZzbwpVOf/sXuGE5A==", "clientDataHash": "RfWgFUb1sjnsZ9+Cizd0kYYTBGcV/TWXAmh7uDhjwcY=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiczc4ZVBBc1AzdlFJX3Bvd2ttbWltQklPMzdaV09RdEtQNnBwZFBiUkN1RSIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEJOybrR12S5fmXk/A6iDkoylAQIDJiABIVggn1dqKnqrxy8iDeY/pgPkof9SFjKMQx5PCXfB6ONlux0iWCAiJNlEOLOKqWaYXNquj9tuvKB0a2ZzbwpVOf/sXuGE5A==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-09-29 01:05:33.91263', '2025-09-29 01:05:33.91263', '\x6b374a757448585a4c6c2d5a6554384471494f536a41', 'Dell1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-09-29T01:05:33.91219645Z", "user_assigned_device_name": "Dell1", "last_successful_auth_timestamp": "2025-09-30T09:49:48.493640513Z"}', '2025-09-30 09:49:48.493641') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (17, 16, '{"id": "gkdWBacuHWW7zJ5o512sEA==", "flags": {"backupState": true, "userPresent": true, "userVerified": false, "backupEligible": true}, "publicKey": "pQECAyYgASFYIEoFQLFvpG4ys1oknmTL5AOR/076FVUXZbOo7ggmTvgcIlgg6K6KMpUgwEbdSamog+65bLJmK7+gKXwLTr0hCVDcx6Y=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEIJHVgWnLh1lu8yeaOddrBClAQIDJiABIVggSgVAsW+kbjKzWiSeZMvkA5H/TvoVVRdls6juCCZO+BwiWCDorooylSDARt1JqaiD7rlssmYrv6ApfAtOvSEJUNzHpg==", "clientDataHash": "Duu0oK2Z+wRjEc5NMlXFaGbIEHZ/lzV8JCgXChdMSGM=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiUWl4Wl9PSkNhS0lwWTV1bXVZWkNnRkNMZUE0NFZONmtPVUpSQmVlY21VTSIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NZAAAAAOqbjWZNAR0hPOS2tIy1ddQAEIJHVgWnLh1lu8yeaOddrBClAQIDJiABIVggSgVAsW+kbjKzWiSeZMvkA5H/TvoVVRdls6juCCZO+BwiWCDorooylSDARt1JqaiD7rlssmYrv6ApfAtOvSEJUNzHpg==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-09-30 09:13:21.114919', '2025-09-30 09:13:21.114919', '\x676b645742616375485757377a4a356f353132734541', 'Dell1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-10-02T00:35:43.663931014Z", "user_assigned_device_name": "Dell1", "last_successful_auth_timestamp": "2025-10-04T04:11:11.967732512Z"}', '2025-10-04 04:11:11.967733') ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (20, 16, '{"id": "jEj5Bvwj2d7BZpP+ekAkPzLGboMvO3HZLJM9C98CH30=", "flags": {"backupState": false, "userPresent": true, "userVerified": true, "backupEligible": false}, "publicKey": "pAEDAzkBACBZAQC9dDktKzLjZGh4NKr6n5U7t64y6E2ZUl8B0kzXiv+rePnJWUogKzMcejlxz6hP8vXuFGlMUjdMyA8WG2yi3hbA4XoPRl7PfExvwsgdpCGtGg98C/p07X2hZMaWulhLg5lu2prC0RSDHxu/aRjCB6eqfUX0Tt1l/ZTel+WE6Nl6Owe3B2igkLTBDGUOogzTL7ho1tafCCxe+BCQCyRWIQEbH2DpZmkWqNnVQ9YRPJi3rclbInCIX0bMz5RMP4PccXK+nsmsg8XAX7NXlQ0c0uePsEgeSYSL3B61G0z3DHOrh6IJpH8Tf3Jr7B1BCbNTdQwTkr5cjCy01rXIwWe4IuvpIUMBAAE=", "transport": ["internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVkBZ0mWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAAAAAAAAAAAAAAAAAAAAAACCMSPkG/CPZ3sFmk/56QCQ/MsZugy87cdkskz0L3wIffaQBAwM5AQAgWQEAvXQ5LSsy42RoeDSq+p+VO7euMuhNmVJfAdJM14r/q3j5yVlKICszHHo5cc+oT/L17hRpTFI3TMgPFhtsot4WwOF6D0Zez3xMb8LIHaQhrRoPfAv6dO19oWTGlrpYS4OZbtqawtEUgx8bv2kYwgenqn1F9E7dZf2U3pflhOjZejsHtwdooJC0wQxlDqIM0y+4aNbWnwgsXvgQkAskViEBGx9g6WZpFqjZ1UPWETyYt63JWyJwiF9GzM+UTD+D3HFyvp7JrIPFwF+zV5UNHNLnj7BIHkmEi9wetRtM9wxzq4eiCaR/E39ya+wdQQmzU3UME5K+XIwstNa1yMFnuCLr6SFDAQAB", "clientDataHash": "YFMCqAWor1uPW0Y+O53BdY8zdpN8vEW0Y4NX++VOl4k=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoidk9LVkk5MEtqcWhLM3p1eElybU9qSElFYzhBV05vaElmbzRQbkEzamJSWSIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIIxI+Qb8I9newWaT/npAJD8yxm6DLztx2SyTPQvfAh99pAEDAzkBACBZAQC9dDktKzLjZGh4NKr6n5U7t64y6E2ZUl8B0kzXiv+rePnJWUogKzMcejlxz6hP8vXuFGlMUjdMyA8WG2yi3hbA4XoPRl7PfExvwsgdpCGtGg98C/p07X2hZMaWulhLg5lu2prC0RSDHxu/aRjCB6eqfUX0Tt1l/ZTel+WE6Nl6Owe3B2igkLTBDGUOogzTL7ho1tafCCxe+BCQCyRWIQEbH2DpZmkWqNnVQ9YRPJi3rclbInCIX0bMz5RMP4PccXK+nsmsg8XAX7NXlQ0c0uePsEgeSYSL3B61G0z3DHOrh6IJpH8Tf3Jr7B1BCbNTdQwTkr5cjCy01rXIwWe4IuvpIUMBAAE=", "publicKeyAlgorithm": -257}, "authenticator": {"AAGUID": "AAAAAAAAAAAAAAAAAAAAAA==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-10-08 01:01:58.793517', '2025-10-08 01:01:58.793517', '\x6a456a354276776a326437425a70502d656b416b507a4c47626f4d764f33485a4c4a4d3943393843483330', 'Dell2', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0", "device_fingerprint": "", "registration_timestamp": "2025-10-08T01:01:58.792496367Z", "user_assigned_device_name": "Dell2", "last_successful_auth_timestamp": "2025-10-08T01:01:58.792496367Z"}', NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (18, 15, '{"id": "awd9/qrbZtO4bkrSqINs6Q==", "flags": {"backupState": true, "userPresent": true, "userVerified": true, "backupEligible": true}, "publicKey": "pQECAyYgASFYIML+N4KDjKjkMQwHW2YgBpV+zD5f87Sk7OOAdWmQQ/dXIlggvAX/LjVI/owT+xxxZkBqVoZOht3svfw3CfLIa9WoFJg=", "transport": ["hybrid", "internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YViUSZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NdAAAAAOqbjWZNAR0hPOS2tIy1ddQAEGsHff6q22bTuG5K0qiDbOmlAQIDJiABIVggwv43goOMqOQxDAdbZiAGlX7MPl/ztKTs44B1aZBD91ciWCC8Bf8uNUj+jBP7HHFmQGpWhk6G3ey9/DcJ8shr1agUmA==", "clientDataHash": "mTs4fpp0YFgj43/2OaEodQVQad/U9fjiDXudQ9ilYcc=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoibnVCNE1DNG5uczl0MWlBWHpFQXpRY0U5M05kOTQ0aTVfS3V2S3FlUHJLMCIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2UsIm90aGVyX2tleXNfY2FuX2JlX2FkZGVkX2hlcmUiOiJkbyBub3QgY29tcGFyZSBjbGllbnREYXRhSlNPTiBhZ2FpbnN0IGEgdGVtcGxhdGUuIFNlZSBodHRwczovL2dvby5nbC95YWJQZXgifQ==", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NdAAAAAOqbjWZNAR0hPOS2tIy1ddQAEGsHff6q22bTuG5K0qiDbOmlAQIDJiABIVggwv43goOMqOQxDAdbZiAGlX7MPl/ztKTs44B1aZBD91ciWCC8Bf8uNUj+jBP7HHFmQGpWhk6G3ey9/DcJ8shr1agUmA==", "publicKeyAlgorithm": -7}, "authenticator": {"AAGUID": "6puNZk0BHSE85La0jLV11A==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-10-02 23:21:55.28255', '2025-10-02 23:21:55.28255', '\x617764395f7172625a744f34626b725371494e733651', 'Dell1', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36", "device_fingerprint": "", "registration_timestamp": "2025-10-07T09:03:04.17704327Z", "user_assigned_device_name": "Dell1", "last_successful_auth_timestamp": "2025-10-07T09:03:04.17704327Z"}', NULL) ON CONFLICT DO NOTHING;
-INSERT INTO public.st_webauthn_credentials VALUES (19, 17, '{"id": "UVruXS56dEYF0LuexotX9MnrIpuoly4ljf0euhckxjE=", "flags": {"backupState": false, "userPresent": true, "userVerified": true, "backupEligible": false}, "publicKey": "pAEDAzkBACBZAQDLEE7B4Nfh5qjxaaMUZwoXTULxH1PIofb7nU7NkbRZAnhyf4notsoxgQ/2tHzle46TYQCQzUzaeADmiQobpWXoActqTwUij08DMVmxQqcprwNE7OaUBwlALTPTg/vfkxY8uSmoO+EAsgJXYP8pG0FV/uG7sAh1n5RZs0s0EXLtOt43/HXYTgLHI8zRtZsHoZm2wCdrkJGeN5M+uviwv5lduuzsa18Zlvk9rqRCheuVcvBKVapRy+Y9zCHWu8I4a9dNojypkeFDSfnDZ1FEUFzPOFIVyQJiEcsGLezui5UHuajth/QVzFrpC1Z/IqUryx9GUkAuFx5YAPHVJEXpEPvjIUMBAAE=", "transport": ["internal"], "attestation": {"object": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVkBZ0mWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAAAAAAAAAAAAAAAAAAAAAACBRWu5dLnp0RgXQu57Gi1f0yesim6iXLiWN/R66FyTGMaQBAwM5AQAgWQEAyxBOweDX4eao8WmjFGcKF01C8R9TyKH2+51OzZG0WQJ4cn+J6LbKMYEP9rR85XuOk2EAkM1M2ngA5okKG6Vl6AHLak8FIo9PAzFZsUKnKa8DROzmlAcJQC0z04P735MWPLkpqDvhALICV2D/KRtBVf7hu7AIdZ+UWbNLNBFy7TreN/x12E4CxyPM0bWbB6GZtsAna5CRnjeTPrr4sL+ZXbrs7GtfGZb5Pa6kQoXrlXLwSlWqUcvmPcwh1rvCOGvXTaI8qZHhQ0n5w2dRRFBczzhSFckCYhHLBi3s7ouVB7mo7Yf0Fcxa6QtWfyKlK8sfRlJALhceWADx1SRF6RD74yFDAQAB", "clientDataHash": "OYlW5r9AREgcK0S2stiBc+0qPDcgSNFc1F28aUMMsow=", "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoibF94ZlVLdjljakx4eUxTSEVteUhhVGxnTm1wVkMzb0ZPcXZMOEF2RGIxOCIsIm9yaWdpbiI6Imh0dHBzOi8vbG9jYWxob3N0OjgwODYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9", "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIFFa7l0uenRGBdC7nsaLV/TJ6yKbqJcuJY39HroXJMYxpAEDAzkBACBZAQDLEE7B4Nfh5qjxaaMUZwoXTULxH1PIofb7nU7NkbRZAnhyf4notsoxgQ/2tHzle46TYQCQzUzaeADmiQobpWXoActqTwUij08DMVmxQqcprwNE7OaUBwlALTPTg/vfkxY8uSmoO+EAsgJXYP8pG0FV/uG7sAh1n5RZs0s0EXLtOt43/HXYTgLHI8zRtZsHoZm2wCdrkJGeN5M+uviwv5lduuzsa18Zlvk9rqRCheuVcvBKVapRy+Y9zCHWu8I4a9dNojypkeFDSfnDZ1FEUFzPOFIVyQJiEcsGLezui5UHuajth/QVzFrpC1Z/IqUryx9GUkAuFx5YAPHVJEXpEPvjIUMBAAE=", "publicKeyAlgorithm": -257}, "authenticator": {"AAGUID": "AAAAAAAAAAAAAAAAAAAAAA==", "signCount": 0, "attachment": "platform", "cloneWarning": false}, "attestationType": "none"}', '2025-10-08 01:00:43.284367', '2025-10-08 01:00:43.284367', '\x555672755853353664455946304c7565786f7458394d6e724970756f6c79346c6a6630657568636b786a45', 'Dell3', '{"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0", "device_fingerprint": "", "registration_timestamp": "2025-10-08T01:00:43.267996839Z", "user_assigned_device_name": "Dell3", "last_successful_auth_timestamp": "2025-10-08T01:00:43.267997027Z"}', NULL) ON CONFLICT DO NOTHING;
-
-
---
--- TOC entry 3381 (class 0 OID 0)
+-- TOC entry 3374 (class 0 OID 0)
 -- Dependencies: 200
 -- Name: at_booking_users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1317,7 +1271,7 @@ SELECT pg_catalog.setval('public.at_booking_users_id_seq', 27, true);
 
 
 --
--- TOC entry 3382 (class 0 OID 0)
+-- TOC entry 3375 (class 0 OID 0)
 -- Dependencies: 202
 -- Name: at_bookings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1326,7 +1280,7 @@ SELECT pg_catalog.setval('public.at_bookings_id_seq', 37, true);
 
 
 --
--- TOC entry 3383 (class 0 OID 0)
+-- TOC entry 3376 (class 0 OID 0)
 -- Dependencies: 204
 -- Name: at_group_bookings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1335,7 +1289,7 @@ SELECT pg_catalog.setval('public.at_group_bookings_id_seq', 2, true);
 
 
 --
--- TOC entry 3384 (class 0 OID 0)
+-- TOC entry 3377 (class 0 OID 0)
 -- Dependencies: 206
 -- Name: at_trip_cost_groups_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1344,7 +1298,7 @@ SELECT pg_catalog.setval('public.at_trip_cost_groups_id_seq', 2, true);
 
 
 --
--- TOC entry 3385 (class 0 OID 0)
+-- TOC entry 3378 (class 0 OID 0)
 -- Dependencies: 208
 -- Name: at_trip_costs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1353,7 +1307,7 @@ SELECT pg_catalog.setval('public.at_trip_costs_id_seq', 10, true);
 
 
 --
--- TOC entry 3386 (class 0 OID 0)
+-- TOC entry 3379 (class 0 OID 0)
 -- Dependencies: 210
 -- Name: at_trips_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1362,7 +1316,7 @@ SELECT pg_catalog.setval('public.at_trips_id_seq', 8, true);
 
 
 --
--- TOC entry 3387 (class 0 OID 0)
+-- TOC entry 3380 (class 0 OID 0)
 -- Dependencies: 212
 -- Name: at_user_payments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1371,7 +1325,7 @@ SELECT pg_catalog.setval('public.at_user_payments_id_seq', 1, true);
 
 
 --
--- TOC entry 3388 (class 0 OID 0)
+-- TOC entry 3381 (class 0 OID 0)
 -- Dependencies: 214
 -- Name: et_access_level_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1380,7 +1334,7 @@ SELECT pg_catalog.setval('public.et_access_level_id_seq', 6, true);
 
 
 --
--- TOC entry 3389 (class 0 OID 0)
+-- TOC entry 3382 (class 0 OID 0)
 -- Dependencies: 216
 -- Name: et_access_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1389,7 +1343,7 @@ SELECT pg_catalog.setval('public.et_access_type_id_seq', 3, true);
 
 
 --
--- TOC entry 3390 (class 0 OID 0)
+-- TOC entry 3383 (class 0 OID 0)
 -- Dependencies: 218
 -- Name: et_booking_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1398,7 +1352,7 @@ SELECT pg_catalog.setval('public.et_booking_status_id_seq', 4, true);
 
 
 --
--- TOC entry 3391 (class 0 OID 0)
+-- TOC entry 3384 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: et_member_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1407,7 +1361,7 @@ SELECT pg_catalog.setval('public.et_member_status_id_seq', 3, true);
 
 
 --
--- TOC entry 3392 (class 0 OID 0)
+-- TOC entry 3385 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: et_resource_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1416,7 +1370,7 @@ SELECT pg_catalog.setval('public.et_resource_id_seq', 20, true);
 
 
 --
--- TOC entry 3393 (class 0 OID 0)
+-- TOC entry 3386 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: et_seasons_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1425,7 +1379,7 @@ SELECT pg_catalog.setval('public.et_seasons_id_seq', 3, true);
 
 
 --
--- TOC entry 3394 (class 0 OID 0)
+-- TOC entry 3387 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: et_trip_difficulty_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1434,7 +1388,7 @@ SELECT pg_catalog.setval('public.et_trip_difficulty_id_seq', 4, true);
 
 
 --
--- TOC entry 3395 (class 0 OID 0)
+-- TOC entry 3388 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: et_trip_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1443,7 +1397,7 @@ SELECT pg_catalog.setval('public.et_trip_status_id_seq', 4, true);
 
 
 --
--- TOC entry 3396 (class 0 OID 0)
+-- TOC entry 3389 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: et_trip_types_trip_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1452,7 +1406,7 @@ SELECT pg_catalog.setval('public.et_trip_types_trip_type_id_seq', 7, true);
 
 
 --
--- TOC entry 3397 (class 0 OID 0)
+-- TOC entry 3390 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: et_user_account_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1461,7 +1415,7 @@ SELECT pg_catalog.setval('public.et_user_account_status_id_seq', 6, true);
 
 
 --
--- TOC entry 3398 (class 0 OID 0)
+-- TOC entry 3391 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: et_user_age_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1470,7 +1424,7 @@ SELECT pg_catalog.setval('public.et_user_age_group_id_seq', 5, true);
 
 
 --
--- TOC entry 3399 (class 0 OID 0)
+-- TOC entry 3392 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: st_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1479,7 +1433,7 @@ SELECT pg_catalog.setval('public.st_group_id_seq', 4, true);
 
 
 --
--- TOC entry 3400 (class 0 OID 0)
+-- TOC entry 3393 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: st_group_resource_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1488,16 +1442,16 @@ SELECT pg_catalog.setval('public.st_group_resource_id_seq', 41, true);
 
 
 --
--- TOC entry 3401 (class 0 OID 0)
+-- TOC entry 3394 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: st_token_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
 
-SELECT pg_catalog.setval('public.st_token_id_seq', 397, true);
+SELECT pg_catalog.setval('public.st_token_id_seq', 416, true);
 
 
 --
--- TOC entry 3402 (class 0 OID 0)
+-- TOC entry 3395 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: st_user_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1506,7 +1460,7 @@ SELECT pg_catalog.setval('public.st_user_group_id_seq', 16, true);
 
 
 --
--- TOC entry 3403 (class 0 OID 0)
+-- TOC entry 3396 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: st_users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1515,16 +1469,7 @@ SELECT pg_catalog.setval('public.st_users_id_seq', 51, true);
 
 
 --
--- TOC entry 3404 (class 0 OID 0)
--- Dependencies: 247
--- Name: st_webauthn_credentials_id_seq1; Type: SEQUENCE SET; Schema: public; Owner: myuser
---
-
-SELECT pg_catalog.setval('public.st_webauthn_credentials_id_seq1', 20, true);
-
-
---
--- TOC entry 3116 (class 2606 OID 16432)
+-- TOC entry 3113 (class 2606 OID 16432)
 -- Name: at_booking_people at_booking_users_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1533,7 +1478,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3118 (class 2606 OID 16448)
+-- TOC entry 3115 (class 2606 OID 16448)
 -- Name: at_bookings at_bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1542,7 +1487,7 @@ ALTER TABLE ONLY public.at_bookings
 
 
 --
--- TOC entry 3120 (class 2606 OID 16459)
+-- TOC entry 3117 (class 2606 OID 16459)
 -- Name: at_group_bookings at_group_bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1551,7 +1496,7 @@ ALTER TABLE ONLY public.at_group_bookings
 
 
 --
--- TOC entry 3122 (class 2606 OID 16469)
+-- TOC entry 3119 (class 2606 OID 16469)
 -- Name: at_trip_cost_groups at_trip_cost_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1560,7 +1505,7 @@ ALTER TABLE ONLY public.at_trip_cost_groups
 
 
 --
--- TOC entry 3124 (class 2606 OID 16479)
+-- TOC entry 3121 (class 2606 OID 16479)
 -- Name: at_trip_costs at_trip_costs_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1569,7 +1514,7 @@ ALTER TABLE ONLY public.at_trip_costs
 
 
 --
--- TOC entry 3126 (class 2606 OID 16496)
+-- TOC entry 3123 (class 2606 OID 16496)
 -- Name: at_trips at_trips_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1578,7 +1523,7 @@ ALTER TABLE ONLY public.at_trips
 
 
 --
--- TOC entry 3128 (class 2606 OID 16506)
+-- TOC entry 3125 (class 2606 OID 16506)
 -- Name: at_user_payments at_user_payments_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1587,7 +1532,7 @@ ALTER TABLE ONLY public.at_user_payments
 
 
 --
--- TOC entry 3130 (class 2606 OID 16516)
+-- TOC entry 3127 (class 2606 OID 16516)
 -- Name: et_access_level et_access_level_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1596,7 +1541,7 @@ ALTER TABLE ONLY public.et_access_level
 
 
 --
--- TOC entry 3132 (class 2606 OID 16526)
+-- TOC entry 3129 (class 2606 OID 16526)
 -- Name: et_access_type et_access_type_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1605,7 +1550,7 @@ ALTER TABLE ONLY public.et_access_type
 
 
 --
--- TOC entry 3134 (class 2606 OID 16536)
+-- TOC entry 3131 (class 2606 OID 16536)
 -- Name: et_booking_status et_booking_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1614,7 +1559,7 @@ ALTER TABLE ONLY public.et_booking_status
 
 
 --
--- TOC entry 3136 (class 2606 OID 16546)
+-- TOC entry 3133 (class 2606 OID 16546)
 -- Name: et_member_status et_member_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1623,7 +1568,7 @@ ALTER TABLE ONLY public.et_member_status
 
 
 --
--- TOC entry 3138 (class 2606 OID 16556)
+-- TOC entry 3135 (class 2606 OID 16556)
 -- Name: et_resource et_resource_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1632,7 +1577,7 @@ ALTER TABLE ONLY public.et_resource
 
 
 --
--- TOC entry 3140 (class 2606 OID 16566)
+-- TOC entry 3137 (class 2606 OID 16566)
 -- Name: et_seasons et_seasons_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1641,7 +1586,7 @@ ALTER TABLE ONLY public.et_seasons
 
 
 --
--- TOC entry 3142 (class 2606 OID 16576)
+-- TOC entry 3139 (class 2606 OID 16576)
 -- Name: et_trip_difficulty et_trip_difficulty_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1650,7 +1595,7 @@ ALTER TABLE ONLY public.et_trip_difficulty
 
 
 --
--- TOC entry 3144 (class 2606 OID 16586)
+-- TOC entry 3141 (class 2606 OID 16586)
 -- Name: et_trip_status et_trip_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1659,7 +1604,7 @@ ALTER TABLE ONLY public.et_trip_status
 
 
 --
--- TOC entry 3146 (class 2606 OID 16596)
+-- TOC entry 3143 (class 2606 OID 16596)
 -- Name: et_trip_type et_trip_types_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1668,7 +1613,7 @@ ALTER TABLE ONLY public.et_trip_type
 
 
 --
--- TOC entry 3148 (class 2606 OID 16609)
+-- TOC entry 3145 (class 2606 OID 16609)
 -- Name: et_user_account_status et_user_account_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1677,7 +1622,7 @@ ALTER TABLE ONLY public.et_user_account_status
 
 
 --
--- TOC entry 3150 (class 2606 OID 16619)
+-- TOC entry 3147 (class 2606 OID 16619)
 -- Name: et_user_age_groups et_user_age_group_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1686,7 +1631,7 @@ ALTER TABLE ONLY public.et_user_age_groups
 
 
 --
--- TOC entry 3152 (class 2606 OID 16630)
+-- TOC entry 3149 (class 2606 OID 16630)
 -- Name: st_group st_group_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1695,7 +1640,7 @@ ALTER TABLE ONLY public.st_group
 
 
 --
--- TOC entry 3154 (class 2606 OID 16641)
+-- TOC entry 3151 (class 2606 OID 16641)
 -- Name: st_group_resource st_group_resource_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1704,7 +1649,7 @@ ALTER TABLE ONLY public.st_group_resource
 
 
 --
--- TOC entry 3156 (class 2606 OID 16652)
+-- TOC entry 3153 (class 2606 OID 16652)
 -- Name: st_token st_token_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1713,7 +1658,7 @@ ALTER TABLE ONLY public.st_token
 
 
 --
--- TOC entry 3158 (class 2606 OID 16662)
+-- TOC entry 3155 (class 2606 OID 16662)
 -- Name: st_user_group st_user_group_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1722,7 +1667,7 @@ ALTER TABLE ONLY public.st_user_group
 
 
 --
--- TOC entry 3160 (class 2606 OID 16679)
+-- TOC entry 3157 (class 2606 OID 16679)
 -- Name: st_users st_users_email_key; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1731,7 +1676,7 @@ ALTER TABLE ONLY public.st_users
 
 
 --
--- TOC entry 3162 (class 2606 OID 16677)
+-- TOC entry 3159 (class 2606 OID 16677)
 -- Name: st_users st_users_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1740,7 +1685,7 @@ ALTER TABLE ONLY public.st_users
 
 
 --
--- TOC entry 3164 (class 2606 OID 16681)
+-- TOC entry 3161 (class 2606 OID 16681)
 -- Name: st_users st_users_username_key; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1749,16 +1694,7 @@ ALTER TABLE ONLY public.st_users
 
 
 --
--- TOC entry 3166 (class 2606 OID 16797)
--- Name: st_webauthn_credentials st_webauthn_credentials_pkey1; Type: CONSTRAINT; Schema: public; Owner: myuser
---
-
-ALTER TABLE ONLY public.st_webauthn_credentials
-    ADD CONSTRAINT st_webauthn_credentials_pkey1 PRIMARY KEY (id);
-
-
---
--- TOC entry 3170 (class 2620 OID 16772)
+-- TOC entry 3165 (class 2620 OID 16772)
 -- Name: at_booking_people set_modified_timestamp_at_booking_people; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1766,7 +1702,7 @@ CREATE TRIGGER set_modified_timestamp_at_booking_people BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3171 (class 2620 OID 16771)
+-- TOC entry 3166 (class 2620 OID 16771)
 -- Name: at_bookings set_modified_timestamp_at_bookings; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1774,7 +1710,7 @@ CREATE TRIGGER set_modified_timestamp_at_bookings BEFORE UPDATE ON public.at_boo
 
 
 --
--- TOC entry 3172 (class 2620 OID 16752)
+-- TOC entry 3167 (class 2620 OID 16752)
 -- Name: at_group_bookings set_modified_timestamp_at_group_bookings; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1782,7 +1718,7 @@ CREATE TRIGGER set_modified_timestamp_at_group_bookings BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3173 (class 2620 OID 16753)
+-- TOC entry 3168 (class 2620 OID 16753)
 -- Name: at_trip_cost_groups set_modified_timestamp_at_trip_cost_groups; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1790,7 +1726,7 @@ CREATE TRIGGER set_modified_timestamp_at_trip_cost_groups BEFORE UPDATE ON publi
 
 
 --
--- TOC entry 3174 (class 2620 OID 16754)
+-- TOC entry 3169 (class 2620 OID 16754)
 -- Name: at_trip_costs set_modified_timestamp_at_trip_costs; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1798,7 +1734,7 @@ CREATE TRIGGER set_modified_timestamp_at_trip_costs BEFORE UPDATE ON public.at_t
 
 
 --
--- TOC entry 3175 (class 2620 OID 16755)
+-- TOC entry 3170 (class 2620 OID 16755)
 -- Name: at_trips set_modified_timestamp_at_trips; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1806,7 +1742,7 @@ CREATE TRIGGER set_modified_timestamp_at_trips BEFORE UPDATE ON public.at_trips 
 
 
 --
--- TOC entry 3176 (class 2620 OID 16756)
+-- TOC entry 3171 (class 2620 OID 16756)
 -- Name: at_user_payments set_modified_timestamp_at_user_payments; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1814,7 +1750,7 @@ CREATE TRIGGER set_modified_timestamp_at_user_payments BEFORE UPDATE ON public.a
 
 
 --
--- TOC entry 3177 (class 2620 OID 16757)
+-- TOC entry 3172 (class 2620 OID 16757)
 -- Name: et_access_level set_modified_timestamp_et_access_level; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1822,7 +1758,7 @@ CREATE TRIGGER set_modified_timestamp_et_access_level BEFORE UPDATE ON public.et
 
 
 --
--- TOC entry 3178 (class 2620 OID 16758)
+-- TOC entry 3173 (class 2620 OID 16758)
 -- Name: et_access_type set_modified_timestamp_et_access_type; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1830,7 +1766,7 @@ CREATE TRIGGER set_modified_timestamp_et_access_type BEFORE UPDATE ON public.et_
 
 
 --
--- TOC entry 3179 (class 2620 OID 16774)
+-- TOC entry 3174 (class 2620 OID 16774)
 -- Name: et_booking_status set_modified_timestamp_et_booking_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1838,7 +1774,7 @@ CREATE TRIGGER set_modified_timestamp_et_booking_status BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3180 (class 2620 OID 16759)
+-- TOC entry 3175 (class 2620 OID 16759)
 -- Name: et_member_status set_modified_timestamp_et_member_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1846,7 +1782,7 @@ CREATE TRIGGER set_modified_timestamp_et_member_status BEFORE UPDATE ON public.e
 
 
 --
--- TOC entry 3181 (class 2620 OID 16760)
+-- TOC entry 3176 (class 2620 OID 16760)
 -- Name: et_resource set_modified_timestamp_et_resource; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1854,7 +1790,7 @@ CREATE TRIGGER set_modified_timestamp_et_resource BEFORE UPDATE ON public.et_res
 
 
 --
--- TOC entry 3182 (class 2620 OID 16761)
+-- TOC entry 3177 (class 2620 OID 16761)
 -- Name: et_seasons set_modified_timestamp_et_seasons; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1862,7 +1798,7 @@ CREATE TRIGGER set_modified_timestamp_et_seasons BEFORE UPDATE ON public.et_seas
 
 
 --
--- TOC entry 3183 (class 2620 OID 16762)
+-- TOC entry 3178 (class 2620 OID 16762)
 -- Name: et_trip_difficulty set_modified_timestamp_et_trip_difficulty; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1870,7 +1806,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_difficulty BEFORE UPDATE ON public
 
 
 --
--- TOC entry 3184 (class 2620 OID 16763)
+-- TOC entry 3179 (class 2620 OID 16763)
 -- Name: et_trip_status set_modified_timestamp_et_trip_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1878,7 +1814,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_status BEFORE UPDATE ON public.et_
 
 
 --
--- TOC entry 3185 (class 2620 OID 16764)
+-- TOC entry 3180 (class 2620 OID 16764)
 -- Name: et_trip_type set_modified_timestamp_et_trip_type; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1886,7 +1822,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_type BEFORE UPDATE ON public.et_tr
 
 
 --
--- TOC entry 3186 (class 2620 OID 16765)
+-- TOC entry 3181 (class 2620 OID 16765)
 -- Name: et_user_account_status set_modified_timestamp_et_user_account_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1894,7 +1830,7 @@ CREATE TRIGGER set_modified_timestamp_et_user_account_status BEFORE UPDATE ON pu
 
 
 --
--- TOC entry 3187 (class 2620 OID 16766)
+-- TOC entry 3182 (class 2620 OID 16766)
 -- Name: et_user_age_groups set_modified_timestamp_et_user_age_groups; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1902,7 +1838,7 @@ CREATE TRIGGER set_modified_timestamp_et_user_age_groups BEFORE UPDATE ON public
 
 
 --
--- TOC entry 3188 (class 2620 OID 16767)
+-- TOC entry 3183 (class 2620 OID 16767)
 -- Name: st_group set_modified_timestamp_st_group; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1910,7 +1846,7 @@ CREATE TRIGGER set_modified_timestamp_st_group BEFORE UPDATE ON public.st_group 
 
 
 --
--- TOC entry 3189 (class 2620 OID 16768)
+-- TOC entry 3184 (class 2620 OID 16768)
 -- Name: st_group_resource set_modified_timestamp_st_group_resource; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1918,7 +1854,7 @@ CREATE TRIGGER set_modified_timestamp_st_group_resource BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3190 (class 2620 OID 16769)
+-- TOC entry 3185 (class 2620 OID 16769)
 -- Name: st_token set_modified_timestamp_st_token; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1926,7 +1862,7 @@ CREATE TRIGGER set_modified_timestamp_st_token BEFORE UPDATE ON public.st_token 
 
 
 --
--- TOC entry 3191 (class 2620 OID 16770)
+-- TOC entry 3186 (class 2620 OID 16770)
 -- Name: st_user_group set_modified_timestamp_st_user_group; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1934,7 +1870,7 @@ CREATE TRIGGER set_modified_timestamp_st_user_group BEFORE UPDATE ON public.st_u
 
 
 --
--- TOC entry 3192 (class 2620 OID 16773)
+-- TOC entry 3187 (class 2620 OID 16773)
 -- Name: st_users set_modified_timestamp_st_users; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1942,7 +1878,7 @@ CREATE TRIGGER set_modified_timestamp_st_users BEFORE UPDATE ON public.st_users 
 
 
 --
--- TOC entry 3167 (class 2606 OID 16688)
+-- TOC entry 3162 (class 2606 OID 16688)
 -- Name: at_booking_people booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1951,7 +1887,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3169 (class 2606 OID 16698)
+-- TOC entry 3164 (class 2606 OID 16698)
 -- Name: at_bookings bookings_status_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1960,7 +1896,7 @@ ALTER TABLE ONLY public.at_bookings
 
 
 --
--- TOC entry 3168 (class 2606 OID 16693)
+-- TOC entry 3163 (class 2606 OID 16693)
 -- Name: at_booking_people user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1969,7 +1905,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3379 (class 0 OID 0)
+-- TOC entry 3373 (class 0 OID 0)
 -- Dependencies: 4
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: myuser
 --
@@ -1978,7 +1914,7 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
--- Completed on 2026-01-27 11:16:58
+-- Completed on 2026-02-03 16:53:24
 
 --
 -- PostgreSQL database dump complete

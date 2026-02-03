@@ -201,8 +201,8 @@ go build -gcflags="all=-N -l" -o apiserver
 ```
 
 ### Run/Stop/Connect demon from terminal
-`docker compose --profile prod up --build -d`
-`docker compose --profile prod up -d`
+`docker compose --profile prod up --build -d` This builds, then runs the app in demon mode
+`docker compose --profile prod up -d` This runs the (already built) app in demon mode
 `docker compose --profile prod down`
 
 To connect to the running apiserver via an interactive terminal

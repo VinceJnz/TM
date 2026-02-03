@@ -66,10 +66,10 @@ Instructions: <http://127.0.0.1:65398/help/help/backup_dialog.html>
 
 **Options**
 * Disable: defaults - all off
-* Miscellaneous: Verbose messages, remainder defaults - all off
+* Miscellaneous: Verbose messages - on, Remainder defaults - all off
 
 **Objects**
-* select public (all opbjects)
+* select public (all objects)
 
 
 
@@ -96,10 +96,10 @@ Instructions: <http://127.0.0.1:65398/help/help/backup_dialog.html>
 
 **Options**
 * Disable: defaults - all off
-* Miscellaneous: Verbose messages, remainder defaults - all off
+* Miscellaneous: Verbose messages - on, remainder defaults - all off
 
 **Objects**
-* select public (all opbjects)
+* select public (all objects)
 
 
 ### 3. Settings for Schema build (file name: dbserver-pgAdmin backup3.sql)
@@ -123,10 +123,10 @@ Instructions: <http://127.0.0.1:65398/help/help/backup_dialog.html>
 
 **Options**
 * Disable: defaults - all off
-* Miscellaneous: Verbose messages, remainder defaults - all off
+* Miscellaneous: Verbose messages - on, remainder defaults - all off
 
 **Objects**
-* select public (all opbjects)
+* select public (all objects)
 
 
 
