@@ -7,9 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -34,6 +36,68 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/logout/", h.AuthLogout).Methods("Get")
 	r.HandleFunc(baseURL+"/menuUser/", h.MenuUserGet).Methods("Get")
 	r.HandleFunc(baseURL+"/menuList/", h.MenuListGet).Methods("Get")
+	r.HandleFunc(baseURL+"/requestToken/", h.RequestLoginToken).Methods("POST")
+}
+
+// RequestLoginToken accepts {"username":"..."} or {"email":"..."} and sends a one-time token
+func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+	var err error
+	if payload.Username != "" {
+		user, err = dbAuthTemplate.UserNameReadQry(debugTag+"RequestLoginToken:byName ", h.appConf.Db, payload.Username)
+	} else if payload.Email != "" {
+		user, err = dbAuthTemplate.UserEmailReadQry(debugTag+"RequestLoginToken:byEmail ", h.appConf.Db, payload.Email)
+	} else {
+		http.Error(w, "username or email required", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		log.Printf("%v failed to find user: %v", debugTag, err)
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+	if !user.UserActive() {
+		log.Printf("%v user account not active: %v", debugTag, user.ID)
+		http.Error(w, "user account not active", http.StatusForbidden)
+		return
+	}
+
+	// Create one-time email token valid for 1 hour
+	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"RequestLoginToken", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, "_temp_email_token", time.Now().Add(1*time.Hour))
+	if err != nil {
+		log.Printf("%v failed to create email token: %v", debugTag, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Compose email
+	subject := "Your one-time login token"
+	body := fmt.Sprintf("Hi %s,\n\nUse this one-time token to log in: %s\n\nThis token expires in 1 hour.", user.Name, tokenCookie.Value)
+
+	// Send email using configured EmailSvc
+	if h.appConf.EmailSvc != nil {
+		if success, err := h.appConf.EmailSvc.SendMail(user.Email.String, subject, body); err != nil {
+			log.Printf("%v failed to send login token email: %v", debugTag, err)
+			// Fall back to logging the token for debugging
+			log.Printf("%v login token for %v: %v", debugTag, user.Email.String, tokenCookie.Value)
+		} else {
+			log.Printf("%v email sent successfully: %v", debugTag, success)
+		}
+	} else {
+		log.Printf("%v EmailSvc not configured; token for %v: %v", debugTag, user.Email.String, tokenCookie.Value)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("token sent"))
 }
 
 // RequireRestAuth checks that the request is authorised, i.e. the user has been given a cookie by loging on.

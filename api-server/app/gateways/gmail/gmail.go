@@ -184,6 +184,8 @@ func New(credentialsFile, tokenFile, from string) *Gateway {
 	}
 }
 
+// SendMail sends an email using the Gmail API. It constructs the email message, encodes it, and sends it through the Gmail service.
+// It returns true if the email was sent successfully, or false along with an error if there was an issue.
 func (s *Gateway) SendMail(to string, title string, message string) (bool, error) {
 	// Create the message
 	msgStr := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s", s.from, to, title, message)
