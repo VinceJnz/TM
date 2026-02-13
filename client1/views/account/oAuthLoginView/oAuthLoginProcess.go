@@ -3,6 +3,7 @@ package oAuthLoginView
 import (
 	"client1/v2/app/eventProcessor"
 	"syscall/js"
+	"strings"
 )
 
 //const debugTag = "aAuthLoginView."
@@ -79,8 +80,87 @@ func (editor *ItemEditor) authProcess() {
 					return nil
 				}))
 			} else {
-				// Not authenticated at all
-				editor.onCompletionMsg(debugTag + "Not authenticated; please log in.")
+				// Not authenticated at all -> prompt for username/email and perform OTP flow
+				editor.onCompletionMsg(debugTag + "Not authenticated; prompting for username/email.")
+
+				// Prompt user for username or email
+				idRes := js.Global().Call("prompt", "Enter username or email to receive a one-time login token:", "")
+				if idRes.IsUndefined() || idRes.IsNull() || idRes.String() == "" {
+					editor.onCompletionMsg(debugTag + "Login cancelled by user.")
+					return nil
+				}
+				identifier := idRes.String()
+
+				// Build request body
+				var bodyObj map[string]any
+				if strings.Contains(identifier, "@") {
+					bodyObj = map[string]any{"email": identifier}
+				} else {
+					bodyObj = map[string]any{"username": identifier}
+				}
+
+				// Request one-time token from server
+				req := js.Global().Call("fetch", "/api/v1/auth/requestToken/", map[string]any{
+					"method":      "POST",
+					"credentials": "include",
+					"headers":     map[string]any{"Content-Type": "application/json"},
+					"body":        js.Global().Get("JSON").Call("stringify", bodyObj),
+				})
+
+				req.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+					resp := args[0]
+					if resp.Get("ok").Bool() {
+						js.Global().Call("alert", "One-time token sent to your email. Please enter it when prompted.")
+					} else {
+						js.Global().Call("alert", "Failed to request token. Please try again.")
+						return nil
+					}
+
+					// Prompt for token
+					tokenRes := js.Global().Call("prompt", "Enter the one-time token sent to your email:", "")
+					if tokenRes.IsUndefined() || tokenRes.IsNull() || tokenRes.String() == "" {
+						editor.onCompletionMsg(debugTag + "Token input cancelled.")
+						return nil
+					}
+					token := tokenRes.String()
+
+					// Call a protected endpoint with the token in header so middleware can exchange it for a session cookie
+					menuWithToken := js.Global().Call("fetch", "/api/v1/auth/menuUser/", map[string]any{
+						"method":      "GET",
+						"credentials": "include",
+						"headers":     map[string]any{"X-Email-Token": token},
+					})
+
+					menuWithToken.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+						resp2 := args[0]
+						if resp2.Get("ok").Bool() {
+							jsonP := resp2.Call("json")
+							jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+								data := args[0]
+								name := ""
+								if n := data.Get("name"); n.Truthy() {
+									name = n.String()
+								}
+								if name == "" {
+									if e := data.Get("email"); e.Truthy() {
+										name = e.String()
+									}
+								}
+								if name == "" {
+									name = "(user)"
+								}
+								editor.LoggedIn = true
+								editor.loginComplete(name)
+								return nil
+							}))
+						} else {
+							editor.onCompletionMsg(debugTag + "Token login failed; please try again.")
+						}
+						return nil
+					}))
+
+					return nil
+				}))
 			}
 			return nil
 		}))
