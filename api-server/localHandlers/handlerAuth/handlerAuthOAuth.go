@@ -10,49 +10,57 @@ import (
 	"api-server/v2/models"
 )
 
+// The function RequireOAuthOrSessionAuth needs to do the following:
+//1. Check to see the the users is already logged in (It already deos this)
+//2. Try logging in using OAuth
+//3. Try using a password and emailed token for authentication.
+
 // RequireOAuthOrSessionAuth returns a middleware that accepts either a DB session cookie ("session")
 // or an OAuth session ("auth-session") from the provided gateway. It ensures an internal session
 // context (models.Session) is available for downstream handlers.
-
 func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var resource RestResource
-		var token models.Token
+		var dbToken models.Token
 		var accessCheck models.AccessCheck
 		var user models.User
 		var err error
 
-		// 1) Try existing DB session cookie
+		// 1) Try existing DB session cookie to see if the user is already logged in
 		if sc, err := r.Cookie("session"); err == nil {
-			if token, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sc.Value); err == nil {
+			if dbToken, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sc.Value); err == nil {
 				// build session context (same as RequireRestAuth)
 
-				resource, err = h.setRestResource(r)
-				if err != nil {
+				//resource, err = h.setRestResource(r)
+				if resource, err = h.setRestResource(r); err != nil {
 					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()1", "err =", err, "resource =", resource, "r =", r)
 					w.WriteHeader(http.StatusUnauthorized)
 					w.Write([]byte("Not authorised - You don't have access to the requested resource."))
 					return
-				} else {
-					// check access to resource
-					//accessCheck, err = h.UserCheckAccess(token.UserID, resource.ResourceName, resource.AccessMethod)
-					accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireOAuth()1a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
-					if err != nil {
-						log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()2", "err =", err, "resource =", resource, "r =", r)
-						w.WriteHeader(http.StatusUnauthorized)
-						w.Write([]byte("Not authorised - You don't have access to the requested resource."))
-						return
-					}
 				}
-				user, err = dbAuthTemplate.UserReadQry(debugTag+"", h.appConf.Db, token.UserID)
-				if err != nil {
+				// check access to resource
+				//accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireOAuth()1a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
+				if accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireOAuth()1a ", h.appConf.Db, dbToken.UserID, resource.ResourceName, resource.AccessMethod); err != nil {
+					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()2", "err =", err, "resource =", resource, "r =", r)
+					w.WriteHeader(http.StatusUnauthorized)
+					w.Write([]byte("Not authorised - You don't have access to the requested resource."))
+					return
+				}
+				// Check the user record is still valid/active
+				//user, err = dbAuthTemplate.UserReadQry(debugTag+"", h.appConf.Db, token.UserID)
+				if user, err = dbAuthTemplate.UserReadQry(debugTag+"", h.appConf.Db, dbToken.UserID); err != nil {
 					log.Printf("%v failed reading user record: %v", debugTag, err)
 					http.Error(w, "internal server error", http.StatusInternalServerError)
 					return
 				}
+				if !user.UserActive() {
+					log.Printf("%v user account not active: %v", debugTag, user.ID)
+					http.Error(w, "user account not active", http.StatusInternalServerError)
+					return
+				}
 				// 6) Attach session to context and continue
 				session := &models.Session{
-					UserID:         token.UserID,
+					UserID:         dbToken.UserID,
 					PrevURL:        resource.PrevURL,
 					ResourceName:   resource.ResourceName,
 					ResourceID:     0,
@@ -63,7 +71,7 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 					AdminFlag:      accessCheck.AdminFlag,
 					Email:          user.Email.String,
 				}
-
+				// 7) Give the user access
 				ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
@@ -116,7 +124,7 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 		} else {
 			// check access to resource
 			//accessCheck, err = h.UserCheckAccess(token.UserID, resource.ResourceName, resource.AccessMethod)
-			accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireOAuth()3a ", h.appConf.Db, token.UserID, resource.ResourceName, resource.AccessMethod)
+			accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireOAuth()3a ", h.appConf.Db, dbToken.UserID, resource.ResourceName, resource.AccessMethod)
 			if err != nil {
 				log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireOAuth()4", "err =", err, "resource =", resource, "r =", r)
 				w.WriteHeader(http.StatusUnauthorized)

@@ -36,12 +36,6 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/menuList/", h.MenuListGet).Methods("Get")
 }
 
-//RequireUserAuth The input to this is a function of the form "fn(Session, ResponseWriter, Request)"
-//The return from this function is "http.HandlerFunc"
-//This function uses an anonymouse function to form a closure around "var Session"
-// ??????? The CheckAccess function may need to be rewritten so that it can be called by each handler
-// ??????? or possibly be added as a seperate wrapper?????
-
 // RequireRestAuth checks that the request is authorised, i.e. the user has been given a cookie by loging on.
 func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
