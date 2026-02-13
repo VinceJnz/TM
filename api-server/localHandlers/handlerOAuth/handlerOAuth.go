@@ -19,7 +19,6 @@ import (
 	//oauthgw "your/module/path/app/gateways/oAuthGateway"
 
 	"api-server/v2/app/appCore"
-	oauthgw "api-server/v2/app/gateways/oAuthGateway/oAuthGateway"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 )
@@ -58,24 +57,16 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%vloginHandler()0 called: host=%s remote=%s cookies=%q", debugTag, r.Host, r.RemoteAddr, r.Header.Get("Cookie"))
-	session, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
+	// Create a DB-backed temporary token to hold the OAuth state and any pending registration data.
+	// The cookie value itself will be used as the `state` parameter for the OAuth flow.
+	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"loginHandler:", h.appConf.Db, true, 0, r.Host, "oauth-state", time.Now().Add(10*time.Minute))
 	if err != nil {
-		log.Printf("%vloginHandler()1 failed to get session: %v; cookies=%q; host=%s; remote=%s", debugTag, err, r.Header.Get("Cookie"), r.Host, r.RemoteAddr)
-		http.Error(w, "failed to get session", http.StatusInternalServerError)
+		log.Printf("%v loginHandler failed to create oauth-state token: %v", debugTag, err)
+		http.Error(w, "failed to create oauth state", http.StatusInternalServerError)
 		return
 	}
-
-	state, err := oauthgw.RandString(32)
-	if err != nil {
-		http.Error(w, "failed to generate state", http.StatusInternalServerError)
-		return
-	}
-
-	session.Values["oauth-state"] = state
-	if err := session.Save(r, w); err != nil {
-		http.Error(w, "failed to save session", http.StatusInternalServerError)
-		return
-	}
+	http.SetCookie(w, tokenCookie)
+	state := tokenCookie.Value
 
 	url := h.appConf.OAuthSvc.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"))
 	log.Printf("%vloginHandler()2 oAuth login: clientID=%s redirectURL=%s authURL=%s", debugTag, h.appConf.OAuthSvc.OAuthConfig.ClientID, h.appConf.OAuthSvc.OAuthConfig.RedirectURL, url)
@@ -85,19 +76,17 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 // callbackHandler handles the OAuth callback, exchanges the code for a token,
 // retrieves user info, and creates a session.
 func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
-	if err != nil {
-		http.Error(w, "failed to get session", http.StatusInternalServerError)
-		return
-	}
-
+	// Validate state by looking up the DB-backed oauth-state token
 	state := r.URL.Query().Get("state")
-	stored, _ := session.Values["oauth-state"].(string)
-	if state == "" || stored == "" || state != stored {
+	if state == "" {
 		http.Error(w, "invalid state", http.StatusForbidden)
 		return
 	}
-	delete(session.Values, "oauth-state")
+	tok, err := dbAuthTemplate.FindToken(debugTag+"callbackHandler:find_state", h.appConf.Db, "oauth-state", state)
+	if err != nil {
+		http.Error(w, "invalid state", http.StatusForbidden)
+		return
+	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -140,52 +129,61 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session.Values["user_id"] = sub
-	session.Values["email"] = userInfo["email"]
-	session.Values["name"] = userInfo["name"]
-	if err := session.Save(r, w); err != nil {
-		http.Error(w, "failed to save session", http.StatusInternalServerError)
-		return
+	// Persist user info in the oauth-state token's SessionData so middleware/endpoints can read it.
+	sd := map[string]any{}
+	if tok.SessionData.Valid {
+		_ = json.Unmarshal([]byte(tok.SessionData.String), &sd)
 	}
+	emailStr, _ := userInfo["email"].(string)
+	nameStr, _ := userInfo["name"].(string)
+	sd["user_id"] = sub
+	sd["email"] = emailStr
+	sd["name"] = nameStr
+	// remove any pending fields only after we consume them below (they will be applied to `user`)
+
+	sdBytes, _ := json.Marshal(sd)
+	tok.SessionData.SetValid(string(sdBytes))
+	_, _ = dbAuthTemplate.TokenWriteQry(debugTag+"callbackHandler:save_userdata", h.appConf.Db, tok)
 
 	// Attempt to create an internal DB-backed session immediately so the client
 	// (popup) will receive the standard 'session' cookie without needing to call /auth/ensure
-	emailStr, _ := session.Values["email"].(string)
-	nameStr, _ := session.Values["name"].(string)
 	user := models.User{}
 	user.Name = nameStr
 	user.Email.SetValid(emailStr)
 	user.Provider.SetValid("google")
 	user.ProviderID.SetValid(sub)
-	// If the client supplied pending registration info before starting the OAuth flow, apply it now
-	if pu, ok := session.Values["pending_username"].(string); ok && pu != "" {
-		user.Username = pu
-		delete(session.Values, "pending_username")
-	}
-	if pa, ok := session.Values["pending_address"].(string); ok && pa != "" {
-		user.Address.SetValid(pa)
-		delete(session.Values, "pending_address")
-	}
-	if pb, ok := session.Values["pending_birth_date"].(string); ok && pb != "" {
-		// Try RFC3339 then YYYY-MM-DD
-		var parsed time.Time
-		var perr error
-		parsed, perr = time.Parse(time.RFC3339, pb)
-		if perr != nil {
-			parsed, perr = time.Parse("2006-01-02", pb)
+	// If the oauth-state token contained pending registration fields, apply them now and remove them.
+	if tok.SessionData.Valid {
+		var sd2 map[string]any
+		_ = json.Unmarshal([]byte(tok.SessionData.String), &sd2)
+		if pu, ok := sd2["pending_username"].(string); ok && pu != "" {
+			user.Username = pu
+			delete(sd2, "pending_username")
 		}
-		if perr == nil {
-			user.BirthDate = zero.NewTime(parsed, true)
+		if pa, ok := sd2["pending_address"].(string); ok && pa != "" {
+			user.Address.SetValid(pa)
+			delete(sd2, "pending_address")
 		}
-		delete(session.Values, "pending_birth_date")
-	}
-	if ph, ok := session.Values["pending_account_hidden"].(bool); ok {
-		user.AccountHidden.SetValid(ph)
-		delete(session.Values, "pending_account_hidden")
-	}
-	// Save session after consuming pending data
-	if err := session.Save(r, w); err != nil {
-		log.Printf("%vcallbackHandler()8 callbackHandler: failed to save session after consuming pending registration: %v", debugTag, err)
+		if pb, ok := sd2["pending_birth_date"].(string); ok && pb != "" {
+			var parsed time.Time
+			var perr error
+			parsed, perr = time.Parse(time.RFC3339, pb)
+			if perr != nil {
+				parsed, perr = time.Parse("2006-01-02", pb)
+			}
+			if perr == nil {
+				user.BirthDate = zero.NewTime(parsed, true)
+			}
+			delete(sd2, "pending_birth_date")
+		}
+		if ph, ok := sd2["pending_account_hidden"].(bool); ok {
+			user.AccountHidden.SetValid(ph)
+			delete(sd2, "pending_account_hidden")
+		}
+		// Save updated token session data without the pending fields
+		newSD, _ := json.Marshal(sd2)
+		tok.SessionData.SetValid(string(newSD))
+		_, _ = dbAuthTemplate.TokenWriteQry(debugTag+"callbackHandler:clear_pending", h.appConf.Db, tok)
 	}
 
 	log.Printf("%vcallbackHandler()9 creating/upserting user: %+v", debugTag, user)
@@ -221,24 +219,36 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
-	uid, ok := session.Values["user_id"]
-	if !ok {
+	// Read DB-backed oauth-state token
+	c, err := r.Cookie("oauth-state")
+	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	tok, err := dbAuthTemplate.FindToken(debugTag+"meHandler:find_state", h.appConf.Db, "oauth-state", c.Value)
+	if err != nil || !tok.SessionData.Valid {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var sd map[string]any
+	_ = json.Unmarshal([]byte(tok.SessionData.String), &sd)
 	resp := map[string]any{
-		"user_id": uid,
-		"email":   session.Values["email"],
-		"name":    session.Values["name"],
+		"user_id": sd["user_id"],
+		"email":   sd["email"],
+		"name":    sd["name"],
 	}
 	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) logoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
-	session.Options.MaxAge = -1
-	_ = session.Save(r, w)
+	// Remove DB-backed oauth-state token and clear cookie
+	if c, err := r.Cookie("oauth-state"); err == nil {
+		if tok, err := dbAuthTemplate.FindToken(debugTag+"logoutHandler:find_state", h.appConf.Db, "oauth-state", c.Value); err == nil {
+			_ = dbAuthTemplate.TokenDeleteQry(debugTag+"logoutHandler:del", h.appConf.Db, tok.ID)
+		}
+		clear := &http.Cookie{Name: "oauth-state", Value: "", Path: "/", MaxAge: -1}
+		http.SetCookie(w, clear)
+	}
 	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect, http.StatusFound)
 }
 
@@ -300,27 +310,44 @@ func (h *Handler) PendingRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("%vPendingRegistration()1: req = %+v\n", debugTag, req)
 
-	sess, err := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
-	if err != nil {
-		http.Error(w, "failed to get session", http.StatusInternalServerError)
-		return
+	// Find or create DB-backed oauth-state token (so the pending data can be consumed after callback)
+	var tok models.Token
+	if c, err := r.Cookie("oauth-state"); err == nil {
+		if t, err := dbAuthTemplate.FindToken(debugTag+"PendingRegistration:find_state", h.appConf.Db, "oauth-state", c.Value); err == nil {
+			tok = t
+		}
+	}
+	if tok.ID == 0 {
+		// create a new oauth-state token and set cookie for client
+		cookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"PendingRegistration:create", h.appConf.Db, true, 0, r.Host, "oauth-state", time.Now().Add(10*time.Minute))
+		if err != nil {
+			http.Error(w, "failed to create session", http.StatusInternalServerError)
+			return
+		}
+		http.SetCookie(w, cookie)
+		if t, err := dbAuthTemplate.FindToken(debugTag+"PendingRegistration:find_after_create", h.appConf.Db, "oauth-state", cookie.Value); err == nil {
+			tok = t
+		}
+	}
+	sd := map[string]any{}
+	if tok.SessionData.Valid {
+		_ = json.Unmarshal([]byte(tok.SessionData.String), &sd)
 	}
 	if req.Username != "" {
-		sess.Values["pending_username"] = strings.TrimSpace(req.Username)
+		sd["pending_username"] = strings.TrimSpace(req.Username)
 	}
 	if req.Address != "" {
-		sess.Values["pending_address"] = req.Address
+		sd["pending_address"] = req.Address
 	}
 	if req.BirthDate != "" {
-		sess.Values["pending_birth_date"] = req.BirthDate
+		sd["pending_birth_date"] = req.BirthDate
 	}
 	if req.AccountHidden != nil {
-		sess.Values["pending_account_hidden"] = *req.AccountHidden
+		sd["pending_account_hidden"] = *req.AccountHidden
 	}
-	if err := sess.Save(r, w); err != nil {
-		http.Error(w, "failed to save session", http.StatusInternalServerError)
-		return
-	}
+	sdBytes, _ := json.Marshal(sd)
+	tok.SessionData.SetValid(string(sdBytes))
+	_, _ = dbAuthTemplate.TokenWriteQry(debugTag+"PendingRegistration:save", h.appConf.Db, tok)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"ok"}`))
 }

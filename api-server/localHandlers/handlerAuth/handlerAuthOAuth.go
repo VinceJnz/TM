@@ -2,6 +2,7 @@ package handlerAuth
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -79,9 +80,25 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 			// If DB lookup failed, continue to try OAuth session
 		}
 
-		// 2) Try OAuth session (gorilla/sessions store)
-		oauthSess, _ := h.appConf.OAuthSvc.Store.Get(r, "auth-session")
-		providerID, _ := oauthSess.Values["user_id"].(string)
+		// 2) Try OAuth session (DB-backed token named "oauth-state")
+		var providerID, email, name string
+		if c, err := r.Cookie("oauth-state"); err == nil {
+			if tok, err := dbAuthTemplate.FindToken(debugTag+"RequireOAuth:find_oauth_state", h.appConf.Db, "oauth-state", c.Value); err == nil {
+				var sd map[string]any
+				if tok.SessionData.Valid {
+					_ = json.Unmarshal([]byte(tok.SessionData.String), &sd)
+					if v, ok := sd["user_id"].(string); ok {
+						providerID = v
+					}
+					if v, ok := sd["email"].(string); ok {
+						email = v
+					}
+					if v, ok := sd["name"].(string); ok {
+						name = v
+					}
+				}
+			}
+		}
 		if providerID == "" {
 			// OAuth session not present. Try password + emailed token fallback (Basic auth or token)
 			// 3) Try password and emailed token for authentication.
@@ -240,9 +257,6 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 		}
 
 		// 3) Find or create an internal user record mapped to this provider
-		email, _ := oauthSess.Values["email"].(string)
-		name, _ := oauthSess.Values["name"].(string)
-
 		user = models.User{}
 		user.Name = name
 		user.Email.SetValid(email)
