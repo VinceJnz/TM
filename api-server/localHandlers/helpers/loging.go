@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -58,7 +59,10 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 		// Log the response status code and body
 		//log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
 		if lrw.statusCode != 0 && lrw.statusCode != 200 {
-			log.Printf(debugTag+`LogRequest()2 LogTag: %s, Response body: %v, status: %d`, logTag, lrw.body.String(), lrw.statusCode)
+			text := lrw.body.String()
+			cleaned := strings.ReplaceAll(text, "\r\n", "<p> ")
+			cleaned = strings.ReplaceAll(cleaned, "\n", "<p> ")
+			log.Printf(debugTag+`LogRequest()2 LogTag: %s, Response body: %v, status: %d`, logTag, cleaned, lrw.statusCode)
 		}
 
 		cookie, err := r.Cookie("session")
@@ -87,7 +91,7 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 			return
 		}
 
-		log.Printf(debugTag+`LogRequest {"HTTPinfo":%v}`, string(infoJSON))
+		log.Printf(debugTag+`LogRequest LogTag: %s, {"HTTPinfo":%v}`, logTag, string(infoJSON))
 	})
 }
 
