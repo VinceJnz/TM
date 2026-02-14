@@ -157,7 +157,8 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// If the OAuth flow was performed in a popup, send a postMessage back to the opener and close the popup.
 	// Otherwise, navigate back to the client application.
 	// Status indicates account is waiting for admin approval.
-	payload := map[string]string{"type": "accountCreated", "status": "pending_admin_approval", "email": emailStr, "name": nameStr}
+	// Use "loginComplete" type so existing client listeners handle the popup message.
+	payload := map[string]string{"type": "loginComplete", "status": "pending_admin_approval", "email": emailStr, "name": nameStr}
 	payloadJSON, _ := json.Marshal(payload)
 	clientRedirect := h.appConf.OAuthSvc.ClientRedirect
 	origin := clientRedirect

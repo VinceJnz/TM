@@ -170,10 +170,16 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store registration data in the token's SessionData field
-	// Note: This requires the token to be updated with SessionData
-	// For now, we'll log what should be sent
-	log.Printf("%v registration token created for %s/%s with data: %s", debugTag, username, email, string(regDataJSON))
+	// Store registration data in the token's SessionData field so it can be retrieved during verification
+	tok, err := dbAuthTemplate.FindToken(debugTag+"Register:findTokenToUpdate", h.appConf.Db, "registration-verification", tokenCookie.Value)
+	if err == nil {
+		tok.SessionData.SetValid(string(regDataJSON))
+		if _, err := dbAuthTemplate.TokenWriteQry(debugTag+"Register:updateSessionData", h.appConf.Db, tok); err != nil {
+			log.Printf("%v failed to update token SessionData: %v", debugTag, err)
+		}
+	} else {
+		log.Printf("%v registration token created but failed to locate DB token to store session data: %v", debugTag, err)
+	}
 
 	// Send verification email
 	subject := "Verify your email to complete registration"
@@ -236,6 +242,23 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v registration token has invalid UserID: %d", debugTag, tok.UserID)
 		http.Error(w, "invalid verification token", http.StatusForbidden)
 		return
+	}
+
+	// If username/email not supplied, try to read from token SessionData (persisted at registration)
+	if (payload.Username == "" || payload.Email == "") && tok.SessionData.Valid {
+		var sd map[string]string
+		if err := json.Unmarshal([]byte(tok.SessionData.String), &sd); err == nil {
+			if payload.Username == "" {
+				if v, ok := sd["username"]; ok {
+					payload.Username = v
+				}
+			}
+			if payload.Email == "" {
+				if v, ok := sd["email"]; ok {
+					payload.Email = v
+				}
+			}
+		}
 	}
 
 	// Create user account with AccountVerified status
