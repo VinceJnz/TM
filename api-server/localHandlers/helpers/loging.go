@@ -28,6 +28,7 @@ type HTTPInfo struct {
 	UserID        int64           `json:"UserID"`
 	TLSProtocol   string          `json:"TLSProtocol"`
 	Session       *models.Session `json:"Session,omitempty"`
+	ResponseBody  string          `json:"ResponseBody,omitempty"`
 }
 
 // LogRequest This is a MiddleWare handler that logs all request to the console
@@ -60,9 +61,9 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 		//log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
 		if lrw.statusCode != 0 && lrw.statusCode != 200 {
 			text := lrw.body.String()
-			cleaned := strings.ReplaceAll(text, "\r\n", "<p> ")
-			cleaned = strings.ReplaceAll(cleaned, "\n", "<p> ")
-			log.Printf(debugTag+`LogRequest()2 LogTag: %s, Response body: %v, status: %d`, logTag, cleaned, lrw.statusCode)
+			cleaned := strings.ReplaceAll(text, "\r\n", "<p>")
+			cleaned = strings.ReplaceAll(cleaned, "\n", "<p>")
+			info.ResponseBody = cleaned
 		}
 
 		cookie, err := r.Cookie("session")

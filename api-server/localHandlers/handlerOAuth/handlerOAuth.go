@@ -37,6 +37,7 @@ func New(appConf *appCore.Config) *Handler {
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/login", h.loginHandler).Methods("GET")
 	r.HandleFunc(baseURL+"/callback", h.callbackHandler).Methods("GET")
+	r.HandleFunc(baseURL+"/verify-email", h.VerifyEmail).Methods("GET", "POST") // Email verification endpoint
 	r.HandleFunc(baseURL+"/logout", h.logoutHandler).Methods("GET")
 	r.HandleFunc(baseURL+"/me", h.meHandler).Methods("GET")
 	// Temporary debug route (DEV only)
@@ -49,15 +50,14 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 // the middleware to create an internal session and set the "session" cookie for subsequent API calls.
 func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/ensure", h.OAuthEnsure).Methods("GET")
-	// Endpoint used to collect additional registration info from OAuth-first-time users (username, address, birthdate, accountHidden)
+	// Endpoint used to collect additional registration info from OAuth users after email verification (username, address, birthdate, accountHidden)
 	r.HandleFunc(baseURL+"/complete-registration", h.CompleteRegistration).Methods("POST")
-	// Endpoint to set pending registration data in the session before starting OAuth flow (UNPROTECTED)
-	r.HandleFunc(baseURL+"/pending-registration", h.PendingRegistration).Methods("POST")
 }
 
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%vloginHandler()0 called: host=%s remote=%s cookies=%q", debugTag, r.Host, r.RemoteAddr, r.Header.Get("Cookie"))
 	// Create a DB-backed temporary token to hold the OAuth state and any pending registration data.
+	// UserID=0 indicates an unauthenticated/temporary token.
 	// The cookie value itself will be used as the `state` parameter for the OAuth flow.
 	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"loginHandler:", h.appConf.Db, true, 0, r.Host, "oauth-state", time.Now().Add(10*time.Minute))
 	if err != nil {
@@ -87,6 +87,8 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid state", http.StatusForbidden)
 		return
 	}
+	// Delete the state token now that it's consumed (prevents replay)
+	defer dbAuthTemplate.TokenDeleteQry(debugTag+"callbackHandler:del_state", h.appConf.Db, tok.ID)
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -129,81 +131,33 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Persist user info in the oauth-state token's SessionData so middleware/endpoints can read it.
-	sd := map[string]any{}
-	if tok.SessionData.Valid {
-		_ = json.Unmarshal([]byte(tok.SessionData.String), &sd)
-	}
+	// Build user from provider info. Don't set session cookie yet—wait for email verification.
 	emailStr, _ := userInfo["email"].(string)
 	nameStr, _ := userInfo["name"].(string)
-	sd["user_id"] = sub
-	sd["email"] = emailStr
-	sd["name"] = nameStr
-	// remove any pending fields only after we consume them below (they will be applied to `user`)
-
-	sdBytes, _ := json.Marshal(sd)
-	tok.SessionData.SetValid(string(sdBytes))
-	_, _ = dbAuthTemplate.TokenWriteQry(debugTag+"callbackHandler:save_userdata", h.appConf.Db, tok)
-
-	// Attempt to create an internal DB-backed session immediately so the client
-	// (popup) will receive the standard 'session' cookie without needing to call /auth/ensure
 	user := models.User{}
 	user.Name = nameStr
 	user.Email.SetValid(emailStr)
 	user.Provider.SetValid("google")
 	user.ProviderID.SetValid(sub)
-	// If the oauth-state token contained pending registration fields, apply them now and remove them.
-	if tok.SessionData.Valid {
-		var sd2 map[string]any
-		_ = json.Unmarshal([]byte(tok.SessionData.String), &sd2)
-		if pu, ok := sd2["pending_username"].(string); ok && pu != "" {
-			user.Username = pu
-			delete(sd2, "pending_username")
-		}
-		if pa, ok := sd2["pending_address"].(string); ok && pa != "" {
-			user.Address.SetValid(pa)
-			delete(sd2, "pending_address")
-		}
-		if pb, ok := sd2["pending_birth_date"].(string); ok && pb != "" {
-			var parsed time.Time
-			var perr error
-			parsed, perr = time.Parse(time.RFC3339, pb)
-			if perr != nil {
-				parsed, perr = time.Parse("2006-01-02", pb)
-			}
-			if perr == nil {
-				user.BirthDate = zero.NewTime(parsed, true)
-			}
-			delete(sd2, "pending_birth_date")
-		}
-		if ph, ok := sd2["pending_account_hidden"].(bool); ok {
-			user.AccountHidden.SetValid(ph)
-			delete(sd2, "pending_account_hidden")
-		}
-		// Save updated token session data without the pending fields
-		newSD, _ := json.Marshal(sd2)
-		tok.SessionData.SetValid(string(newSD))
-		_, _ = dbAuthTemplate.TokenWriteQry(debugTag+"callbackHandler:clear_pending", h.appConf.Db, tok)
-	}
+	user.AccountStatusID.SetValid(int64(models.AccountNew)) // Set to unverified
 
 	log.Printf("%vcallbackHandler()9 creating/upserting user: %+v", debugTag, user)
 
 	userID, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v failed to upsert user: %v", debugTag, err)
-	} else {
-		sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"callbackHandler:", h.appConf.Db, userID, r.RemoteAddr, time.Time{})
-		if err != nil {
-			log.Printf("%v failed to create session token: %v", debugTag, err)
-		} else {
-			http.SetCookie(w, sessionToken)
-			log.Printf("%v created DB session for user %v", debugTag, userID)
-		}
+		http.Error(w, "failed to create user", http.StatusInternalServerError)
+		return
 	}
+
+	// OAuth email is already verified by the provider. User is created as AccountNew and requires admin approval.
+	// No email verification step needed.
+	log.Printf("%v OAuth user account created: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
 
 	// If the OAuth flow was performed in a popup, send a postMessage back to the opener and close the popup.
 	// Otherwise, navigate back to the client application.
-	payload := map[string]string{"type": "loginComplete", "name": nameStr, "email": emailStr}
+	// Status indicates account is waiting for admin approval.
+	payload := map[string]string{"type": "accountCreated", "status": "pending_admin_approval", "email": emailStr, "name": nameStr}
 	payloadJSON, _ := json.Marshal(payload)
 	clientRedirect := h.appConf.OAuthSvc.ClientRedirect
 	origin := clientRedirect
@@ -219,23 +173,26 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
-	// Read DB-backed oauth-state token
-	c, err := r.Cookie("oauth-state")
+	// Prefer an established DB session. If present, return the user info.
+	sc, err := r.Cookie("session")
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	tok, err := dbAuthTemplate.FindToken(debugTag+"meHandler:find_state", h.appConf.Db, "oauth-state", c.Value)
-	if err != nil || !tok.SessionData.Valid {
+	dbTok, err := dbAuthTemplate.FindSessionToken(debugTag+"meHandler:find_session", h.appConf.Db, sc.Value)
+	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var sd map[string]any
-	_ = json.Unmarshal([]byte(tok.SessionData.String), &sd)
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"meHandler:user", h.appConf.Db, dbTok.UserID)
+	if err != nil {
+		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		return
+	}
 	resp := map[string]any{
-		"user_id": sd["user_id"],
-		"email":   sd["email"],
-		"name":    sd["name"],
+		"user_id": user.ProviderID.String,
+		"email":   user.Email.String,
+		"name":    user.Name,
 	}
 	json.NewEncoder(w).Encode(resp)
 }
@@ -295,61 +252,78 @@ func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-// PendingRegistration stores registration fields in the session so they can be applied after the OAuth callback completes.
-// Client should POST these before opening the OAuth popup.
-func (h *Handler) PendingRegistration(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Username      string `json:"username"`
-		Address       string `json:"address"`
-		BirthDate     string `json:"birth_date"`
-		AccountHidden *bool  `json:"account_hidden"`
+// VerifyEmail validates the email verification token and creates a session cookie.
+// Client calls this after user clicks the verification link in their email.
+func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		// Also try from POST body
+		var req struct {
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err == nil && req.Token != "" {
+			tokenStr = req.Token
+		}
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+
+	if tokenStr == "" {
+		http.Error(w, "missing verification token", http.StatusBadRequest)
 		return
 	}
-	log.Printf("%vPendingRegistration()1: req = %+v\n", debugTag, req)
 
-	// Find or create DB-backed oauth-state token (so the pending data can be consumed after callback)
-	var tok models.Token
-	if c, err := r.Cookie("oauth-state"); err == nil {
-		if t, err := dbAuthTemplate.FindToken(debugTag+"PendingRegistration:find_state", h.appConf.Db, "oauth-state", c.Value); err == nil {
-			tok = t
-		}
+	// Find the email-verification token
+	tok, err := dbAuthTemplate.FindToken(debugTag+"VerifyEmail:find", h.appConf.Db, "email-verification", tokenStr)
+	if err != nil {
+		log.Printf("%v verification token not found or invalid: %v", debugTag, err)
+		http.Error(w, "invalid or expired verification token", http.StatusForbidden)
+		return
 	}
-	if tok.ID == 0 {
-		// create a new oauth-state token and set cookie for client
-		cookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"PendingRegistration:create", h.appConf.Db, true, 0, r.Host, "oauth-state", time.Now().Add(10*time.Minute))
-		if err != nil {
-			http.Error(w, "failed to create session", http.StatusInternalServerError)
-			return
-		}
-		http.SetCookie(w, cookie)
-		if t, err := dbAuthTemplate.FindToken(debugTag+"PendingRegistration:find_after_create", h.appConf.Db, "oauth-state", cookie.Value); err == nil {
-			tok = t
-		}
+
+	userID := tok.UserID
+	if userID == 0 {
+		log.Printf("%v verification token has no associated user", debugTag)
+		http.Error(w, "invalid verification token", http.StatusForbidden)
+		return
 	}
-	sd := map[string]any{}
-	if tok.SessionData.Valid {
-		_ = json.Unmarshal([]byte(tok.SessionData.String), &sd)
+
+	// Update user to AccountActive (verified)
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"VerifyEmail:read", h.appConf.Db, userID)
+	if err != nil {
+		log.Printf("%v failed to read user: %v", debugTag, err)
+		http.Error(w, "user not found", http.StatusInternalServerError)
+		return
 	}
-	if req.Username != "" {
-		sd["pending_username"] = strings.TrimSpace(req.Username)
+
+	user.AccountStatusID.SetValid(int64(models.AccountActive)) // Mark as verified
+	_, err = dbAuthTemplate.UserWriteQry(debugTag+"VerifyEmail:write", h.appConf.Db, user)
+	if err != nil {
+		log.Printf("%v failed to update user: %v", debugTag, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
-	if req.Address != "" {
-		sd["pending_address"] = req.Address
+
+	// Delete the verification token (one-time use)
+	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyEmail:del", h.appConf.Db, tok.ID)
+
+	// Create session cookie
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyEmail", h.appConf.Db, userID, r.RemoteAddr, time.Time{})
+	if err != nil {
+		log.Printf("%v failed to create session token: %v", debugTag, err)
+		http.Error(w, "failed to create session", http.StatusInternalServerError)
+		return
 	}
-	if req.BirthDate != "" {
-		sd["pending_birth_date"] = req.BirthDate
-	}
-	if req.AccountHidden != nil {
-		sd["pending_account_hidden"] = *req.AccountHidden
-	}
-	sdBytes, _ := json.Marshal(sd)
-	tok.SessionData.SetValid(string(sdBytes))
-	_, _ = dbAuthTemplate.TokenWriteQry(debugTag+"PendingRegistration:save", h.appConf.Db, tok)
+
+	http.SetCookie(w, sessionToken)
+	log.Printf("%v email verified and session created for user %d", debugTag, userID)
+
+	// Return user info
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"ok"}`))
+	json.NewEncoder(w).Encode(map[string]any{
+		"status": "verified",
+		"user_id": userID,
+		"email": user.Email.String,
+		"name": user.Name,
+	})
 }
 
 // CompleteRegistration updates additional profile info collected after OAuth registration.

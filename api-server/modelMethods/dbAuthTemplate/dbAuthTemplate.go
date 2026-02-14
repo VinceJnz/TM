@@ -86,7 +86,7 @@ func UserSetStatusID(debugStr string, Db *sqlx.DB, userID int, status models.Acc
 const (
 	sqlTokenDelete = `DELETE FROM st_token WHERE ID=$1`
 	sqlTokenFind   = `SELECT ID FROM st_token WHERE ID=$1`
-	sqlTokenInsert = `INSERT INTO st_token (user_iD, name, host, token, token_valid, valid_from, valid_to) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	sqlTokenInsert = `INSERT INTO st_token (user_iD, name, host, token, token_valid, valid_from, valid_to) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
 	sqlTokenRead   = `SELECT c.id, c.user_id, c.name, c.host, c.token, c.token_valid, c.valid_from, c.valid_to FROM st_token c WHERE c.ID=$1`
 	sqlTokenUpdate = `UPDATE st_token SET (user_id, name, host, token, token_valid, valid_from, valid_to) = ($2, $3, $4, $5, $6, $7, $8) WHERE id=$1`
 )
@@ -170,7 +170,7 @@ const (
 	//Finds only valid cookies where the user account is current
 	//if the user account is disabled or set to new it will not return the cookie
 	//if the cookie is not valid it will not return the cookie.
-	sqlFindSessionToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
+	sqlFindSessionToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.session_data, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		JOIN st_users stu ON stu.ID=stt.User_ID
 	WHERE stt.token=$1 AND stt.Name='session' AND stt.token_valid AND stu.user_account_status_ID=$2 AND stt.Valid_From < CURRENT_TIMESTAMP AND stt.Valid_To > CURRENT_TIMESTAMP`
@@ -178,7 +178,7 @@ const (
 
 	//Finds valid tokens where user account exists and the token name is the same as the name passed in
 	//Finds valid tokens where the token name is the same as the name passed in
-	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.token_valid, stt.Valid_From, stt.Valid_To
+	sqlFindToken = `SELECT stt.ID, stt.User_ID, stt.Name, stt.token, stt.session_data, stt.token_valid, stt.Valid_From, stt.Valid_To
 	FROM st_token stt
 		--JOIN st_users stu ON stu.ID=stt.User_ID
 		WHERE stt.token=$1 AND stt.Name=$2 AND stt.token_valid AND stt.Valid_From < CURRENT_TIMESTAMP AND stt.Valid_To > CURRENT_TIMESTAMP`
@@ -395,7 +395,7 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		tokenItem.Name.SetValid(sessionToken.Name)
 		tokenItem.Host.SetValid(host)
 		tokenItem.TokenStr.SetValid(sessionToken.Value)
-		tokenItem.SessionData.SetValid("")
+		//tokenItem.SessionData.SetValid("") // Not yet implemented. This can be used to store session data in JSON format.
 		tokenItem.Valid.SetValid(true)
 		tokenItem.ValidFrom.SetValid(time.Now())
 		tokenItem.ValidTo.SetValid(time.Now().Add(1 * time.Hour))
