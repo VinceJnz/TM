@@ -43,7 +43,7 @@ const (
 // ********************* This needs to be changed for each api **********************
 // const ApiURL = "/auth"
 // const ApiURL = "/oauth/google/"
-const ApiURL = "/auth/oauth/"
+const ApiURL = "/auth/oauth"
 const ApiURL2 = "/api/v1" + ApiURL
 
 // ********************* This needs to be changed for each api **********************
