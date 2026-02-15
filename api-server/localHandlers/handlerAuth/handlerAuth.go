@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const debugTag = "handlerAuth."
@@ -42,6 +43,9 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/verify-registration", h.VerifyRegistration).Methods("POST")
 	r.HandleFunc(baseURL+"/login", h.LoginSendOTP).Methods("POST")
 	r.HandleFunc(baseURL+"/verify-otp", h.VerifyOTP).Methods("POST")
+	// Password-based login endpoints
+	r.HandleFunc(baseURL+"/login-password", h.LoginWithPassword).Methods("POST")
+	r.HandleFunc(baseURL+"/verify-password-otp", h.VerifyPasswordOTP).Methods("POST")
 }
 
 // RequestLoginToken accepts {"username":"..."} or {"email":"..."} and sends a one-time token
@@ -218,6 +222,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		Token    string `json:"token"`
 		Username string `json:"username"`
 		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -268,6 +273,21 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	user.AccountStatusID.SetValid(int64(models.AccountVerified)) // Email verified, pending admin approval
 	user.Created = time.Now()
 	user.Modified = time.Now()
+
+	// Hash password if provided
+	if payload.Password != "" {
+		if len(payload.Password) < 8 {
+			http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
+			return
+		}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("%v failed to hash password: %v", debugTag, err)
+			http.Error(w, "failed to process password", http.StatusInternalServerError)
+			return
+		}
+		user.Password.SetValid(string(hashedPassword))
+	}
 
 	// Create user in database
 	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"VerifyRegistration:create", h.appConf.Db, user)
@@ -597,4 +617,178 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(user)
+}
+
+// LoginWithPassword accepts username and password, validates them, and sends an OTP token via email.
+// Expects: {"username": "...", "password": "..."}
+// Returns: OTP sent to registered email
+func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Username == "" || payload.Password == "" {
+		http.Error(w, "username and password required", http.StatusBadRequest)
+		return
+	}
+
+	// Look up user by username
+	user, err := dbAuthTemplate.UserNameReadQry(debugTag+"LoginWithPassword:find ", h.appConf.Db, payload.Username)
+	if err != nil {
+		// Don't reveal whether user exists - send generic response for security
+		log.Printf("%v user not found for password login: %v", debugTag, err)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("invalid username or password"))
+		return
+	}
+
+	// Check if user account is active
+	if user.AccountStatusID.IsZero() || models.AccountStatus(user.AccountStatusID.Int64) != models.AccountActive {
+		log.Printf("%v user account not active: %v", debugTag, user.ID)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("invalid username or password"))
+		return
+	}
+
+	// Validate password using bcrypt
+	if user.Password.IsZero() {
+		// User has no password set
+		log.Printf("%v user has no password set: %v", debugTag, user.ID)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("invalid username or password"))
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password.String), []byte(payload.Password))
+	if err != nil {
+		log.Printf("%v password validation failed for user %d: %v", debugTag, user.ID, err)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("invalid username or password"))
+		return
+	}
+
+	// Password is valid; now create and send OTP token
+	otpToken, err := dbAuthTemplate.CreateNamedToken(debugTag+"LoginWithPassword", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, "password-login-otp", time.Now().Add(15*time.Minute))
+	if err != nil {
+		log.Printf("%v failed to create OTP token: %v", debugTag, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Compose email
+	subject := "Your one-time password (OTP)"
+	body := fmt.Sprintf("Hi %s,\n\nYour one-time password is: %s\n\nThis code expires in 15 minutes. Enter this code to log in.\n\nIf you didn't request this, please ignore this email.", user.Name, otpToken.Value)
+
+	// Send email
+	if h.appConf.EmailSvc != nil {
+		if success, err := h.appConf.EmailSvc.SendMail(user.Email.String, subject, body); err != nil {
+			log.Printf("%v failed to send OTP email: %v", debugTag, err)
+			// Delete token if email failed
+			tok, err := dbAuthTemplate.FindToken(debugTag+"LoginWithPassword:findTokenForDeletion", h.appConf.Db, "password-login-otp", otpToken.Value)
+			if err == nil {
+				_ = dbAuthTemplate.TokenDeleteQry(debugTag+"LoginWithPassword:del_on_failure", h.appConf.Db, tok.ID)
+			}
+			http.Error(w, "failed to send OTP email", http.StatusInternalServerError)
+			return
+		} else {
+			log.Printf("%v OTP email sent successfully: %v", debugTag, success)
+		}
+	} else {
+		log.Printf("%v EmailSvc not configured; OTP for %v: %v", debugTag, user.Email.String, otpToken.Value)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "otp_sent",
+		"message": "OTP sent to your email",
+		"email":   user.Email.String,
+	})
+}
+
+// VerifyPasswordOTP verifies an OTP token received after password login and creates a session.
+// Expects: {"token": "...", "remember_me": true/false}
+// Returns: session cookie with user info
+func (h *Handler) VerifyPasswordOTP(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Token      string `json:"token"`
+		RememberMe bool   `json:"remember_me"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Token == "" {
+		http.Error(w, "token required", http.StatusBadRequest)
+		return
+	}
+
+	// Find the OTP token
+	tok, err := dbAuthTemplate.FindToken(debugTag+"VerifyPasswordOTP:find", h.appConf.Db, "password-login-otp", payload.Token)
+	if err != nil {
+		log.Printf("%v OTP token not found or invalid: %v", debugTag, err)
+		http.Error(w, "invalid or expired OTP", http.StatusForbidden)
+		return
+	}
+
+	userID := tok.UserID
+	if userID == 0 {
+		log.Printf("%v OTP token has no associated user", debugTag)
+		http.Error(w, "invalid OTP token", http.StatusForbidden)
+		return
+	}
+
+	// Read user record
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"VerifyPasswordOTP:read", h.appConf.Db, userID)
+	if err != nil {
+		log.Printf("%v failed to read user: %v", debugTag, err)
+		http.Error(w, "user not found", http.StatusInternalServerError)
+		return
+	}
+
+	// Check user is still active
+	if !user.UserActive() {
+		log.Printf("%v user account not active: %v", debugTag, user.ID)
+		http.Error(w, "user account not active", http.StatusForbidden)
+		return
+	}
+
+	// Delete the OTP token (one-time use)
+	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyPasswordOTP:del", h.appConf.Db, tok.ID)
+
+	// Create session with appropriate expiry
+	// If remember_me is true, session lasts 30 days; otherwise use default
+	var sessionExpiry time.Time
+	if payload.RememberMe {
+		sessionExpiry = time.Now().Add(30 * 24 * time.Hour) // 30 days
+	} else {
+		sessionExpiry = time.Time{} // Use default expiry
+	}
+
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyPasswordOTP", h.appConf.Db, userID, r.RemoteAddr, sessionExpiry)
+	if err != nil {
+		log.Printf("%v failed to create session token: %v", debugTag, err)
+		http.Error(w, "failed to create session", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, sessionToken)
+	log.Printf("%v password OTP verified and session created for user %d (remember_me=%v)", debugTag, userID, payload.RememberMe)
+
+	// Return user info
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]any{
+		"status":   "logged_in",
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email.String,
+		"name":     user.Name,
+	})
 }

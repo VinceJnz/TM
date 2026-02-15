@@ -155,6 +155,16 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// No email verification step needed.
 	log.Printf("%vcallbackHandler()10 oAuth user account created/updated: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
 
+	// Create and set session cookie so subsequent API calls (e.g., /ensure) will be authenticated.
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"callbackHandler", h.appConf.Db, userID, r.RemoteAddr, time.Time{})
+	if err != nil {
+		log.Printf("%v failed to create session token: %v", debugTag, err)
+		http.Error(w, "failed to create session", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, sessionToken)
+	log.Printf("%vcallbackHandler()10.5 session cookie created for user %d", debugTag, userID)
+
 	// If the oAuth flow was performed in a popup, send a postMessage back to the opener and close the popup.
 	// Otherwise, navigate back to the client application.
 	// Status indicates account is waiting for admin approval.
