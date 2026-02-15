@@ -7,9 +7,19 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type userState int
+
+const (
+	userStateUnknown userState = iota
+	userStateUpdated
+	userStateCreated
+	userStateNotFound
+)
+
 // func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, provider, providerID, email, name string) (int, error) {
 func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) (int, error) {
 	var userID int
+	//var userStatus userState
 	err := Db.Get(&userID, `SELECT id FROM users WHERE provider=$1 AND provider_id=$2`, user.Provider, user.ProviderID)
 	if err == nil {
 		// found existing user
@@ -21,6 +31,9 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		// found existing user by email, merge provider info into the existing user
 		log.Printf("%vFindOrCreateUserByProvider()1 - user found by email, merging provider info: incoming user = %+v, userFromDB = %+v", debugStr, user, userFromDB)
 		user.ID = userFromDB.ID
+		//if !user.Equal(&userFromDB) {
+		//	userStatus = userStateUpdated
+		//}
 		// Preserve existing fields when incoming values are empty.
 		if user.Name == "" {
 			user.Name = userFromDB.Name
@@ -47,7 +60,7 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		if !user.ProviderID.Valid || user.ProviderID.String == "" {
 			user.ProviderID = userFromDB.ProviderID
 		}
-		log.Printf("%vFindOrCreateUserByProvider()2 - merged user to upsert: %+v", debugStr, user)
+		log.Printf("%vFindOrCreateUserByProvider()2 - merged user data: %+v", debugStr, user)
 
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider ", Db, user)
 		if err != nil {
@@ -55,11 +68,19 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		}
 	} else {
 		// No existing user found by provider or email: insert a new user so provider info is persisted
+		//userStatus = userStateCreated
 		log.Printf("%vFindOrCreateUserByProvider()3 - no existing user found; inserting new user: %+v", debugStr, user)
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider:insert ", Db, user)
 		if err != nil {
 			return 0, err
 		}
 	}
+
+	//switch userStatus {
+	//case userStateUpdated:
+	//	return userID, errors.New("user account updated with new information from OAuth provider; pending admin approval if account was previously inactive")
+	//case userStateCreated:
+	//	return userID, errors.New("user account created with information from OAuth provider; pending admin approval")
+	//}
 	return userID, nil
 }

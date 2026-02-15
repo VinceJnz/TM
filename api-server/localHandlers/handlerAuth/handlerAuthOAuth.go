@@ -78,7 +78,7 @@ func (h *Handler) RequireOAuthOrSessionAuth(next http.Handler) http.Handler {
 			}
 			// If DB lookup failed, continue to try OAuth session
 		}
-		log.Printf("%v no valid DB session, trying OAuth session\n", debugTag)
+		log.Printf("%vRequireOAuthOrSessionAuth()3 no valid DB session, trying OAuth session\n", debugTag)
 		// 2) Try OAuth session (DB-backed token named "oauth-state")
 
 		/*

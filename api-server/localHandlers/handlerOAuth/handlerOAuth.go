@@ -54,12 +54,13 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/complete-registration", h.CompleteRegistration).Methods("POST")
 }
 
+// loginHandler initiates the OAuth flow by creating a temporary DB-backed token to hold the state and pending registration data, then redirects the user to the provider's auth URL with the state parameter. The callbackHandler will validate the state and complete the login/registration process.
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%vloginHandler()0 called: host=%s remote=%s cookies=%q", debugTag, r.Host, r.RemoteAddr, r.Header.Get("Cookie"))
+	log.Printf("%vloginHandler()0 called: r.host=%s, settings.host=%v, r.remote=%s r.cookies=%q", debugTag, r.Host, h.appConf.Settings.Host, r.RemoteAddr, r.Header.Get("Cookie"))
 	// Create a DB-backed temporary token to hold the OAuth state and any pending registration data.
 	// UserID=0 indicates an unauthenticated/temporary token.
 	// The cookie value itself will be used as the `state` parameter for the OAuth flow.
-	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"loginHandler:", h.appConf.Db, true, 0, r.Host, "oauth-state", time.Now().Add(10*time.Minute))
+	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"loginHandler:", h.appConf.Db, true, 0, h.appConf.Settings.Host, "oauth-state", time.Now().Add(10*time.Minute))
 	if err != nil {
 		log.Printf("%v loginHandler failed to create oauth-state token: %v", debugTag, err)
 		http.Error(w, "failed to create oauth state", http.StatusInternalServerError)
@@ -152,9 +153,9 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	// OAuth email is already verified by the provider. User is created as AccountNew and requires admin approval.
 	// No email verification step needed.
-	log.Printf("%v OAuth user account created: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
+	log.Printf("%vcallbackHandler()10 oAuth user account created/updated: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
 
-	// If the OAuth flow was performed in a popup, send a postMessage back to the opener and close the popup.
+	// If the oAuth flow was performed in a popup, send a postMessage back to the opener and close the popup.
 	// Otherwise, navigate back to the client application.
 	// Status indicates account is waiting for admin approval.
 	// Use "loginComplete" type so existing client listeners handle the popup message.
@@ -171,6 +172,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>")
 	fmt.Fprintf(w, "<script>\n(function(){\n  var payload = %s;\n  var origin = %q;\n  if (window.opener && !window.opener.closed) {\n    try { window.opener.postMessage(payload, origin); } catch(e) { window.opener.postMessage(payload, '*'); }\n    window.close();\n  } else {\n    window.location = origin;\n  }\n})();\n</script>", payloadJSON, origin)
 	fmt.Fprintf(w, "</body></html>")
+	log.Printf("%vcallbackHandler()11 sent postMessage to client: payload=%s origin=%s", debugTag, payloadJSON, origin)
 }
 
 func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
@@ -320,10 +322,10 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	// Return user info
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"status": "verified",
+		"status":  "verified",
 		"user_id": userID,
-		"email": user.Email.String,
-		"name": user.Name,
+		"email":   user.Email.String,
+		"name":    user.Name,
 	})
 }
 

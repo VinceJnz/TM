@@ -145,3 +145,40 @@ func (u *UserDeviceRegistration) IsValid() error {
 	}
 	return nil
 }
+
+func (u *User) Equal(other *User) bool {
+	return u.ID == other.ID &&
+		u.Name == other.Name &&
+		u.Username == other.Username &&
+		u.Email.String == other.Email.String &&
+		u.Address.String == other.Address.String &&
+		u.MemberCode.String == other.MemberCode.String &&
+		u.BirthDate.Time.Equal(other.BirthDate.Time) &&
+		u.MemberStatusID.Int64 == other.MemberStatusID.Int64 &&
+		u.AccountStatusID.Int64 == other.AccountStatusID.Int64 &&
+		u.AccountHidden.Bool == other.AccountHidden.Bool
+}
+
+/*
+	ID              int         `json:"id" db:"id"`
+	Name            string      `json:"name" db:"name"`
+	Username        string      `json:"username" db:"username"` //WebAuthn json:"displayName"
+	Email           zero.String `json:"email" db:"email"`
+	Address         zero.String `json:"user_address" db:"user_address"`
+	MemberCode      zero.String `json:"member_code" db:"member_code"`
+	BirthDate       zero.Time   `json:"user_birth_date" db:"user_birth_date"` //This can be used to calculate what age group to apply
+	UserAgeGroupID  zero.Int    `json:"user_age_group_id" db:"user_age_group_id"`
+	MemberStatusID  zero.Int    `json:"member_status_id" db:"member_status_id"`
+	MemberStatus    zero.String `json:"member_status" db:"member_status"`
+	Password        zero.String `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
+	Salt            []byte      `json:"salt" db:"salt"`
+	Verifier        *big.Int    `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
+	AccountStatusID zero.Int    `json:"user_account_status_id" db:"user_account_status_id"`
+	AccountHidden   zero.Bool   `json:"user_account_hidden" db:"user_account_hidden"`
+	//WebAuthnUserID  []byte                `json:"webauthn_user_id" db:"webauthn_user_id"` // This is the WebAuthn ID (user handle), which is a byte slice representation of the user ID. This does not change.
+	Credentials []webauthn.Credential `json:"credentials" db:"credentials"` // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
+	Provider    zero.String           `json:"provider" db:"provider"`       // OAuth provider name (e.g., "google", "facebook")
+	ProviderID  zero.String           `json:"provider_id" db:"provider_id"` // OAuth provider user ID
+	Created     time.Time             `json:"created" db:"created"`
+	Modified    time.Time             `json:"modified" db:"modified"`
+*/

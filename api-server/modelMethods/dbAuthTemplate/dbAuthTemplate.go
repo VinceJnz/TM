@@ -120,6 +120,7 @@ func TokenWriteQry(debugStr string, Db *sqlx.DB, record models.Token) (int, erro
 }
 
 func TokenDeleteQry(debugStr string, Db *sqlx.DB, recordID int) error {
+	log.Printf("%v %v %v", debugTag+"TokenDeleteQry()1."+debugStr, "recordID =", recordID)
 	_, err := Db.Exec(sqlTokenDelete, recordID)
 	return err
 }
@@ -149,6 +150,8 @@ func TokenCleanOld(debugStr string, Db *sqlx.DB, recordID int) error {
 		log.Printf("%v %v %v %v %v %v %+v %v %v\n", debugTag+"TokenCleanOld()2", "err =", err, "recordID", recordID, "result", result, "rowsAffected =", rowsAffected)
 		return err
 	}
+	log.Printf("%v %v %v %v %v %v %+v %v %v\n", debugTag+"TokenCleanOld()3", "err =", err, "recordID", recordID, "result", result, "rowsAffected =", rowsAffected)
+
 	return nil
 }
 
@@ -164,6 +167,7 @@ func TokenCleanExpired(debugStr string, Db *sqlx.DB) error {
 		log.Printf("%v %v %v %v %+v %v %v\n", debugTag+"TokenCleanExpired()2", "err =", err, "result", result, "rowsAffected =", rowsAffected)
 		return err
 	}
+	log.Printf("%v %v %v %v %+v %v %v\n", debugTag+"TokenCleanExpired()3", "err =", err, "result", result, "rowsAffected =", rowsAffected)
 	return nil
 }
 
@@ -415,6 +419,6 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 			}
 		}
 	}
-	log.Printf("%v %v %v %v %v %v %v %v %v", debugTag+"CreateNamedToken()5: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
+	log.Printf("%v %v %v %v %v %v %v %+v %+v", debugTag+"CreateNamedToken()5: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
 	return sessionToken, err
 }
