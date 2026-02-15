@@ -46,6 +46,28 @@ func BooleanEdit(value bool, document js.Value, labelText string, inputType stri
 	return fieldset, input
 }
 
+// ActionGroup creates a fieldset to group action buttons.
+func ActionGroup(document js.Value, htmlID string, children ...js.Value) js.Value {
+	fieldset := document.Call("createElement", "fieldset")
+	fieldset.Set("className", "input-group")
+	fieldset.Set("id", htmlID)
+	for _, child := range children {
+		fieldset.Call("appendChild", child)
+	}
+	return fieldset
+}
+
+// InputGroup wraps elements in a div with the input-group class.
+func InputGroup(document js.Value, htmlID string, children ...js.Value) js.Value {
+	div := document.Call("createElement", "div")
+	div.Set("className", "input-group")
+	div.Set("id", htmlID)
+	for _, child := range children {
+		div.Call("appendChild", child)
+	}
+	return div
+}
+
 func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn func()) js.Value {
 	itemDiv := document.Call("createElement", "div")
 	itemDiv.Set("id", debugTag+"itemDiv")

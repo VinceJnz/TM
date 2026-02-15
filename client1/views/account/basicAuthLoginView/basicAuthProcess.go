@@ -16,13 +16,23 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
+	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
+	editor.CurrentRecord.BirthDate = editor.UiComponents.BirthDate.Get("value").String()
+	editor.CurrentRecord.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
 	//editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
 
 	if editor.CurrentRecord.Username == "" || editor.CurrentRecord.Password == "" || editor.CurrentRecord.Email == "" {
 		js.Global().Call("alert", "username, email, and password required")
 		return nil
 	}
-	payload := map[string]string{"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "password": editor.CurrentRecord.Password}
+	payload := map[string]any{
+		"username":       editor.CurrentRecord.Username,
+		"email":          editor.CurrentRecord.Email,
+		"password":       editor.CurrentRecord.Password,
+		"address":        editor.CurrentRecord.Address,
+		"birth_date":     editor.CurrentRecord.BirthDate,
+		"account_hidden": editor.CurrentRecord.AccountHidden,
+	}
 	if editor.client == nil {
 		js.Global().Call("alert", "no http client available")
 		return nil
@@ -32,6 +42,10 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 			if err != nil {
 				js.Global().Call("alert", "registration failed: "+err.Error())
 				return
+			}
+			if editor.UiComponents.Token.Truthy() {
+				editor.UiComponents.Token.Set("disabled", false)
+				editor.UiComponents.Token.Call("focus")
 			}
 			js.Global().Call("alert", "verification token sent to your email")
 		},
@@ -48,7 +62,6 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 	}
 
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
 	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
 
@@ -71,50 +84,25 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 	return nil
 }
 
-// handleLoginSubmit sends OTP to username/email
-func (editor *ItemEditor) handleLoginSubmit(this js.Value, args []js.Value) interface{} {
-	if len(args) > 0 {
-		args[0].Call("preventDefault")
-	}
-
-	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
-	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
-	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
-
-	if editor.CurrentRecord.Username == "" && editor.CurrentRecord.Email == "" {
-		js.Global().Call("alert", "enter username or email")
-		return nil
-	}
-	payload := map[string]string{"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email}
-	editor.client.NewRequest("POST", ApiURL+"/login", nil, payload,
-		func(err error, rd *httpProcessor.ReturnData) {
-			// return message is generic to avoid user enumeration
-			js.Global().Call("alert", "If the account exists, an OTP has been sent to the email address")
-		},
-		func(err error, rd *httpProcessor.ReturnData) {
-			js.Global().Call("alert", "failed to send OTP: "+err.Error())
-		})
-	return nil
-}
-
-// handleLoginWithPassword submits {username,password} to /auth/login-password
+// handleLoginWithPassword submits {username/email,password} to /auth/login-password
 func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value) interface{} {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
 	}
 
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
-	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
+	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 
-	if editor.CurrentRecord.Username == "" || editor.CurrentRecord.Password == "" {
-		js.Global().Call("alert", "username and password required")
+	if editor.CurrentRecord.Username == "" && editor.CurrentRecord.Email == "" {
+		js.Global().Call("alert", "enter username or email")
 		return nil
 	}
-	payload := map[string]string{"username": editor.CurrentRecord.Username, "password": editor.CurrentRecord.Password}
-	// mark that the last login method used was password; verify step will use verify-password-otp
+	if editor.CurrentRecord.Password == "" {
+		js.Global().Call("alert", "password required")
+		return nil
+	}
+	payload := map[string]string{"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "password": editor.CurrentRecord.Password}
 	editor.client.NewRequest("POST", ApiURL+"/login-password", nil, payload,
 		func(err error, rd *httpProcessor.ReturnData) {
 			if err != nil {
@@ -123,9 +111,10 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 			}
 			// signal to user and set method for verify
 			js.Global().Call("alert", "If the credentials are valid, an OTP has been sent to the email on the account")
-			// store login method on the editor (used by verify)
-			// use JS field on the div to avoid changing struct too much
-			editor.Elements.Div.Set("data-login-method", "password")
+			if editor.UiComponents.Token.Truthy() {
+				editor.UiComponents.Token.Set("disabled", false)
+				editor.UiComponents.Token.Call("focus")
+			}
 		},
 		func(err error, rd *httpProcessor.ReturnData) {
 			js.Global().Call("alert", "password login error: "+err.Error())
@@ -140,7 +129,6 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 	}
 
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
 	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
 	editor.CurrentRecord.Remember = editor.UiComponents.Remember.Get("checked").Bool()
@@ -151,12 +139,7 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 	}
 	payload := map[string]any{"token": editor.CurrentRecord.Token, "remember_me": editor.CurrentRecord.Remember}
 	var resp map[string]any
-	// choose verification endpoint depending on login method used
-	verifyEndpoint := ApiURL + "/verify-otp"
-	if editor.Elements.Div.Get("data-login-method").String() == "password" {
-		verifyEndpoint = ApiURL + "/verify-password-otp"
-	}
-	editor.client.NewRequest("POST", verifyEndpoint, &resp, payload,
+	editor.client.NewRequest("POST", ApiURL+"/verify-password-otp", &resp, payload,
 		func(err error, rd *httpProcessor.ReturnData) {
 			if err != nil {
 				js.Global().Call("alert", "OTP verify failed: "+err.Error())
@@ -172,8 +155,6 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 			if editor.events != nil {
 				editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: "basicAuthLoginView", Data: name})
 			}
-			// clear login method after success
-			editor.Elements.Div.Set("data-login-method", "")
 		},
 		func(err error, rd *httpProcessor.ReturnData) {
 			js.Global().Call("alert", "OTP verification error: "+err.Error())
@@ -184,71 +165,64 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 func (editor *ItemEditor) regForm() js.Value {
 	// registration form
 	regForm := viewHelpers.Form(editor.handleRegisterSubmit, editor.document, "regForm")
-	editor.UiComponents.Username = viewHelpers.Input("", editor.document, "Username", "text", "regUsername")
-	editor.UiComponents.Email = viewHelpers.Input("", editor.document, "Email", "email", "regEmail")
-	editor.UiComponents.Password = viewHelpers.Input("", editor.document, "Password", "password", "regPassword")
-	editor.UiComponents.Token = viewHelpers.Input("", editor.document, "Verification Token", "text", "verToken")
-	//regForm.Call("appendChild", viewHelpers.Label(editor.document, "Username:", "regUsername"))
-	regForm.Call("appendChild", editor.UiComponents.Username)
-	//regForm.Call("appendChild", viewHelpers.Label(editor.document, "Email:", "regEmail"))
-	regForm.Call("appendChild", editor.UiComponents.Email)
-	regForm.Call("appendChild", editor.UiComponents.Password)
-	regForm.Call("appendChild", editor.UiComponents.Token)
-	regForm.Call("appendChild", viewHelpers.SubmitButton(editor.document, "Register", "regSubmit"))
+	regUserObj, regUserInp := viewHelpers.StringEdit("", editor.document, "Username", "text", "regUsername")
+	regEmailObj, regEmailInp := viewHelpers.StringEdit("", editor.document, "Email", "email", "regEmail")
+	regPassObj, regPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "regPassword")
+	regAddressObj, regAddressInp := viewHelpers.StringEdit("", editor.document, "Address", "text", "regAddress")
+	regBirthObj, regBirthInp := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "regBirthDate")
+	regHiddenObj, regHiddenInp := viewHelpers.BooleanEdit(false, editor.document, "Account Hidden", "checkbox", "regAccountHidden")
+	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "OTP Token", "text", "regToken")
+	regTokenInp.Set("disabled", true)
+	editor.UiComponents.Username = regUserInp
+	editor.UiComponents.Email = regEmailInp
+	editor.UiComponents.Password = regPassInp
+	editor.UiComponents.Address = regAddressInp
+	editor.UiComponents.BirthDate = regBirthInp
+	editor.UiComponents.AccountHidden = regHiddenInp
+	editor.UiComponents.Token = regTokenInp
+	regForm.Call("appendChild", regUserObj)
+	regForm.Call("appendChild", regEmailObj)
+	regForm.Call("appendChild", regPassObj)
+	regForm.Call("appendChild", regAddressObj)
+	regForm.Call("appendChild", regBirthObj)
+	regForm.Call("appendChild", regHiddenObj)
+	regForm.Call("appendChild", regTokenObj)
+	regActions := viewHelpers.ActionGroup(
+		editor.document,
+		"regActions",
+		viewHelpers.SubmitButton(editor.document, "Register", "regSubmit"),
+		viewHelpers.Button(editor.handleVerifyRegistration, editor.document, "Verify Registration", "verSubmit"),
+	)
+	regForm.Call("appendChild", regActions)
 
 	return regForm
 }
 
-func (editor *ItemEditor) regFormVerify() js.Value {
-	// verify registration form
-	verForm := viewHelpers.Form(editor.handleVerifyRegistration, editor.document, "verForm")
-	editor.UiComponents.Token = viewHelpers.Input("", editor.document, "Token", "text", "verToken")
-	verForm.Call("appendChild", viewHelpers.Label(editor.document, "Verification Token:", "verToken"))
-	verForm.Call("appendChild", editor.UiComponents.Token)
-	verForm.Call("appendChild", viewHelpers.SubmitButton(editor.document, "Verify Registration", "verSubmit"))
-
-	return verForm
-}
-
 func (editor *ItemEditor) loginForm() js.Value {
-	// login area
-	loginForm := viewHelpers.Form(editor.handleLoginSubmit, editor.document, "loginForm")
-	// reuse Username and Email inputs for login
-	loginUserInp := viewHelpers.Input("", editor.document, "Username", "text", "loginUsername")
-	loginEmailInp := viewHelpers.Input("", editor.document, "Email", "email", "loginEmail")
-	loginForm.Call("appendChild", viewHelpers.Label(editor.document, "Username (or leave blank to use Email):", "loginUsername"))
-	loginForm.Call("appendChild", loginUserInp)
-	loginForm.Call("appendChild", viewHelpers.Label(editor.document, "Email:", "loginEmail"))
-	loginForm.Call("appendChild", loginEmailInp)
-	// remember me
-	remInp := viewHelpers.InputCheckBox(false, editor.document, "Remember me", "checkbox", "rememberMe")
-	editor.UiComponents.Remember = remInp
-	loginForm.Call("appendChild", remInp)
-	loginForm.Call("appendChild", viewHelpers.SubmitButton(editor.document, "Send OTP", "sendOtp"))
+	// login area (username/email + password -> send OTP -> verify)
+	loginForm := viewHelpers.Form(editor.handleLoginWithPassword, editor.document, "loginForm")
+	loginUserObj, loginUserInp := viewHelpers.StringEdit("", editor.document, "Username", "text", "loginUsername")
+	loginEmailObj, loginEmailInp := viewHelpers.StringEdit("", editor.document, "Email", "email", "loginEmail")
+	loginPassObj, loginPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "loginPassword")
+	loginTokenObj, loginTokenInp := viewHelpers.StringEdit("", editor.document, "OTP Token", "text", "loginOtp")
+	loginTokenInp.Set("disabled", true)
+	editor.UiComponents.Username = loginUserInp
+	editor.UiComponents.Email = loginEmailInp
+	editor.UiComponents.Password = loginPassInp
+	editor.UiComponents.Token = loginTokenInp
+	loginForm.Call("appendChild", loginUserObj)
+	loginForm.Call("appendChild", loginEmailObj)
+	loginForm.Call("appendChild", loginPassObj)
+	loginForm.Call("appendChild", loginTokenObj)
+	rememberObj, rememberInp := viewHelpers.BooleanEdit(false, editor.document, "Remember me", "checkbox", "rememberMe")
+	editor.UiComponents.Remember = rememberInp
+	loginForm.Call("appendChild", rememberObj)
+	loginActions := viewHelpers.ActionGroup(
+		editor.document,
+		"loginActions",
+		viewHelpers.SubmitButton(editor.document, "Send OTP", "sendOtp"),
+		viewHelpers.Button(editor.handleVerifyOTP, editor.document, "Verify OTP", "verifyOtpBtn"),
+	)
+	loginForm.Call("appendChild", loginActions)
 	return loginForm
-}
-
-func (editor *ItemEditor) loginWithPasswordForm() js.Value {
-	// password-login form (username + password -> send OTP if password valid)
-	pwForm := viewHelpers.Form(editor.handleLoginWithPassword, editor.document, "pwForm")
-	pwFormUser := viewHelpers.Input("", editor.document, "Username", "text", "pwUsername")
-	editor.UiComponents.Password = viewHelpers.Input("", editor.document, "Password", "password", "pwPassword")
-	pwForm.Call("appendChild", viewHelpers.Label(editor.document, "Username:", "pwUsername"))
-	pwForm.Call("appendChild", pwFormUser)
-	pwForm.Call("appendChild", viewHelpers.Label(editor.document, "Password:", "pwPassword"))
-	pwForm.Call("appendChild", editor.UiComponents.Password)
-	pwForm.Call("appendChild", viewHelpers.SubmitButton(editor.document, "Send OTP (password)", "sendPwOtp"))
-	//editor.Elements.LoginDiv.Call("appendChild", pwForm)
-	return pwForm
-}
-
-func (editor *ItemEditor) verifyOTPForm() js.Value {
-	// verify OTP form
-	otpForm := viewHelpers.Form(editor.handleVerifyOTP, editor.document, "verifyOtpForm")
-	otpInp := viewHelpers.Input("", editor.document, "OTP", "text", "otpToken")
-	otpForm.Call("appendChild", viewHelpers.Label(editor.document, "OTP Token:", "otpToken"))
-	otpForm.Call("appendChild", otpInp)
-	otpForm.Call("appendChild", viewHelpers.SubmitButton(editor.document, "Verify OTP", "verifyOtpBtn"))
-	//editor.Elements.LoginDiv.Call("appendChild", otpForm)
-	return otpForm
 }
