@@ -92,12 +92,10 @@ type ItemEditor struct {
 
 // NewItemEditor creates a new ItemEditor instance
 func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
-	editor := new(ItemEditor)
-	editor.appCore = appCore
-	editor.document = document
-	editor.events = eventProcessor
-	editor.client = appCore.HttpClient
-
+	editor := &ItemEditor{appCore: appCore, document: document, events: eventProcessor}
+	if appCore != nil {
+		editor.client = appCore.HttpClient
+	}
 	editor.ItemState = viewHelpers.ItemStateNone
 
 	// Create a div for the item editor

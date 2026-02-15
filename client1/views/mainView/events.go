@@ -6,7 +6,7 @@ import (
 )
 
 // Example
-// DisplayStatus provides an object to send data to the even handler. This is an examle, it is not used.
+// DisplayStatus provides an object to send data to the even handler. This is an example, it is not used.
 type DisplayStatus struct {
 	Message string
 }
