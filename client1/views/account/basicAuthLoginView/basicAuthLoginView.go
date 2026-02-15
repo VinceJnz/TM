@@ -8,11 +8,48 @@ import (
 	"syscall/js"
 )
 
+type ItemState int
+
+const debugTag = "basicAuthLoginView."
+
+const (
+	ItemStateNone ItemState = iota
+	ItemStateFetching
+	ItemStateEditing
+	ItemStateAdding
+	ItemStateSaving
+	ItemStateDeleting
+	ItemStateSubmitted
+)
+
+type ViewState int
+
+const (
+	ViewStateNone ViewState = iota
+	ViewStateBlock
+)
+
+type RecordState int
+
+const (
+	RecordStateReloadRequired RecordState = iota
+	RecordStateCurrent
+)
+
+// ********************* This needs to be changed for each api **********************
+const ApiURL = "/auth"
 const ApiBase = "/auth"
+
+// ********************* This needs to be changed for each api **********************
+type TableData struct {
+	Username string `json:"username"`
+	Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)
+}
 
 type UI struct {
 	Username js.Value
 	Email    js.Value
+	Password js.Value
 	Token    js.Value
 	Remember js.Value
 }
@@ -21,7 +58,10 @@ type viewElements struct {
 	Div      js.Value
 	RegDiv   js.Value
 	LoginDiv js.Value
-	State    js.Value
+	//State    js.Value
+	EditDiv  js.Value
+	ListDiv  js.Value
+	StateDiv js.Value
 }
 
 type ItemEditor struct {
@@ -36,6 +76,8 @@ type ItemEditor struct {
 	verHandler   js.Func
 	loginHandler js.Func
 	otpHandler   js.Func
+	ViewState    ViewState
+	ItemState    viewHelpers.ItemState
 }
 
 func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
@@ -89,6 +131,17 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	loginForm.Call("appendChild", viewHelpers.SubmitButton(document, "Send OTP", "sendOtp"))
 	ed.Elements.LoginDiv.Call("appendChild", loginForm)
 
+	// password-login form (username + password -> send OTP if password valid)
+	pwForm := viewHelpers.Form(ed.handleLoginWithPassword, document, "pwForm")
+	pwFormUser := viewHelpers.Input("", document, "Username", "text", "pwUsername")
+	ed.Ui.Password = viewHelpers.Input("", document, "Password", "password", "pwPassword")
+	pwForm.Call("appendChild", viewHelpers.Label(document, "Username:", "pwUsername"))
+	pwForm.Call("appendChild", pwFormUser)
+	pwForm.Call("appendChild", viewHelpers.Label(document, "Password:", "pwPassword"))
+	pwForm.Call("appendChild", ed.Ui.Password)
+	pwForm.Call("appendChild", viewHelpers.SubmitButton(document, "Send OTP (password)", "sendPwOtp"))
+	ed.Elements.LoginDiv.Call("appendChild", pwForm)
+
 	// verify OTP form
 	otpForm := viewHelpers.Form(ed.handleVerifyOTP, document, "verifyOtpForm")
 	otpInp := viewHelpers.Input("", document, "OTP", "text", "otpToken")
@@ -104,7 +157,34 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	return ed
 }
 
-func (ed *ItemEditor) GetDiv() js.Value { return ed.Elements.Div }
+func (editor *ItemEditor) ResetView() {
+	editor.Elements.EditDiv.Set("innerHTML", "")
+	editor.Elements.ListDiv.Set("innerHTML", "")
+}
+
+func (editor *ItemEditor) GetDiv() js.Value {
+	return editor.Elements.Div
+}
+
+func (editor *ItemEditor) Toggle() {
+	if editor.ViewState == ViewStateNone {
+		editor.ViewState = ViewStateBlock
+		editor.Display()
+	} else {
+		editor.ViewState = ViewStateNone
+		editor.Hide()
+	}
+}
+
+func (editor *ItemEditor) Hide() {
+	editor.Elements.Div.Get("style").Call("setProperty", "display", "none")
+	editor.ViewState = ViewStateNone
+}
+
+func (editor *ItemEditor) Display() {
+	editor.Elements.Div.Get("style").Call("setProperty", "display", "block")
+	editor.ViewState = ViewStateBlock
+}
 
 // handleRegisterSubmit submits {username,email} to /auth/register
 func (ed *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) interface{} {
@@ -187,6 +267,37 @@ func (ed *ItemEditor) handleLoginSubmit(this js.Value, args []js.Value) interfac
 	return nil
 }
 
+// handleLoginWithPassword submits {username,password} to /auth/login-password
+func (ed *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value) interface{} {
+	if len(args) > 0 {
+		args[0].Call("preventDefault")
+	}
+	uname := ed.Elements.LoginDiv.Call("querySelector", "#pwUsername").Get("value").String()
+	pwd := ed.Elements.LoginDiv.Call("querySelector", "#pwPassword").Get("value").String()
+	if uname == "" || pwd == "" {
+		js.Global().Call("alert", "username and password required")
+		return nil
+	}
+	payload := map[string]string{"username": uname, "password": pwd}
+	// mark that the last login method used was password; verify step will use verify-password-otp
+	ed.client.NewRequest("POST", ApiBase+"/login-password", nil, payload,
+		func(err error, rd *httpProcessor.ReturnData) {
+			if err != nil {
+				js.Global().Call("alert", "password login failed: "+err.Error())
+				return
+			}
+			// signal to user and set method for verify
+			js.Global().Call("alert", "If the credentials are valid, an OTP has been sent to the email on the account")
+			// store login method on the editor (used by verify)
+			// use JS field on the div to avoid changing struct too much
+			ed.Elements.Div.Set("data-login-method", "password")
+		},
+		func(err error, rd *httpProcessor.ReturnData) {
+			js.Global().Call("alert", "password login error: "+err.Error())
+		})
+	return nil
+}
+
 // handleVerifyOTP posts token and remember_me to /auth/verify-otp and triggers loginComplete on success
 func (ed *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interface{} {
 	if len(args) > 0 {
@@ -200,7 +311,12 @@ func (ed *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interface{
 	}
 	payload := map[string]any{"token": token, "remember_me": remember}
 	var resp map[string]any
-	ed.client.NewRequest("POST", ApiBase+"/verify-otp", &resp, payload,
+	// choose verification endpoint depending on login method used
+	verifyEndpoint := ApiBase + "/verify-otp"
+	if ed.Elements.Div.Get("data-login-method").String() == "password" {
+		verifyEndpoint = ApiBase + "/verify-password-otp"
+	}
+	ed.client.NewRequest("POST", verifyEndpoint, &resp, payload,
 		func(err error, rd *httpProcessor.ReturnData) {
 			if err != nil {
 				js.Global().Call("alert", "OTP verify failed: "+err.Error())
@@ -216,9 +332,26 @@ func (ed *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interface{
 			if ed.events != nil {
 				ed.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: "basicAuthLoginView", Data: name})
 			}
+			// clear login method after success
+			ed.Elements.Div.Set("data-login-method", "")
 		},
 		func(err error, rd *httpProcessor.ReturnData) {
 			js.Global().Call("alert", "OTP verification error: "+err.Error())
 		})
 	return nil
+}
+
+func (editor *ItemEditor) UpdateItem(item TableData) {
+}
+
+func (editor *ItemEditor) AddItem(item TableData) {
+}
+
+func (editor *ItemEditor) FetchItems() {
+	//editor.NewItemData()
+}
+
+func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
+	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
+	editor.ItemState = newState
 }

@@ -593,6 +593,6 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 		editor.Elements.Status.Set("innerText", "Registered as: "+name)
 	}
 	// After OAuth popup, call server to get the full user object (username may be empty)
-	editor.client.NewRequest(http.MethodGet, ApiURL2+"/ensure", &user, nil, success, failure)
+	editor.client.NewRequest(http.MethodGet, ApiURL+"/ensure", &user, nil, success, failure)
 	editor.LoggedIn = true
 }

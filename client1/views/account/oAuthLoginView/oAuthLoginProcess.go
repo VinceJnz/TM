@@ -2,8 +2,8 @@ package oAuthLoginView
 
 import (
 	"client1/v2/app/eventProcessor"
-	"syscall/js"
 	"strings"
+	"syscall/js"
 )
 
 //const debugTag = "aAuthLoginView."
@@ -62,7 +62,7 @@ func (editor *ItemEditor) authProcess() {
 						}
 					}
 					// Call /auth/ensure to create DB session cookie
-					ensureP := js.Global().Call("fetch", "/api/v1/auth/ensure", map[string]any{"method": "GET", "credentials": "include"})
+					ensureP := js.Global().Call("fetch", "/api/v1/auth/oauth/ensure", map[string]any{"method": "GET", "credentials": "include"})
 					ensureP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
 						enResp := args[0]
 						if enResp.Get("ok").Bool() {
@@ -185,7 +185,7 @@ func (editor *ItemEditor) authProcess() {
 							name = e.String()
 						}
 					}
-					ensureP := js.Global().Call("fetch", "/api/v1/auth/ensure", map[string]any{"method": "GET", "credentials": "include"})
+					ensureP := js.Global().Call("fetch", "/api/v1/auth/oauth/ensure", map[string]any{"method": "GET", "credentials": "include"})
 					ensureP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
 						enResp := args[0]
 						if enResp.Get("ok").Bool() {
