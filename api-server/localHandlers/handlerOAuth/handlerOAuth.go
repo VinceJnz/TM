@@ -3,10 +3,8 @@ package handlerOAuth
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -40,6 +38,9 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/verify-email", h.VerifyEmail).Methods("GET", "POST") // Email verification endpoint
 	r.HandleFunc(baseURL+"/logout", h.logoutHandler).Methods("GET")
 	r.HandleFunc(baseURL+"/me", h.meHandler).Methods("GET")
+	// Endpoint used to collect additional registration info from OAuth users after email verification (username, address, birthdate, accountHidden)
+	// Public because it authenticates via session cookie OR oauth-state token from the OAuth flow
+	r.HandleFunc(baseURL+"/complete-registration", h.CompleteRegistration).Methods("POST")
 	// Temporary debug route (DEV only)
 	r.HandleFunc(baseURL+"/debug", h.debugHandler).Methods("GET")
 }
@@ -50,8 +51,6 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 // the middleware to create an internal session and set the "session" cookie for subsequent API calls.
 func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/ensure", h.OAuthEnsure).Methods("GET")
-	// Endpoint used to collect additional registration info from OAuth users after email verification (username, address, birthdate, accountHidden)
-	r.HandleFunc(baseURL+"/complete-registration", h.CompleteRegistration).Methods("POST")
 }
 
 // loginHandler initiates the OAuth flow by creating a temporary DB-backed token to hold the state and pending registration data, then redirects the user to the provider's auth URL with the state parameter. The callbackHandler will validate the state and complete the login/registration process.
@@ -88,8 +87,9 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid state", http.StatusForbidden)
 		return
 	}
-	// Delete the state token now that it's consumed (prevents replay)
-	defer dbAuthTemplate.TokenDeleteQry(debugTag+"callbackHandler:del_state", h.appConf.Db, tok.ID)
+	// Don't delete the state token yet - CompleteRegistration may need it.
+	// We'll update it with the UserID below, so it can be found and used by CompleteRegistration.
+	// The token will eventually expire naturally.
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -137,6 +137,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	nameStr, _ := userInfo["name"].(string)
 	user := models.User{}
 	user.Name = nameStr
+	//user.Username =
 	user.Email.SetValid(emailStr)
 	user.Provider.SetValid("google")
 	user.ProviderID.SetValid(sub)
@@ -155,8 +156,18 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// No email verification step needed.
 	log.Printf("%vcallbackHandler()10 oAuth user account created/updated: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
 
+	// Update the oauth-state token with the UserID so CompleteRegistration can look it up.
+	// This allows CompleteRegistration to work when the session cookie doesn't transfer from the popup.
+	tok.UserID = userID
+	if err := dbAuthTemplate.TokenUpdateQry(debugTag+"callbackHandler:update_state", h.appConf.Db, tok); err != nil {
+		log.Printf("%v failed to update oauth-state token with UserID: %v", debugTag, err)
+		// Continue anyway - not critical if this fails
+	} else {
+		log.Printf("%vcallbackHandler()10.1 oauth-state token updated with UserID=%d", debugTag, userID)
+	}
+
 	// Create and set session cookie so subsequent API calls (e.g., /ensure) will be authenticated.
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"callbackHandler", h.appConf.Db, userID, r.RemoteAddr, time.Time{})
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"callbackHandler", h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{})
 	if err != nil {
 		log.Printf("%v failed to create session token: %v", debugTag, err)
 		http.Error(w, "failed to create session", http.StatusInternalServerError)
@@ -165,24 +176,29 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, sessionToken)
 	log.Printf("%vcallbackHandler()10.5 session cookie created for user %d", debugTag, userID)
 
-	// If the oAuth flow was performed in a popup, send a postMessage back to the opener and close the popup.
-	// Otherwise, navigate back to the client application.
-	// Status indicates account is waiting for admin approval.
-	// Use "loginComplete" type so existing client listeners handle the popup message.
-	payload := map[string]string{"type": "loginComplete", "status": "pending_admin_approval", "email": emailStr, "name": nameStr}
-	payloadJSON, _ := json.Marshal(payload)
-	clientRedirect := h.appConf.OAuthSvc.ClientRedirect
-	origin := clientRedirect
-	if u, err := url.Parse(clientRedirect); err == nil {
-		origin = u.Scheme + "://" + u.Host
+	// Load the user to check if they have a username (indicates returning user vs new user)
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"callbackHandler:check_username", h.appConf.Db, userID)
+	if err != nil {
+		log.Printf("%v failed to load user for username check: %v", debugTag, err)
+		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		return
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>")
-	fmt.Fprintf(w, "<script>\n(function(){\n  var payload = %s;\n  var origin = %q;\n  if (window.opener && !window.opener.closed) {\n    try { window.opener.postMessage(payload, origin); } catch(e) { window.opener.postMessage(payload, '*'); }\n    window.close();\n  } else {\n    window.location = origin;\n  }\n})();\n</script>", payloadJSON, origin)
-	fmt.Fprintf(w, "</body></html>")
-	log.Printf("%vcallbackHandler()11 sent postMessage to client: payload=%s origin=%s", debugTag, payloadJSON, origin)
+	// Redirect to the frontend with appropriate query parameter
+	// oauth-login=true for returning users (has username)
+	// oauth-register=true for new users (no username)
+	clientRedirect := h.appConf.OAuthSvc.ClientRedirect
+	var redirectURL string
+	if user.Username != "" {
+		// Returning user - just login, no registration needed
+		redirectURL = clientRedirect + "?oauth-login=true"
+		log.Printf("%vcallbackHandler()11a redirecting returning user (has username) with oauth-login flag: %s", debugTag, redirectURL)
+	} else {
+		// New user - show registration form to collect username
+		redirectURL = clientRedirect + "?oauth-register=true"
+		log.Printf("%vcallbackHandler()11b redirecting new user (no username) with oauth-register flag: %s", debugTag, redirectURL)
+	}
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
@@ -340,18 +356,49 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 // CompleteRegistration updates additional profile info collected after OAuth registration.
+// This is a public endpoint that authenticates via session cookie or oauth-state token.
 func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
-	// Require a session (set by RequireOAuthOrSessionAuth middleware)
-	sessI := r.Context().Value(h.appConf.SessionIDKey)
-	if sessI == nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	log.Printf("%vCompleteRegistration()0: r = %+v\n", debugTag, r)
+
+	var userID int
+
+	// Try 1: Check for DB session cookie
+	if sc, err := r.Cookie("session"); err == nil {
+		log.Printf("%vCompleteRegistration() found session cookie: %s", debugTag, sc.Value)
+		if dbToken, err := dbAuthTemplate.FindSessionToken(debugTag+"CompleteRegistration:session", h.appConf.Db, sc.Value); err == nil {
+			userID = dbToken.UserID
+			log.Printf("%vCompleteRegistration() using DB session for user %d", debugTag, userID)
+		} else {
+			log.Printf("%vCompleteRegistration() session cookie lookup failed: %v", debugTag, err)
+		}
+	} else {
+		log.Printf("%vCompleteRegistration() no session cookie found: %v", debugTag, err)
+	}
+
+	// Try 2: If no DB session, check for oauth-state token (fallback for popup case)
+	if userID == 0 {
+		if c, err := r.Cookie("oauth-state"); err == nil {
+			log.Printf("%vCompleteRegistration() found oauth-state cookie: %s", debugTag, c.Value)
+			if dbToken, err := dbAuthTemplate.FindToken(debugTag+"CompleteRegistration:oauth-state", h.appConf.Db, "oauth-state", c.Value); err == nil {
+				userID = dbToken.UserID
+				log.Printf("%vCompleteRegistration() using oauth-state token for user %d", debugTag, userID)
+			} else {
+				log.Printf("%vCompleteRegistration() oauth-state token lookup failed: %v", debugTag, err)
+			}
+		} else {
+			log.Printf("%vCompleteRegistration() no oauth-state cookie found: %v", debugTag, err)
+		}
+	}
+
+	if userID == 0 {
+		log.Printf("%vCompleteRegistration() no valid authentication found, redirecting to OAuth login", debugTag)
+		// Redirect to OAuth login so the client/popup can authenticate
+		// The loginHandler will create an oauth-state token and redirect to Google
+		loginURL := h.appConf.Settings.APIprefix + "/auth/oauth/login"
+		http.Redirect(w, r, loginURL, http.StatusFound)
 		return
 	}
-	sess, ok := sessI.(*models.Session)
-	if !ok {
-		http.Error(w, "invalid session", http.StatusInternalServerError)
-		return
-	}
+
 	var req struct {
 		Username      string `json:"username"`
 		Address       string `json:"address"`
@@ -371,13 +418,13 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		existing, err := dbAuthTemplate.UserNameReadQry(debugTag+"CompleteRegistration:check ", h.appConf.Db, uname)
-		if err == nil && existing.ID != sess.UserID {
+		if err == nil && existing.ID != userID {
 			http.Error(w, "username taken", http.StatusConflict)
 			return
 		}
 	}
 	// Load user
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration ", h.appConf.Db, sess.UserID)
+	user, err := dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration ", h.appConf.Db, userID)
 	if err != nil {
 		http.Error(w, "failed to load user", http.StatusInternalServerError)
 		return

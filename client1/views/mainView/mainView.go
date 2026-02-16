@@ -9,6 +9,7 @@ import (
 	"client1/v2/views/account/basicAuthLoginView"
 	"client1/v2/views/account/logoutView"
 	"client1/v2/views/account/oAuthLoginView"
+	"client1/v2/views/account/oAuthRegistrationProcess"
 	"client1/v2/views/account/oAuthRegistrationView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
@@ -173,6 +174,7 @@ func (v *View) Setup() {
 	//v.AddViewItem("WebAuthn Login", "", true, webAuthnLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	// OAuth registration view (Google)
 	v.AddViewItem("oAuth Register", "", true, oAuthRegistrationView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
+	v.AddViewItem("oAuth Register2", "", true, oAuthRegistrationProcess.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	v.AddViewItem("oAuth Login", "", true, oAuthLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	v.AddViewItem("Basic Auth Login", "", true, basicAuthLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	v.AddViewItem("Home", "", true, nil, true, false, v.elements.sidemenu)

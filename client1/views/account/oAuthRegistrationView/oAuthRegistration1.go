@@ -368,10 +368,10 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 	*/
 	// Register the account using the canonical registration endpoint, then open OAuth popup
 	if editor.client != nil {
-		editor.client.NewRequest(http.MethodPost, ApiURL2+"/pending-registration", nil, &editor.CurrentRecord,
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &editor.CurrentRecord,
 			func(err error, rd *httpProcessor.ReturnData) {
 				if err != nil {
-					log.Printf("%v pending-registration failed: %v", debugTag, err)
+					log.Printf("%v complete-registration failed: %v", debugTag, err)
 					js.Global().Call("alert", "Failed to save registration data: "+err.Error())
 					return
 				}
@@ -379,7 +379,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 				editor.client.OpenPopup(ApiURL+"/login", "oauth", "width=600,height=800")
 			},
 			func(err error, rd *httpProcessor.ReturnData) {
-				log.Printf("%v pending-registration error: %v", debugTag, err)
+				log.Printf("%v complete-registration error: %v", debugTag, err)
 				js.Global().Call("alert", "Failed to save registration data: "+err.Error())
 			})
 	} else {
@@ -497,11 +497,14 @@ type LoginComplete struct {
 func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 	var user TableData
 	var name string
+	fromPopupRegistration := false
 
 	// Accept either a simple string or the LoginComplete struct (backwards compatibility)
 	switch v := event.Data.(type) {
 	case string:
+		// String means this came from the oAuthRegistrationProcess popup - registration is already complete
 		name = v
+		fromPopupRegistration = true
 	case LoginComplete:
 		user = v.User
 	case *LoginComplete:
@@ -511,6 +514,17 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 		return
 	}
 
+	// If registration came from popup, it's already complete - just update UI
+	if fromPopupRegistration {
+		log.Printf("%v Registration completed via popup for user: %s", debugTag, name)
+		if editor.Elements.Status.Truthy() {
+			editor.Elements.Status.Set("innerText", "Registered as: "+name)
+		}
+		editor.LoggedIn = true
+		return
+	}
+
+	// Otherwise, call /ensure to get user data (for non-popup OAuth flows)
 	success := func(err error, rd *httpProcessor.ReturnData) {
 		if err != nil {
 			log.Printf("%voAuth ensure request failed: %v", debugTag, err)
@@ -560,7 +574,7 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 			reg.AccountHidden = ah
 
 			// Send the completion request to OAuth complete-registration endpoint
-			editor.client.NewRequest(http.MethodPost, ApiURL2+"/complete-registration", nil, &reg,
+			editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
 				func(err error, rd *httpProcessor.ReturnData) { // success callback
 					if err != nil {
 						log.Printf("%v complete-registration failed: %v", debugTag, err)
