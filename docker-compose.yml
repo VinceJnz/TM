@@ -61,6 +61,30 @@ services:
       #- gmail-tokens:/etc/certs/gmail-tokens
       #- gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
 
+  apiserver-interactive:
+    profiles: ["interactive"]
+    build:
+      context: .                        # Updated context for API server
+      dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
+      target: interactive               # <-- interactive build (for development with mounted code)
+    container_name: apiserver
+    ports:
+      - "8085:8085"
+      - "8086:8086"
+    networks:
+      - mynetwork
+    environment:
+      - GO_ENV=production
+##    - DATABASE_URL=postgres://user:password@postgres:5432/mydb
+      - DATABASE_URL=dbserver://api_user:api_password@postgres:5432/mydatabase
+    depends_on:
+##      - postgres
+      - dbserver
+    volumes:
+      - ./data/gmail-tokens:/etc/certs/gmail-tokens
+      - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
+      #- gmail-tokens:/etc/certs/gmail-tokens
+      #- gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
 
   apiserver-debug:
     profiles: ["debug"]

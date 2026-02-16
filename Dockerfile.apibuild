@@ -90,8 +90,47 @@ CMD ["./apiserver"]
 # Command to use to launch an interactive shell
 #CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
 
+
 ############################################################
-# STAGE 4: Debug image (delve enabled)
+# STAGE 4: Create a clean image for the final output
+FROM alpine:latest AS interactive
+
+# Copy the compiled wasm binary from the builder stage to the static folder
+COPY --from=wasmbuilder /app/main.wasm ./static/
+COPY --from=wasmbuilder /app/wasm_exec.js ./static/
+
+# Copy the static files from the builder stage to the static folder
+COPY --from=apibuilder /app/static/ ./static/
+#COPY --from=apibuilder /app/static/*.html ./static/
+#COPY --from=apibuilder /app/static/*.css ./static/
+#COPY --from=apibuilder /app/static/*.txt ./static/
+#COPY --from=apibuilder /app/static/favicon.ico ./static/
+#COPY --from=apibuilder /app/static/favicon.png ./static/
+
+# Copy the compiled webserver binary from the builder stage
+COPY --from=apibuilder /app/apiserver .
+COPY --from=apibuilder /app/.env .
+COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
+# comment out if credentials are loaded manually at runtime from mounted volume
+#COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
+COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
+
+# Create directory for runtime OAuth tokens
+#RUN mkdir -p /etc/certs/gmail-tokens && chmod 755 /etc/certs/gmail-tokens
+#RUN mkdir -p /etc/certs/gmail-credentials && chmod 755 /etc/certs/gmail-credentials
+# Windows hosts may have issues with chmod, so just create the directories
+RUN mkdir -p /etc/certs/gmail-tokens /etc/certs/gmail-credentials
+
+# Expose the port the API server listens on
+EXPOSE 8085 8086
+
+# Command to run the API server
+#CMD ["./apiserver"]
+# Command to use to launch an interactive shell
+CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
+
+############################################################
+# STAGE 5: Debug image (delve enabled)
 FROM golang:1.23.4-alpine AS debug
 WORKDIR /app
 

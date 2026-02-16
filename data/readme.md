@@ -7,3 +7,6 @@ Place your Gmail API credentials here:
 
 OAuth tokens generated at runtime (do not manually edit):
 - `client_token.json` - Generated after OAuth flow
+
+
+**NOTE: These files are shared with the live server**
