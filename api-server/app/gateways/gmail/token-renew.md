@@ -1,7 +1,7 @@
 # token renew instructions
 
 1. delete or rename the file <client_token.json>
-2. Restart the api server
+2. Restart the api server (IMPORTANT: in interactive mode: docker compose --profile interactive up --build -d)
 3. In the start up logs  - look for the URL line like the example below - Copy the entire URL from the logs
 ```log
 apiserver  | 2026/01/27 10:37:05 gmail.Handler.getTokenFromWeb()1 ... Go to the following link in your browser then type the authorization code:
@@ -20,3 +20,4 @@ Note: The page itself won't load (you'll see "This site can't be reached" or sim
 8. Past the code into the console.
 You should see something like:
 `2026/01/08 22:23:XX gmail.saveToken()2 ... Saving credential file to: /etc/certs/gmail-tokens/client_token.json`
+

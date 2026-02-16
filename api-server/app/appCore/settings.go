@@ -11,22 +11,23 @@ import (
 )
 
 type settings struct {
-	AppTitle     string `json:"AppTitle"`
-	Host         string `json:"Host"`
-	PortHttp     string `json:"PortHttp"`
-	PortHttps    string `json:"PortHttps"`
-	DataSource   string `json:"DataSource"`
-	APIprefix    string `json:"APIprefix"`
-	ServerCaCert string `json:"ServerCaCert"`
-	ClientCaCert string `json:"ClientCaCert"`
-	ServerKey    string `json:"ServerKey"`
-	ServerCert   string `json:"ServerCert"`
-	CertOpt      int    `json:"CertOpt"`
-	LogFile      string `json:"LogFile"`
-	EmailAddr    string `json:"EmailAddr"`
-	EmailToken   string `json:"EmailToken"`
-	EmailSecret  string `json:"EmailSecret"`
-	PaymentKey   string `json:"PaymentKey"`
+	AppTitle       string `json:"AppTitle"`
+	Host           string `json:"Host"`
+	PortHttp       string `json:"PortHttp"`
+	PortHttps      string `json:"PortHttps"`
+	DataSource     string `json:"DataSource"`
+	APIprefix      string `json:"APIprefix"`
+	ServerCaCert   string `json:"ServerCaCert"`
+	ClientCaCert   string `json:"ClientCaCert"`
+	ServerKey      string `json:"ServerKey"`
+	ServerCert     string `json:"ServerCert"`
+	CertOpt        int    `json:"CertOpt"`
+	LogFile        string `json:"LogFile"`
+	EmailAddr      string `json:"EmailAddr"`
+	EmailToken     string `json:"EmailToken"`
+	EmailSecret    string `json:"EmailSecret"`
+	PaymentKey     string `json:"PaymentKey"`
+	EmailDebugAddr string `json:"EmailDebugAddr"`
 }
 
 func (s *settings) SaveJson() error {
@@ -105,6 +106,7 @@ func (s *settings) LoadEnv() error {
 	s.EmailToken = os.Getenv("EMAIL_TOKEN")
 	s.EmailSecret = os.Getenv("EMAIL_SECRET")
 	s.PaymentKey = os.Getenv("PAYMENT_KEY")
+	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
 	s.AppTitle = os.Getenv("APP_TITLE")
 	log.Printf("%sLoadEnv() Settings loaded from environment variables: %+v\n", debugTag, s)
 	if err := s.ValidateEnv(); err != nil {
@@ -154,6 +156,10 @@ func (s *settings) ValidateEnv() error {
 	if os.Getenv("APP_TITLE") == "" {
 		log.Printf("%sValidateEnv() Warning: APP_TITLE is not set, using default value\n", debugTag)
 		return errors.New("empty setting: APP_TITLE missing")
+	}
+	if os.Getenv("EMAIL_DEBUG_ADDR") != "" {
+		log.Printf("%sValidateEnv() Warning: EMAIL_DEBUG_ADDR is set, using DEBUG value\n", debugTag)
+		return errors.New("nonempty setting: EMAIL_DEBUG_ADDR should be empty in production")
 	}
 	return nil
 }

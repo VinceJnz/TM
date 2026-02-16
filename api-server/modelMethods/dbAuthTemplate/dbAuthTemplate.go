@@ -254,11 +254,11 @@ func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, acc
 
 const (
 	sqlUserFind        = `SELECT id FROM st_users WHERE id = $1`
-	sqlUserRead        = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, provider, provider_id FROM st_users WHERE id = $1`
-	sqlUserNameRead    = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, provider, provider_id FROM st_users WHERE username = $1`
-	sqlUserEmailRead   = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, provider, provider_id FROM st_users WHERE email = $1`
-	sqlUserInsert      = `INSERT INTO st_users (name, username, email, user_address, user_birth_date,  provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	sqlUserUpdate      = `UPDATE st_users SET name = $1, username = $2, email = $3 , user_address = $4 , user_birth_date = $5 , provider = $6 , provider_id = $7 WHERE id = $8`
+	sqlUserRead        = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE id = $1`
+	sqlUserNameRead    = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE username = $1`
+	sqlUserEmailRead   = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE email = $1`
+	sqlUserInsert      = `INSERT INTO st_users (name, username, email, user_address, user_birth_date, user_password, user_account_status_id, user_account_hidden, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	sqlUserUpdate      = `UPDATE st_users SET name = $1, username = $2, email = $3, user_address = $4, user_birth_date = $5, user_password = $6, user_account_status_id = $7, user_account_hidden = $8, provider = $9, provider_id = $10 WHERE id = $11`
 	sqlUserDelProvider = `UPDATE st_users SET provider = null , provider_id = null WHERE id = $1`
 )
 
@@ -312,7 +312,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Provider, record.ProviderID).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
@@ -321,7 +321,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 }
 
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
-	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Provider, record.ProviderID, record.ID)
+	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID, record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx()1 - ", "err =", err, "record =", record)
 	}
@@ -403,7 +403,11 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		//tokenItem.SessionData.SetValid("") // Not yet implemented. This can be used to store session data in JSON format.
 		tokenItem.Valid.SetValid(true)
 		tokenItem.ValidFrom.SetValid(time.Now())
-		tokenItem.ValidTo.SetValid(time.Now().Add(1 * time.Hour))
+		validTo := expiration
+		if validTo.IsZero() {
+			validTo = time.Now().Add(1 * time.Hour)
+		}
+		tokenItem.ValidTo.SetValid(validTo)
 
 		tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
 		if err != nil {

@@ -64,15 +64,20 @@ func main() {
 	oauth := handlerOAuth.New(app)
 	oauth.RegisterRoutes(public, "/auth/oauth") // OAuth handlers
 
-	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	// Auth handlers - Public routes (no authentication required)
 	auth := handlerAuth.New(app)
-	auth.RegisterRoutes(protected, "/auth")
+	auth.RegisterRoutesPublic(public, "/auth") // Public auth endpoints (register, verify, login, etc.)
+
+	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	//protected.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
 	protected.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
 	//protected.Use(SRPauth.RequireRestAuth)        // Add some middleware, e.g. an auth handler
 	protected.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "protected") // Then logging
 	})
+
+	// Auth handlers - Protected routes (requires authentication)
+	auth.RegisterRoutesProtected(protected, "/auth") // Protected auth endpoints (menuUser, logout, etc.)
 
 	// The following routes are protected, i.e. require authentication to use.
 	oauth.RegisterRoutesProtected(protected, "/auth/oauth") // Protected OAuth handlers

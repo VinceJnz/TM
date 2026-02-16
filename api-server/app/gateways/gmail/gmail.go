@@ -22,8 +22,9 @@ import (
 const debugTag = "gmail."
 
 type Gateway struct {
-	srv  *gmail.Service
-	from string
+	srv               *gmail.Service
+	from              string
+	debugEmailAddress string
 }
 
 //https://developers.google.com/gmail/api/quickstart/go
@@ -158,7 +159,7 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func New(credentialsFile, tokenFile, from string) *Gateway {
+func New(credentialsFile, tokenFile, from, debugEmail string) *Gateway {
 	ctx := context.Background()
 	credential, err := os.ReadFile(credentialsFile)
 	if err != nil {
@@ -179,8 +180,9 @@ func New(credentialsFile, tokenFile, from string) *Gateway {
 
 	log.Println(debugTag + "New()4 ... Gmail client created")
 	return &Gateway{
-		srv:  gmailService,
-		from: from,
+		srv:               gmailService,
+		from:              from,
+		debugEmailAddress: debugEmail,
 	}
 }
 
@@ -188,7 +190,12 @@ func New(credentialsFile, tokenFile, from string) *Gateway {
 // It returns true if the email was sent successfully, or false along with an error if there was an issue.
 func (s *Gateway) SendMail(to string, title string, message string) (bool, error) {
 	// Create the message
+	if s.debugEmailAddress != "" {
+		log.Printf(debugTag+"Handler.SendMail()1 ... Debug email address configured, overriding recipient. Original to: %s, title: %s", to, title)
+		to = s.debugEmailAddress
+	}
 	msgStr := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s", s.from, to, title, message)
+
 	msg := []byte(msgStr)
 	// Get raw
 	gMessage := &gmail.Message{Raw: base64.URLEncoding.EncodeToString(msg)}
@@ -196,7 +203,7 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 	// Send the message
 	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
 	if err != nil {
-		log.Println(debugTag+"Handler.SendMail()1 ... Could not send mail>", err)
+		log.Println(debugTag+"Handler.SendMail()1 ... Could not send mail>", err, "to:", to, "title:", title, "message:", message)
 		return false, err
 	}
 	return true, nil
@@ -204,6 +211,10 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 
 func (s *Gateway) SendMail2(from string, to string, title string, message string) (bool, error) {
 	// Create the message
+	if s.debugEmailAddress != "" {
+		log.Printf(debugTag+"Handler.SendMail2()1 ... Debug email address configured, overriding recipient. Original to: %s, title: %s", to, title)
+		to = s.debugEmailAddress
+	}
 	msgStr := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s", from, to, title, message)
 	msg := []byte(msgStr)
 	// Get raw
@@ -212,7 +223,7 @@ func (s *Gateway) SendMail2(from string, to string, title string, message string
 	// Send the message
 	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
 	if err != nil {
-		log.Println(debugTag+"Handler.SendMail()1 ... Could not send mail>", err)
+		log.Println(debugTag+"Handler.SendMail()1 ... Could not send mail>", err, "from:", from, "to:", to, "title:", title, "message:", message)
 		return false, err
 	}
 	return true, nil
@@ -225,6 +236,10 @@ func (s *Gateway) Demo(emailAddress string) (bool, error) {
 	}
 	from := emailAddress
 	to := emailAddress
+	if s.debugEmailAddress != "" {
+		log.Printf(debugTag+"Handler.Demo()1 ... Debug email address configured, overriding recipient. Original to: %s, title: %s", to, "Gmail With Go")
+		to = s.debugEmailAddress
+	}
 	ret, err := s.SendMail2(from, to, "Gmail With Go", "It worked!")
 	return ret, err
 }
