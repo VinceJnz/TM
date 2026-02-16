@@ -60,6 +60,7 @@ type TableData struct {
 	Username      string `json:"username"`
 	Password      string `json:"user_password"`
 	Email         string `json:"email"`
+	Name          string `json:"name"`
 	Address       string `json:"address"`
 	BirthDate     string `json:"birth_date"`
 	AccountHidden bool   `json:"account_hidden"`
@@ -71,6 +72,7 @@ type UI struct {
 	Username      js.Value
 	Email         js.Value
 	Password      js.Value
+	Name          js.Value
 	Address       js.Value
 	BirthDate     js.Value
 	AccountHidden js.Value

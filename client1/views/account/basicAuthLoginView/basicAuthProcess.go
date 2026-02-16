@@ -16,6 +16,7 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
+	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
 	editor.CurrentRecord.BirthDate = editor.UiComponents.BirthDate.Get("value").String()
 	editor.CurrentRecord.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
@@ -29,6 +30,7 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 		"username":       editor.CurrentRecord.Username,
 		"email":          editor.CurrentRecord.Email,
 		"password":       editor.CurrentRecord.Password,
+		"name":           editor.CurrentRecord.Name,
 		"address":        editor.CurrentRecord.Address,
 		"birth_date":     editor.CurrentRecord.BirthDate,
 		"account_hidden": editor.CurrentRecord.AccountHidden,
@@ -63,13 +65,15 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
+	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
+	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
 
 	if editor.CurrentRecord.Token == "" {
 		js.Global().Call("alert", "verification token required")
 		return nil
 	}
-	payload := map[string]string{"token": editor.CurrentRecord.Token, "username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email}
+	payload := map[string]string{"token": editor.CurrentRecord.Token, "username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "name": editor.CurrentRecord.Name, "password": editor.CurrentRecord.Password}
 	editor.client.NewRequest("POST", ApiURL+"/verify-registration", nil, payload,
 		func(err error, rd *httpProcessor.ReturnData) {
 			if err != nil {
@@ -168,6 +172,7 @@ func (editor *ItemEditor) regForm() js.Value {
 	regUserObj, regUserInp := viewHelpers.StringEdit("", editor.document, "Username", "text", "regUsername")
 	regEmailObj, regEmailInp := viewHelpers.StringEdit("", editor.document, "Email", "email", "regEmail")
 	regPassObj, regPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "regPassword")
+	regNameObj, regNameInp := viewHelpers.StringEdit("", editor.document, "Full Name", "text", "regName")
 	regAddressObj, regAddressInp := viewHelpers.StringEdit("", editor.document, "Address", "text", "regAddress")
 	regBirthObj, regBirthInp := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "regBirthDate")
 	regHiddenObj, regHiddenInp := viewHelpers.BooleanEdit(false, editor.document, "Account Hidden", "checkbox", "regAccountHidden")
@@ -176,6 +181,7 @@ func (editor *ItemEditor) regForm() js.Value {
 	editor.UiComponents.Username = regUserInp
 	editor.UiComponents.Email = regEmailInp
 	editor.UiComponents.Password = regPassInp
+	editor.UiComponents.Name = regNameInp
 	editor.UiComponents.Address = regAddressInp
 	editor.UiComponents.BirthDate = regBirthInp
 	editor.UiComponents.AccountHidden = regHiddenInp
@@ -183,6 +189,7 @@ func (editor *ItemEditor) regForm() js.Value {
 	regForm.Call("appendChild", regUserObj)
 	regForm.Call("appendChild", regEmailObj)
 	regForm.Call("appendChild", regPassObj)
+	regForm.Call("appendChild", regNameObj)
 	regForm.Call("appendChild", regAddressObj)
 	regForm.Call("appendChild", regBirthObj)
 	regForm.Call("appendChild", regHiddenObj)
