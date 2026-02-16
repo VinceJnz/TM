@@ -177,7 +177,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%vcallbackHandler()10.5 session cookie created for user %d", debugTag, userID)
 
 	// Load the user to check if they have a username (indicates returning user vs new user)
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"callbackHandler:check_username", h.appConf.Db, userID)
+	user, err = dbAuthTemplate.UserReadQry(debugTag+"callbackHandler:check_username", h.appConf.Db, userID)
 	if err != nil {
 		log.Printf("%v failed to load user for username check: %v", debugTag, err)
 		http.Error(w, "failed to load user", http.StatusInternalServerError)

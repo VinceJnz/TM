@@ -64,19 +64,20 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	// Detect if we're running in a popup window
 	p.isPopup = !js.Global().Get("window").Get("opener").IsNull()
 
-	log.Printf("%v New() called: isPopup=%v, location=%s", debugTag, p.isPopup, js.Global().Get("location").Get("href").String())
-
-	// Check if this is the OAuth callback redirect with registration flag
+	// Check if this is the OAuth callback redirect
 	urlParams := js.Global().Get("URLSearchParams").New(js.Global().Get("location").Get("search"))
-	hasParam := urlParams.Call("has", "oauth-register").Bool()
+	hasRegisterParam := urlParams.Call("has", "oauth-register").Bool()
+	hasLoginParam := urlParams.Call("has", "oauth-login").Bool()
 
-	log.Printf("%v Checking for oauth-register parameter: hasParam=%v, search=%s", debugTag, hasParam, js.Global().Get("location").Get("search").String())
-
-	if hasParam {
-		log.Printf("%v Detected oauth-register parameter in popup, showing registration form", debugTag)
-		// Use a delay to ensure DOM is ready and mainView.Setup() has completed
+	if hasLoginParam {
+		// Returning user - just notify parent and close
 		js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any {
-			log.Printf("%v Timeout fired, calling showRegistrationFormInPopup()", debugTag)
+			p.handleLoginComplete()
+			return nil
+		}), 500)
+	} else if hasRegisterParam {
+		// New user - show registration form
+		js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any {
 			p.showRegistrationFormInPopup()
 			return nil
 		}), 500)
@@ -150,6 +151,31 @@ func (p *Process) ResetView() {
 	p.Elements.Content.Set("innerHTML", "")
 }
 
+// handleLoginComplete handles the case where a returning user logs in (no registration needed)
+func (p *Process) handleLoginComplete() {
+	if !p.isPopup {
+		return
+	}
+
+	log.Printf("%v Returning user login complete, notifying parent and closing popup", debugTag)
+
+	// Notify parent window that login succeeded
+	if !js.Global().Get("window").Get("opener").IsNull() {
+		payload := map[string]interface{}{
+			"type":   "loginComplete",
+			"status": "success",
+		}
+		opener := js.Global().Get("window").Get("opener")
+		opener.Call("postMessage", payload, "*")
+	}
+
+	// Close popup after delay
+	js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any {
+		js.Global().Get("window").Call("close")
+		return nil
+	}), 1500)
+}
+
 // StartRegistration initiates the OAuth registration flow by opening the OAuth popup.
 // This should be called from the parent window (not in popup).
 func (p *Process) StartRegistration() {
@@ -182,29 +208,48 @@ func (p *Process) setupParentMessageListener() {
 		}
 
 		typeVal := data.Get("type")
-		if typeVal.IsUndefined() || typeVal.String() != "registrationComplete" {
+		if typeVal.IsUndefined() {
 			return nil
 		}
 
-		// Extract registration result
+		msgType := typeVal.String()
 		statusVal := data.Get("status")
 		success := statusVal.String() == "success"
 
-		usernameVal := data.Get("username")
-		username := ""
-		if !usernameVal.IsUndefined() && usernameVal.Type() == js.TypeString {
-			username = usernameVal.String()
+		// Handle registration completion (new user)
+		if msgType == "registrationComplete" {
+			usernameVal := data.Get("username")
+			username := ""
+			if !usernameVal.IsUndefined() && usernameVal.Type() == js.TypeString {
+				username = usernameVal.String()
+			}
+
+			log.Printf("%v Registration complete: success=%v, username=%s", debugTag, success, username)
+
+			// Trigger loginComplete event so the app updates
+			if p.events != nil && success {
+				p.events.ProcessEvent(eventProcessor.Event{
+					Type:     "loginComplete",
+					DebugTag: debugTag,
+					Data:     username,
+				})
+			}
+			return nil
 		}
 
-		log.Printf("%v Registration complete: success=%v, username=%s", debugTag, success, username)
+		// Handle login completion (returning user)
+		if msgType == "loginComplete" {
+			log.Printf("%v Login complete: success=%v", debugTag, success)
 
-		// Trigger loginComplete event so the app updates
-		if p.events != nil && success {
-			p.events.ProcessEvent(eventProcessor.Event{
-				Type:     "loginComplete",
-				DebugTag: debugTag,
-				Data:     username,
-			})
+			// Trigger loginComplete event so the app updates
+			if p.events != nil && success {
+				p.events.ProcessEvent(eventProcessor.Event{
+					Type:     "loginComplete",
+					DebugTag: debugTag,
+					Data:     "authenticated",
+				})
+			}
+			return nil
 		}
 
 		return nil
