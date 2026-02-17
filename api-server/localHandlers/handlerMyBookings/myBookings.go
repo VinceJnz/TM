@@ -97,7 +97,6 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	//log.Printf(debugTag+"GetAll()1 userID=%v, adminFlag=%v\n", session.UserID, session.AdminFlag)
 
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
 	//dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
@@ -132,13 +131,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//log.Printf(debugTag+"Create()3 record = %+v, query = %+v", record, qryCreate)
-
 	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 
 	// Send notification email to user
-	//h.appConf.EmailSvc.SendMail(session.Email, "New Booking Created", fmt.Sprintf("A new booking has been created by user ID %d for trip %d, %s.", session.UserID, record.TripID.Int64, record.TripName))
-	h.appConf.EmailSvc.SendMail("vince.jennings@gmail.com", "New Booking Created", fmt.Sprintf("A new booking has been created by user %d, %s for trip %d, %s.", session.UserID, session.Email, record.TripID.Int64, record.TripName))
+	h.appConf.EmailSvc.SendMail(session.Email, "New Booking Created", fmt.Sprintf("A new booking has been created by user ID %d for trip %d, %s.", session.UserID, record.TripID.Int64, record.TripName))
 }
 
 // Update: modifies the existing record identified by id and returns the updated record

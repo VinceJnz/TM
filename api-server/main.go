@@ -46,19 +46,12 @@ func main() {
 	log.Printf("%smain(), debug: %v, App settings: %+v, os Env: %+v\n", debugTag, debugFlag, app.Settings, os.Environ())
 
 	r := mux.NewRouter()
-	// Setup your API subrouter with CORS middleware
+	// *****************************************************
+	// Setup your API subrouter with CORS middleware. These routes are unprotected, i.e. do not require authentication to use. This is where you would register any routes that should be accessible without authentication, such as login or registration endpoints.
 	public := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
 	public.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "public") // First logging
 	})
-	// The following routes are unprotected, i.e. do not require authentication to use.
-
-	//SRP authentication and registration process handlers
-	//handlerSRPAuth.New(app).RegisterRoutes(public, "/srpAuth")
-	//public.HandleFunc("/srpAuth/sessioncheck/", auth.SessionCheck).Methods("Get")
-
-	// WebAuthn handlers
-	//handlerWebAuthn.New(app).RegisterRoutes(public, "/webauthn")
 
 	// OAuth handlers
 	oauth := handlerOAuth.New(app)
@@ -68,10 +61,10 @@ func main() {
 	auth := handlerAuth.New(app)
 	auth.RegisterRoutesPublic(public, "/auth") // Public auth endpoints (register, verify, login, etc.)
 
+	// *****************************************************
+	// Protected routes (require authentication) - These are registered on a subrouter so that the auth middleware is only applied to these routes and not the public routes above. This allows us to have a mix of protected and unprotected routes.
 	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
-	//protected.Use(auth.RequireRestAuth)           // Add some middleware, e.g. an auth handler
-	protected.Use(auth.RequireOAuthOrSessionAuth) // Add some middleware, e.g. an auth handler
-	//protected.Use(SRPauth.RequireRestAuth)        // Add some middleware, e.g. an auth handler
+	protected.Use(auth.RequireSessionAuth) // This needs to be here to protect the routes below. It checks for a valid session cookie and ensures the user has access to the requested resource. If the session is valid and access is granted, it allows the request to proceed to the appropriate handler. If not, it returns an unauthorized error.
 	protected.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "protected") // Then logging
 	})
@@ -83,7 +76,6 @@ func main() {
 	oauth.RegisterRoutesProtected(protected, "/auth/oauth") // Protected OAuth handlers
 
 	// Add route groups (protected)
-	//handlerWebAuthnManagement.New(app).RegisterRoutes(protected, "/webauthn")                // WebAuthn routes
 	handlerSeasons.New(app).RegisterRoutes(protected, "/seasons")                             // Seasons routes
 	handlerUser.New(app).RegisterRoutes(protected, "/users")                                  // User routes
 	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups")                 // UserAgeGroup routes
@@ -139,7 +131,6 @@ func main() {
 	)
 
 	corsMuxHandler := corsOpts(r)
-	//loggedHandler := helpers.LogRequest(corsMuxHandler, app.SessionIDKey, "main") // Wrap the router with the logging middleware
 	loggedHandler := corsMuxHandler
 
 	// Paths to certificate and key files

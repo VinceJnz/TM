@@ -31,9 +31,6 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		// found existing user by email, merge provider info into the existing user
 		log.Printf("%vFindOrCreateUserByProvider()1 - user found by email, merging provider info: incoming user = %+v, userFromDB = %+v", debugStr, user, userFromDB)
 		user.ID = userFromDB.ID
-		//if !user.Equal(&userFromDB) {
-		//	userStatus = userStateUpdated
-		//}
 		// Preserve existing fields when incoming values are empty.
 		if user.Name == "" {
 			user.Name = userFromDB.Name
@@ -68,7 +65,6 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		}
 	} else {
 		// No existing user found by provider or email: insert a new user so provider info is persisted
-		//userStatus = userStateCreated
 		log.Printf("%vFindOrCreateUserByProvider()3 - no existing user found; inserting new user: %+v", debugStr, user)
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider:insert ", Db, user)
 		if err != nil {
@@ -76,11 +72,5 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		}
 	}
 
-	//switch userStatus {
-	//case userStateUpdated:
-	//	return userID, errors.New("user account updated with new information from OAuth provider; pending admin approval if account was previously inactive")
-	//case userStateCreated:
-	//	return userID, errors.New("user account created with information from OAuth provider; pending admin approval")
-	//}
 	return userID, nil
 }

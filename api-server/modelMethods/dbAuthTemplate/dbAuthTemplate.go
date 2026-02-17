@@ -43,15 +43,6 @@ const (
 // CheckAccess Checks that the user is authorised to take this action
 // Resource = name of the data resource being accesses being accessed
 // Action = type of access request action e.g. view, save, edit, list, delete
-//
-//	func UserCheckAccess(UserID, Resource string, Action string) bool {
-//			// check that the user has permissions to take the requested action
-//			// this might also consider information in record being accessed
-//	}
-
-//(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string)
-//(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest interface{}, query string, args ...interface{})
-
 func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, ActionName string) (models.AccessCheck, error) {
 	var err error
 	var access models.AccessCheck

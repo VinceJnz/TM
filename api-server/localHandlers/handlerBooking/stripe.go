@@ -151,7 +151,6 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 
 	//Update the Booking record with the stripe checkout session id
 	bookingItem.StripeSessionID.SetValid(CheckoutSession.ID)
-	//bookingItem.TotalFee.SetValid(bookingItem.Cost.Float64) //??????? is this recording the amount paid or is it just a flag???
 	err = Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdateStripeSession, bookingItem.ID, bookingItem.StripeSessionID, bookingItem.BookingCost)
 	if err != nil {
 		log.Printf("%v %v %v, booking item = %+v", debugTag+"Handler.CheckoutCreate()6", "Update() error =", err, bookingItem)
@@ -160,7 +159,6 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	//*******************************************************
 	//r.Header.Set("Access-Control-Allow-Origin", "stripe.com, 111.stripe.com")
 	//w.Header().Set("Access-Control-Allow-Origin", "stripe.com, 222.stripe.com")
-	//log.Printf("%v %v %+v %v %+v", debugTag+"Handler.CheckoutCreate()6", "w.Header() =", w.Header(), "r =", r)
 	log.Printf("%v %v %v", debugTag+"Handler.CheckoutCreate()7", "CheckoutSession.URL", CheckoutSession.URL)
 
 	// Return structured JSON response
@@ -202,7 +200,6 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 	}
 
 	// Get checkout session from Stripe
-	// NEW WAY: Use session.New with the client
 	CheckoutSession, err := session.Get(bookingItem.StripeSessionID.String, nil)
 	if err != nil {
 		log.Printf("%v session.Get error: %v, bookingItem = %+v", debugTag+"Handler.CheckoutCheck()3", err, bookingItem)
@@ -244,10 +241,6 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}
-
-	//poc ??????????? websocket poc stuff ??????????????????????
-	//h.wsPool.FindKey(bookingItem.PaymentToken.String).Write([]byte("complete"))
-	//h.wsPool.FindKey(strconv.FormatInt(bookingItem.ID, 10)).Write([]byte("complete"))
 }
 
 // CheckoutSuccess handles successful payment redirect
@@ -258,22 +251,10 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) { //, s 
 func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v", debugTag+"CheckoutSuccess()1")
 
-	// User validation passed ????
-	//h.validateUser( &models.BookingPaymentInfo{}, 0)
-
-	// Get booking ID from URL parameter
-	//recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
-	//if recordID == 0 {
-	//	http.Error(w, "Invalid booking ID", http.StatusBadRequest)
-	//	return
-	//}
-
 	if h.appConf.TestMode {
 		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 		h.appConf.EmailSvc.SendMail("vince.jennings@gmail.com", "Test Mode - Payment Successful", "Test mode enabled - payment successful for uers email:"+appSession.Email)
 	}
-
-	//log.Printf("%v Payment successful for booking %d", debugTag+"CheckoutSuccess()3", recordID)
 
 	//Send a completed page to the payment window/tab
 	// Return HTML page with success message
@@ -334,15 +315,6 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
 func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v", debugTag+"CheckoutCancel()1")
-
-	// Get booking ID from URL parameter
-	//recordID := dbStandardTemplate.GetID(w, r) // THis is not used ????
-	//if recordID == 0 {
-	//	http.Error(w, "Invalid booking ID", http.StatusBadRequest)
-	//	return
-	//}
-
-	//log.Printf("%v Payment cancelled for booking %d", debugTag+"CheckoutCancel()3", recordID)
 
 	// Return HTML page with cancellation message
 	html := `<!DOCTYPE html>

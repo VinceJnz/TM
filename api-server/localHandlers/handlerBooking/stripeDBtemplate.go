@@ -27,12 +27,6 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 
 // Update: modifies the existing record identified by id and returns the updated record
 func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) error {
-	//if err := json.NewDecoder(r.Body).Decode(dest); err != nil {
-	//	log.Printf(debugTag+debugStr+"Update()1 err=%+v, dest=%+v", err, dest)
-	//	http.Error(w, "Invalid request payload", http.StatusBadRequest)
-	//	return
-	//}
-
 	tx, err := Db.Beginx() // Start transaction
 	if err != nil {
 		http.Error(w, debugTag+debugStr+"Update()1: Could not start transaction", http.StatusInternalServerError)
@@ -53,8 +47,5 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		return err
 	}
 
-	//w.WriteHeader(http.StatusOK)
-	//w.Header().Set("Content-Type", "application/json")
-	//json.NewEncoder(w).Encode(dest) // Not sure why this is returning a copy of the record (dest) that was sent in.
 	return nil
 }

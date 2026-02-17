@@ -26,22 +26,18 @@ func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
 		return
 	}
-	//w.WriteHeader(http.StatusNotImplemented)
-	//w.Write([]byte("Not implemented"))
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("User logged out."))
 }
 
 func (h *Handler) removeSessionToken(tokenStr string) error {
-	//tokenItem, err := h.FindSessionToken(tokenStr)
 	tokenItem, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, tokenStr)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken()1 token not found", "err =", err, "tokenItem =", tokenItem)
 		return err
 	}
 	log.Printf(debugTag+"Handler.removeSessionToken()1 token found. tokenItem=%+v", tokenItem)
-	//err = h.TokenDeleteQry(tokenItem.ID)
 	err = dbAuthTemplate.TokenDeleteQry(debugTag+"Handler.removeSessionToken()2 ", h.appConf.Db, tokenItem.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken()2 failed to remove token", "err =", err, "tokenItem =", tokenItem)

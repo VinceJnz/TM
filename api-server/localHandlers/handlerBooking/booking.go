@@ -151,7 +151,6 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseUrlBooking, baseUrlTrip stri
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	//log.Printf(debugTag+"GetAll()1 userID=%v, adminFlag=%v\n", session.UserID, session.AdminFlag)
 
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
 	//dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
@@ -184,8 +183,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
-
-	//log.Printf(debugTag+"Create()3 record = %+v, query = %+v", record, qryCreate)
 
 	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 }

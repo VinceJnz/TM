@@ -496,11 +496,12 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // RequireRestAuth checks that the request is authorised, i.e. the user has been given a cookie by loging on.
-func (h *Handler) RequireRestAuth(next http.Handler) http.Handler {
+func (h *Handler) RequireRestAuthXX(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var resource RestResource
 		var token models.Token
 		var accessCheck models.AccessCheck
+
 		var err error
 
 		//token.Host.SetValid(r.RemoteAddr) // Do we need to check the host when we check the session cookie???

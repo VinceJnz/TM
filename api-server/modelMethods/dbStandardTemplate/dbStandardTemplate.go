@@ -44,8 +44,6 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 		return
 	}
 
-	//log.Printf(debugTag+debugStr+"Get()2 dest=%+v\n", dest)
-
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dest)
@@ -70,13 +68,6 @@ func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.D
 
 // Create: adds a new record and returns the new record
 func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	//log.Printf(debugTag+debugStr+"Create()1 dest=%+v", dest)
-	//err := json.NewDecoder(r.Body).Decode(dest)
-	//if err != nil {
-	//	log.Printf(debugTag+debugStr+"Create()2 err=%+v", err)
-	//	http.Error(w, "Invalid request payload", http.StatusBadRequest)
-	//	return
-	//}
 	log.Printf(debugTag+debugStr+"Create()3 dest=%+v", dest)
 
 	tx, err := Db.Beginx() // Start transaction
@@ -105,12 +96,6 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // Update: modifies the existing record identified by id and returns the updated record
 func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	//if err := json.NewDecoder(r.Body).Decode(dest); err != nil {
-	//	log.Printf(debugTag+debugStr+"Update()1 err=%+v, dest=%+v", err, dest)
-	//	http.Error(w, "Invalid request payload", http.StatusBadRequest)
-	//	return
-	//}
-
 	tx, err := Db.Beginx() // Start transaction
 	if err != nil {
 		http.Error(w, debugTag+debugStr+"Create()1: Could not start transaction", http.StatusInternalServerError)
@@ -186,7 +171,6 @@ func GetSession(w http.ResponseWriter, r *http.Request, SessionIDKey appCore.Con
 		http.Error(w, "Session data not available in request context", http.StatusInternalServerError)
 		return nil
 	}
-	//log.Printf(debugTag+"GetSession()2 session=%+v\n", session)
 	return session
 }
 
