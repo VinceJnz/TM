@@ -41,8 +41,6 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-// const ApiURL = "/auth"
-// const ApiURL = "/oauth/google/"
 const ApiURL = "/auth/oauth"
 const ApiURL2 = "/api/v1" + ApiURL
 
@@ -64,7 +62,6 @@ type UI struct {
 	Address       js.Value
 	BirthDate     js.Value
 	AccountHidden js.Value
-	//Password js.Value
 }
 
 type ParentData struct {
@@ -83,8 +80,6 @@ type viewElements struct {
 
 type children struct {
 	//Add child structures as necessary
-	//SrpClient *srp.SRP
-	//SrpGroup int
 }
 
 type ItemEditor struct {
@@ -154,8 +149,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 	// Create child editors here
 	//..........
-	//editor.Children.SrpGroup = srp.RFC5054Group3072
-	//editor.Children.SrpGroup = 0
 	editor.RecordState = RecordStateReloadRequired
 
 	// Listen for global loginComplete events
@@ -236,26 +229,17 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
 	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Account Hidden", "checkbox", "itemAccountHidden")
-	//editor.UiComponents.AccountHidden.Call("setAttribute", "required", "true")
 	editor.UiComponents.AccountHidden.Set("defaultChecked", true)
 	editor.UiComponents.AccountHidden.Set("Checked", editor.CurrentRecord.AccountHidden)
-
-	//localObjs.Password, editor.UiComponents.Password = viewHelpers.StringEdit(editor.CurrentRecord.Password, editor.document, "Password", "password", "itemPassword")
-	//editor.UiComponents.Password.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Address)
 	form.Call("appendChild", localObjs.BirthDate)
 	form.Call("appendChild", localObjs.AccountHidden)
-	//form.Call("appendChild", localObjs.Password)
 
 	// Create form buttons
-	//submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
-	//cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
-	//submitBtn := viewHelpers.SubmitValidateButton(editor.authProcess, editor.document, "Submit", "submitEditBtn")
 	submitBtn := viewHelpers.SubmitValidateButton2(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
-	//submitBtn := viewHelpers.SubmitValidateButton2(editor.authProcess, editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
@@ -348,24 +332,6 @@ func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 }
 
 func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
-	// Collect input elements
-	//js.FuncOf(func(this js.Value, args []js.Value) any {
-	// Collect pending registration data
-	//var payload TableData
-	//var err error
-	/*
-		payload.Username = editor.UiComponents.Username.Get("value").String()
-		if len(payload.Username) < 3 || len(payload.Username) > 20 {
-			js.Global().Call("alert", "Username is required and must be 3-20 characters")
-			return nil
-		}
-		payload.BirthDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BirthDate.Get("value").String())
-		if err != nil {
-			js.Global().Call("alert", "Invalid birth date format. Use YYYY-MM-DD")
-			return nil
-		}
-		payload.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
-	*/
 	// Register the account using the canonical registration endpoint, then open OAuth popup
 	if editor.client != nil {
 		editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &editor.CurrentRecord,

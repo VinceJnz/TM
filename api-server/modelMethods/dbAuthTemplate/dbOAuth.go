@@ -50,6 +50,8 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		if user.Address.Valid == false {
 			user.Address = userFromDB.Address
 		}
+		// CRITICAL: Preserve existing account status - admins set this manually
+		user.AccountStatusID = userFromDB.AccountStatusID
 		// For provider fields, prefer incoming (new) values; fall back to existing DB values if incoming is empty
 		if !user.Provider.Valid || user.Provider.String == "" {
 			user.Provider = userFromDB.Provider

@@ -30,8 +30,6 @@ func (editor *View) getMenuUser() {
 		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
 		//editor.CurrentRecord.MenuUser = menuUser // Save the menuUser to the current record
 		editor.elements.userDisplay.Set("innerHTML", editor.appCore.User.Name)
-		//log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()3 success: ", "err =", err, "MenuUser", editor.CurrentRecord.MenuUser) //Log the error in the browser
-
 		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 		// Next process step
 		editor.getMenuList()
@@ -61,8 +59,6 @@ func (editor *View) getMenuList() {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()2 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		}
 		editor.CurrentRecord.MenuList = menuList // Save the salt to the current record
-		//log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()3 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
-
 		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 		// Next process step
 		editor.menuComplete()
@@ -83,8 +79,6 @@ func (editor *View) getMenuList() {
 
 func (editor *View) menuComplete() {
 	// Need to do something here to signify the menu data fetch being successful!!!!
-	//log.Printf("%v %v %+v %v %+v", debugTag+"loginComplete()1 ", "MenuUser =", editor.CurrentRecord.MenuUser, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
-
 	editor.onCompletionMsg(debugTag + "Menu fetch complete")
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateMenu", DebugTag: debugTag, Data: UpdateMenu{
 		MenuUser: editor.appCore.User,

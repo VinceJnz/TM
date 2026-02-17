@@ -104,11 +104,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.ListDiv.Set("id", debugTag+"itemList")
 	editor.Div.Call("appendChild", editor.ListDiv)
 
-	// Create a div for displaying ItemState
-	//editor.StateDiv = editor.document.Call("createElement", "div")
-	//editor.StateDiv.Set("id", debugTag+"ItemStateDiv")
-	//editor.Div.Call("appendChild", editor.StateDiv)
-
 	// Store supplied parent value
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
@@ -372,32 +367,5 @@ func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: viewHelpers.ItemState(newState)})
 	editor.ItemState = newState
 }
-
-/*
-func (editor *ItemEditor) XXupdateStateDisplay(newState ItemState) {
-	editor.ItemState = newState
-	var stateText string
-	switch editor.ItemState {
-	case ItemStateNone:
-		stateText = "Idle"
-	case ItemStateFetching:
-		stateText = "Fetching Data"
-	case ItemStateEditing:
-		stateText = "Editing Item"
-	case ItemStateAdding:
-		stateText = "Adding New Item"
-	case ItemStateSaving:
-		stateText = "Saving Item"
-	case ItemStateDeleting:
-		stateText = "Deleting Item"
-	case ItemStateSubmitted:
-		stateText = "Edit Form Submitted"
-	default:
-		stateText = "Unknown State"
-	}
-
-	editor.StateDiv.Set("textContent", "Current State: "+stateText)
-}
-*/
 
 // Event handlers and event data types

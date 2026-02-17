@@ -90,9 +90,19 @@ func TokenInsertQry(debugStr string, Db *sqlx.DB, record models.Token) (int, err
 }
 
 func TokenUpdateQry(debugStr string, Db *sqlx.DB, record models.Token) error {
-	err := Db.QueryRow(sqlTokenUpdate,
-		record.ID, record.UserID, record.Name, record.Host, record.TokenStr, record.SessionData, record.Valid, record.ValidFrom, record.ValidTo).Scan(&record.ID)
-	return err
+	result, err := Db.Exec(sqlTokenUpdate,
+		record.ID, record.UserID, record.Name, record.Host, record.TokenStr, record.SessionData, record.Valid, record.ValidFrom, record.ValidTo)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func TokenWriteQry(debugStr string, Db *sqlx.DB, record models.Token) (int, error) {

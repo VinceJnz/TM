@@ -46,8 +46,6 @@ func ValidateDatesFromLtTo(fromDateObj, toDateObj, msgObj js.Value, warningMsg s
 		log.Println("warning message not set")
 		return errors.New("warning message not set")
 	}
-	//log.Printf(debugTag+"ValidateDatesFromLtTo()1 from=%v, to=%v, FromDate=%v, ToDate=%v, compare=%v", from, to, FromDate, ToDate, FromDate.Compare(ToDate))
-	//log.Printf(debugTag+"ValidateDatesFromLtTo()2 fromDateObj=%v, toDateObj=%v, msgObj=%v, warningMsg=%v", fromDateObj.Get("id"), toDateObj.Get("id"), msgObj.Get("id"), warningMsg)
 	fromDateObj.Call("setCustomValidity", "")
 	toDateObj.Call("setCustomValidity", "")
 	if FromDate.Compare(ToDate) > 0 { //!FromDate.Before(ToDate) {
@@ -65,10 +63,8 @@ func ValidateNewPassword(passwordObj, passwordChkObj js.Value) {
 	password := passwordObj.Get("value").String()
 	passwordChk := passwordChkObj.Get("value").String()
 
-	//passwordObj.Call("setCustomValidity", "")
 	passwordChkObj.Call("setCustomValidity", "")
 	if password != passwordChk {
-		//passwordObj.Call("setCustomValidity", "Passwords do not match")
 		passwordChkObj.Call("setCustomValidity", "Passwords do not match")
 	}
 }

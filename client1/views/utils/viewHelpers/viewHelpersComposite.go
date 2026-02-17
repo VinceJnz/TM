@@ -68,6 +68,57 @@ func InputGroup(document js.Value, htmlID string, children ...js.Value) js.Value
 	return div
 }
 
+// StyleStringEdit applies consistent styling to a StringEdit fieldset.
+func StyleStringEdit(fieldset, label, input js.Value, labelBold bool) {
+	SetStyles(fieldset, map[string]string{
+		"border":  "none",
+		"padding": "0",
+		"margin":  "0",
+	})
+	SetStyles(label, map[string]string{
+		"display":      "block",
+		"marginBottom": "5px",
+	})
+	if labelBold {
+		SetStyleProperty(label, "fontWeight", "bold")
+	}
+	SetStyles(input, map[string]string{
+		"width":        "100%",
+		"padding":      "8px",
+		"marginBottom": "15px",
+		"boxSizing":    "border-box",
+	})
+}
+
+// StyleBooleanEdit applies consistent styling to a BooleanEdit fieldset.
+func StyleBooleanEdit(fieldset, label, input js.Value, marginBottom string) {
+	fieldset.Call("insertBefore", input, label)
+	styles := map[string]string{
+		"border":  "none",
+		"padding": "0",
+		"margin":  "0",
+	}
+	if marginBottom != "" {
+		styles["marginBottom"] = marginBottom
+	}
+	SetStyles(fieldset, styles)
+	SetStyleProperty(input, "marginRight", "8px")
+}
+
+// StyleSubmitButton applies consistent styling to submit buttons.
+func StyleSubmitButton(button js.Value) {
+	SetStyles(button, map[string]string{
+		"width":           "100%",
+		"padding":         "12px",
+		"backgroundColor": "#4285f4",
+		"color":           "white",
+		"border":          "none",
+		"borderRadius":    "4px",
+		"fontSize":        "16px",
+		"cursor":          "pointer",
+	})
+}
+
 func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn func()) js.Value {
 	itemDiv := document.Call("createElement", "div")
 	itemDiv.Set("id", debugTag+"itemDiv")

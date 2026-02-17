@@ -2,6 +2,7 @@ package handlerAuth
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -9,12 +10,12 @@ import (
 	"api-server/v2/models"
 )
 
-// The function RequireOAuthOrSessionAuth needs to do the following:
+// The function RequireSessionAuth needs to do the following:
 //1. Check to see the the users is already logged in (It already deos this)
 //2. Try logging in using OAuth
 //3. Try using a password and emailed token for authentication.
 
-// RequireOAuthOrSessionAuth returns a middleware that accepts either a DB session cookie ("session")
+// RequireSessionAuth returns a middleware that accepts either a DB session cookie ("session")
 // or an OAuth session ("auth-session") from the provided gateway. It ensures an internal session
 // context (models.Session) is available for downstream handlers.
 func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
@@ -76,5 +77,12 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 			// If DB lookup failed, continue to try OAuth session
 		}
 		log.Printf("%vRequireSessionAuth()3 no valid DB session, trying OAuth session\n", debugTag)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error":   "unauthorized",
+			"message": "authentication required",
+		})
+		return
 	})
 }

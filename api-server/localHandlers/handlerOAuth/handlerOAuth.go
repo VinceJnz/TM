@@ -132,7 +132,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build user from provider info. Don't set session cookie yet—wait for email verification.
+	// Build user from provider info. Email is already verified by the provider.
 	emailStr, _ := userInfo["email"].(string)
 	nameStr, _ := userInfo["name"].(string)
 	user := models.User{}
@@ -141,7 +141,9 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	user.Email.SetValid(emailStr)
 	user.Provider.SetValid("google")
 	user.ProviderID.SetValid(sub)
-	user.AccountStatusID.SetValid(int64(models.AccountNew)) // Set to unverified
+	// For NEW users only, set AccountNew/AccountVerified (requires admin approval).
+	// For EXISTING users, FindOrCreateUserByProvider will preserve their current status.
+	user.AccountStatusID.SetValid(int64(models.AccountNew))
 
 	log.Printf("%vcallbackHandler()9 creating/upserting user: %+v", debugTag, user)
 

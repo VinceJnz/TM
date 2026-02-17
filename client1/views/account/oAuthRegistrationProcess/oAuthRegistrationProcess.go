@@ -54,7 +54,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	// Create container div
 	p.Elements.Div = p.document.Call("createElement", "div")
 	p.Elements.Div.Set("id", debugTag+"Div")
-	p.Elements.Div.Get("style").Set("display", "none")
+	viewHelpers.SetStyleProperty(p.Elements.Div, "display", "none")
 
 	// Create content div
 	p.Elements.Content = p.document.Call("createElement", "div")
@@ -96,13 +96,13 @@ func (p *Process) GetDiv() js.Value {
 
 // Display shows the view (required by editorElement interface)
 func (p *Process) Display() {
-	p.Elements.Div.Get("style").Set("display", "block")
+	viewHelpers.SetStyleProperty(p.Elements.Div, "display", "block")
 	p.isVisible = true
 }
 
 // Hide hides the view (required by editorElement interface)
 func (p *Process) Hide() {
-	p.Elements.Div.Get("style").Set("display", "none")
+	viewHelpers.SetStyleProperty(p.Elements.Div, "display", "none")
 	p.isVisible = false
 }
 
@@ -117,7 +117,7 @@ func (p *Process) FetchItems() {
 	p.Elements.Content.Set("innerHTML", "")
 
 	container := p.document.Call("createElement", "div")
-	container.Get("style").Set("padding", "20px")
+	viewHelpers.SetStyleProperty(container, "padding", "20px")
 
 	title := p.document.Call("createElement", "h2")
 	title.Set("textContent", "Register with OAuth")
@@ -129,13 +129,15 @@ func (p *Process) FetchItems() {
 
 	registerBtn := p.document.Call("createElement", "button")
 	registerBtn.Set("textContent", "Register with Google")
-	registerBtn.Get("style").Set("padding", "12px 24px")
-	registerBtn.Get("style").Set("fontSize", "16px")
-	registerBtn.Get("style").Set("backgroundColor", "#4285f4")
-	registerBtn.Get("style").Set("color", "white")
-	registerBtn.Get("style").Set("border", "none")
-	registerBtn.Get("style").Set("borderRadius", "4px")
-	registerBtn.Get("style").Set("cursor", "pointer")
+	viewHelpers.SetStyles(registerBtn, map[string]string{
+		"padding":         "12px 24px",
+		"fontSize":        "16px",
+		"backgroundColor": "#4285f4",
+		"color":           "white",
+		"border":          "none",
+		"borderRadius":    "4px",
+		"cursor":          "pointer",
+	})
 
 	registerBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 		p.StartRegistration()
@@ -279,10 +281,12 @@ func (p *Process) showRegistrationFormInPopup() {
 	// Create container
 	container := doc.Call("createElement", "div")
 	container.Set("className", "oauth-registration-container")
-	container.Get("style").Set("maxWidth", "400px")
-	container.Get("style").Set("margin", "40px auto")
-	container.Get("style").Set("padding", "30px")
-	container.Get("style").Set("fontFamily", "sans-serif")
+	viewHelpers.SetStyles(container, map[string]string{
+		"maxWidth":   "400px",
+		"margin":     "40px auto",
+		"padding":    "30px",
+		"fontFamily": "sans-serif",
+	})
 
 	// Title
 	title := doc.Call("createElement", "h2")
@@ -292,13 +296,13 @@ func (p *Process) showRegistrationFormInPopup() {
 	// Info message
 	info := doc.Call("createElement", "p")
 	info.Set("textContent", "Please provide additional information to complete your registration.")
-	info.Get("style").Set("color", "#666")
+	viewHelpers.SetStyleProperty(info, "color", "#666")
 	container.Call("appendChild", info)
 
 	// Status message div
 	statusDiv := doc.Call("createElement", "div")
 	statusDiv.Set("id", "statusMessage")
-	statusDiv.Get("style").Set("marginBottom", "15px")
+	viewHelpers.SetStyleProperty(statusDiv, "marginBottom", "15px")
 	container.Call("appendChild", statusDiv)
 
 	// Create form
@@ -306,91 +310,37 @@ func (p *Process) showRegistrationFormInPopup() {
 	form.Set("id", "registrationForm")
 
 	// Username field
-	usernameLabel := doc.Call("createElement", "label")
-	usernameLabel.Set("textContent", "Username (required)")
-	usernameLabel.Get("style").Set("display", "block")
-	usernameLabel.Get("style").Set("marginBottom", "5px")
-	usernameLabel.Get("style").Set("fontWeight", "bold")
-
-	usernameInput := doc.Call("createElement", "input")
-	usernameInput.Set("type", "text")
-	usernameInput.Set("id", "username")
+	usernameFieldset, usernameInput := viewHelpers.StringEdit("", doc, "Username (required)", "text", "username")
+	usernameLabel := usernameFieldset.Get("firstChild")
+	viewHelpers.StyleStringEdit(usernameFieldset, usernameLabel, usernameInput, true)
 	usernameInput.Set("required", true)
 	usernameInput.Set("minLength", 3)
 	usernameInput.Set("maxLength", 20)
 	usernameInput.Set("placeholder", "Choose a username")
-	usernameInput.Get("style").Set("width", "100%")
-	usernameInput.Get("style").Set("padding", "8px")
-	usernameInput.Get("style").Set("marginBottom", "15px")
-	usernameInput.Get("style").Set("boxSizing", "border-box")
-
-	form.Call("appendChild", usernameLabel)
-	form.Call("appendChild", usernameInput)
+	form.Call("appendChild", usernameFieldset)
 
 	// Address field (optional)
-	addressLabel := doc.Call("createElement", "label")
-	addressLabel.Set("textContent", "Address (optional)")
-	addressLabel.Get("style").Set("display", "block")
-	addressLabel.Get("style").Set("marginBottom", "5px")
-
-	addressInput := doc.Call("createElement", "input")
-	addressInput.Set("type", "text")
-	addressInput.Set("id", "address")
+	addressFieldset, addressInput := viewHelpers.StringEdit("", doc, "Address (optional)", "text", "address")
+	addressLabel := addressFieldset.Get("firstChild")
+	viewHelpers.StyleStringEdit(addressFieldset, addressLabel, addressInput, false)
 	addressInput.Set("placeholder", "Your address")
-	addressInput.Get("style").Set("width", "100%")
-	addressInput.Get("style").Set("padding", "8px")
-	addressInput.Get("style").Set("marginBottom", "15px")
-	addressInput.Get("style").Set("boxSizing", "border-box")
-
-	form.Call("appendChild", addressLabel)
-	form.Call("appendChild", addressInput)
+	form.Call("appendChild", addressFieldset)
 
 	// Birth date field (optional)
-	birthDateLabel := doc.Call("createElement", "label")
-	birthDateLabel.Set("textContent", "Birth Date (optional)")
-	birthDateLabel.Get("style").Set("display", "block")
-	birthDateLabel.Get("style").Set("marginBottom", "5px")
-
-	birthDateInput := doc.Call("createElement", "input")
-	birthDateInput.Set("type", "date")
-	birthDateInput.Set("id", "birth_date")
-	birthDateInput.Get("style").Set("width", "100%")
-	birthDateInput.Get("style").Set("padding", "8px")
-	birthDateInput.Get("style").Set("marginBottom", "15px")
-	birthDateInput.Get("style").Set("boxSizing", "border-box")
-
-	form.Call("appendChild", birthDateLabel)
-	form.Call("appendChild", birthDateInput)
+	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", doc, "Birth Date (optional)", "date", "birth_date")
+	birthDateLabel := birthDateFieldset.Get("firstChild")
+	viewHelpers.StyleStringEdit(birthDateFieldset, birthDateLabel, birthDateInput, false)
+	form.Call("appendChild", birthDateFieldset)
 
 	// Account hidden checkbox
-	checkboxContainer := doc.Call("createElement", "div")
-	checkboxContainer.Get("style").Set("marginBottom", "20px")
-
-	accountHiddenInput := doc.Call("createElement", "input")
-	accountHiddenInput.Set("type", "checkbox")
-	accountHiddenInput.Set("id", "account_hidden")
-	accountHiddenInput.Get("style").Set("marginRight", "8px")
-
-	accountHiddenLabel := doc.Call("createElement", "label")
-	accountHiddenLabel.Set("textContent", "Hide my account from public listings")
-
-	checkboxContainer.Call("appendChild", accountHiddenInput)
-	checkboxContainer.Call("appendChild", accountHiddenLabel)
-	form.Call("appendChild", checkboxContainer)
+	checkboxFieldset, accountHiddenInput := viewHelpers.BooleanEdit(false, doc, "Hide my account from public listings", "checkbox", "account_hidden")
+	checkboxLabel := checkboxFieldset.Get("firstChild")
+	viewHelpers.StyleBooleanEdit(checkboxFieldset, checkboxLabel, accountHiddenInput, "20px")
+	form.Call("appendChild", checkboxFieldset)
 
 	// Submit button
-	submitBtn := doc.Call("createElement", "button")
-	submitBtn.Set("type", "submit")
-	submitBtn.Set("id", "submitBtn")
-	submitBtn.Set("textContent", "Complete Registration")
-	submitBtn.Get("style").Set("width", "100%")
-	submitBtn.Get("style").Set("padding", "12px")
-	submitBtn.Get("style").Set("backgroundColor", "#4285f4")
-	submitBtn.Get("style").Set("color", "white")
-	submitBtn.Get("style").Set("border", "none")
-	submitBtn.Get("style").Set("borderRadius", "4px")
-	submitBtn.Get("style").Set("fontSize", "16px")
-	submitBtn.Get("style").Set("cursor", "pointer")
+	submitBtn := viewHelpers.SubmitButton(doc, "Complete Registration", "submitBtn")
+	viewHelpers.StyleSubmitButton(submitBtn)
 
 	form.Call("appendChild", submitBtn)
 
@@ -494,16 +444,22 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 // showStatus displays a status message
 func (p *Process) showStatus(statusDiv js.Value, message string, messageType string) {
 	statusDiv.Set("textContent", message)
-	statusDiv.Get("style").Set("padding", "10px")
-	statusDiv.Get("style").Set("borderRadius", "4px")
-	statusDiv.Get("style").Set("marginBottom", "10px")
+	viewHelpers.SetStyles(statusDiv, map[string]string{
+		"padding":      "10px",
+		"borderRadius": "4px",
+		"marginBottom": "10px",
+	})
 
 	if messageType == "error" {
-		statusDiv.Get("style").Set("backgroundColor", "#ffebee")
-		statusDiv.Get("style").Set("color", "#c62828")
+		viewHelpers.SetStyles(statusDiv, map[string]string{
+			"backgroundColor": "#ffebee",
+			"color":           "#c62828",
+		})
 	} else if messageType == "success" {
-		statusDiv.Get("style").Set("backgroundColor", "#e8f5e9")
-		statusDiv.Get("style").Set("color", "#2e7d32")
+		viewHelpers.SetStyles(statusDiv, map[string]string{
+			"backgroundColor": "#e8f5e9",
+			"color":           "#2e7d32",
+		})
 	}
 }
 

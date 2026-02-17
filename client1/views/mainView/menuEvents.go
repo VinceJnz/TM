@@ -89,7 +89,6 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 	} else {
 		for _, o := range menuData.MenuList { // Iterate through the menu list from the server and hide/display buttons as necessary.
 			val, ok := v.menuButtons[strings.ToLower(o.Resource)]
-			//log.Printf(debugTag+"updateMenu()2 Menu val=%+v, MenuItem=%+v,okay=%v\n", val, o, ok)
 			if ok {
 				if !val.adminOnly {
 					val.button.Get("style").Call("removeProperty", "display") // Remove property "display: none;" causes the menu button to be displayed

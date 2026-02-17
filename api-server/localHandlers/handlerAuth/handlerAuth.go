@@ -34,6 +34,10 @@ func New(appConf *appCore.Config) *Handler {
 // RegisterRoutesPublic registers unprotected authentication routes (no auth middleware)
 func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
 	// Public endpoints - accessible without authentication
+	// Menu user endpoint (public so client can check auth status on page load)
+	r.HandleFunc(baseURL+"/menuUser/", h.MenuUserGet).Methods("GET")
+	// Authentication status check (does not require auth)
+	r.HandleFunc(baseURL+"/status", h.AuthStatus).Methods("GET")
 	// Email/OTP registration and login
 	r.HandleFunc(baseURL+"/register", h.Register).Methods("POST")
 	r.HandleFunc(baseURL+"/verify-registration", h.VerifyRegistration).Methods("POST")
@@ -50,7 +54,6 @@ func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
 func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 	// Protected endpoints - require valid authentication
 	r.HandleFunc(baseURL+"/logout/", h.AuthLogout).Methods("Get")
-	r.HandleFunc(baseURL+"/menuUser/", h.MenuUserGet).Methods("Get")
 	r.HandleFunc(baseURL+"/menuList/", h.MenuListGet).Methods("Get")
 }
 

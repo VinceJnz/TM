@@ -170,9 +170,6 @@ func (v *View) Setup() {
 
 	// Add all the menu options to the sidemenu
 	v.AddViewItem("&times;", "", false, nil, true, false, v.elements.sidemenu)
-	//v.AddViewItem("SRP Login", "", true, srpLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
-	//v.AddViewItem("WebAuthn Login", "", true, webAuthnLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
-	// OAuth registration view (Google)
 	v.AddViewItem("oAuth Register", "", true, oAuthRegistrationView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	v.AddViewItem("oAuth Register2", "", true, oAuthRegistrationProcess.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	v.AddViewItem("oAuth Login", "", true, oAuthLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
