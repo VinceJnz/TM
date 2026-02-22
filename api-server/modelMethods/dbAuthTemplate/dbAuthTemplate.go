@@ -313,6 +313,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
+	log.Printf("%v %v %+v", debugTag+debugStr+"UserInsertQryTx()1 - ", "record =", record)
 	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)

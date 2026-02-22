@@ -2,10 +2,8 @@ package models
 
 import (
 	"errors"
-	"math/big"
 	"time"
 
-	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/guregu/null/v5/zero"
 )
 
@@ -33,16 +31,12 @@ type User struct {
 	MemberStatusID  zero.Int    `json:"member_status_id" db:"member_status_id"`
 	MemberStatus    zero.String `json:"member_status" db:"member_status"`
 	Password        zero.String `json:"user_password" db:"user_password"` //This will probably not be used (see: salt, verifier)
-	Salt            []byte      `json:"salt" db:"salt"`
-	Verifier        *big.Int    `json:"verifier" db:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
 	AccountStatusID zero.Int    `json:"user_account_status_id" db:"user_account_status_id"`
 	AccountHidden   zero.Bool   `json:"user_account_hidden" db:"user_account_hidden"`
-	//WebAuthnUserID  []byte                `json:"webauthn_user_id" db:"webauthn_user_id"` // This is the WebAuthn ID (user handle), which is a byte slice representation of the user ID. This does not change.
-	Credentials []webauthn.Credential `json:"credentials" db:"credentials"` // WebAuthn credentials // Need to investigate how to store this in the DB ?????????
-	Provider    zero.String           `json:"provider" db:"provider"`       // OAuth provider name (e.g., "google", "facebook")
-	ProviderID  zero.String           `json:"provider_id" db:"provider_id"` // OAuth provider user ID
-	Created     time.Time             `json:"created" db:"created"`
-	Modified    time.Time             `json:"modified" db:"modified"`
+	Provider        zero.String `json:"provider" db:"provider"`       // OAuth provider name (e.g., "google", "facebook")
+	ProviderID      zero.String `json:"provider_id" db:"provider_id"` // OAuth provider user ID
+	Created         time.Time   `json:"created" db:"created"`
+	Modified        time.Time   `json:"modified" db:"modified"`
 }
 
 type UserAgeGroups struct {
@@ -64,9 +58,9 @@ type UserPayments struct {
 	ID            int         `json:"id" db:"id"`
 	UserID        int         `json:"user_id" db:"user_id"`
 	BookingID     int         `json:"booking_id" db:"booking_id"`
-	PaymentDate   zero.Time   `json:"paymnet_date" db:"paymnet_date"`
+	PaymentDate   zero.Time   `json:"payment_date" db:"payment_date"`
 	Amount        zero.Float  `json:"amount" db:"amount"`
-	PaymentMethod zero.String `json:"payment_menthod" db:"payment_menthod"`
+	PaymentMethod zero.String `json:"payment_method" db:"payment_method"`
 	Created       time.Time   `json:"created" db:"created"`
 	Modified      time.Time   `json:"modified" db:"modified"`
 }

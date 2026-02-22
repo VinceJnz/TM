@@ -7,6 +7,7 @@ import (
 	"client1/v2/views/account/oAuthRegistrationView"
 	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
+	"time"
 )
 
 /*
@@ -57,15 +58,15 @@ const ApiURL = "/auth"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {
-	Username      string `json:"username"`
-	Password      string `json:"user_password"`
-	Email         string `json:"email"`
-	Name          string `json:"name"`
-	Address       string `json:"address"`
-	BirthDate     string `json:"birth_date"`
-	AccountHidden bool   `json:"account_hidden"`
-	Token         string `json:"token"`    // for registration verification or OTP
-	Remember      bool   `json:"remember"` // for login OTP
+	Username      string    `json:"username"`
+	Password      string    `json:"user_password"`
+	Email         string    `json:"email"`
+	Name          string    `json:"name"`
+	Address       string    `json:"user_address"`
+	BirthDate     time.Time `json:"user_birth_date"`
+	AccountHidden bool      `json:"user_account_hidden"`
+	Token         string    `json:"token"`    // for registration verification or OTP
+	Remember      bool      `json:"remember"` // for login OTP
 }
 
 type UI struct {

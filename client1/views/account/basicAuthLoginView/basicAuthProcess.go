@@ -4,7 +4,9 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
+	"log"
 	"syscall/js"
+	"time"
 )
 
 // handleRegisterSubmit submits {username,email} to /auth/register
@@ -18,7 +20,14 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
-	editor.CurrentRecord.BirthDate = editor.UiComponents.BirthDate.Get("value").String()
+	var err error
+	editor.CurrentRecord.BirthDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BirthDate.Get("value").String())
+	if err != nil {
+		log.Println("Error parsing value:", err)
+		//js.Global().Call("alert", "invalid birth date format")
+		//return nil
+	}
+
 	editor.CurrentRecord.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
 	//editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
 
@@ -26,20 +35,22 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 		js.Global().Call("alert", "username, email, and password required")
 		return nil
 	}
-	payload := map[string]any{
-		"username":       editor.CurrentRecord.Username,
-		"email":          editor.CurrentRecord.Email,
-		"password":       editor.CurrentRecord.Password,
-		"name":           editor.CurrentRecord.Name,
-		"address":        editor.CurrentRecord.Address,
-		"birth_date":     editor.CurrentRecord.BirthDate,
-		"account_hidden": editor.CurrentRecord.AccountHidden,
-	}
+	//payload := map[string]any{
+	//	"username":       editor.CurrentRecord.Username,
+	//	"email":          editor.CurrentRecord.Email,
+	//	"user_password":       editor.CurrentRecord.Password,
+	//	"name":           editor.CurrentRecord.Name,
+	//	"user_address":        editor.CurrentRecord.Address,
+	//	"user_birth_date":     editor.CurrentRecord.BirthDate,
+	//	"account_hidden": editor.CurrentRecord.AccountHidden,
+	//}
 	if editor.client == nil {
 		js.Global().Call("alert", "no http client available")
 		return nil
 	}
-	editor.client.NewRequest("POST", ApiURL+"/register", nil, payload,
+	//editor.client.NewRequest("POST", ApiURL+"/register", nil, payload,
+	log.Printf("%vhandleRegisterSubmit()1 Submitting registration for user: %+v", debugTag, editor.CurrentRecord)
+	editor.client.NewRequest("POST", ApiURL+"/register", nil, editor.CurrentRecord,
 		func(err error, rd *httpProcessor.ReturnData) {
 			if err != nil {
 				js.Global().Call("alert", "registration failed: "+err.Error())
@@ -63,18 +74,27 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 		args[0].Call("preventDefault")
 	}
 
-	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
-	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
+	//editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
+	//editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
+	//editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
+	//editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
 
 	if editor.CurrentRecord.Token == "" {
 		js.Global().Call("alert", "verification token required")
 		return nil
 	}
-	payload := map[string]string{"token": editor.CurrentRecord.Token, "username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "name": editor.CurrentRecord.Name, "password": editor.CurrentRecord.Password}
-	editor.client.NewRequest("POST", ApiURL+"/verify-registration", nil, payload,
+	/*
+		payload := map[string]string{
+			"token":         editor.CurrentRecord.Token,
+			"username":      editor.CurrentRecord.Username,
+			"email":         editor.CurrentRecord.Email,
+			"name":          editor.CurrentRecord.Name,
+			"user_password": editor.CurrentRecord.Password,
+		}
+	*/
+	//editor.client.NewRequest("POST", ApiURL+"/verify-registration", nil, payload,
+	editor.client.NewRequest("POST", ApiURL+"/verify-registration", nil, editor.CurrentRecord.Token,
 		func(err error, rd *httpProcessor.ReturnData) {
 			if err != nil {
 				js.Global().Call("alert", "verification failed: "+err.Error())
@@ -106,8 +126,8 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 		js.Global().Call("alert", "password required")
 		return nil
 	}
-	payload := map[string]string{"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "password": editor.CurrentRecord.Password}
-	editor.client.NewRequest("POST", ApiURL+"/login-password", nil, payload,
+	//payload := map[string]string{"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "password": editor.CurrentRecord.Password}
+	editor.client.NewRequest("POST", ApiURL+"/login-password", nil, editor.CurrentRecord,
 		func(err error, rd *httpProcessor.ReturnData) {
 			if err != nil {
 				js.Global().Call("alert", "password login failed: "+err.Error())

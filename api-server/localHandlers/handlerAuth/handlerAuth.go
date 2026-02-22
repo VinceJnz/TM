@@ -122,40 +122,35 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 // Expects: {"username": "...", "email": "...", "name": "..." (optional), "password": "..."}
 // Returns: registration pending, check email for verification token
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Name     string `json:"name"`
-		Password string `json:"password"`
-	}
+	var payload models.User
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
+	log.Printf("%vRegister()1 payload received: %+v", debugTag, payload)
 
 	// Validate input
-	username := strings.TrimSpace(payload.Username)
-	email := strings.TrimSpace(payload.Email)
-	name := strings.TrimSpace(payload.Name)
-	password := payload.Password
+	payload.Email.SetValid(strings.TrimSpace(payload.Email.String))
+	payload.Name = strings.TrimSpace(payload.Name)
+	payload.Address.SetValid(strings.TrimSpace(payload.Address.String))
 
-	if username == "" || email == "" {
+	if payload.Username == "" || payload.Email.String == "" {
 		http.Error(w, "username and email are required", http.StatusBadRequest)
 		return
 	}
 
-	if len(username) < 3 || len(username) > 50 {
+	if len(payload.Username) < 3 || len(payload.Username) > 50 {
 		http.Error(w, "username must be between 3 and 50 characters", http.StatusBadRequest)
 		return
 	}
 
-	if password != "" && len(password) < 8 {
+	if payload.Password.String != "" && len(payload.Password.String) < 8 {
 		http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
 		return
 	}
 
 	// Check if username already exists
-	_, err := dbAuthTemplate.UserNameReadQry(debugTag+"Register:checkUsername ", h.appConf.Db, username)
+	_, err := dbAuthTemplate.UserNameReadQry(debugTag+"Register:checkUsername ", h.appConf.Db, payload.Username)
 	if err == nil {
 		// Username exists
 		http.Error(w, "this username is already taken", http.StatusConflict)
@@ -163,21 +158,14 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if email already exists
-	_, err = dbAuthTemplate.UserEmailReadQry(debugTag+"Register:checkEmail ", h.appConf.Db, email)
+	_, err = dbAuthTemplate.UserEmailReadQry(debugTag+"Register:checkEmail ", h.appConf.Db, payload.Email.String)
 	if err == nil {
 		// Email exists
 		http.Error(w, "an account with this email address already exists", http.StatusConflict)
 		return
 	}
 
-	// Create temporary registration token with user data stored in SessionData
-	regData := map[string]string{
-		"username": username,
-		"email":    email,
-		"name":     name,
-		"password": password,
-	}
-	regDataJSON, _ := json.Marshal(regData)
+	regDataJSON, _ := json.Marshal(payload)
 
 	tokenCookie, err := dbAuthTemplate.CreateNamedToken(
 		debugTag+"Register:CreateNamedToken",
@@ -207,10 +195,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	// Send verification email
 	subject := "Verify your email to complete registration"
-	body := fmt.Sprintf("Hi %s,\n\nVerify your email using this code: %s\n\nThis code expires in 24 hours.\n\nIf you didn't register, you can ignore this email.", username, tokenCookie.Value)
+	body := fmt.Sprintf("Hi %s,\n\nVerify your email using this code: %s\n\nThis code expires in 24 hours.\n\nIf you didn't register, you can ignore this email.", payload.Username, tokenCookie.Value)
 
 	if h.appConf.EmailSvc != nil {
-		if success, err := h.appConf.EmailSvc.SendMail(email, subject, body); err != nil {
+		if success, err := h.appConf.EmailSvc.SendMail(payload.Email.String, subject, body); err != nil {
 			log.Printf("%vRegister()6 failed to send registration verification email: %v", debugTag, err)
 			// Delete the token if email failed
 			tok, err := dbAuthTemplate.FindToken(debugTag+"Register:findTokenForDeletion", h.appConf.Db, "registration-verification", tokenCookie.Value) // Find the token to get its ID for deletion
@@ -223,14 +211,14 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			log.Printf("%vRegister()7 registration verification email sent: %v", debugTag, success)
 		}
 	} else {
-		log.Printf("%vRegister()8 EmailSvc not configured; registration token for %s: %s", debugTag, email, tokenCookie.Value)
+		log.Printf("%vRegister()8 EmailSvc not configured; registration token for %s: %s", debugTag, payload.Email.String, tokenCookie.Value)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "registration_pending",
-		"message": "verification code sent to " + email,
+		"message": "verification code sent to " + payload.Email.String,
 	})
 }
 
@@ -239,17 +227,14 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // Returns: user account created and verified, pending admin approval for activation
 func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
-		Token    string `json:"token"`
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Name     string `json:"name"`
+		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("%vVerifyRegistration()1 payload received: %+v", debugTag, payload)
 	if payload.Token == "" {
 		http.Error(w, "verification token is required", http.StatusBadRequest)
 		return
@@ -269,56 +254,25 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid verification token", http.StatusForbidden)
 		return
 	}
+	log.Printf("%vVerifyRegistration()3 registration token found: %+v", debugTag, tok)
 
-	// If username/email/name/password not supplied, try to read from token SessionData (persisted at registration)
-	if (payload.Username == "" || payload.Email == "" || payload.Name == "" || payload.Password == "") && tok.SessionData.Valid {
-		var sd map[string]string
-		if err := json.Unmarshal([]byte(tok.SessionData.String), &sd); err == nil {
-			if payload.Username == "" {
-				if v, ok := sd["username"]; ok {
-					payload.Username = v
-				}
-			}
-			if payload.Email == "" {
-				if v, ok := sd["email"]; ok {
-					payload.Email = v
-				}
-			}
-			if payload.Name == "" {
-				if v, ok := sd["name"]; ok {
-					payload.Name = v
-				}
-			}
-			if payload.Password == "" {
-				if v, ok := sd["password"]; ok {
-					payload.Password = v
-				}
-			}
-		}
+	var user models.User
+	// Read username/email/name/password from token SessionData (persisted at registration)
+	if err := json.Unmarshal([]byte(tok.SessionData.String), &user); err != nil {
+		log.Printf("%vVerifyRegistration()4 failed to extract user data from token SessionData: %v", debugTag, err)
 	}
 
-	// Create user account with AccountVerified status
-	user := models.User{}
-	user.Username = payload.Username
-	user.Email.SetValid(payload.Email)
-	if payload.Name != "" {
-		user.Name = payload.Name
-	} else {
-		user.Name = payload.Username // Default to username if name not provided
-	}
 	user.AccountStatusID.SetValid(int64(models.AccountVerified)) // Email verified, pending admin approval
-	user.Created = time.Now()
-	user.Modified = time.Now()
 
 	// Hash password if provided
-	if payload.Password != "" {
-		if len(payload.Password) < 8 {
+	if user.Password.String != "" {
+		if len(user.Password.String) < 8 {
 			http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
 			return
 		}
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password.String), bcrypt.DefaultCost)
 		if err != nil {
-			log.Printf("%vVerifyRegistration()3 failed to hash password: %v", debugTag, err)
+			log.Printf("%vVerifyRegistration()5 failed to hash password: %v", debugTag, err)
 			http.Error(w, "failed to process password", http.StatusInternalServerError)
 			return
 		}
@@ -326,9 +280,10 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create user in database
+	log.Printf("%vVerifyRegistration()6 creating user account for user=%+v", debugTag, user)
 	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"VerifyRegistration:create", h.appConf.Db, user)
 	if err != nil {
-		log.Printf("%vVerifyRegistration()4 failed to create user: %v", debugTag, err)
+		log.Printf("%vVerifyRegistration()7 failed to create user: %v", debugTag, err)
 		http.Error(w, "failed to create user account", http.StatusInternalServerError)
 		return
 	}
@@ -336,7 +291,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	// Delete the registration verification token (one-time use)
 	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyRegistration:del", h.appConf.Db, tok.ID)
 
-	log.Printf("%vVerifyRegistration()5 user registered and verified: userID=%d, username=%s, email=%s (pending admin activation)", debugTag, userID, payload.Username, payload.Email)
+	log.Printf("%vVerifyRegistration()8 user registered and verified: userID=%d, user %+v (pending admin activation)", debugTag, userID, user)
 
 	// TODO: Notify admin group of new user account needing approval
 
