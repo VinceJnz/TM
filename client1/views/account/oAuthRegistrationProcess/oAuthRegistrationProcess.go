@@ -401,7 +401,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 		ApiURL+"/complete-registration",
 		nil,
 		&regData,
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			// Success callback
 			if err != nil {
 				log.Printf("%v Registration failed: %v", debugTag, err)
@@ -431,7 +431,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 				return nil
 			}), 1500)
 		},
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			// Failure callback
 			log.Printf("%v Registration error: %v", debugTag, err)
 			p.showStatus(statusDiv, "Registration error: "+err.Error(), "error")

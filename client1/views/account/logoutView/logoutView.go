@@ -253,7 +253,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	success := func(err error, data *httpProcessor.ReturnData) {
+	success := func(err error) {
 		if err != nil {
 			log.Printf("%v %v %v", debugTag+"FetchItems()1 success: ", "err =", err) //Log the error in the browser
 			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Logout failed, error: " + err.Error()})

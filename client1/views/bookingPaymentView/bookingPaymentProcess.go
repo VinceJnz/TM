@@ -1,7 +1,6 @@
 package bookingPaymentView
 
 import (
-	"client1/v2/app/httpProcessor"
 	"log"
 	"net/http"
 	"strconv"
@@ -45,7 +44,7 @@ func (p *ItemEditor) MakePayment(ItemID int64) {
 	var checkoutResp CheckoutCreateResponse
 	log.Printf("%vMakePayment() starting for BookingID=%d", debugTag, ItemID)
 
-	success := func(err error, data *httpProcessor.ReturnData) {
+	success := func(err error) {
 		if err != nil {
 			log.Printf("%vMakePayment()1 error: %v", debugTag, err)
 			//p.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -66,7 +65,7 @@ func (p *ItemEditor) MakePayment(ItemID int64) {
 		p.openPaymentPage(checkoutResp.CheckoutURL)
 	}
 
-	fail := func(err error, data *httpProcessor.ReturnData) {
+	fail := func(err error) {
 		log.Printf("%vMakePayment()4 failed: %v", debugTag, err)
 		//p.updateStateDisplay(viewHelpers.ItemStateNone)
 	}
@@ -239,7 +238,7 @@ func (p *ItemEditor) checkPayment() {
 
 	log.Printf("%vcheckPayment() checking payment status for BookingID=%d", debugTag, p.ParentData.ID)
 
-	success := func(err error, data *httpProcessor.ReturnData) {
+	success := func(err error) {
 		if err != nil {
 			log.Printf("%vcheckPayment() error: %v", debugTag, err)
 			return
@@ -270,7 +269,7 @@ func (p *ItemEditor) checkPayment() {
 		}
 	}
 
-	fail := func(err error, data *httpProcessor.ReturnData) {
+	fail := func(err error) {
 		log.Printf("%vcheckPayment() failed: %v", debugTag, err)
 	}
 

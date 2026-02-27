@@ -97,7 +97,6 @@ type ItemEditor struct {
 	ViewState     ViewState
 	RecordState   RecordState
 	Children      children
-	FieldNames    httpProcessor.FieldNames
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -431,10 +430,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) FetchItems() {
 	var records []TableData
-	success := func(err error, data *httpProcessor.ReturnData) {
-		if data != nil {
-			editor.FieldNames = data.FieldNames // Might be able to use this to filter the fields displayed on the form
-		}
+	success := func(err error) {
 		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)

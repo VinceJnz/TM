@@ -57,22 +57,22 @@ func New(baseURL string) *Client {
 	}
 }
 
-func (c *Client) NewRequest(method, url string, rxDataStru, txDataStru any, callBacks ...func(error, *ReturnData)) {
+func (c *Client) NewRequest(method, url string, rxDataStru, txDataStru any, callBacks ...func(error)) {
 	err := c.newRequest(method, url, rxDataStru, txDataStru, callBacks...)
 	if err != nil {
 		log.Printf(debugTag+"NewRequest()1 err = %v", err)
 	}
 }
 
-func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, callBacks ...func(error, *ReturnData)) error {
+func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, callBacks ...func(error)) error {
 	var err error
 	var req *http.Request
 	var res *http.Response
-	var fieldNames FieldNames
+	//var fieldNames FieldNames
 
 	url = c.BaseURL + url
 
-	callBackSuccess := func(error, *ReturnData) {
+	callBackSuccess := func(error) {
 		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: No success-callback has been provided: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderOk is called
 	} //The function to be called to render the request results
@@ -82,7 +82,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 		}
 	}
 
-	callBackFail := func(error, *ReturnData) {
+	callBackFail := func(error) {
 		err = fmt.Errorf(debugTag+"newRequest()3 INFORMATION: No error-callback function has been provided: %w", err)
 		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderErr is called
 	} //The function to be called to render an error
@@ -144,7 +144,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 	res, err = c.doRequest(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)
-		callBackFail(err, nil)
+		callBackFail(err)
 		return err
 	}
 	defer res.Body.Close()
@@ -164,10 +164,10 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 		if err != nil {
 			log.Printf("%v %v %v %v %v %v %v", debugTag+"NewRequest()6a ", "err =", err, "res.StatusCode =", res.StatusCode, "req.URL =", req.URL)
 			err = fmt.Errorf(debugTag+"newRequest()6b server response StatusCode=%v: error=%w", res.StatusCode, err)
-			callBackFail(err, nil)
+			callBackFail(err)
 		}
 		err = fmt.Errorf(debugTag+"newRequest()7 server response StatusCode=%v: server message=%s", res.StatusCode, resBody)
-		callBackFail(err, nil)
+		callBackFail(err)
 		return err
 	}
 
@@ -179,12 +179,12 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 		//	callBackFail(err)
 		//	return err
 		//}
-		fieldNames, err = decodeJSON(res, &rxDataStru)
+		err = decodeJSON(res, &rxDataStru)
 		if err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
 			resBody, _ := io.ReadAll(res.Body)
 			log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8a ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
 			err = fmt.Errorf(debugTag+"newRequest()8b failed to decode JSON data: %w", err)
-			callBackFail(err, nil)
+			callBackFail(err)
 			return err
 		}
 	} else {
@@ -196,47 +196,26 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 		}
 	}
 
-	returnData := &ReturnData{FieldNames: fieldNames}
-	callBackSuccess(nil, returnData)
+	//returnData := &ReturnData{FieldNames: fieldNames}
+	//callBackSuccess(nil, returnData)
+	callBackSuccess(nil)
 	return nil
 }
 
 // decodeJSON decodes the JSON data in the body and puts it in the supplied structure, and returns the field names.
-func decodeJSON(res *http.Response, rxDataStru interface{}) (FieldNames, error) {
-	fieldNames := make(FieldNames)
-
+func decodeJSON(res *http.Response, rxDataStru interface{}) error {
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return fieldNames, err
+		return err
 	}
 
 	// Unmarshal into the provided structure.
 	if err := json.Unmarshal(bodyBytes, rxDataStru); err != nil {
 		// Provide a helpful error; return it so the caller can decide how to proceed.
-		return fieldNames, fmt.Errorf("%vdecodeJSON: failed to unmarshal response body: %w", debugTag, err)
+		return fmt.Errorf("%vdecodeJSON: failed to unmarshal response body: %w", debugTag, err)
 	}
 
-	// Try to extract field names. The response might be an array of objects or a single object.
-	var arr []map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &arr); err == nil && len(arr) > 0 {
-		record := arr[0]
-		for key := range record {
-			fieldNames[key] = key
-		}
-		return fieldNames, nil
-	}
-
-	var obj map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &obj); err == nil {
-		for key := range obj {
-			fieldNames[key] = key
-		}
-		return fieldNames, nil
-	}
-
-	// No usable fields found; log and return empty map.
-	log.Println(debugTag + "decodeJSON(): warning: no object/array fields detected in response body")
-	return fieldNames, nil
+	return nil
 }
 
 // Replace the problematic Do() call with this function

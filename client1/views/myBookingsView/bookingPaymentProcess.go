@@ -1,7 +1,6 @@
 package myBookingsView
 
 import (
-	"client1/v2/app/httpProcessor"
 	"log"
 	"net/http"
 	"strconv"
@@ -45,7 +44,7 @@ func (p *ItemEditor) MakePayment() {
 	var checkoutResp CheckoutCreateResponse
 	log.Printf("%vMakePayment() starting for BookingID=%d", debugTag, p.CurrentRecord.ID)
 
-	success := func(err error, data *httpProcessor.ReturnData) {
+	success := func(err error) {
 		if err != nil {
 			log.Printf("%vMakePayment()1 error: %v", debugTag, err)
 			//p.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -66,7 +65,7 @@ func (p *ItemEditor) MakePayment() {
 		p.openPaymentPage(checkoutResp.CheckoutURL)
 	}
 
-	fail := func(err error, data *httpProcessor.ReturnData) {
+	fail := func(err error) {
 		log.Printf("%vMakePayment()4 failed: %v", debugTag, err)
 		//p.updateStateDisplay(viewHelpers.ItemStateNone)
 	}
@@ -206,29 +205,6 @@ func (p *ItemEditor) paymentWindowDestroy() {
 	// Note: The server doesn't have a /closed endpoint
 	// Instead, we should call /check to get the final status
 	// Or rely on the /success and /cancel callbacks from Stripe
-
-	/*
-		success := func(err error, data *httpProcessor.ReturnData) {
-			log.Printf("%vpaymentWindowDestroy() success", debugTag)
-			// Refresh the booking list to show updated payment status
-			p.RecordState = RecordStateReloadRequired
-			//p.FetchItems() //?????????
-		}
-
-		fail := func(err error, data *httpProcessor.ReturnData) {
-			log.Printf("%vpaymentWindowDestroy() error: %v", debugTag, err)
-		}
-
-		// Check final payment status
-		p.client.NewRequest(
-			http.MethodGet,
-			ApiURL+"/checkout/close/"+strconv.FormatInt(int64(p.ParentData.ID), 10),
-			nil,
-			nil,
-			success,
-			fail,
-		)
-	*/
 }
 
 // checkPayment triggers payment status check
@@ -237,7 +213,7 @@ func (p *ItemEditor) checkPayment() {
 
 	log.Printf("%vcheckPayment() checking payment status for BookingID=%d", debugTag, p.CurrentRecord.ID)
 
-	success := func(err error, data *httpProcessor.ReturnData) {
+	success := func(err error) {
 		if err != nil {
 			log.Printf("%vcheckPayment() error: %v", debugTag, err)
 			return
@@ -268,7 +244,7 @@ func (p *ItemEditor) checkPayment() {
 		}
 	}
 
-	fail := func(err error, data *httpProcessor.ReturnData) {
+	fail := func(err error) {
 		log.Printf("%vcheckPayment() failed: %v", debugTag, err)
 	}
 

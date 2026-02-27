@@ -335,7 +335,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 	// Register the account using the canonical registration endpoint, then open OAuth popup
 	if editor.client != nil {
 		editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &editor.CurrentRecord,
-			func(err error, rd *httpProcessor.ReturnData) {
+			func(err error) {
 				if err != nil {
 					log.Printf("%v complete-registration failed: %v", debugTag, err)
 					js.Global().Call("alert", "Failed to save registration data: "+err.Error())
@@ -344,7 +344,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 				// Open popup after pending data saved (server may later merge provider info)
 				editor.client.OpenPopup(ApiURL+"/login", "oauth", "width=600,height=800")
 			},
-			func(err error, rd *httpProcessor.ReturnData) {
+			func(err error) {
 				log.Printf("%v complete-registration error: %v", debugTag, err)
 				js.Global().Call("alert", "Failed to save registration data: "+err.Error())
 			})
@@ -491,7 +491,7 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 	}
 
 	// Otherwise, call /ensure to get user data (for non-popup OAuth flows)
-	success := func(err error, rd *httpProcessor.ReturnData) {
+	success := func(err error) {
 		if err != nil {
 			log.Printf("%voAuth ensure request failed: %v", debugTag, err)
 			return
@@ -541,7 +541,7 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 
 			// Send the completion request to OAuth complete-registration endpoint
 			editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
-				func(err error, rd *httpProcessor.ReturnData) { // success callback
+				func(err error) { // success callback
 					if err != nil {
 						log.Printf("%v complete-registration failed: %v", debugTag, err)
 						js.Global().Call("alert", "Failed to complete registration: "+err.Error())
@@ -552,7 +552,7 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 						editor.Elements.Status.Set("innerText", "Registered as: "+name+" ("+uname+")")
 					}
 				},
-				func(err error, rd *httpProcessor.ReturnData) { // failure callback
+				func(err error) { // failure callback
 					log.Printf("%v complete-registration error: %v", debugTag, err)
 					js.Global().Call("alert", "Failed to complete registration: "+err.Error())
 				})
@@ -564,7 +564,7 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 		}
 	}
 
-	failure := func(err error, rd *httpProcessor.ReturnData) {
+	failure := func(err error) {
 		log.Printf("%voAuth ensure request failed (fail callback): %v", debugTag, err)
 	}
 

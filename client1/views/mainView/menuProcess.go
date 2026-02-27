@@ -3,7 +3,6 @@ package mainView
 import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
-	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -22,7 +21,7 @@ func (editor *View) getMenuUser() {
 	//Get Menu User from server
 	var menuUser appCore.User
 
-	success := func(err error, data *httpProcessor.ReturnData) {
+	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()2 success: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
@@ -36,7 +35,7 @@ func (editor *View) getMenuUser() {
 		log.Printf("%v %v", debugTag+"getMenuUser()", "Menu user fetch complete")
 	}
 
-	fail := func(err error, data *httpProcessor.ReturnData) {
+	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		//Don't display message to user
 	}
@@ -53,7 +52,7 @@ func (editor *View) getMenuList() {
 	//Get Menu List from server
 	var menuList MenuList
 
-	success := func(err error, data *httpProcessor.ReturnData) {
+	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
 			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()2 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
@@ -65,7 +64,7 @@ func (editor *View) getMenuList() {
 		log.Printf("%v %v", debugTag+"getMenuList()", "Menu list fetch complete")
 	}
 
-	fail := func(err error, data *httpProcessor.ReturnData) {
+	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()4 fail: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		//Display message  to user ??????????????
 		editor.onCompletionMsg(debugTag + "getMenuList()1 " + err.Error())

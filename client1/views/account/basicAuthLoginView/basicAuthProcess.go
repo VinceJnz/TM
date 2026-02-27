@@ -2,7 +2,6 @@ package basicAuthLoginView
 
 import (
 	"client1/v2/app/eventProcessor"
-	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"syscall/js"
@@ -51,7 +50,7 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 	//editor.client.NewRequest("POST", ApiURL+"/register", nil, payload,
 	log.Printf("%vhandleRegisterSubmit()1 Submitting registration for user: %+v", debugTag, editor.CurrentRecord)
 	editor.client.NewRequest("POST", ApiURL+"/register", nil, editor.CurrentRecord,
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			if err != nil {
 				js.Global().Call("alert", "registration failed: "+err.Error())
 				return
@@ -62,7 +61,7 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 			}
 			js.Global().Call("alert", "verification token sent to your email")
 		},
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			js.Global().Call("alert", "registration error: "+err.Error())
 		})
 	return nil
@@ -95,14 +94,14 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 	*/
 	//editor.client.NewRequest("POST", ApiURL+"/verify-registration", nil, payload,
 	editor.client.NewRequest("POST", ApiURL+"/verify-registration", nil, editor.CurrentRecord.Token,
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			if err != nil {
 				js.Global().Call("alert", "verification failed: "+err.Error())
 				return
 			}
 			js.Global().Call("alert", "account verified and pending admin approval")
 		},
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			js.Global().Call("alert", "verification error: "+err.Error())
 		})
 	return nil
@@ -128,7 +127,7 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 	}
 	//payload := map[string]string{"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "password": editor.CurrentRecord.Password}
 	editor.client.NewRequest("POST", ApiURL+"/login-password", nil, editor.CurrentRecord,
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			if err != nil {
 				js.Global().Call("alert", "password login failed: "+err.Error())
 				return
@@ -140,7 +139,7 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 				editor.UiComponents.Token.Call("focus")
 			}
 		},
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			js.Global().Call("alert", "password login error: "+err.Error())
 		})
 	return nil
@@ -164,7 +163,7 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 	payload := map[string]any{"token": editor.CurrentRecord.Token, "remember_me": editor.CurrentRecord.Remember}
 	var resp map[string]any
 	editor.client.NewRequest("POST", ApiURL+"/verify-password-otp", &resp, payload,
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			if err != nil {
 				js.Global().Call("alert", "OTP verify failed: "+err.Error())
 				return
@@ -180,7 +179,7 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 				editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: "basicAuthLoginView", Data: name})
 			}
 		},
-		func(err error, rd *httpProcessor.ReturnData) {
+		func(err error) {
 			js.Global().Call("alert", "OTP verification error: "+err.Error())
 		})
 	return nil
