@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"log"
+	"strings"
 	"syscall/js"
 )
 
@@ -13,12 +14,18 @@ const debugTag = "appCore."
 
 const ApiURL = "/auth"
 
+const (
+	RoleUser     = "user"
+	RoleAdmin    = "admin"
+	RoleSysadmin = "sysadmin"
+)
+
 // UserItem contains the basic user info for driving the display of the client menu
 type User struct {
-	UserID    int    `json:"user_id"`
-	Name      string `json:"name"`
-	Group     string `json:"group"`
-	AdminFlag bool   `json:"admin_flag"`
+	UserID int    `json:"user_id"`
+	Name   string `json:"name"`
+	Group  string `json:"group"`
+	Role   string `json:"role"`
 }
 
 type AppCore struct {
@@ -79,4 +86,43 @@ func (ac *AppCore) GetUser() User {
 
 func (ac *AppCore) SetUser(user User) {
 	ac.User = user
+}
+
+func NormalizeRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case RoleSysadmin:
+		return RoleSysadmin
+	case RoleAdmin:
+		return RoleAdmin
+	default:
+		return RoleUser
+	}
+}
+
+func (ac *AppCore) CurrentRole() string {
+	if ac == nil {
+		return RoleUser
+	}
+	return NormalizeRole(ac.User.Role)
+}
+
+func (ac *AppCore) IsAtLeastRole(requiredRole string) bool {
+	roleRank := map[string]int{
+		RoleUser:     1,
+		RoleAdmin:    2,
+		RoleSysadmin: 3,
+	}
+	userRoleRank, ok := roleRank[NormalizeRole(ac.CurrentRole())]
+	if !ok {
+		return false
+	}
+	requiredRoleRank, ok := roleRank[NormalizeRole(requiredRole)]
+	if !ok {
+		return false
+	}
+	return userRoleRank >= requiredRoleRank
+}
+
+func (ac *AppCore) IsAdminOrHigher() bool {
+	return ac.IsAtLeastRole(RoleAdmin)
 }

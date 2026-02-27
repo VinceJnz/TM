@@ -48,7 +48,6 @@ type TableData struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	AdminFlag   bool      `json:"admin_flag"`
 	Created     time.Time `json:"created"`
 	Modified    time.Time `json:"modified"`
 }
@@ -57,7 +56,6 @@ type TableData struct {
 type UI struct {
 	Name        js.Value
 	Description js.Value
-	AdminFlag   js.Value
 }
 
 type children struct {
@@ -219,13 +217,9 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.Description, editor.UiComponents.Description = viewHelpers.StringEdit(editor.CurrentRecord.Description, editor.document, "Description", "text", "itemDescription")
 	editor.UiComponents.Description.Call("setAttribute", "required", "true")
 
-	localObjs.AdminFlag, editor.UiComponents.AdminFlag = viewHelpers.BooleanEdit(editor.CurrentRecord.AdminFlag, editor.document, "Sys Admin Flag", "checkbox", "itemAdminFlag")
-	//editor.UiComponents.AdminFlag.Call("setAttribute", "required", "true")
-
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Description)
-	form.Call("appendChild", localObjs.AdminFlag)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -267,7 +261,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Description = editor.UiComponents.Description.Get("value").String()
-	editor.CurrentRecord.AdminFlag = editor.UiComponents.AdminFlag.Get("checked").Bool()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique

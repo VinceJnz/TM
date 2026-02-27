@@ -58,7 +58,6 @@ type TableData struct {
 	AccessLevel   string    `json:"access_level"`
 	AccessTypeID  int       `json:"access_type_id"`
 	AccessType    string    `json:"access_type"`
-	AdminFlag     bool      `json:"admin_flag"`
 	Created       time.Time `json:"created"`
 	Modified      time.Time `json:"modified"`
 }
@@ -69,7 +68,6 @@ type UI struct {
 	ResourceID    js.Value
 	AccessLevelID js.Value
 	AccessTypeID  js.Value
-	AdminFlag     js.Value
 }
 
 type children struct {
@@ -247,15 +245,11 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.AccessTypeID, editor.UiComponents.AccessTypeID = editor.Children.AccessType.NewDropdown(editor.CurrentRecord.AccessTypeID, "Access Type", "itemAccessType")
 	//editor.UiComponents.AccessTypeID.Call("setAttribute", "required", "true")
 
-	localObjs.AdminFlag, editor.UiComponents.AdminFlag = viewHelpers.BooleanEdit(editor.CurrentRecord.AdminFlag, editor.document, "Admin Flag", "checkbox", "itemAdminFlag")
-	//editor.UiComponents.AdminFlag.Call("setAttribute", "required", "true")
-
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.GroupID)
 	form.Call("appendChild", localObjs.ResourceID)
 	form.Call("appendChild", localObjs.AccessLevelID)
 	form.Call("appendChild", localObjs.AccessTypeID)
-	form.Call("appendChild", localObjs.AdminFlag)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -318,8 +312,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing access_type_id:", err)
 		return nil
 	}
-
-	editor.CurrentRecord.AdminFlag = editor.UiComponents.AdminFlag.Get("checked").Bool()
 
 	// Need to investigate the technique for passing values into a go routine ?????????
 	// I think I need to pass a copy of the current item to the go routine or use some other technique

@@ -10,9 +10,8 @@ import (
 
 // MenuItem contains data for a menu item
 type MenuItem struct {
-	UserID    int    `json:"user_id"`
-	Resource  string `json:"resource"`
-	AdminFlag bool   `json:"admin_flag"`
+	UserID   int    `json:"user_id"`
+	Resource string `json:"resource"`
 }
 
 // MenuItem contains a list of valid menu items to display
@@ -73,6 +72,10 @@ func (v *View) resetMenu(event eventProcessor.Event) {
 			o.button.Get("style").Call("setProperty", "display", "none") // Hide menu item - set property "display: none;"
 		}
 	}
+	for _, section := range v.menuSections {
+		section.container.Get("style").Call("setProperty", "display", "none")
+		section.content.Get("style").Call("setProperty", "display", "none")
+	}
 }
 
 // updateMenu is an event handler that updates the menu in the sidebar on the main page.
@@ -82,18 +85,62 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 		log.Printf(debugTag+"updateMenu()1 Invalid data for event type: %s, source %s\n", event.Type, event.DebugTag)
 		return
 	}
-	if menuData.MenuUser.AdminFlag {
-		for _, o := range v.menuButtons {
-			o.button.Get("style").Call("removeProperty", "display") // Remove property "display: none;" causes the menu button to be displayed
+
+	v.resetMenu(event)
+
+	userRole := effectiveMenuUserRole(menuData.MenuUser)
+
+	allowedResources := map[string]bool{}
+	for _, o := range menuData.MenuList {
+		allowedResources[strings.ToLower(o.Resource)] = true
+	}
+
+	visibleSections := map[string]bool{}
+	for key, item := range v.menuButtons {
+		if item.defaultDisplay {
+			continue
 		}
-	} else {
-		for _, o := range menuData.MenuList { // Iterate through the menu list from the server and hide/display buttons as necessary.
-			val, ok := v.menuButtons[strings.ToLower(o.Resource)]
-			if ok {
-				if !val.adminOnly {
-					val.button.Get("style").Call("removeProperty", "display") // Remove property "display: none;" causes the menu button to be displayed
-				}
-			}
+		if !canDisplayByRole(userRole, item.requiredRole) {
+			continue
+		}
+		if !allowedResources[key] {
+			continue
+		}
+		item.button.Get("style").Call("removeProperty", "display")
+		if item.section != menuSectionRoot {
+			visibleSections[item.section] = true
 		}
 	}
+
+	for sectionName, visible := range visibleSections {
+		if !visible {
+			continue
+		}
+		section, ok := v.menuSections[sectionName]
+		if !ok {
+			continue
+		}
+		section.container.Get("style").Call("removeProperty", "display")
+	}
+}
+
+func canDisplayByRole(userRole, requiredRole string) bool {
+	roleRank := map[string]int{
+		roleUser:     1,
+		roleAdmin:    2,
+		roleSysadmin: 3,
+	}
+	userValue, ok := roleRank[normalizeRole(userRole)]
+	if !ok {
+		return false
+	}
+	requiredValue, ok := roleRank[normalizeRole(requiredRole)]
+	if !ok {
+		return false
+	}
+	return userValue >= requiredValue
+}
+
+func effectiveMenuUserRole(menuUser appCore.User) string {
+	return normalizeRole(menuUser.Role)
 }

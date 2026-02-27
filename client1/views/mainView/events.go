@@ -2,6 +2,7 @@ package mainView
 
 import (
 	"client1/v2/views/utils/viewHelpers"
+	"strings"
 	"time"
 )
 
@@ -37,22 +38,48 @@ func (v *View) resetMenu2() {
 			o.button.Get("style").Call("setProperty", "display", "none") // Hide menu item
 		}
 	}
+	for _, section := range v.menuSections {
+		section.container.Get("style").Call("setProperty", "display", "none")
+		section.content.Get("style").Call("setProperty", "display", "none")
+	}
 }
 
 // updateStatus is an event handler the updates the menu in the sidebar on the main page.
 func (v *View) updateMenu2(menuData UpdateMenu) {
-	// Update menu display??? on fetch success????
-	if menuData.MenuUser.AdminFlag {
-		for _, o := range v.menuButtons {
-			o.button.Get("style").Call("removeProperty", "display")
+	v.resetMenu2()
+
+	userRole := effectiveMenuUserRole(menuData.MenuUser)
+	allowedResources := map[string]bool{}
+	for _, o := range menuData.MenuList {
+		allowedResources[strings.ToLower(o.Resource)] = true
+	}
+
+	visibleSections := map[string]bool{}
+	for key, item := range v.menuButtons {
+		if item.defaultDisplay {
+			continue
 		}
-	} else {
-		for _, o := range menuData.MenuList {
-			val, ok := v.menuButtons["/"+o.Resource] // get current menu button
-			if ok {
-				val.button.Get("style").Call("removeProperty", "display")
-			}
+		if !canDisplayByRole(userRole, item.requiredRole) {
+			continue
 		}
+		if !allowedResources[key] {
+			continue
+		}
+		item.button.Get("style").Call("removeProperty", "display")
+		if item.section != menuSectionRoot {
+			visibleSections[item.section] = true
+		}
+	}
+
+	for sectionName, visible := range visibleSections {
+		if !visible {
+			continue
+		}
+		section, ok := v.menuSections[sectionName]
+		if !ok {
+			continue
+		}
+		section.container.Get("style").Call("removeProperty", "display")
 	}
 }
 

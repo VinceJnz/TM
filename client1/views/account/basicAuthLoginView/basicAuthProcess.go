@@ -99,7 +99,7 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 				js.Global().Call("alert", "verification failed: "+err.Error())
 				return
 			}
-			js.Global().Call("alert", "account verified and pending admin approval")
+			js.Global().Call("alert", "account verified and pending approval")
 		},
 		func(err error) {
 			js.Global().Call("alert", "verification error: "+err.Error())

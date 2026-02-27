@@ -244,7 +244,7 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.ToDate)
 	form.Call("appendChild", localObjs.BookingStatusID)
 
-	if editor.appCore.User.AdminFlag {
+	if editor.appCore.IsAdminOrHigher() {
 		localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
 		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
@@ -347,7 +347,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		log.Println("Error parsing value:", err)
 	}
 
-	if editor.appCore.User.AdminFlag {
+	if editor.appCore.IsAdminOrHigher() {
 		editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BookingDate.Get("value").String())
 		if err != nil {
 			log.Println("Error parsing value:", err)
@@ -472,7 +472,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("innerHTML", "Trip: "+record.TripName+" (BOOKED by:"+record.Owner+", Notes:"+record.Notes+", Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+", Cost:$"+record.BookingCost.StringFixedBank(2)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.User.AdminFlag {
+		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.IsAdminOrHigher() {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
