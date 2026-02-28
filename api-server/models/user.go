@@ -39,6 +39,12 @@ type User struct {
 	Modified        time.Time   `json:"modified" db:"modified"`
 }
 
+type LoginWithPasswordPayload struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"user_password"`
+}
+
 type UserAgeGroups struct {
 	ID       int       `json:"id" db:"id"`
 	AgeGroup string    `json:"age_group" db:"age_group"`

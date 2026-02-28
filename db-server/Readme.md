@@ -47,7 +47,7 @@ Instructions: <http://127.0.0.1:65398/help/help/backup_dialog.html>
 
 **General**
 * File name: dbserver-pgAdmin backup1.sql
-* Format: Tar
+* Format: Plain
 
 **Data options**
 * Sections: Pre-data, Data, Post-data

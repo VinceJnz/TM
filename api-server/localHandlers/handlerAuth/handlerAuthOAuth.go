@@ -5,10 +5,41 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
+
+	"github.com/gorilla/mux"
 )
+
+const (
+	roleUser     = "user"
+	roleAdmin    = "admin"
+	roleSysadmin = "sysadmin"
+)
+
+func normalizeRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case roleSysadmin:
+		return roleSysadmin
+	case roleAdmin:
+		return roleAdmin
+	default:
+		return roleUser
+	}
+}
+
+func roleRank(role string) int {
+	switch normalizeRole(role) {
+	case roleSysadmin:
+		return 3
+	case roleAdmin:
+		return 2
+	default:
+		return 1
+	}
+}
 
 // The function RequireSessionAuth needs to do the following:
 //1. Check to see the the users is already logged in (It already deos this)
@@ -66,8 +97,9 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 					AccessMethodID: 0,
 					AccessType:     "",
 					AccessTypeID:   accessCheck.AccessTypeID,
-					AdminFlag:      accessCheck.AdminFlag,
-					Email:          user.Email.String,
+					//AdminFlag:      accessCheck.AdminFlag,
+					Role:  accessCheck.Role,
+					Email: user.Email.String,
 				}
 				// 7) Give the user access
 				ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session)
@@ -83,6 +115,43 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 			"error":   "unauthorized",
 			"message": "authentication required",
 		})
-		return
 	})
+}
+
+func (h *Handler) RequireRole(minRole string) mux.MiddlewareFunc {
+	required := roleRank(minRole)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session)
+			if !ok || session == nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(map[string]string{
+					"error":   "unauthorized",
+					"message": "authentication required",
+				})
+				return
+			}
+
+			if roleRank(session.Role) < required {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(map[string]string{
+					"error":   "forbidden",
+					"message": "insufficient role",
+				})
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func (h *Handler) RequireAdmin(next http.Handler) http.Handler {
+	return h.RequireRole(roleAdmin)(next)
+}
+
+func (h *Handler) RequireSysadmin(next http.Handler) http.Handler {
+	return h.RequireRole(roleSysadmin)(next)
 }

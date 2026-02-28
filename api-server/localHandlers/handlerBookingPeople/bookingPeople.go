@@ -33,8 +33,8 @@ const (
 	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) VALUES ($1, $2, $3, $4) RETURNING id`
 	qryUpdate = `UPDATE at_booking_people
 					SET (person_id, notes) = ($4, $5)
-					WHERE id = $1 AND (owner_id = $2 OR true=$3)`
-	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND (owner_id = $2 OR true=$3)`
+					WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
+	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
 )
 
 type Handler struct {
@@ -140,7 +140,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.PersonID, record.Notes)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.PersonID, record.Notes)
 }
 
 // Delete: removes a record identified by id
@@ -163,7 +163,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
 }
 
 const (

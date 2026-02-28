@@ -508,10 +508,10 @@ func (h *Handler) RequireRestAuthXX(next http.Handler) http.Handler {
 			AccessMethodID: 0,
 			AccessType:     "",
 			AccessTypeID:   accessCheck.AccessTypeID,
-			AdminFlag:      accessCheck.AdminFlag,
+			Role:           accessCheck.Role,
 		}
 
-		log.Printf("%v %v %v %v %v %v %v %v %v %v %v %v %v\n", debugTag+"Handler.RequireRestAuth()5", "UserID =", session.UserID, "PrevURL =", session.PrevURL, "ResourceName =", session.ResourceName, "AccessMethod =", session.AccessMethod, "AccessType =", session.AccessType, "AdminFlag =", session.AdminFlag)
+		log.Printf("%v %v %v %v %v %v %v %v %v %v %v %v %v\n", debugTag+"Handler.RequireRestAuth()5", "UserID =", session.UserID, "PrevURL =", session.PrevURL, "ResourceName =", session.ResourceName, "AccessMethod =", session.AccessMethod, "AccessType =", session.AccessType, "Role =", session.Role)
 		//w.WriteHeader(http.StatusOK) // If this get called first, subsequent calls to w.WriteHeader are ignored. So it should not be called here.
 		ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session) // Store userID in the context. This can be used to filter rows in subsequent handlers
 		next.ServeHTTP(w, r.WithContext(ctx))                                  // Access is correct so the request is passed to the next handler
@@ -615,22 +615,25 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 // Expects: {"username": "...", "password": "..."}
 // Returns: OTP sent to registered email
 func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
+	var payload models.LoginWithPasswordPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	if payload.Username == "" || payload.Password == "" {
-		http.Error(w, "username and password required", http.StatusBadRequest)
+	if (payload.Username == "" && payload.Email == "") || payload.Password == "" {
+		http.Error(w, "username/email and password required", http.StatusBadRequest)
 		return
 	}
 
-	// Look up user by username
-	user, err := dbAuthTemplate.UserNameReadQry(debugTag+"LoginWithPassword:find ", h.appConf.Db, payload.Username)
+	// Look up user by username or email
+	var user models.User
+	var err error
+	if payload.Username != "" {
+		user, err = dbAuthTemplate.UserNameReadQry(debugTag+"LoginWithPassword:findByUsername ", h.appConf.Db, payload.Username)
+	} else {
+		user, err = dbAuthTemplate.UserEmailReadQry(debugTag+"LoginWithPassword:findByEmail ", h.appConf.Db, payload.Email)
+	}
 	if err != nil {
 		// Don't reveal whether user exists - send generic response for security
 		log.Printf("%vLoginWithPassword()1 user not found for password login: %v", debugTag, err)
@@ -680,6 +683,18 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	if h.appConf.EmailSvc != nil {
 		if success, err := h.appConf.EmailSvc.SendMail(user.Email.String, subject, body); err != nil {
 			log.Printf("%vvLoginWithPassword()6 failed to send OTP email: %v", debugTag, err)
+			if h.appConf.Settings.DevMode {
+				log.Printf("%vLoginWithPassword()6a DEV mode enabled; returning OTP in response due to email delivery failure", debugTag)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusAccepted)
+				json.NewEncoder(w).Encode(map[string]string{
+					"status":  "otp_generated_dev",
+					"message": "OTP generated (email delivery failed in DEV mode)",
+					"email":   user.Email.String,
+					"otp":     otpToken.Value,
+				})
+				return
+			}
 			// Delete token if email failed
 			tok, err := dbAuthTemplate.FindToken(debugTag+"LoginWithPassword:findTokenForDeletion", h.appConf.Db, "password-login-otp", otpToken.Value)
 			if err == nil {

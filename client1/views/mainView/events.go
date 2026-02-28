@@ -62,7 +62,7 @@ func (v *View) updateMenu2(menuData UpdateMenu) {
 		if !canDisplayByRole(userRole, item.requiredRole) {
 			continue
 		}
-		if !allowedResources[key] {
+		if shouldFilterByResource(userRole) && !allowedResources[key] {
 			continue
 		}
 		item.button.Get("style").Call("removeProperty", "display")

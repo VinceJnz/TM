@@ -2,10 +2,12 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 13.23 (Debian 13.23-1.pgdg13+1)
--- Dumped by pg_dump version 17.1
+\restrict nPbQ9nD5uFPReihpeMza28RvRkV0Os9X4a0gdc7UxoPm4m5k4EhZEcvStxNxmmj
 
--- Started on 2026-02-03 16:54:03
+-- Dumped from database version 13.23 (Debian 13.23-1.pgdg13+1)
+-- Dumped by pg_dump version 18.1
+
+-- Started on 2026-02-28 22:45:14
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +22,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 3324 (class 1262 OID 16384)
+-- TOC entry 3326 (class 1262 OID 16384)
 -- Name: mydatabase; Type: DATABASE; Schema: -; Owner: myuser
 --
 
@@ -29,7 +31,9 @@ CREATE DATABASE mydatabase WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PR
 
 ALTER DATABASE mydatabase OWNER TO myuser;
 
+\unrestrict nPbQ9nD5uFPReihpeMza28RvRkV0Os9X4a0gdc7UxoPm4m5k4EhZEcvStxNxmmj
 \connect mydatabase
+\restrict nPbQ9nD5uFPReihpeMza28RvRkV0Os9X4a0gdc7UxoPm4m5k4EhZEcvStxNxmmj
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -54,13 +58,27 @@ CREATE SCHEMA public;
 ALTER SCHEMA public OWNER TO myuser;
 
 --
--- TOC entry 3325 (class 0 OID 0)
+-- TOC entry 3327 (class 0 OID 0)
 -- Dependencies: 4
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: myuser
 --
 
 COMMENT ON SCHEMA public IS 'standard public schema';
 
+
+--
+-- TOC entry 778 (class 1247 OID 16833)
+-- Name: app_role; Type: TYPE; Schema: public; Owner: myuser
+--
+
+CREATE TYPE public.app_role AS ENUM (
+    'user',
+    'admin',
+    'sysadmin'
+);
+
+
+ALTER TYPE public.app_role OWNER TO myuser;
 
 --
 -- TOC entry 250 (class 1255 OID 16726)
@@ -727,9 +745,9 @@ CREATE TABLE public.st_group (
     id integer DEFAULT nextval('public.st_group_id_seq'::regclass) NOT NULL,
     name character varying(45),
     description character varying(45),
-    admin_flag boolean DEFAULT false,
     created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    role public.app_role
 );
 
 
@@ -761,7 +779,6 @@ CREATE TABLE public.st_group_resource (
     resource_id integer NOT NULL,
     access_level_id integer NOT NULL,
     access_type_id integer NOT NULL,
-    admin_flag boolean DEFAULT false,
     created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
@@ -799,7 +816,8 @@ CREATE TABLE public.st_token (
     valid_to timestamp with time zone,
     created timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    token_valid boolean DEFAULT false NOT NULL
+    token_valid boolean DEFAULT false NOT NULL,
+    session_data json
 );
 
 
@@ -888,7 +906,7 @@ CREATE TABLE public.st_users (
     user_age_group_id integer,
     user_address character varying(255),
     member_code character varying(20),
-    user_password character varying(45),
+    user_password character varying(100),
     user_account_status_id integer DEFAULT 0 NOT NULL,
     user_account_hidden boolean,
     provider character varying(30),
@@ -922,7 +940,7 @@ CREATE VIEW public.vt_trips AS
 ALTER VIEW public.vt_trips OWNER TO myuser;
 
 --
--- TOC entry 3113 (class 2606 OID 16432)
+-- TOC entry 3115 (class 2606 OID 16432)
 -- Name: at_booking_people at_booking_users_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -931,7 +949,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3115 (class 2606 OID 16448)
+-- TOC entry 3117 (class 2606 OID 16448)
 -- Name: at_bookings at_bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -940,7 +958,7 @@ ALTER TABLE ONLY public.at_bookings
 
 
 --
--- TOC entry 3117 (class 2606 OID 16459)
+-- TOC entry 3119 (class 2606 OID 16459)
 -- Name: at_group_bookings at_group_bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -949,7 +967,7 @@ ALTER TABLE ONLY public.at_group_bookings
 
 
 --
--- TOC entry 3119 (class 2606 OID 16469)
+-- TOC entry 3121 (class 2606 OID 16469)
 -- Name: at_trip_cost_groups at_trip_cost_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -958,7 +976,7 @@ ALTER TABLE ONLY public.at_trip_cost_groups
 
 
 --
--- TOC entry 3121 (class 2606 OID 16479)
+-- TOC entry 3123 (class 2606 OID 16479)
 -- Name: at_trip_costs at_trip_costs_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -967,7 +985,7 @@ ALTER TABLE ONLY public.at_trip_costs
 
 
 --
--- TOC entry 3123 (class 2606 OID 16496)
+-- TOC entry 3125 (class 2606 OID 16496)
 -- Name: at_trips at_trips_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -976,7 +994,7 @@ ALTER TABLE ONLY public.at_trips
 
 
 --
--- TOC entry 3125 (class 2606 OID 16506)
+-- TOC entry 3127 (class 2606 OID 16506)
 -- Name: at_user_payments at_user_payments_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -985,7 +1003,7 @@ ALTER TABLE ONLY public.at_user_payments
 
 
 --
--- TOC entry 3127 (class 2606 OID 16516)
+-- TOC entry 3129 (class 2606 OID 16516)
 -- Name: et_access_level et_access_level_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -994,7 +1012,7 @@ ALTER TABLE ONLY public.et_access_level
 
 
 --
--- TOC entry 3129 (class 2606 OID 16526)
+-- TOC entry 3131 (class 2606 OID 16526)
 -- Name: et_access_type et_access_type_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1003,7 +1021,7 @@ ALTER TABLE ONLY public.et_access_type
 
 
 --
--- TOC entry 3131 (class 2606 OID 16536)
+-- TOC entry 3133 (class 2606 OID 16536)
 -- Name: et_booking_status et_booking_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1012,7 +1030,7 @@ ALTER TABLE ONLY public.et_booking_status
 
 
 --
--- TOC entry 3133 (class 2606 OID 16546)
+-- TOC entry 3135 (class 2606 OID 16546)
 -- Name: et_member_status et_member_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1021,7 +1039,7 @@ ALTER TABLE ONLY public.et_member_status
 
 
 --
--- TOC entry 3135 (class 2606 OID 16556)
+-- TOC entry 3137 (class 2606 OID 16556)
 -- Name: et_resource et_resource_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1030,7 +1048,7 @@ ALTER TABLE ONLY public.et_resource
 
 
 --
--- TOC entry 3137 (class 2606 OID 16566)
+-- TOC entry 3139 (class 2606 OID 16566)
 -- Name: et_seasons et_seasons_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1039,7 +1057,7 @@ ALTER TABLE ONLY public.et_seasons
 
 
 --
--- TOC entry 3139 (class 2606 OID 16576)
+-- TOC entry 3141 (class 2606 OID 16576)
 -- Name: et_trip_difficulty et_trip_difficulty_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1048,7 +1066,7 @@ ALTER TABLE ONLY public.et_trip_difficulty
 
 
 --
--- TOC entry 3141 (class 2606 OID 16586)
+-- TOC entry 3143 (class 2606 OID 16586)
 -- Name: et_trip_status et_trip_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1057,7 +1075,7 @@ ALTER TABLE ONLY public.et_trip_status
 
 
 --
--- TOC entry 3143 (class 2606 OID 16596)
+-- TOC entry 3145 (class 2606 OID 16596)
 -- Name: et_trip_type et_trip_types_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1066,7 +1084,7 @@ ALTER TABLE ONLY public.et_trip_type
 
 
 --
--- TOC entry 3145 (class 2606 OID 16609)
+-- TOC entry 3147 (class 2606 OID 16609)
 -- Name: et_user_account_status et_user_account_status_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1075,7 +1093,7 @@ ALTER TABLE ONLY public.et_user_account_status
 
 
 --
--- TOC entry 3147 (class 2606 OID 16619)
+-- TOC entry 3149 (class 2606 OID 16619)
 -- Name: et_user_age_groups et_user_age_group_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1084,7 +1102,7 @@ ALTER TABLE ONLY public.et_user_age_groups
 
 
 --
--- TOC entry 3149 (class 2606 OID 16630)
+-- TOC entry 3151 (class 2606 OID 16630)
 -- Name: st_group st_group_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1093,7 +1111,7 @@ ALTER TABLE ONLY public.st_group
 
 
 --
--- TOC entry 3151 (class 2606 OID 16641)
+-- TOC entry 3153 (class 2606 OID 16641)
 -- Name: st_group_resource st_group_resource_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1102,7 +1120,7 @@ ALTER TABLE ONLY public.st_group_resource
 
 
 --
--- TOC entry 3153 (class 2606 OID 16652)
+-- TOC entry 3155 (class 2606 OID 16652)
 -- Name: st_token st_token_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1111,7 +1129,7 @@ ALTER TABLE ONLY public.st_token
 
 
 --
--- TOC entry 3155 (class 2606 OID 16662)
+-- TOC entry 3157 (class 2606 OID 16662)
 -- Name: st_user_group st_user_group_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1120,7 +1138,7 @@ ALTER TABLE ONLY public.st_user_group
 
 
 --
--- TOC entry 3157 (class 2606 OID 16679)
+-- TOC entry 3159 (class 2606 OID 16679)
 -- Name: st_users st_users_email_key; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1129,7 +1147,7 @@ ALTER TABLE ONLY public.st_users
 
 
 --
--- TOC entry 3159 (class 2606 OID 16677)
+-- TOC entry 3161 (class 2606 OID 16677)
 -- Name: st_users st_users_pkey; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1138,7 +1156,7 @@ ALTER TABLE ONLY public.st_users
 
 
 --
--- TOC entry 3161 (class 2606 OID 16681)
+-- TOC entry 3163 (class 2606 OID 16681)
 -- Name: st_users st_users_username_key; Type: CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1147,7 +1165,7 @@ ALTER TABLE ONLY public.st_users
 
 
 --
--- TOC entry 3165 (class 2620 OID 16772)
+-- TOC entry 3167 (class 2620 OID 16772)
 -- Name: at_booking_people set_modified_timestamp_at_booking_people; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1155,7 +1173,7 @@ CREATE TRIGGER set_modified_timestamp_at_booking_people BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3166 (class 2620 OID 16771)
+-- TOC entry 3168 (class 2620 OID 16771)
 -- Name: at_bookings set_modified_timestamp_at_bookings; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1163,7 +1181,7 @@ CREATE TRIGGER set_modified_timestamp_at_bookings BEFORE UPDATE ON public.at_boo
 
 
 --
--- TOC entry 3167 (class 2620 OID 16752)
+-- TOC entry 3169 (class 2620 OID 16752)
 -- Name: at_group_bookings set_modified_timestamp_at_group_bookings; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1171,7 +1189,7 @@ CREATE TRIGGER set_modified_timestamp_at_group_bookings BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3168 (class 2620 OID 16753)
+-- TOC entry 3170 (class 2620 OID 16753)
 -- Name: at_trip_cost_groups set_modified_timestamp_at_trip_cost_groups; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1179,7 +1197,7 @@ CREATE TRIGGER set_modified_timestamp_at_trip_cost_groups BEFORE UPDATE ON publi
 
 
 --
--- TOC entry 3169 (class 2620 OID 16754)
+-- TOC entry 3171 (class 2620 OID 16754)
 -- Name: at_trip_costs set_modified_timestamp_at_trip_costs; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1187,7 +1205,7 @@ CREATE TRIGGER set_modified_timestamp_at_trip_costs BEFORE UPDATE ON public.at_t
 
 
 --
--- TOC entry 3170 (class 2620 OID 16755)
+-- TOC entry 3172 (class 2620 OID 16755)
 -- Name: at_trips set_modified_timestamp_at_trips; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1195,7 +1213,7 @@ CREATE TRIGGER set_modified_timestamp_at_trips BEFORE UPDATE ON public.at_trips 
 
 
 --
--- TOC entry 3171 (class 2620 OID 16756)
+-- TOC entry 3173 (class 2620 OID 16756)
 -- Name: at_user_payments set_modified_timestamp_at_user_payments; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1203,7 +1221,7 @@ CREATE TRIGGER set_modified_timestamp_at_user_payments BEFORE UPDATE ON public.a
 
 
 --
--- TOC entry 3172 (class 2620 OID 16757)
+-- TOC entry 3174 (class 2620 OID 16757)
 -- Name: et_access_level set_modified_timestamp_et_access_level; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1211,7 +1229,7 @@ CREATE TRIGGER set_modified_timestamp_et_access_level BEFORE UPDATE ON public.et
 
 
 --
--- TOC entry 3173 (class 2620 OID 16758)
+-- TOC entry 3175 (class 2620 OID 16758)
 -- Name: et_access_type set_modified_timestamp_et_access_type; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1219,7 +1237,7 @@ CREATE TRIGGER set_modified_timestamp_et_access_type BEFORE UPDATE ON public.et_
 
 
 --
--- TOC entry 3174 (class 2620 OID 16774)
+-- TOC entry 3176 (class 2620 OID 16774)
 -- Name: et_booking_status set_modified_timestamp_et_booking_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1227,7 +1245,7 @@ CREATE TRIGGER set_modified_timestamp_et_booking_status BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3175 (class 2620 OID 16759)
+-- TOC entry 3177 (class 2620 OID 16759)
 -- Name: et_member_status set_modified_timestamp_et_member_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1235,7 +1253,7 @@ CREATE TRIGGER set_modified_timestamp_et_member_status BEFORE UPDATE ON public.e
 
 
 --
--- TOC entry 3176 (class 2620 OID 16760)
+-- TOC entry 3178 (class 2620 OID 16760)
 -- Name: et_resource set_modified_timestamp_et_resource; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1243,7 +1261,7 @@ CREATE TRIGGER set_modified_timestamp_et_resource BEFORE UPDATE ON public.et_res
 
 
 --
--- TOC entry 3177 (class 2620 OID 16761)
+-- TOC entry 3179 (class 2620 OID 16761)
 -- Name: et_seasons set_modified_timestamp_et_seasons; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1251,7 +1269,7 @@ CREATE TRIGGER set_modified_timestamp_et_seasons BEFORE UPDATE ON public.et_seas
 
 
 --
--- TOC entry 3178 (class 2620 OID 16762)
+-- TOC entry 3180 (class 2620 OID 16762)
 -- Name: et_trip_difficulty set_modified_timestamp_et_trip_difficulty; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1259,7 +1277,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_difficulty BEFORE UPDATE ON public
 
 
 --
--- TOC entry 3179 (class 2620 OID 16763)
+-- TOC entry 3181 (class 2620 OID 16763)
 -- Name: et_trip_status set_modified_timestamp_et_trip_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1267,7 +1285,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_status BEFORE UPDATE ON public.et_
 
 
 --
--- TOC entry 3180 (class 2620 OID 16764)
+-- TOC entry 3182 (class 2620 OID 16764)
 -- Name: et_trip_type set_modified_timestamp_et_trip_type; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1275,7 +1293,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_type BEFORE UPDATE ON public.et_tr
 
 
 --
--- TOC entry 3181 (class 2620 OID 16765)
+-- TOC entry 3183 (class 2620 OID 16765)
 -- Name: et_user_account_status set_modified_timestamp_et_user_account_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1283,7 +1301,7 @@ CREATE TRIGGER set_modified_timestamp_et_user_account_status BEFORE UPDATE ON pu
 
 
 --
--- TOC entry 3182 (class 2620 OID 16766)
+-- TOC entry 3184 (class 2620 OID 16766)
 -- Name: et_user_age_groups set_modified_timestamp_et_user_age_groups; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1291,7 +1309,7 @@ CREATE TRIGGER set_modified_timestamp_et_user_age_groups BEFORE UPDATE ON public
 
 
 --
--- TOC entry 3183 (class 2620 OID 16767)
+-- TOC entry 3185 (class 2620 OID 16767)
 -- Name: st_group set_modified_timestamp_st_group; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1299,7 +1317,7 @@ CREATE TRIGGER set_modified_timestamp_st_group BEFORE UPDATE ON public.st_group 
 
 
 --
--- TOC entry 3184 (class 2620 OID 16768)
+-- TOC entry 3186 (class 2620 OID 16768)
 -- Name: st_group_resource set_modified_timestamp_st_group_resource; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1307,7 +1325,7 @@ CREATE TRIGGER set_modified_timestamp_st_group_resource BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3185 (class 2620 OID 16769)
+-- TOC entry 3187 (class 2620 OID 16769)
 -- Name: st_token set_modified_timestamp_st_token; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1315,7 +1333,7 @@ CREATE TRIGGER set_modified_timestamp_st_token BEFORE UPDATE ON public.st_token 
 
 
 --
--- TOC entry 3186 (class 2620 OID 16770)
+-- TOC entry 3188 (class 2620 OID 16770)
 -- Name: st_user_group set_modified_timestamp_st_user_group; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1323,7 +1341,7 @@ CREATE TRIGGER set_modified_timestamp_st_user_group BEFORE UPDATE ON public.st_u
 
 
 --
--- TOC entry 3187 (class 2620 OID 16773)
+-- TOC entry 3189 (class 2620 OID 16773)
 -- Name: st_users set_modified_timestamp_st_users; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1331,7 +1349,7 @@ CREATE TRIGGER set_modified_timestamp_st_users BEFORE UPDATE ON public.st_users 
 
 
 --
--- TOC entry 3162 (class 2606 OID 16688)
+-- TOC entry 3164 (class 2606 OID 16688)
 -- Name: at_booking_people booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1340,7 +1358,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3164 (class 2606 OID 16698)
+-- TOC entry 3166 (class 2606 OID 16698)
 -- Name: at_bookings bookings_status_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1349,7 +1367,7 @@ ALTER TABLE ONLY public.at_bookings
 
 
 --
--- TOC entry 3163 (class 2606 OID 16693)
+-- TOC entry 3165 (class 2606 OID 16693)
 -- Name: at_booking_people user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -1358,7 +1376,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3326 (class 0 OID 0)
+-- TOC entry 3328 (class 0 OID 0)
 -- Dependencies: 4
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: myuser
 --
@@ -1367,9 +1385,11 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
--- Completed on 2026-02-03 16:54:03
+-- Completed on 2026-02-28 22:45:15
 
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict nPbQ9nD5uFPReihpeMza28RvRkV0Os9X4a0gdc7UxoPm4m5k4EhZEcvStxNxmmj
 

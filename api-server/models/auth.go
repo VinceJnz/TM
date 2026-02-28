@@ -68,6 +68,7 @@ type Session struct {
 	AccessMethodID int
 	AccessType     string
 	AccessTypeID   int
-	AdminFlag      bool
-	Email          string
+	//AdminFlag      bool
+	Role  string
+	Email string
 }

@@ -16,10 +16,10 @@ import (
 const debugTag = "handlerSecurityGroup."
 
 const (
-	qryGetAll = `SELECT id, name, description, admin_flag FROM st_group`
-	qryGet    = `SELECT id, name, description, admin_flag FROM st_group WHERE id = $1`
-	qryCreate = `INSERT INTO st_group (name, description, admin_flag) VALUES ($1, $2, $3) RETURNING id`
-	qryUpdate = `UPDATE st_group SET name = $1, description = $2, admin_flag = $3 WHERE id = $4`
+	qryGetAll = `SELECT id, name, description, role FROM st_group`
+	qryGet    = `SELECT id, name, description, role FROM st_group WHERE id = $1`
+	qryCreate = `INSERT INTO st_group (name, description, role) VALUES ($1, $2, $3) RETURNING id`
+	qryUpdate = `UPDATE st_group SET name = $1, description = $2, role = $3 WHERE id = $4`
 	qryDelete = `DELETE FROM st_group WHERE id = $1`
 )
 
@@ -55,7 +55,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Description, record.AdminFlag)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Description, record.Role)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
@@ -70,7 +70,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Name, record.Description, record.AdminFlag, id)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Name, record.Description, record.Role, id)
 }
 
 // Delete: removes a record identified by id

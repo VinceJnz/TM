@@ -103,7 +103,7 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 		if !canDisplayByRole(userRole, item.requiredRole) {
 			continue
 		}
-		if !allowedResources[key] {
+		if shouldFilterByResource(userRole) && !allowedResources[key] {
 			continue
 		}
 		item.button.Get("style").Call("removeProperty", "display")
@@ -143,4 +143,9 @@ func canDisplayByRole(userRole, requiredRole string) bool {
 
 func effectiveMenuUserRole(menuUser appCore.User) string {
 	return normalizeRole(menuUser.Role)
+}
+
+func shouldFilterByResource(userRole string) bool {
+	normalized := normalizeRole(userRole)
+	return normalized == roleUser
 }

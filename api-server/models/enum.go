@@ -33,20 +33,23 @@ type Resource struct { //-- Example: 'trips', 'users', 'bookings', 'member_statu
 // Resource is the enumeration of the url name of the Resource being accessed
 type AccessCheck struct {
 	AccessTypeID int
-	AdminFlag    bool
+	//AdminFlag    bool
+	Role string
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed
 type MenuUser struct {
-	UserID    int    `json:"user_id" db:"user_id"`
-	Name      string `json:"name" db:"name"`
-	Group     string `json:"group" db:"group"`
-	AdminFlag bool   `json:"admin_flag" db:"admin_flag"`
+	UserID int    `json:"user_id" db:"user_id"`
+	Name   string `json:"name" db:"name"`
+	Group  string `json:"group" db:"group"`
+	//AdminFlag bool   `json:"admin_flag" db:"admin_flag"` // TODO: This can be removed once role is implemented.
+	Role string `json:"role" db:"role"`
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed
 type MenuItem struct {
-	UserID    int    `json:"user_id" db:"user_id"`
-	Name      string `json:"resource" db:"resource"`
-	AdminFlag bool   `json:"admin_flag" db:"admin_flag"`
+	UserID int    `json:"user_id" db:"user_id"`
+	Name   string `json:"resource" db:"resource"`
+	//AdminFlag bool   `json:"admin_flag" db:"admin_flag"` // TODO: This can be removed once role is implemented.
+	Role string `json:"role" db:"role"`
 }

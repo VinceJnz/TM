@@ -10,16 +10,23 @@ import (
 )
 
 const (
-	sqlMenuUser = `SELECT stu.ID AS user_id, stu.name, stg.name AS group, stg.admin_flag
+	sqlMenuUser = `SELECT stu.ID AS user_id, stu.name, stg.name AS group, stg.role
 		FROM st_users stu
 			JOIN st_user_group stug ON stug.User_ID=stu.ID
 			JOIN st_group stg ON stg.ID=stug.Group_ID
 		WHERE stu.ID=$1
 			AND stu.user_account_status_id=$2
-		ORDER BY stg.admin_flag -- This might need to change to DESC
+		ORDER BY
+			CASE LOWER(stg.Role::text)
+				WHEN 'sysadmin' THEN 3
+				WHEN 'admin' THEN 2
+				WHEN 'user' THEN 1
+				ELSE 0
+			END DESC,
+			stg.ID DESC
 		LIMIT 1`
 
-	sqlMenuList = `SELECT stu.ID AS user_id, etr.Name AS resource, stgr.admin_flag
+	sqlMenuList = `SELECT stu.ID AS user_id, etr.Name AS resource, stg.role
 		FROM st_users stu
 			JOIN st_user_group stug ON stug.User_ID=stu.ID
 			JOIN st_group stg ON stg.ID=stug.Group_ID
@@ -27,8 +34,7 @@ const (
 			JOIN et_resource etr ON etr.ID=stgr.Resource_ID
 		WHERE stu.ID=$1
 			AND stu.user_account_status_id=$2
-		--ORDER BY stgr.admin_flag -- This might need to change to DESC
-		GROUP BY stu.ID, etr.Name, stgr.admin_flag`
+		GROUP BY stu.ID, etr.Name, stg.role`
 )
 
 // MenuUserGet is a public endpoint that returns menu user data if authenticated, or empty data if not
@@ -134,11 +140,11 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{
 			"authenticated": true,
 			"user": map[string]any{
-				"user_id":    user.ID,
-				"name":       user.Name,
-				"email":      user.Email.String,
-				"group":      "",
-				"admin_flag": false,
+				"user_id": user.ID,
+				"name":    user.Name,
+				"email":   user.Email.String,
+				"group":   "",
+				"role":    "",
 			},
 		})
 		return

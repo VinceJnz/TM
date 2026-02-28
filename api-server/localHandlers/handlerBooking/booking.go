@@ -31,7 +31,7 @@ const (
 									AND attc.member_status_id=stu.member_status_id
 									AND attc.user_age_group_id=stu.user_age_group_id
 			JOIN st_users stu2 ON stu2.id=atb.owner_id
-		WHERE atb.owner_id = $1 OR true=$2
+		WHERE atb.owner_id = $1 OR $2 IN ('admin', 'sysadmin')
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id;`
 
@@ -49,7 +49,7 @@ const (
 				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
 										AND attc.member_status_id=stu.member_status_id
 										AND attc.user_age_group_id=stu.user_age_group_id
-				WHERE atb.owner_id = $1 OR true=$2
+				WHERE atb.owner_id = $1 OR $2 IN ('admin', 'sysadmin')
 				GROUP BY att.id, att.trip_name, atb.id, ebs.status
 				ORDER BY att.trip_name, atb.id`
 
@@ -64,14 +64,14 @@ const (
 				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
 										AND attc.member_status_id=stu.member_status_id
 										AND attc.user_age_group_id=stu.user_age_group_id
-				WHERE atb.owner_id = $1 OR true=$2
+				WHERE atb.owner_id = $1 OR $2 IN ('admin', 'sysadmin')
 				GROUP BY att.id, att.trip_name, atb.id, ebs.status
 				ORDER BY att.trip_name, atb.id`
 
 	X1_qryGetAll = `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, ab.created, ab.modified
 					FROM public.at_bookings ab
 						JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id
-					WHERE ab.owner_id = $1 OR true=$2`
+					WHERE ab.owner_id = $1 OR $2 IN ('admin', 'sysadmin')`
 
 	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, created, modified 
 					FROM at_bookings WHERE id = $1`
@@ -129,8 +129,8 @@ const (
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
 					SET (notes, from_date, to_date, booking_status_id) = ($4, $5, $6, $7)
-					WHERE id = $1 AND (owner_id = $2 OR true=$3)`
-	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR true=$3)`
+					WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
+	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
 )
 
 type Handler struct {
@@ -153,8 +153,8 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
 	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
-	//dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AdminFlag)
+	//dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.Role)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.Role)
 }
 
 // Get: retrieves and returns a single record identified by id
@@ -207,10 +207,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.AdminFlag {
+	if session.Role == "admin" || session.Role == "sysadmin" {
 		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
 	} else {
-		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
 	}
 }
 
@@ -218,7 +218,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
 }
 
 func (h *Handler) RecordValidation(record models.Booking) error {

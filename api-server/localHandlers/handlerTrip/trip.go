@@ -31,8 +31,8 @@ const (
 					LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`
 	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
-	qryUpdate = `UPDATE at_trips SET (trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) = ($4, $5, $6, $7, $8, $9, $10, $11, $12) WHERE id = $1 AND (owner_id = $2 OR true=$3)`
-	qryDelete = `DELETE FROM at_trips WHERE id = $1 AND (owner_id = $2 OR true=$3)`
+	qryUpdate = `UPDATE at_trips SET (trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) = ($4, $5, $6, $7, $8, $9, $10, $11, $12) WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
+	qryDelete = `DELETE FROM at_trips WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
 )
 
 type Handler struct {
@@ -51,16 +51,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	//session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
-	//if !ok {
-	//	log.Printf(debugTag+"GetAll()1 UserID not available in request context. userID=%v\n", session.UserID)
-	//	http.Error(w, "UserID not available in request context", http.StatusInternalServerError)
-	//	return
-	//}
-	//log.Printf(debugTag+"GetAll()2 session=%v\n", session)
-
 	// Includes code to check if the user has access.
-	//dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll, session.UserID, session.AdminFlag)
 	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGetAll)
 }
 
@@ -104,7 +95,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	// This validation needs to be added into the process ???????????????????????????????????????
 	if err := h.RecordValidation(record); err != nil {
 		log.Printf(debugTag+"Update()2 validation error: %v", err)
-		//http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(map[string]string{"error": debugTag + "Update: " + err.Error()})
@@ -112,14 +102,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf(debugTag + "Update()3 processing the update")
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AdminFlag, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AdminFlag)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
 }
 
 func (h *Handler) RecordValidation(record models.Trip) error {

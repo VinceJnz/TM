@@ -28,6 +28,7 @@ type settings struct {
 	EmailSecret    string `json:"EmailSecret"`
 	PaymentKey     string `json:"PaymentKey"`
 	EmailDebugAddr string `json:"EmailDebugAddr"`
+	DevMode        bool   `json:"DevMode"`
 }
 
 func (s *settings) SaveJson() error {
@@ -107,6 +108,7 @@ func (s *settings) LoadEnv() error {
 	s.EmailSecret = os.Getenv("EMAIL_SECRET")
 	s.PaymentKey = os.Getenv("PAYMENT_KEY")
 	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
+	s.DevMode = os.Getenv("DEV_MODE") == "true"
 	s.AppTitle = os.Getenv("APP_TITLE")
 	log.Printf("%sLoadEnv() Settings loaded from environment variables: %+v\n", debugTag, s)
 	if err := s.ValidateEnv(); err != nil {

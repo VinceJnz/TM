@@ -16,7 +16,7 @@ const debugTag = "dbAuthTemplate."
 // sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
 // NOTE: If the group (stg) admin_flag is set then access is given regardless of the resource or action settings.
 const (
-	sqlUserCheckAccess = `SELECT etat.ID, (stgr.admin_flag OR stg.admin_flag) AS admin_flag
+	sqlUserCheckAccess = `SELECT etat.ID, stg.Role
 	FROM st_users stu
 		JOIN st_user_group stug ON stug.User_ID=stu.ID
 		JOIN st_group stg ON stg.ID=stug.Group_ID
@@ -28,8 +28,16 @@ const (
 		AND stu.user_account_status_id=$4
 		AND ((UPPER(etr.Name)=UPPER($2)
 		AND UPPER(etal.Name)=UPPER($3))
-			 OR stg.admin_flag)
-	GROUP BY etat.ID, stgr.admin_flag, stg.admin_flag
+			 OR stg.Role IN ('admin', 'sysadmin'))
+	GROUP BY etat.ID, stg.Role
+	ORDER BY
+		CASE LOWER(stg.Role::text)
+			WHEN 'sysadmin' THEN 3
+			WHEN 'admin' THEN 2
+			WHEN 'user' THEN 1
+			ELSE 0
+		END DESC,
+		etat.ID DESC
 	LIMIT 1`
 )
 
@@ -47,7 +55,7 @@ func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, Act
 	var err error
 	var access models.AccessCheck
 
-	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessTypeID, &access.AdminFlag)
+	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessTypeID, &access.Role)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
 		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"UserCheckAccess()3 Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
 		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
