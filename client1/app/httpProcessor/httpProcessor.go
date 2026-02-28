@@ -73,8 +73,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 	url = c.BaseURL + url
 
 	callBackSuccess := func(error) {
-		err = fmt.Errorf(debugTag+"newRequest()2 INFORMATION: No success-callback has been provided: %w", err)
-		log.Println(err, "req.URL =", req.URL) //This is the default returned if renderOk is called
+		// Optional callback: no-op when caller does not provide a success handler.
 	} //The function to be called to render the request results
 	if len(callBacks) > 0 {
 		if callBacks[0] != nil {
@@ -191,9 +190,8 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 		//Data struct is nil - this is not necesssarily an error, e.g. we might be deleting an item?????
 		//Should the deleted item ID be returned???
 		resBody, err := io.ReadAll(res.Body)
-		if len(resBody) != 0 { // if the resBody in not empty then we should log it because there was no rxDataStru provided for the data in resBody
-			log.Printf("%v %v %v %v %v %v %p %+v %v %+v %v %+v", debugTag+"NewRequest()9 - rx data structure is nil but the response body contains data ", "res.StatusCode =", res.StatusCode, "req.URL =", req.URL, "rxDataStru =", rxDataStru, rxDataStru, "resBody =", string(resBody), "err =", err)
-		}
+		_ = resBody
+		_ = err
 	}
 
 	//returnData := &ReturnData{FieldNames: fieldNames}

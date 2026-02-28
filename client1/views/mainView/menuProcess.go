@@ -24,7 +24,7 @@ func (editor *View) getMenuUser() {
 	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()2 success: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
+			log.Printf("%v %v %v %v %+v", debugTag+"getMenuUser()2 success: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		}
 		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
 		//editor.CurrentRecord.MenuUser = menuUser // Save the menuUser to the current record
@@ -36,7 +36,7 @@ func (editor *View) getMenuUser() {
 	}
 
 	fail := func(err error) {
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v", debugTag+"getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		//Don't display message to user
 	}
 
@@ -55,7 +55,7 @@ func (editor *View) getMenuList() {
 	success := func(err error) {
 		//Call the next step in the Auth process
 		if err != nil {
-			log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()2 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
+			log.Printf("%v %v %v %v %+v", debugTag+"getMenuList()2 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		}
 		editor.CurrentRecord.MenuList = menuList // Save the salt to the current record
 		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
@@ -65,7 +65,7 @@ func (editor *View) getMenuList() {
 	}
 
 	fail := func(err error) {
-		log.Printf("%v %v %v %v %+v", debugTag+"LogonForm.getMenuList()4 fail: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
+		log.Printf("%v %v %v %v %+v", debugTag+"getMenuList()4 fail: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		//Display message  to user ??????????????
 		editor.onCompletionMsg(debugTag + "getMenuList()1 " + err.Error())
 	}
