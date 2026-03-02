@@ -44,7 +44,7 @@ const (
 	menuSectionSysadmin = "sysadmin"
 
 	menuSectionAdminCaption    = "Administrator"
-	menuSectionSysadminCaption = "System Admin"
+	menuSectionSysadminCaption = "System Administrator"
 )
 
 type MenuChoice int
@@ -75,6 +75,7 @@ type buttonElement struct {
 
 type sectionElement struct {
 	container js.Value
+	header    js.Value
 	content   js.Value
 }
 
@@ -103,24 +104,28 @@ type View struct {
 	document js.Value
 	elements viewElements
 
-	events        *eventProcessor.EventProcessor
-	CurrentRecord TableData
-	ItemState     viewHelpers.ItemStateView //viewHelpers.ItemState
-	menuChoice2   string
-	childElements map[string]editorElement
-	menuButtons   map[string]buttonElement
-	menuSections  map[string]sectionElement
-	Children      children
+	events              *eventProcessor.EventProcessor
+	CurrentRecord       TableData
+	ItemState           viewHelpers.ItemStateView //viewHelpers.ItemState
+	menuChoice2         string
+	childElements       map[string]editorElement
+	menuButtons         map[string]buttonElement
+	menuTitles          map[string]js.Value
+	menuSectionsByTitle map[string]string
+	menuSections        map[string]sectionElement
+	Children            children
 }
 
 func New(appCore *appCore.AppCore) *View {
 	v := &View{
-		appCore:       appCore,
-		client:        appCore.HttpClient,
-		document:      js.Global().Get("document"),
-		childElements: map[string]editorElement{},
-		menuButtons:   map[string]buttonElement{},
-		menuSections:  map[string]sectionElement{},
+		appCore:             appCore,
+		client:              appCore.HttpClient,
+		document:            js.Global().Get("document"),
+		childElements:       map[string]editorElement{},
+		menuButtons:         map[string]buttonElement{},
+		menuTitles:          map[string]js.Value{},
+		menuSectionsByTitle: map[string]string{},
+		menuSections:        map[string]sectionElement{},
 	}
 
 	v.events = eventProcessor.New()
@@ -135,6 +140,8 @@ func New(appCore *appCore.AppCore) *View {
 }
 
 func (v *View) Setup() {
+	viewHelpers.ApplyBaseTheme(v.document)
+
 	// Create new body element and other page elements
 	newBody := v.document.Call("createElement", "body")
 	newBody.Set("id", debugTag+"body")
@@ -159,6 +166,7 @@ func (v *View) Setup() {
 	// Add the menu icon to the navbar
 	menuIcon := v.document.Call("createElement", "div")
 	menuIcon.Set("id", "menuIcon")
+	menuIcon.Set("title", "Open menu")
 	menuIcon.Set("innerHTML", "&#9776;")
 	menuIcon.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		v.toggleSideMenu()
@@ -182,6 +190,15 @@ func (v *View) Setup() {
 	v.elements.userDisplay.Set("id", "userDisplay")
 	v.elements.topmenu.Set("className", "right-align")
 	v.elements.navbar.Call("appendChild", v.elements.userDisplay)
+	v.document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) == 0 {
+			return nil
+		}
+		if args[0].Get("key").String() == "Escape" {
+			v.closeSideMenu()
+		}
+		return nil
+	}))
 
 	// Add the logout button to the navbar
 	v.AddViewItem("Logout", "", true, logoutView.New(v.document, v.events, v.appCore), true, roleUser, v.elements.topmenu, menuSectionRoot)
@@ -191,13 +208,13 @@ func (v *View) Setup() {
 	//v.AddViewItem("oAuth Register", "", true, oAuthRegistrationView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	//v.AddViewItem("oAuth Register2", "", true, oAuthRegistrationProcess.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	//v.AddViewItem("oAuth Login", "", true, oAuthLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
-	v.AddViewItem("Login/Register", "", true, basicAuthLoginView.New(v.document, v.events, v.appCore), true, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Login / Register", "", true, basicAuthLoginView.New(v.document, v.events, v.appCore), true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Home", "", true, nil, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("About", "", true, nil, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Contact", "", true, nil, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("Trip Participant", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Trip Participant Status", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 
 	adminMenu := v.AddMenuSection(menuSectionAdminCaption, menuSectionAdmin, false, v.elements.sidemenu)
@@ -217,8 +234,8 @@ func (v *View) Setup() {
 	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
 	v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
 	v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
-	v.AddViewItem("Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
-	v.AddViewItem("Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
+	v.AddViewItem("Security Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
+	v.AddViewItem("Security Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
 	//v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	log.Printf("%v %v", debugTag+"Setup()", "Menu items added")
 
@@ -268,6 +285,7 @@ func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editor
 
 	onClickFn := v.menuOnClick(title, menuAction, element)            // Set up menu onClick function
 	fetchBtn := viewHelpers.HRef(onClickFn, v.document, title, title) // Set up menu button
+	fetchBtn.Set("className", "menu-item")
 	if !defaultDisplay {
 		fetchBtn.Get("style").Call("setProperty", "display", "none")
 	}
@@ -275,6 +293,8 @@ func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editor
 	if section == "" {
 		section = menuSectionRoot
 	}
+	v.menuTitles[title] = fetchBtn
+	v.menuSectionsByTitle[title] = section
 	v.menuButtons[buttonName] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay, requiredRole: normalizeRole(requiredRole), section: section}
 	menu.Call("appendChild", fetchBtn) // Append the button to the side menu
 	if element != nil {
@@ -286,6 +306,8 @@ func (v *View) AddMenuSection(title, section string, defaultDisplay bool, menu j
 	htmlID := "menuSection" + strings.ReplaceAll(strings.ToLower(title), " ", "")
 	container := viewHelpers.Div(v.document, "", htmlID)
 	header := viewHelpers.HRef(func() { v.toggleMenuSection(section) }, v.document, title, htmlID+"Header")
+	header.Set("aria-expanded", "false")
+	header.Set("className", "menu-section-header")
 	content := viewHelpers.Div(v.document, "", htmlID+"Items")
 	content.Get("style").Call("setProperty", "padding-left", "16px")
 	content.Get("style").Call("setProperty", "display", "none")
@@ -295,7 +317,7 @@ func (v *View) AddMenuSection(title, section string, defaultDisplay bool, menu j
 		container.Get("style").Call("setProperty", "display", "none")
 	}
 	menu.Call("appendChild", container)
-	v.menuSections[section] = sectionElement{container: container, content: content}
+	v.menuSections[section] = sectionElement{container: container, header: header, content: content}
 	return content
 }
 
@@ -306,9 +328,40 @@ func (v *View) toggleMenuSection(section string) {
 	}
 	if val.content.Get("style").Get("display").String() == "none" {
 		val.content.Get("style").Call("removeProperty", "display")
+		val.header.Set("aria-expanded", "true")
+		val.header.Get("classList").Call("add", "btn-active")
 	} else {
 		val.content.Get("style").Call("setProperty", "display", "none")
+		val.header.Set("aria-expanded", "false")
+		val.header.Get("classList").Call("remove", "btn-active")
 	}
+}
+
+func (v *View) setActiveMenuTitle(title string) {
+	for _, button := range v.menuTitles {
+		button.Get("classList").Call("remove", "menu-item-active")
+	}
+
+	selected, ok := v.menuTitles[title]
+	if !ok {
+		return
+	}
+
+	selected.Get("classList").Call("add", "menu-item-active")
+
+	section, ok := v.menuSectionsByTitle[title]
+	if !ok || section == menuSectionRoot {
+		return
+	}
+
+	val, ok := v.menuSections[section]
+	if !ok {
+		return
+	}
+	val.container.Get("style").Call("removeProperty", "display")
+	val.content.Get("style").Call("removeProperty", "display")
+	val.header.Set("aria-expanded", "true")
+	val.header.Get("classList").Call("add", "btn-active")
 }
 
 func normalizeRole(role string) string {
@@ -334,7 +387,8 @@ func (v *View) menuOnClick(PageTitle string, menuAction bool, element editorElem
 			}
 			v.menuChoice2 = PageTitle                        // Set new menu choice
 			v.elements.pageTitle.Set("innerHTML", PageTitle) // set the title for the element when it is displayed
-			if element != nil {                              // Some menu choices do not display an element
+			v.setActiveMenuTitle(PageTitle)
+			if element != nil { // Some menu choices do not display an element
 				element.Display()    // Display new editor
 				element.FetchItems() // Fetch new editor data
 			}

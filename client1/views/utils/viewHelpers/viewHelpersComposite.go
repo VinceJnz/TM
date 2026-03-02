@@ -119,6 +119,23 @@ func StyleSubmitButton(button js.Value) {
 	})
 }
 
+func StyleButtonPrimary(button js.Value) {
+	button.Set("className", "btn btn-primary")
+}
+
+func StyleButtonSecondary(button js.Value) {
+	button.Set("className", "btn btn-secondary")
+}
+
+func FormButtonRow(document js.Value, buttons ...js.Value) js.Value {
+	row := document.Call("createElement", "div")
+	row.Set("className", "form-button-row")
+	for _, button := range buttons {
+		row.Call("appendChild", button)
+	}
+	return row
+}
+
 func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn func()) js.Value {
 	itemDiv := document.Call("createElement", "div")
 	itemDiv.Set("id", debugTag+"itemDiv")
@@ -129,6 +146,7 @@ func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn fu
 	// Create an edit button
 	editButton := document.Call("createElement", "button")
 	editButton.Set("innerHTML", "Edit")
+	editButton.Set("className", "btn btn-secondary")
 	editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		editFn()
 		return nil
@@ -137,6 +155,7 @@ func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn fu
 	// Create a delete button
 	deleteButton := document.Call("createElement", "button")
 	deleteButton.Set("innerHTML", "Delete")
+	deleteButton.Set("className", "btn btn-danger")
 	deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		deleteFn()
 		return nil

@@ -170,6 +170,19 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
 }
 
+func (editor *ItemEditor) setActiveButtons(activeID string, buttonIDs ...string) {
+	for _, buttonID := range buttonIDs {
+		button := editor.document.Call("getElementById", buttonID)
+		if button.IsUndefined() || button.IsNull() {
+			continue
+		}
+		button.Get("classList").Call("remove", "btn-active")
+		if buttonID == activeID {
+			button.Get("classList").Call("add", "btn-active")
+		}
+	}
+}
+
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
 	editor.Elements.EditDiv.Set("innerHTML", "") // Clear existing content
@@ -191,16 +204,21 @@ func (editor *ItemEditor) populateEditForm() {
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
-	form.Call("appendChild", submitBtn)
-	form.Call("appendChild", cancelBtn)
+	viewHelpers.StyleButtonPrimary(submitBtn)
+	viewHelpers.StyleButtonSecondary(cancelBtn)
+	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
+	form.Call("appendChild", buttonRow)
 
 	// Create and add child views and buttons to Item
 	register := oAuthRegistrationView.New(editor.document, editor.events, editor.appCore, editor.ParentID)
 
 	// Create a Login with Google button
 	loginButton := editor.document.Call("createElement", "button")
+	loginButton.Set("id", "oauthLoginOption")
 	loginButton.Set("innerHTML", "Login with Google")
+	loginButton.Set("className", "btn btn-primary")
 	loginButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		editor.setActiveButtons("oauthLoginOption", "oauthLoginOption", "oauthRegisterOption")
 		// Open OAuth popup; server will set cookies on completion
 		js.Global().Call("open", ApiURL+"/login", "oauth", "width=600,height=800")
 		return nil
@@ -208,12 +226,16 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create a toggle child button for registration
 	registerButton := editor.document.Call("createElement", "button")
-	registerButton.Set("innerHTML", "oAuthRegister")
+	registerButton.Set("id", "oauthRegisterOption")
+	registerButton.Set("innerHTML", "OAuth Register")
+	registerButton.Set("className", "btn btn-secondary")
 	registerButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		editor.setActiveButtons("oauthRegisterOption", "oauthLoginOption", "oauthRegisterOption")
 		register.NewItemData()
 		register.Toggle()
 		return nil
 	}))
+	editor.setActiveButtons("oauthLoginOption", "oauthLoginOption", "oauthRegisterOption")
 
 	// Append child components to editor div
 	editor.Elements.EditDiv.Call("appendChild", loginButton)

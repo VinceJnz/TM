@@ -71,10 +71,13 @@ func (v *View) resetMenu(event eventProcessor.Event) {
 		if !o.defaultDisplay {
 			o.button.Get("style").Call("setProperty", "display", "none") // Hide menu item - set property "display: none;"
 		}
+		o.button.Get("classList").Call("remove", "menu-item-active")
 	}
 	for _, section := range v.menuSections {
 		section.container.Get("style").Call("setProperty", "display", "none")
 		section.content.Get("style").Call("setProperty", "display", "none")
+		section.header.Set("aria-expanded", "false")
+		section.header.Get("classList").Call("remove", "btn-active")
 	}
 }
 
@@ -121,6 +124,8 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 			continue
 		}
 		section.container.Get("style").Call("removeProperty", "display")
+		section.header.Set("aria-expanded", "false")
+		section.header.Get("classList").Call("remove", "btn-active")
 	}
 }
 

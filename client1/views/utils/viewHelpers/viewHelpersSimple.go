@@ -68,6 +68,7 @@ func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Val
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "button")
+	button.Set("className", "btn")
 	button.Set("innerHTML", displayText)
 	button.Call("addEventListener", "click", js.FuncOf(onClick))
 	return button
@@ -78,6 +79,7 @@ func Button2(onClick func() interface{}, doc js.Value, displayText, htmlID strin
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "button")
+	button.Set("className", "btn")
 	button.Set("innerHTML", displayText)
 	f := func(this js.Value, args []js.Value) interface{} {
 		onClick()
@@ -92,6 +94,7 @@ func SubmitButton(doc js.Value, displayText, htmlID string) js.Value {
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "submit")
+	button.Set("className", "btn btn-primary")
 	button.Set("innerHTML", displayText)
 	return button
 }
@@ -101,6 +104,7 @@ func SubmitValidateButton(onClick func(), doc js.Value, displayText, htmlID stri
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "submit")
+	button.Set("className", "btn btn-primary")
 	button.Set("innerHTML", displayText)
 	if onClick != nil {
 		f := func(this js.Value, args []js.Value) any {
@@ -116,6 +120,7 @@ func SubmitValidateButton2(onClick func(this js.Value, args []js.Value) any, doc
 	button := doc.Call("createElement", "button")
 	button.Set("id", htmlID)
 	button.Set("type", "submit")
+	button.Set("className", "btn btn-primary")
 	button.Set("innerHTML", displayText)
 	if onClick != nil {
 		f := func(this js.Value, args []js.Value) any {
@@ -144,6 +149,9 @@ func HRef(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 	//link.Set("type", "button")
 	//link.Set("innerHTML", displayText)
 	f := func(this js.Value, args []js.Value) any {
+		if len(args) > 0 {
+			args[0].Call("preventDefault")
+		}
 		onClick()
 		return nil
 	}

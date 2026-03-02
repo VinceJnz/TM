@@ -194,6 +194,7 @@ func (editor *ItemEditor) populateEditForm() {
 	// Create a Login with Google button
 	loginButton := editor.document.Call("createElement", "button")
 	loginButton.Set("innerHTML", "Login with Google")
+	loginButton.Set("className", "btn btn-primary")
 	loginButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 		// Open OAuth popup; server will set cookies on completion
 		js.Global().Call("open", "/api/v1/auth/oauth/login", "oauth", "width=600,height=800")
@@ -202,7 +203,8 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Create a toggle child button for registration
 	registerButton := editor.document.Call("createElement", "button")
-	registerButton.Set("innerHTML", "oAuthRegister")
+	registerButton.Set("innerHTML", "OAuth Register")
+	registerButton.Set("className", "btn btn-secondary")
 	registerButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 		register.NewItemData()
 		register.Toggle()
@@ -273,6 +275,19 @@ func (editor *ItemEditor) showLoginForm(this js.Value, args []js.Value) interfac
 	return nil
 }
 
+func (editor *ItemEditor) setActiveButtons(activeID string, buttonIDs ...string) {
+	for _, buttonID := range buttonIDs {
+		button := editor.document.Call("getElementById", buttonID)
+		if button.IsUndefined() || button.IsNull() {
+			continue
+		}
+		button.Get("classList").Call("remove", "btn-active")
+		if buttonID == activeID {
+			button.Get("classList").Call("add", "btn-active")
+		}
+	}
+}
+
 func (editor *ItemEditor) renderAuthForm(mode string) {
 	editor.authMode = mode
 	editor.UiComponents = UI{}
@@ -282,9 +297,11 @@ func (editor *ItemEditor) renderAuthForm(mode string) {
 	}
 	if mode == "login" {
 		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
+		editor.setActiveButtons("showLogin", "showRegister", "showLogin")
 		return
 	}
 	editor.Elements.AuthDiv.Call("appendChild", editor.regForm())
+	editor.setActiveButtons("showRegister", "showRegister", "showLogin")
 }
 
 func (editor *ItemEditor) showBasicTab(this js.Value, args []js.Value) interface{} {
@@ -294,6 +311,7 @@ func (editor *ItemEditor) showBasicTab(this js.Value, args []js.Value) interface
 	if editor.Elements.OauthDiv.Truthy() {
 		editor.Elements.OauthDiv.Get("style").Set("display", "none")
 	}
+	editor.setActiveButtons("tabBasic", "tabBasic", "tabOauth")
 	return nil
 }
 
@@ -304,6 +322,7 @@ func (editor *ItemEditor) showOauthTab(this js.Value, args []js.Value) interface
 	if editor.Elements.OauthDiv.Truthy() {
 		editor.Elements.OauthDiv.Get("style").Set("display", "block")
 	}
+	editor.setActiveButtons("tabOauth", "tabBasic", "tabOauth")
 	return nil
 }
 

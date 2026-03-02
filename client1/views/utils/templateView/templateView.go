@@ -152,10 +152,12 @@ func (v *ItemEditor) populateEditForm(record ItemRecord) {
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(v.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(v.cancelItemEdit, v.document, "Cancel", "cancelEditBtn")
+	viewHelpers.StyleButtonPrimary(submitBtn)
+	viewHelpers.StyleButtonSecondary(cancelBtn)
+	buttonRow := viewHelpers.FormButtonRow(v.document, submitBtn, cancelBtn)
 
 	// Append elements to form
-	form.Call("appendChild", submitBtn)
-	form.Call("appendChild", cancelBtn)
+	form.Call("appendChild", buttonRow)
 
 	// Append form to editor div
 	v.EditDiv.Call("appendChild", form)
@@ -304,6 +306,7 @@ func (v *ItemEditor) populateItemList() {
 		// Create an edit button
 		editButton := v.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
+		editButton.Set("className", "btn btn-secondary")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			v.updateStateDisplay(ItemStateEditing)
 			v.populateEditForm(record)
@@ -313,6 +316,7 @@ func (v *ItemEditor) populateItemList() {
 		// Create a delete button
 		deleteButton := v.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
+		deleteButton.Set("className", "btn btn-danger")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			v.deleteItem(record)
 			return nil

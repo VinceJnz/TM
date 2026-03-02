@@ -243,8 +243,10 @@ func (editor *ItemEditor) populateEditForm() {
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
-	form.Call("appendChild", submitBtn)
-	form.Call("appendChild", cancelBtn)
+	viewHelpers.StyleButtonPrimary(submitBtn)
+	viewHelpers.StyleButtonSecondary(cancelBtn)
+	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
+	form.Call("appendChild", buttonRow)
 
 	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item

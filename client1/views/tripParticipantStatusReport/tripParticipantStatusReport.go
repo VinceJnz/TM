@@ -208,7 +208,7 @@ func (editor *ItemEditor) populateItemList() {
 			if record.Name != "" {
 				bookingDiv.Set("innerHTML", " Booking:"+strconv.Itoa(record.BookingID))
 			} else {
-				bookingDiv.Set("innerHTML", " Nil Bookings")
+				bookingDiv.Set("innerHTML", "No Bookings")
 			}
 
 			tripDiv.Call("appendChild", bookingDiv)

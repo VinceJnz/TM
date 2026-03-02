@@ -129,15 +129,7 @@ func (p *Process) FetchItems() {
 
 	registerBtn := p.document.Call("createElement", "button")
 	registerBtn.Set("textContent", "Register with Google")
-	viewHelpers.SetStyles(registerBtn, map[string]string{
-		"padding":         "12px 24px",
-		"fontSize":        "16px",
-		"backgroundColor": "#4285f4",
-		"color":           "white",
-		"border":          "none",
-		"borderRadius":    "4px",
-		"cursor":          "pointer",
-	})
+	registerBtn.Set("className", "btn btn-primary")
 
 	registerBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 		p.StartRegistration()

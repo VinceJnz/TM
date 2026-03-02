@@ -230,8 +230,10 @@ func (editor *ItemEditor) populateEditForm() {
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
-	form.Call("appendChild", submitBtn)
-	form.Call("appendChild", cancelBtn)
+	viewHelpers.StyleButtonPrimary(submitBtn)
+	viewHelpers.StyleButtonSecondary(cancelBtn)
+	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
+	form.Call("appendChild", buttonRow)
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
@@ -362,6 +364,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create an edit button
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
+		editButton.Set("className", "btn btn-secondary")
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
@@ -372,6 +375,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create a delete button
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
+		deleteButton.Set("className", "btn btn-danger")
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			editor.deleteItem(record.ID)
 			return nil
@@ -380,6 +384,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create a toggle modify-booking-list button
 		costItemButton := editor.document.Call("createElement", "button")
 		costItemButton.Set("innerHTML", "Cost Item")
+		costItemButton.Set("className", "btn btn-secondary")
 		costItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			tripCostItem.FetchItems()
 			tripCostItem.Toggle()
