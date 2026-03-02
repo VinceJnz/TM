@@ -32,7 +32,7 @@ const (
 				booking_order.person_id,
 				--stu.name as person_name,
 				CASE
-                    WHEN stu.user_account_hidden AND $1<>"user" THEN 'name hidden'
+                    WHEN stu.user_account_hidden AND $1 IN ('admin', 'sysadmin') THEN 'name hidden'
                     ELSE stu.name
                 END as person_name,
 				--booking_order.booking_status_id,
