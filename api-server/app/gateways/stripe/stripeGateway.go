@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/stripe/stripe-go/v84"
 	//"github.com/stripe/stripe-go/v84/customer"
@@ -46,6 +47,13 @@ func New(keyFile, domain string, testMode bool) *Gateway {
 			Domain: domain,
 		}
 	}
+	if testMode && !isStripeTestKey(apiKey) {
+		log.Printf(debugTag + "New() WARNING: test mode enabled but Stripe key is not a test key; payment features are disabled")
+		return &Gateway{
+			Client: nil,
+			Domain: domain,
+		}
+	}
 
 	// DON'T add sk_test_ prefix - the key already has it!
 	// Set the global Stripe key
@@ -68,6 +76,13 @@ func NewFromKey(apiKey, domain string, testMode bool) *Gateway {
 			Domain: domain,
 		}
 	}
+	if testMode && !isStripeTestKey(apiKey) {
+		log.Printf(debugTag + "NewFromKey() WARNING: test mode enabled but Stripe key is not a test key; payment features are disabled")
+		return &Gateway{
+			Client: nil,
+			Domain: domain,
+		}
+	}
 
 	// DON'T add sk_test_ prefix - the key already has it!
 	// Set the global Stripe key
@@ -84,7 +99,7 @@ func NewFromKey(apiKey, domain string, testMode bool) *Gateway {
 func KeyFromFile(file string) string {
 	f, err := os.Open(file)
 	if err != nil {
-		log.Printf(debugTag+"KeyFromFile()1 error opening file: %v", err)
+		log.Printf(debugTag+"KeyFromFile error opening file: %v", err)
 		return ""
 	}
 	defer f.Close()
@@ -92,7 +107,7 @@ func KeyFromFile(file string) string {
 	var data map[string]string
 	err = json.NewDecoder(f).Decode(&data)
 	if err != nil {
-		log.Printf(debugTag+"KeyFromFile()2 error decoding JSON: %v", err)
+		log.Printf(debugTag+"KeyFromFile error decoding JSON: %v", err)
 		return ""
 	}
 
@@ -100,6 +115,10 @@ func KeyFromFile(file string) string {
 		return key
 	}
 
-	log.Printf(debugTag + "KeyFromFile()3 'key' field not found in JSON")
+	log.Printf(debugTag + "KeyFromFile 'key' field not found in JSON")
 	return ""
+}
+
+func isStripeTestKey(apiKey string) bool {
+	return strings.HasPrefix(strings.TrimSpace(apiKey), "sk_test_")
 }

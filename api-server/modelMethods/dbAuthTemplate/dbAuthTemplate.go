@@ -57,7 +57,7 @@ func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, Act
 
 	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessTypeID, &access.Role)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
-		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"UserCheckAccess()3 Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
+		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"UserCheckAccess Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
 		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
 	}
 	return access, nil
@@ -74,7 +74,7 @@ func UserSetStatusID(debugStr string, Db *sqlx.DB, userID int, status models.Acc
 
 	result, err := Db.Exec(sqlSetStatus, status, userID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserSetStatusID()2 ", "err =", err, "result =", result)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserSetStatusID ", "err =", err, "result =", result)
 		return err //update failed
 	}
 	return nil //nil error = users status updated
@@ -122,14 +122,14 @@ func TokenWriteQry(debugStr string, Db *sqlx.DB, record models.Token) (int, erro
 		err = TokenUpdateQry(debugStr, Db, record) //Existing record found so we are okay to update the record
 	}
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"TokenWriteQry()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"TokenWriteQry - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
 		return 0, err
 	}
 	return record.ID, err
 }
 
 func TokenDeleteQry(debugStr string, Db *sqlx.DB, recordID int) error {
-	log.Printf("%v %v %v", debugTag+"TokenDeleteQry()1."+debugStr, "recordID =", recordID)
+	log.Printf("%v %v %v", debugTag+"TokenDeleteQry."+debugStr, "recordID =", recordID)
 	_, err := Db.Exec(sqlTokenDelete, recordID)
 	return err
 }
@@ -151,15 +151,15 @@ func TokenCleanOld(debugStr string, Db *sqlx.DB, recordID int) error {
 	var err error
 	result, err := Db.Exec(sqlTokenCleanOld, recordID)
 	if err != nil { // Various errors including: no record found; key constraints
-		log.Printf("%v %v %v %v %+v", debugTag+"TokenCleanOld()1", "recordID", recordID, "result =", result)
+		log.Printf("%v %v %v %v %+v", debugTag+"TokenCleanOld", "recordID", recordID, "result =", result)
 		return err
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v %v %v\n", debugTag+"TokenCleanOld()2", "err =", err, "recordID", recordID, "result", result, "rowsAffected =", rowsAffected)
+		log.Printf("%v %v %v %v %v %v %+v %v %v\n", debugTag+"TokenCleanOld", "err =", err, "recordID", recordID, "result", result, "rowsAffected =", rowsAffected)
 		return err
 	}
-	log.Printf("%v %v %v %v %v %v %+v %v %v\n", debugTag+"TokenCleanOld()3", "err =", err, "recordID", recordID, "result", result, "rowsAffected =", rowsAffected)
+	log.Printf("%v %v %v %v %v %v %+v %v %v\n", debugTag+"TokenCleanOld", "err =", err, "recordID", recordID, "result", result, "rowsAffected =", rowsAffected)
 
 	return nil
 }
@@ -168,15 +168,15 @@ func TokenCleanExpired(debugStr string, Db *sqlx.DB) error {
 	var err error
 	result, err := Db.Exec(sqlTokenCleanExpired)
 	if err != nil { // Various errors including: no record found; key constraints
-		log.Printf("%v %v %v %v %+v\n", debugTag+"TokenCleanExpired()1", "err =", err, "result =", result)
+		log.Printf("%v %v %v %v %+v\n", debugTag+"TokenCleanExpired", "err =", err, "result =", result)
 		return err
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("%v %v %v %v %+v %v %v\n", debugTag+"TokenCleanExpired()2", "err =", err, "result", result, "rowsAffected =", rowsAffected)
+		log.Printf("%v %v %v %v %+v %v %v\n", debugTag+"TokenCleanExpired", "err =", err, "result", result, "rowsAffected =", rowsAffected)
 		return err
 	}
-	log.Printf("%v %v %v %v %+v %v %v\n", debugTag+"TokenCleanExpired()3", "err =", err, "result", result, "rowsAffected =", rowsAffected)
+	log.Printf("%v %v %v %v %+v %v %v\n", debugTag+"TokenCleanExpired", "err =", err, "result", result, "rowsAffected =", rowsAffected)
 	return nil
 }
 
@@ -208,12 +208,12 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
 	err = Db.QueryRow(sqlFindSessionToken, result.TokenStr, models.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
-		//log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken()2", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
+		//log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
 	}
 	err = TokenCleanExpired(debugStr, Db)
 	if err != nil {
-		log.Printf("%v %v %v", debugTag+"Handler.FindSessionToken()3: Token CleanExpired fail", "err =", err)
+		log.Printf("%v %v %v", debugTag+"Handler.FindSessionToken: Token CleanExpired fail", "err =", err)
 	}
 	return result, nil
 }
@@ -226,12 +226,12 @@ func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Tok
 	//result.Name.SetValid(name)
 	err = Db.QueryRow(sqlFindToken, cookieStr, name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken()2", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
+		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return result, err
 	}
 	err = TokenCleanExpired(debugStr, Db)
 	if err != nil {
-		log.Printf("%v %v %v", debugTag+"Handler.FindToken()3: Token CleanExpired fail", "err =", err)
+		log.Printf("%v %v %v", debugTag+"Handler.FindToken: Token CleanExpired fail", "err =", err)
 	}
 	return result, nil
 }
@@ -295,29 +295,29 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 	var err error
 	Tx, err := Db.Beginx() // Start a transaction
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry()1 - ", "err =", err, "record =", record)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry - ", "err =", err, "record =", record)
 		return 0, err // If we can't start a transaction then we can't write the record
 	}
 	defer Tx.Rollback() // Ensure the transaction is rolled back if we don't commit it
 
 	record.ID, err = UserWriteQryTx(debugStr, Tx, record) // Write the user record to the database
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry()2 - ", "err =", err, "record =", record)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry - ", "err =", err, "record =", record)
 		return 0, err // If we can't write the record then we can't commit the transaction
 	}
 	err = Tx.Commit() // Commit the transaction
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry()3 - ", "err =", err, "record =", record)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
 	}
 	return record.ID, err
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	log.Printf("%v %v %+v", debugTag+debugStr+"UserInsertQryTx()1 - ", "record =", record)
+	log.Printf("%v %v %+v", debugTag+debugStr+"UserInsertQryTx - ", "record =", record)
 	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx()1 - ", "err =", err, "record =", record)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
 	}
 	return record.ID, err
@@ -326,7 +326,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
 	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID, record.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx()1 - ", "err =", err, "record =", record)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx - ", "err =", err, "record =", record)
 	}
 	return err
 }
@@ -338,17 +338,17 @@ func UserWriteQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, erro
 	case sql.ErrNoRows:
 		record.ID, err = UserInsertQryTx(debugStr, Db, record) //No Existing record found so we are okay to insert the new record
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx()5 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
 			return 0, err
 		}
 	case nil:
 		err = UserUpdateQryTx(debugStr, Db, record) //Existing record found so we are okay to update the record
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx()6 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
 			return 0, err
 		}
 	default:
-		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx()7 - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
 		return 0, err
 	}
 	return record.ID, err
@@ -357,7 +357,7 @@ func UserWriteQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, erro
 func UserDelProvider(debugStr string, Db *sqlx.DB, id int) error {
 	_, err := Db.Exec(sqlUserDelProvider, id)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserDelProvider()1 - ", "err =", err, "id =", id)
+		log.Printf("%v %v %v %v %+v", debugTag+"UserDelProvider - ", "err =", err, "id =", id)
 	}
 	return err
 }
@@ -414,18 +414,18 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 
 		tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken()1 Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+			log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 		} else {
 			err = TokenCleanOld(debugStr, Db, tokenItem.ID)
 			if err != nil {
-				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken()2: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 			}
-			err = TokenCleanExpired(debugTag+"CreateNamedToken()3 ", Db) // Clean expired tokens for the user
+			err = TokenCleanExpired(debugTag+"CreateNamedToken ", Db) // Clean expired tokens for the user
 			if err != nil {
-				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken()4: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
 			}
 		}
 	}
-	log.Printf("%v %v %v %v %v %v %v %+v %+v", debugTag+"CreateNamedToken()5: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
+	log.Printf("%v %v %v %v %v %v %v %+v %+v", debugTag+"CreateNamedToken: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
 	return sessionToken, err
 }

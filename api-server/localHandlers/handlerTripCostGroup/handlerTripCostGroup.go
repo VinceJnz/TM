@@ -5,7 +5,6 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -53,8 +52,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // Create: adds a new trip cost record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.TripCostGroup
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Create()2 err=%+v", err)
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -66,8 +65,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.TripCostGroup
 	id := dbStandardTemplate.GetID(w, r)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Update()1 dest=%+v", record)
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Update err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}

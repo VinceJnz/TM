@@ -2,6 +2,7 @@ package handlerUserAccountStatus
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"api-server/v2/app/appCore"
@@ -43,9 +44,11 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.list)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(h.list); err != nil {
+		log.Printf("handlerUserAccountStatus.GetAll() failed to encode response: %v", err)
+	}
 }
 
 // Get: retrieves and returns a single record identified by id
@@ -56,9 +59,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dest := h.list[id]
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dest)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(dest); err != nil {
+		log.Printf("handlerUserAccountStatus.Get() failed to encode response: %v", err)
+	}
 }
 
 // Create: adds a new record and returns the new record

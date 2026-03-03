@@ -65,14 +65,18 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Create()2 err=%+v", err)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.RecordValidation(record); err != nil {
-		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
+		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -84,23 +88,29 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Update()1 dest=%+v", record)
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Update err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 	record.ID = id
 
 	if err := h.RecordValidation(record); err != nil {
-		log.Printf(debugTag+"Update()2 validation error: %v", err)
+		log.Printf(debugTag+"Update validation error: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(w).Encode(map[string]string{"error": debugTag + "Update: " + err.Error()})
+		if encodeErr := json.NewEncoder(w).Encode(map[string]string{"error": debugTag + "Update: " + err.Error()}); encodeErr != nil {
+			log.Printf(debugTag+"Update failed to encode validation response: %v", encodeErr)
+		}
 		return
 	}
 
-	log.Printf(debugTag + "Update()3 processing the update")
+	log.Printf(debugTag + "Update processing the update")
 	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
@@ -108,6 +118,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
 }
 

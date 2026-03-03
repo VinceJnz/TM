@@ -7,7 +7,7 @@
 <https://console.cloud.google.com/>
 
 GMAIL API Error
-`gmail.Handler.SendMail()1 ... Could not send mail> googleapi: Error 403: Request had insufficient authentication scopes.`
+`gmail.Handler.SendMail ... Could not send mail> googleapi: Error 403: Request had insufficient authentication scopes.`
 <https://stackoverflow.com/questions/65946707/googleapi-error-403-request-had-insufficient-authentication-scopes-more-detai>
 
 Seting for google gmail api SEND permissions

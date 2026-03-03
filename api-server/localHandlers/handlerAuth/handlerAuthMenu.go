@@ -1,8 +1,6 @@
 package handlerAuth
 
 import (
-	"encoding/json"
-
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
@@ -46,8 +44,7 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	sc, err := r.Cookie("session")
 	if err != nil {
 		// No session cookie - return empty response
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(models.MenuUser{})
+		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
 		return
 	}
 
@@ -55,8 +52,7 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	dbToken, err := dbAuthTemplate.FindSessionToken(debugTag+"MenuUserGet", h.appConf.Db, sc.Value)
 	if err != nil {
 		// Session cookie exists but is invalid/expired
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(models.MenuUser{})
+		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
 		return
 	}
 
@@ -64,8 +60,7 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	user, err := dbAuthTemplate.UserReadQry(debugTag+"MenuUserGet:user", h.appConf.Db, dbToken.UserID)
 	if err != nil || !user.UserActive() {
 		// User not found or not active
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(models.MenuUser{})
+		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
 		return
 	}
 
@@ -74,19 +69,21 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	err = h.appConf.Db.Get(&menuUser, sqlMenuUser, dbToken.UserID, models.AccountActive)
 	if err != nil {
 		// Failed to get menu user (maybe no group assigned)
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(models.MenuUser{})
+		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
 		return
 	}
 
 	// Return menu user info
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(menuUser)
+	writeJSONResponse(w, http.StatusOK, menuUser, "MenuUserGet()")
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, models.AccountActive)
 }
 
@@ -99,11 +96,10 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	sc, err := r.Cookie("session")
 	if err != nil {
 		// No session cookie - user not authenticated
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, http.StatusOK, map[string]any{
 			"authenticated": false,
 			"user":          nil,
-		})
+		}, "AuthStatus()")
 		return
 	}
 
@@ -111,11 +107,10 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	dbToken, err := dbAuthTemplate.FindSessionToken(debugTag+"AuthStatus", h.appConf.Db, sc.Value)
 	if err != nil {
 		// Session cookie exists but is invalid/expired
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, http.StatusOK, map[string]any{
 			"authenticated": false,
 			"user":          nil,
-		})
+		}, "AuthStatus()")
 		return
 	}
 
@@ -123,11 +118,10 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	user, err := dbAuthTemplate.UserReadQry(debugTag+"AuthStatus:user", h.appConf.Db, dbToken.UserID)
 	if err != nil || !user.UserActive() {
 		// User not found or not active
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, http.StatusOK, map[string]any{
 			"authenticated": false,
 			"user":          nil,
-		})
+		}, "AuthStatus()")
 		return
 	}
 
@@ -136,8 +130,7 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	err = h.appConf.Db.Get(&menuUser, sqlMenuUser, dbToken.UserID, models.AccountActive)
 	if err != nil {
 		// Failed to get menu user (maybe no group assigned)
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, http.StatusOK, map[string]any{
 			"authenticated": true,
 			"user": map[string]any{
 				"user_id": user.ID,
@@ -146,14 +139,13 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 				"group":   "",
 				"role":    "",
 			},
-		})
+		}, "AuthStatus()")
 		return
 	}
 
 	// Return full menu user info
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSONResponse(w, http.StatusOK, map[string]any{
 		"authenticated": true,
 		"user":          menuUser,
-	})
+	}, "AuthStatus()")
 }

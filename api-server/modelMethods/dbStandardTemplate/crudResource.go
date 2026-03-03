@@ -49,7 +49,7 @@ func (rc *ResourceCRUD[T]) Get(w http.ResponseWriter, r *http.Request) {
 func (rc *ResourceCRUD[T]) Create(w http.ResponseWriter, r *http.Request) {
 	record := rc.cfg.NewRecord()
 	if err := json.NewDecoder(r.Body).Decode(record); err != nil {
-		log.Printf(rc.cfg.DebugTag+"Create()2 err=%+v", err)
+		log.Printf(rc.cfg.DebugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -60,7 +60,7 @@ func (rc *ResourceCRUD[T]) Update(w http.ResponseWriter, r *http.Request) {
 	record := rc.cfg.NewRecord()
 	id := GetID(w, r)
 	if err := json.NewDecoder(r.Body).Decode(record); err != nil {
-		log.Printf(rc.cfg.DebugTag+"Update()1 dest=%+v", *record)
+		log.Printf(rc.cfg.DebugTag+"Update dest=%+v", *record)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}

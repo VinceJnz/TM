@@ -52,7 +52,11 @@ const (
 // GetBookingStatus: retrieves and returns all records with the status of each users booking (trip participant booking status list)
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	log.Printf("%vGetParticipantStatus()1 session=%+v\n", debugTag, session)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	log.Printf("%vGetParticipantStatus session=%+v\n", debugTag, session)
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.TripParticipantStatus{}, sqlGetParticipantStatus, session.Role)
 	/*
 		records := []models.TripParticipantStatus{}
@@ -62,7 +66,7 @@ func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Record not found", http.StatusNotFound)
 			return
 		} else if err != nil {
-			log.Printf("%v.GetBookingStatus()2 %v\n", debugTag, err)
+			log.Printf("%v.GetBookingStatus %v\n", debugTag, err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

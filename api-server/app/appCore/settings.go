@@ -16,6 +16,7 @@ type settings struct {
 	Host               string `json:"Host"`
 	PortHttp           string `json:"PortHttp"`
 	PortHttps          string `json:"PortHttps"`
+	CoreOrigins        string `json:"CoreOrigins"`
 	DataSource         string `json:"DataSource"`
 	APIprefix          string `json:"APIprefix"`
 	ServerCaCert       string `json:"ServerCaCert"`
@@ -33,6 +34,7 @@ type settings struct {
 	GoogleRedirectURL  string `json:"GoogleRedirectURL"`
 	SessionKey         string `json:"SessionKey"`
 	ClientRedirectURL  string `json:"ClientRedirectURL"`
+	GmailAuthCode      string `json:"GmailAuthCode"`
 	EmailDebugAddr     string `json:"EmailDebugAddr"`
 	DevMode            bool   `json:"DevMode"`
 }
@@ -54,16 +56,16 @@ func (s *settings) LoadJson() error {
 	var err error
 	envData, err := os.ReadFile("Project_manager_config.json")
 	if err != nil {
-		log.Printf("%sload() Error loading settings file: %v\n", debugTag, err)
+		log.Printf("%sLoadJson() error loading settings file: %v\n", debugTag, err)
 		return err
 	}
-	log.Printf("%sload()1 Settings file loaded successfully: %s\n", debugTag, string(envData))
+	log.Printf("%sLoadJson() settings file loaded successfully: %s\n", debugTag, string(envData))
 	err = json.Unmarshal(envData, &s)
 	if err != nil {
-		log.Printf("%sload()1 Error loading settings: %v\n", debugTag, err)
+		log.Printf("%sLoadJson() error unmarshalling settings: %v\n", debugTag, err)
 		return err
 	}
-	log.Printf("%sload()3 Settings loaded successfully: %+v\n", debugTag, s)
+	log.Printf("%sLoadJson() settings loaded successfully: %+v\n", debugTag, s)
 	return nil
 }
 
@@ -96,6 +98,7 @@ func (s *settings) LoadEnv() error {
 	s.Host = os.Getenv("HOST")
 	s.PortHttp = os.Getenv("HTTP_PORT")
 	s.PortHttps = os.Getenv("HTTPS_PORT")
+	s.CoreOrigins = os.Getenv("CORE_ORIGINS")
 	s.APIprefix = os.Getenv("API_PATH_PREFIX")
 	s.DataSource = os.Getenv("DATA_SOURCE")
 	if s.DataSource == "" {
@@ -127,6 +130,7 @@ func (s *settings) LoadEnv() error {
 	s.GoogleRedirectURL = os.Getenv("GOOGLE_REDIRECT_URL")
 	s.SessionKey = os.Getenv("SESSION_KEY")
 	s.ClientRedirectURL = os.Getenv("CLIENT_REDIRECT_URL")
+	s.GmailAuthCode = os.Getenv("GMAIL_AUTH_CODE")
 	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
 	s.DevMode = os.Getenv("DEV_MODE") == "true"
 	s.AppTitle = os.Getenv("APP_TITLE")
@@ -139,32 +143,40 @@ func (s *settings) LoadEnv() error {
 // Validate checks all the json inputs for valid values
 func (s *settings) ValidateEnv() error {
 	if s.Host == "" {
-		log.Printf("%sValidateEnv() Warning: HOST is not set, using default value\n", debugTag)
+		log.Printf("%sValidateEnv() Warning: HOST is not set (required)\n", debugTag)
 		return errors.New("empty setting: HOST missing")
 	}
 	if s.PortHttp == "" {
-		log.Printf("%sValidateEnv() Warning: HTTP_PORT is not set, using default value\n", debugTag)
+		log.Printf("%sValidateEnv() Warning: HTTP_PORT is not set (required)\n", debugTag)
 		return errors.New("empty setting: HTTP_PORT missing")
 	}
 	if s.PortHttps == "" {
-		log.Printf("%sValidateEnv() Warning: HTTPS_PORT is not set, using default value\n", debugTag)
+		log.Printf("%sValidateEnv() Warning: HTTPS_PORT is not set (required)\n", debugTag)
 		return errors.New("empty setting: HTTPS_PORT missing")
 	}
+	if s.CoreOrigins == "" {
+		log.Printf("%sValidateEnv() Warning: CORE_ORIGINS is not set (required)\n", debugTag)
+		return errors.New("empty setting: CORE_ORIGINS missing")
+	}
 	if s.APIprefix == "" {
-		log.Printf("%sValidateEnv() Warning: API_PATH_PREFIX is not set, using default value\n", debugTag)
+		log.Printf("%sValidateEnv() Warning: API_PATH_PREFIX is not set (required)\n", debugTag)
 		return errors.New("empty setting: API_PATH_PREFIX missing")
 	}
 	if s.DataSource == "" {
-		log.Printf("%sValidateEnv() Warning: DATA_SOURCE (or DB_* fallback) is not set, using default value\n", debugTag)
+		log.Printf("%sValidateEnv() Warning: DATA_SOURCE (or DB_* fallback) is not set (required)\n", debugTag)
 		return errors.New("empty setting: DATA_SOURCE missing")
 	}
 	if s.AppTitle == "" {
-		log.Printf("%sValidateEnv() Warning: APP_TITLE is not set, using default value\n", debugTag)
+		log.Printf("%sValidateEnv() Warning: APP_TITLE is not set (required)\n", debugTag)
 		return errors.New("empty setting: APP_TITLE missing")
 	}
-	if s.EmailDebugAddr != "" {
-		log.Printf("%sValidateEnv() Warning: EMAIL_DEBUG_ADDR is set, using DEBUG value\n", debugTag)
-		return errors.New("nonempty setting: EMAIL_DEBUG_ADDR should be empty in production")
+	if s.DevMode && s.EmailDebugAddr == "" {
+		log.Printf("%sValidateEnv() Warning: DEV_MODE is true but EMAIL_DEBUG_ADDR is empty\n", debugTag)
+		return errors.New("empty setting: EMAIL_DEBUG_ADDR required when DEV_MODE=true")
+	}
+	if !s.DevMode && s.EmailDebugAddr != "" {
+		log.Printf("%sValidateEnv() Warning: EMAIL_DEBUG_ADDR is set while DEV_MODE is false\n", debugTag)
+		return errors.New("nonempty setting: EMAIL_DEBUG_ADDR should be empty when DEV_MODE=false")
 	}
 	return nil
 }

@@ -22,7 +22,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf(debugTag+debugStr+"GetAll()2 %v\n", err)
+		log.Printf(debugTag+debugStr+"GetAll %v\n", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -39,7 +39,7 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf(debugTag+debugStr+"Get()2 err=%v\n", err)
+		log.Printf(debugTag+debugStr+"Get err=%v\n", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -56,11 +56,11 @@ func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.D
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf(debugTag+debugStr+"GetList()2 err=%v\n", err)
+		log.Printf(debugTag+debugStr+"GetList err=%v\n", err)
 		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//log.Printf(debugTag+debugStr+"GetList()2 dest=%+v\n", dest)
+	//log.Printf(debugTag+debugStr+"GetList dest=%+v\n", dest)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dest)
@@ -68,11 +68,11 @@ func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.D
 
 // Create: adds a new record and returns the new record
 func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	log.Printf(debugTag+debugStr+"Create()3 dest=%+v", dest)
+	log.Printf(debugTag+debugStr+"Create dest=%+v", dest)
 
 	tx, err := Db.Beginx() // Start transaction
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create()1: Could not start transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Create: Could not start transaction", http.StatusInternalServerError)
 		return
 	}
 
@@ -85,7 +85,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 	err = tx.Commit() // Commit on success
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create()3: Could not commit transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Create: Could not commit transaction", http.StatusInternalServerError)
 		return
 	}
 
@@ -98,21 +98,21 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	tx, err := Db.Beginx() // Start transaction
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create()1: Could not start transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Create: Could not start transaction", http.StatusInternalServerError)
 		return
 	}
 
 	result, err := tx.Exec(query, args...)
 	if err != nil {
 		tx.Rollback() // Rollback on error
-		log.Printf(debugTag+debugStr+"Update()2 err=%+v, result=%+v", err, result)
+		log.Printf(debugTag+debugStr+"Update err=%+v, result=%+v", err, result)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	err = tx.Commit() // Commit on success
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create()3: Could not commit transaction", http.StatusInternalServerError)
+		http.Error(w, debugTag+debugStr+"Create: Could not commit transaction", http.StatusInternalServerError)
 		return
 	}
 
@@ -133,7 +133,7 @@ func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	result, err := tx.Exec(query, args...)
 	if err != nil {
 		tx.Rollback()
-		log.Printf(debugTag+debugStr+"Delete()1 result=%+v", result)
+		log.Printf(debugTag+debugStr+"Delete result=%+v", result)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -167,7 +167,7 @@ func GetID(w http.ResponseWriter, r *http.Request) int {
 func GetSession(w http.ResponseWriter, r *http.Request, SessionIDKey appCore.ContextKey) *models.Session {
 	session, ok := r.Context().Value(SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	if !ok {
-		log.Printf(debugTag+"GetSession()1 Session data not available in request context. session=%+v\n", session)
+		log.Printf(debugTag+"GetSession Session data not available in request context. session=%+v\n", session)
 		http.Error(w, "Session data not available in request context", http.StatusInternalServerError)
 		return nil
 	}

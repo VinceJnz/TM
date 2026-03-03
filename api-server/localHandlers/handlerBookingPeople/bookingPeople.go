@@ -53,22 +53,22 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll)
-
 	records := []models.BookingPeople{}
 	err := h.appConf.Db.Select(&records, qryGetAll)
 	if err == sql.ErrNoRows {
-		log.Printf("%v.GetAll()1 %v\n", debugTag, err)
+		log.Printf("%v.GetAll %v\n", debugTag, err)
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf(debugTag+"GetAll()2 %v\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf(debugTag+"GetAll %v\n", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	if err := json.NewEncoder(w).Encode(records); err != nil {
+		log.Printf("%sGetAll failed to encode response: %v", debugTag, err)
+	}
 }
 
 // Get: retrieves and returns a list of records identified by parent id
@@ -76,7 +76,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	parentID, err := strconv.Atoi(params["id"])
 	if err != nil {
-		log.Printf("%v.GetList()1 %v\n", debugTag, err)
+		log.Printf("%v.GetList %v\n", debugTag, err)
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return
 	}
@@ -87,13 +87,15 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
 	} else if err != nil {
-		log.Printf("%v.GetList()2 %v\n", debugTag, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("%v.GetList %v\n", debugTag, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(records)
+	if err := json.NewEncoder(w).Encode(records); err != nil {
+		log.Printf("%sGetList failed to encode response: %v", debugTag, err)
+	}
 }
 
 // Get: retrieves and returns a single record identified by id
@@ -106,9 +108,13 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Create()2 err=%+v", err)
+		log.Printf(debugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -126,9 +132,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Update()1 dest=%+v", record)
+		log.Printf(debugTag+"Update decode error: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -149,6 +159,10 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Validation stuff
 	record.ID = id
@@ -178,11 +192,12 @@ func (h *Handler) RecordValidation(session *models.Session, record models.Bookin
 	err = h.appConf.Db.Get(&validationRecord, qryParentRecordValidation, parentID)
 	switch {
 	case err == sql.ErrNoRows:
-		return fmt.Errorf(debugTag+"ParentRecordValidation()1 - Record not found: error message = %s", err.Error())
+		return fmt.Errorf("booking not found for booking_id=%v", parentID)
 	case err != nil:
-		return fmt.Errorf(debugTag+"ParentRecordValidation()2 - Internal Server Error:  error message = %s", err.Error())
+		log.Printf("%sParentRecordValidation() database error for booking_id=%v: %v", debugTag, parentID, err)
+		return fmt.Errorf("unable to validate booking record")
 	case validationRecord.OwnerID != session.UserID:
-		return fmt.Errorf(debugTag+"ParentRecordValidation()3 - Access denied: Requested resource = %s", session.ResourceName)
+		return fmt.Errorf("access denied")
 	default:
 		return nil
 	}

@@ -56,7 +56,7 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 
 // loginHandler initiates the OAuth flow by creating a temporary DB-backed token to hold the state and pending registration data, then redirects the user to the provider's auth URL with the state parameter. The callbackHandler will validate the state and complete the login/registration process.
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%vloginHandler()0 called: r.host=%s, settings.host=%v, r.remote=%s r.cookies=%q", debugTag, r.Host, h.appConf.Settings.Host, r.RemoteAddr, r.Header.Get("Cookie"))
+	log.Printf("%vloginHandler called: r.host=%s, settings.host=%v, r.remote=%s r.cookies=%q", debugTag, r.Host, h.appConf.Settings.Host, r.RemoteAddr, r.Header.Get("Cookie"))
 	// Create a DB-backed temporary token to hold the OAuth state and any pending registration data.
 	// UserID=0 indicates an unauthenticated/temporary token.
 	// The cookie value itself will be used as the `state` parameter for the OAuth flow.
@@ -70,7 +70,7 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	state := tokenCookie.Value
 
 	url := h.appConf.OAuthSvc.OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"))
-	log.Printf("%vloginHandler()2 oAuth login: clientID=%s redirectURL=%s authURL=%s", debugTag, h.appConf.OAuthSvc.OAuthConfig.ClientID, h.appConf.OAuthSvc.OAuthConfig.RedirectURL, url)
+	log.Printf("%vloginHandler oauth login: clientID=%s redirectURL=%s authURL=%s", debugTag, h.appConf.OAuthSvc.OAuthConfig.ClientID, h.appConf.OAuthSvc.OAuthConfig.RedirectURL, url)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
@@ -102,9 +102,9 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// If the error includes the provider response, log status and body for diagnosis
 		if re, ok := err.(*oauth2.RetrieveError); ok {
-			log.Printf("%vcallbackHandler()5 token exchange failed: status=%d body=%s", debugTag, re.Response.StatusCode, string(re.Body))
+			log.Printf("%vcallbackHandler token exchange failed: status=%d body=%s", debugTag, re.Response.StatusCode, string(re.Body))
 		} else {
-			log.Printf("%vcallbackHandler()6 token exchange failed: %v", debugTag, err)
+			log.Printf("%vcallbackHandler token exchange failed: %v", debugTag, err)
 		}
 		handlerHelpers.WriteInternalServerError(w, "failed to exchange token")
 		return
@@ -113,7 +113,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	client := h.appConf.OAuthSvc.OAuthConfig.Client(context.Background(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		log.Printf("%vcallbackHandler()7 failed to get userinfo: %v", debugTag, err)
+		log.Printf("%vcallbackHandler failed to get userinfo: %v", debugTag, err)
 		handlerHelpers.WriteInternalServerError(w, "failed to get userinfo")
 		return
 	}
@@ -121,7 +121,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	var userInfo map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		log.Printf("%vcallbackHandler()8 failed to decode userinfo: %v", debugTag, err)
+		log.Printf("%vcallbackHandler failed to decode userinfo: %v", debugTag, err)
 		handlerHelpers.WriteInternalServerError(w, "failed to decode userinfo")
 		return
 	}
@@ -146,7 +146,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// For EXISTING users, FindOrCreateUserByProvider will preserve their current status.
 	user.AccountStatusID.SetValid(int64(models.AccountNew))
 
-	log.Printf("%vcallbackHandler()9 creating/upserting user: %+v", debugTag, user)
+	log.Printf("%vcallbackHandler creating/upserting user: %+v", debugTag, user)
 
 	userID, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
 	if err != nil {
@@ -157,7 +157,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	// OAuth email is already verified by the provider. User is created as AccountNew and requires admin approval.
 	// No email verification step needed.
-	log.Printf("%vcallbackHandler()10 oAuth user account created/updated: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
+	log.Printf("%vcallbackHandler oauth user account created/updated: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
 
 	// Update the oauth-state token with the UserID so CompleteRegistration can look it up.
 	// This allows CompleteRegistration to work when the session cookie doesn't transfer from the popup.
@@ -166,7 +166,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v failed to update oauth-state token with UserID: %v", debugTag, err)
 		// Continue anyway - not critical if this fails
 	} else {
-		log.Printf("%vcallbackHandler()10.1 oauth-state token updated with UserID=%d", debugTag, userID)
+		log.Printf("%vcallbackHandler oauth-state token updated with UserID=%d", debugTag, userID)
 	}
 
 	// Create and set session cookie so subsequent API calls (e.g., /ensure) will be authenticated.
@@ -175,7 +175,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		handlerHelpers.WriteInternalServerError(w, "failed to create session")
 		return
 	}
-	log.Printf("%vcallbackHandler()10.5 session cookie created for user %d", debugTag, userID)
+	log.Printf("%vcallbackHandler session cookie created for user %d", debugTag, userID)
 
 	// Load the user to check if they have a username (indicates returning user vs new user)
 	user, err = dbAuthTemplate.UserReadQry(debugTag+"callbackHandler:check_username", h.appConf.Db, userID)
@@ -193,11 +193,11 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	if user.Username != "" {
 		// Returning user - just login, no registration needed
 		redirectURL = clientRedirect + "?oauth-login=true"
-		log.Printf("%vcallbackHandler()11a redirecting returning user (has username) with oauth-login flag: %s", debugTag, redirectURL)
+		log.Printf("%vcallbackHandler redirecting returning user (has username) with oauth-login flag: %s", debugTag, redirectURL)
 	} else {
 		// New user - show registration form to collect username
 		redirectURL = clientRedirect + "?oauth-register=true"
-		log.Printf("%vcallbackHandler()11b redirecting new user (no username) with oauth-register flag: %s", debugTag, redirectURL)
+		log.Printf("%vcallbackHandler redirecting new user (no username) with oauth-register flag: %s", debugTag, redirectURL)
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
@@ -268,8 +268,8 @@ func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sess, ok := sessI.(*models.Session)
-	if !ok {
-		http.Error(w, "invalid session", http.StatusInternalServerError)
+	if !ok || sess == nil || sess.UserID == 0 {
+		handlerHelpers.WriteUnauthorizedText(w, "unauthorized")
 		return
 	}
 	user, err := dbAuthTemplate.UserReadQry(debugTag+"OAuthEnsure ", h.appConf.Db, sess.UserID)
@@ -354,7 +354,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 // CompleteRegistration updates additional profile info collected after OAuth registration.
 // This is a public endpoint that authenticates via session cookie or oauth-state token.
 func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%vCompleteRegistration()0: r = %+v\n", debugTag, r)
+	log.Printf("%vCompleteRegistration: r = %+v\n", debugTag, r)
 
 	userID := handlerHelpers.ResolveUserIDFromSessionOrOAuthState(debugTag+"CompleteRegistration:", r, h.appConf.Db)
 
@@ -377,7 +377,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	log.Printf("%vCompleteRegistration()1: req = %+v\n", debugTag, req)
+	log.Printf("%vCompleteRegistration req = %+v\n", debugTag, req)
 	// Validate username if provided
 	if req.Username != "" {
 		uname := strings.TrimSpace(req.Username)
@@ -421,7 +421,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	if req.AccountHidden != nil {
 		user.AccountHidden.SetValid(*req.AccountHidden)
 	}
-	log.Printf("%vCompleteRegistration()2: updated user = %+v\n", debugTag, user)
+	log.Printf("%vCompleteRegistration updated user = %+v\n", debugTag, user)
 	// Save user
 	_, err = dbAuthTemplate.UserWriteQry(debugTag+"CompleteRegistration:write ", h.appConf.Db, user)
 	if err != nil {

@@ -90,7 +90,9 @@ func WriteAcceptedText(w http.ResponseWriter, msg string) {
 
 func WriteUnauthorizedText(w http.ResponseWriter, msg string) {
 	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte(msg))
+	if _, err := w.Write([]byte(msg)); err != nil {
+		log.Printf("helpers.WriteUnauthorizedText() failed to write response: %v", err)
+	}
 }
 
 func WriteForbidden(w http.ResponseWriter, msg string) {
@@ -108,7 +110,9 @@ func WriteAcceptedJSON(w http.ResponseWriter, payload any) {
 func WriteJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(payload)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		log.Printf("helpers.WriteJSON() failed to encode response: %v", err)
+	}
 }
 
 func DecodeJSONBody(r *http.Request, payload any) error {

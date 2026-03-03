@@ -53,8 +53,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.User
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Create()2 err=%+v", err)
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -66,8 +66,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.User
 	id := dbStandardTemplate.GetID(w, r)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Update()1 dest=%+v", record)
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Update err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -91,15 +91,15 @@ func (h *Handler) SetUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sess, ok := sessI.(*models.Session)
-	if !ok {
-		http.Error(w, "invalid session", http.StatusInternalServerError)
+	if !ok || sess == nil || sess.UserID == 0 {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	// Parse request body
 	var req struct {
 		Username string `json:"username"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := helpers.DecodeJSONBody(r, &req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -131,5 +131,7 @@ func (h *Handler) SetUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "username": uname})
+	if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok", "username": uname}); err != nil {
+		log.Printf("%sSetUsername() failed to encode response: %v", debugTag, err)
+	}
 }

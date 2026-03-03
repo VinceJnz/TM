@@ -58,7 +58,7 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 		next.ServeHTTP(lrw, r)
 
 		// Log the response status code and body
-		//log.Printf(debugTag+`LogRequest()1 Response status: %d`, lrw.statusCode)
+		//log.Printf(debugTag+`LogRequest Response status: %d`, lrw.statusCode)
 		if lrw.statusCode != 0 && lrw.statusCode != 200 {
 			text := lrw.body.String()
 			cleaned := strings.ReplaceAll(text, "\r\n", "<p>")
@@ -88,7 +88,7 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 
 		infoJSON, err := json.Marshal(info)
 		if err != nil {
-			log.Println(debugTag+`Handler.LogRequest()5`, "err =", err)
+			log.Println(debugTag+`Handler.LogRequest`, "err =", err)
 			return
 		}
 
@@ -139,7 +139,7 @@ func (s *Stats) StatsLog(logingDuration time.Duration) {
 		time.Sleep(logingDuration)
 		statsJSON, err := json.Marshal(s)
 		if err != nil {
-			log.Println(debugTag+`Handler.StatsLog()1`, "err =", err)
+			log.Println(debugTag+`Handler.StatsLog`, "err =", err)
 			return
 		}
 

@@ -29,13 +29,13 @@ func InitDB(dataSource string) (*sqlx.DB, error) {
 	for i := 0; i < 3; i++ {
 		db, err = sqlx.Connect("postgres", connStr)
 		if err != nil {
-			log.Printf("%sInitDB()1 connect attempt %d/3 failed: %v", debugTag, i+1, err)
+			log.Printf("%sInitDB() connect attempt %d/3 failed: %v", debugTag, i+1, err)
 		} else {
-			log.Printf("%sInitDB()2 connected", debugTag)
+			log.Printf("%sInitDB() connected", debugTag)
 			return db, nil
 		}
 		time.Sleep(1 * time.Second)
 	}
-	log.Printf("%sInitDB()3 unable to connect after retries: %v", debugTag, err)
+	log.Printf("%sInitDB() unable to connect after retries: %v", debugTag, err)
 	return nil, fmt.Errorf("unable to connect to database after retries: %w", err)
 }

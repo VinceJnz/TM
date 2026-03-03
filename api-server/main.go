@@ -28,15 +28,30 @@ import (
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/helpers"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
+	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 const debugTag = "main."
+
+func parseOrigins(csv string) []string {
+	origins := make([]string, 0)
+	for _, entry := range strings.Split(csv, ",") {
+		origin := strings.TrimSpace(entry)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	if len(origins) == 0 {
+		return []string{"http://localhost:8086"}
+	}
+	return origins
+}
 
 func main() {
 	debugFlag := true
@@ -47,7 +62,7 @@ func main() {
 	r := mux.NewRouter()
 	// *****************************************************
 	// Setup your API subrouter with CORS middleware. These routes are unprotected, i.e. do not require authentication to use. This is where you would register any routes that should be accessible without authentication, such as login or registration endpoints.
-	public := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	public := r.PathPrefix(app.Settings.APIprefix).Subrouter()
 	public.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "public") // First logging
 	})
@@ -62,7 +77,7 @@ func main() {
 
 	// *****************************************************
 	// Protected routes (require authentication) - These are registered on a subrouter so that the auth middleware is only applied to these routes and not the public routes above. This allows us to have a mix of protected and unprotected routes.
-	protected := r.PathPrefix(os.Getenv("API_PATH_PREFIX")).Subrouter()
+	protected := r.PathPrefix(app.Settings.APIprefix).Subrouter()
 	protected.Use(auth.RequireSessionAuth) // This needs to be here to protect the routes below. It checks for a valid session cookie and ensures the user has access to the requested resource. If the session is valid and access is granted, it allows the request to proceed to the appropriate handler. If not, it returns an unauthorized error.
 	protected.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "protected") // Then logging
@@ -110,30 +125,13 @@ func main() {
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
-	/*
-		//if debugFlag {
-		// For debugging: Log all registered routes
-		public.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-			path, _ := route.GetPathTemplate()
-			methods, _ := route.GetMethods()
-			log.Printf("Registered routes for public: %s %v", path, methods)
-			return nil
-		})
-		protected.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-			path, _ := route.GetPathTemplate()
-			methods, _ := route.GetMethods()
-			log.Printf("Registered routes for protected: %s %v", path, methods)
-			return nil
-		})
-		//}
-	*/
-
 	// Define CORS options
+	allowedOrigins := parseOrigins(app.Settings.CoreOrigins)
+	log.Printf("%sCORS allowed origins: %v", debugTag, allowedOrigins)
 	corsOpts := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:8081", "https://localhost:8081", "http://localhost:8085", "https://localhost:8086"}), // Allow requests from http://localhost:8080 //w.Header().Set("Access-Control-Allow-Origin", "http://localhost") // "http://localhost:8081" // or "*" if you want to test without restrictions
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),                                                            // Allowed HTTP methods
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}),                                  // Allowed headers
-		handlers.AllowedOrigins([]string{"http://localhost:8081", "https://localhost:8081", "https://checkout.stripe.com"}),                     // Add Stripe
+		handlers.AllowedOrigins(allowedOrigins),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}),
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
@@ -143,21 +141,23 @@ func main() {
 	// Paths to certificate and key files
 	crtFile := app.Settings.ServerCert
 	keyFile := app.Settings.ServerKey
+	httpAddr := ":" + app.Settings.PortHttp
+	httpsAddr := ":" + app.Settings.PortHttps
+	serverErrCh := make(chan error, 2)
 
 	go func() {
-		log.Println(debugTag + "HTTP server running on http://localhost:8085")
-		if err := http.ListenAndServe(":8085", loggedHandler); err != nil {
-			log.Fatalf("HTTP server error: %v", err)
+		log.Printf("%sHTTP server running on http://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttp)
+		if err := http.ListenAndServe(httpAddr, loggedHandler); err != nil {
+			serverErrCh <- fmt.Errorf("http server error: %w", err)
 		}
 	}()
 
 	go func() {
-		log.Println(debugTag + "HTTPS server running on https://localhost:8086")
-		if err := http.ListenAndServeTLS(":8086", crtFile, keyFile, loggedHandler); err != nil {
-			log.Fatalf("HTTPS server error: %v", err)
+		log.Printf("%sHTTPS server running on https://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttps)
+		if err := http.ListenAndServeTLS(httpsAddr, crtFile, keyFile, loggedHandler); err != nil {
+			serverErrCh <- fmt.Errorf("https server error: %w", err)
 		}
 	}()
 
-	// Block the main goroutine to keep the servers running
-	select {}
+	log.Fatalf("%v", <-serverErrCh)
 }

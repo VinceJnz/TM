@@ -77,7 +77,7 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !user.UserActive() {
-		log.Printf("%vRequestLoginToken()1 user account not active: %v", debugTag, user.ID)
+		log.Printf("%vRequestLoginToken user account not active: %v", debugTag, user.ID)
 		http.Error(w, "user account not active", http.StatusForbidden)
 		return
 	}
@@ -85,7 +85,7 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 	// Create one-time email token valid for 1 hour
 	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"RequestLoginToken:CreateNamedToken", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, "_temp_email_token", time.Now().Add(1*time.Hour))
 	if err != nil {
-		log.Printf("%vRequestLoginToken()2 failed to create email token: %v", debugTag, err)
+		log.Printf("%vRequestLoginToken failed to create email token: %v", debugTag, err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -97,13 +97,13 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 	// Send email using configured EmailSvc
 	if h.appConf.EmailSvc != nil {
 		if success, err := h.appConf.EmailSvc.SendMail(user.Email.String, subject, body); err != nil {
-			log.Printf("%vRequestLoginToken()3 failed to send login token email: %v", debugTag, err)
+			log.Printf("%vRequestLoginToken failed to send login token email: %v", debugTag, err)
 			// Fall back to logging the token for debugging
 		} else {
-			log.Printf("%vRequestLoginToken()5 email sent successfully: %v", debugTag, success)
+			log.Printf("%vRequestLoginToken email sent successfully: %v", debugTag, success)
 		}
 	} else {
-		log.Printf("%vRequestLoginToken()6 EmailSvc not configured; token for %v not sent", debugTag, user.Email.String)
+		log.Printf("%vRequestLoginToken EmailSvc not configured; token for %v not sent", debugTag, user.Email.String)
 	}
 
 	w.WriteHeader(http.StatusAccepted)
@@ -119,7 +119,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-	log.Printf("%vRegister()1 payload received: %+v", debugTag, payload)
+	log.Printf("%vRegister payload received: %+v", debugTag, payload)
 
 	// Validate input
 	payload.Email.SetValid(strings.TrimSpace(payload.Email.String))
@@ -169,7 +169,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		time.Now().Add(24*time.Hour),
 	)
 	if err != nil {
-		log.Printf("%vRegister()3 failed to create registration token: %v", debugTag, err)
+		log.Printf("%vRegister failed to create registration token: %v", debugTag, err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -179,10 +179,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		tok.SessionData.SetValid(string(regDataJSON))
 		if _, err := dbAuthTemplate.TokenWriteQry(debugTag+"Register:updateSessionData", h.appConf.Db, tok); err != nil {
-			log.Printf("%vRegister()4 failed to update token SessionData: %v", debugTag, err)
+			log.Printf("%vRegister failed to update token SessionData: %v", debugTag, err)
 		}
 	} else {
-		log.Printf("%vRegister()5 registration token created but failed to locate DB token to store session data: %v", debugTag, err)
+		log.Printf("%vRegister registration token created but failed to locate DB token to store session data: %v", debugTag, err)
 	}
 
 	// Send verification email
@@ -191,7 +191,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	if h.appConf.EmailSvc != nil {
 		if success, err := h.appConf.EmailSvc.SendMail(payload.Email.String, subject, body); err != nil {
-			log.Printf("%vRegister()6 failed to send registration verification email: %v", debugTag, err)
+			log.Printf("%vRegister failed to send registration verification email: %v", debugTag, err)
 			// Delete the token if email failed
 			tok, err := dbAuthTemplate.FindToken(debugTag+"Register:findTokenForDeletion", h.appConf.Db, "registration-verification", tokenCookie.Value) // Find the token to get its ID for deletion
 			if err == nil {
@@ -200,10 +200,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "failed to send verification email", http.StatusInternalServerError)
 			return
 		} else {
-			log.Printf("%vRegister()7 registration verification email sent: %v", debugTag, success)
+			log.Printf("%vRegister registration verification email sent: %v", debugTag, success)
 		}
 	} else {
-		log.Printf("%vRegister()8 EmailSvc not configured; registration token for %s: %s", debugTag, payload.Email.String, tokenCookie.Value)
+		log.Printf("%vRegister EmailSvc not configured; registration token for %s: %s", debugTag, payload.Email.String, tokenCookie.Value)
 	}
 
 	handlerHelpers.WriteAcceptedJSON(w, map[string]string{
@@ -224,7 +224,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%vVerifyRegistration()1 payload received: %+v", debugTag, payload)
+	log.Printf("%vVerifyRegistration payload received: %+v", debugTag, payload)
 	if payload.Token == "" {
 		http.Error(w, "verification token is required", http.StatusBadRequest)
 		return
@@ -233,23 +233,23 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	// Find registration-verification token
 	tok, err := dbAuthTemplate.FindToken(debugTag+"VerifyRegistration:find", h.appConf.Db, "registration-verification", payload.Token)
 	if err != nil {
-		log.Printf("%vVerifyRegistration()1 registration verification token not found: %v", debugTag, err)
+		log.Printf("%vVerifyRegistration registration verification token not found: %v", debugTag, err)
 		http.Error(w, "invalid or expired verification token", http.StatusForbidden)
 		return
 	}
 
 	// Verify token hasn't been used and is for registration
 	if tok.UserID != 0 {
-		log.Printf("%vVerifyRegistration()2 registration token has invalid UserID: %d", debugTag, tok.UserID)
+		log.Printf("%vVerifyRegistration registration token has invalid UserID: %d", debugTag, tok.UserID)
 		http.Error(w, "invalid verification token", http.StatusForbidden)
 		return
 	}
-	log.Printf("%vVerifyRegistration()3 registration token found: %+v", debugTag, tok)
+	log.Printf("%vVerifyRegistration registration token found: %+v", debugTag, tok)
 
 	var user models.User
 	// Read username/email/name/password from token SessionData (persisted at registration)
 	if err := json.Unmarshal([]byte(tok.SessionData.String), &user); err != nil {
-		log.Printf("%vVerifyRegistration()4 failed to extract user data from token SessionData: %v", debugTag, err)
+		log.Printf("%vVerifyRegistration failed to extract user data from token SessionData: %v", debugTag, err)
 	}
 
 	user.AccountStatusID.SetValid(int64(models.AccountVerified)) // Email verified, pending admin approval
@@ -262,7 +262,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		}
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password.String), bcrypt.DefaultCost)
 		if err != nil {
-			log.Printf("%vVerifyRegistration()5 failed to hash password: %v", debugTag, err)
+			log.Printf("%vVerifyRegistration failed to hash password: %v", debugTag, err)
 			http.Error(w, "failed to process password", http.StatusInternalServerError)
 			return
 		}
@@ -270,10 +270,10 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create user in database
-	log.Printf("%vVerifyRegistration()6 creating user account for user=%+v", debugTag, user)
+	log.Printf("%vVerifyRegistration creating user account for user=%+v", debugTag, user)
 	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"VerifyRegistration:create", h.appConf.Db, user)
 	if err != nil {
-		log.Printf("%vVerifyRegistration()7 failed to create user: %v", debugTag, err)
+		log.Printf("%vVerifyRegistration failed to create user: %v", debugTag, err)
 		http.Error(w, "failed to create user account", http.StatusInternalServerError)
 		return
 	}
@@ -281,14 +281,14 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	// Delete the registration verification token (one-time use)
 	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyRegistration:del", h.appConf.Db, tok.ID)
 
-	log.Printf("%vVerifyRegistration()8 user registered and verified: userID=%d, user %+v (pending admin activation)", debugTag, userID, user)
+	log.Printf("%vVerifyRegistration user registered and verified: userID=%d, user %+v (pending admin activation)", debugTag, userID, user)
 
 	if h.appConf.EmailSvc != nil {
 		adminEmails, err := dbAuthTemplate.UserEmailsByRole(debugTag+"VerifyRegistration:adminEmails", h.appConf.Db, "admin")
 		if err != nil {
-			log.Printf("%vVerifyRegistration()9 failed to load admin email list: %v", debugTag, err)
+			log.Printf("%vVerifyRegistration failed to load admin email list: %v", debugTag, err)
 		} else if len(adminEmails) == 0 {
-			log.Printf("%vVerifyRegistration()9 no admin users found for notification", debugTag)
+			log.Printf("%vVerifyRegistration no admin users found for notification", debugTag)
 		} else {
 			subject := "New account pending admin approval"
 			body := fmt.Sprintf(
@@ -306,14 +306,14 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if _, err := h.appConf.EmailSvc.SendMail(adminEmail, subject, body); err != nil {
-					log.Printf("%vVerifyRegistration()10 failed to notify admin %s for user %d: %v", debugTag, adminEmail, userID, err)
+					log.Printf("%vVerifyRegistration failed to notify admin %s for user %d: %v", debugTag, adminEmail, userID, err)
 				} else {
-					log.Printf("%vVerifyRegistration()11 admin %s notified for new user %d", debugTag, adminEmail, userID)
+					log.Printf("%vVerifyRegistration admin %s notified for new user %d", debugTag, adminEmail, userID)
 				}
 			}
 		}
 	} else {
-		log.Printf("%vVerifyRegistration()9 admin notification skipped (email service not configured)", debugTag)
+		log.Printf("%vVerifyRegistration admin notification skipped (email service not configured)", debugTag)
 	}
 
 	handlerHelpers.WriteJSON(w, http.StatusCreated, map[string]any{
@@ -344,14 +344,14 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// Don't reveal whether user exists - send same response for security
-		log.Printf("%vLoginSendOTP()1 failed to find user for login: %v", debugTag, err)
+		log.Printf("%vLoginSendOTP failed to find user for login: %v", debugTag, err)
 		handlerHelpers.WriteAcceptedText(w, "if the account exists, OTP has been sent")
 		return
 	}
 
 	// Check if user account is active
 	if user.AccountStatusID.IsZero() || models.AccountStatus(user.AccountStatusID.Int64) != models.AccountActive {
-		log.Printf("%vLoginSendOTP()2 user account not active: %v", debugTag, user.ID)
+		log.Printf("%vLoginSendOTP user account not active: %v", debugTag, user.ID)
 		// Don't reveal status - send same response for security
 		handlerHelpers.WriteAcceptedText(w, "if the account exists, OTP has been sent")
 		return
@@ -375,14 +375,14 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 		true,
 	)
 	if err != nil {
-		log.Printf("%vLoginSendOTP()3 failed to create OTP token: %v", debugTag, err)
+		log.Printf("%vLoginSendOTP failed to create OTP token: %v", debugTag, err)
 		handlerHelpers.WriteInternalServerError(w, "failed to send OTP email")
 		return
 	}
 	if !emailSent {
-		log.Printf("%vLoginSendOTP()6 EmailSvc not configured; OTP for %v: %v", debugTag, user.Email.String, tokenValue)
+		log.Printf("%vLoginSendOTP EmailSvc not configured; OTP for %v: %v", debugTag, user.Email.String, tokenValue)
 	} else {
-		log.Printf("%vLoginSendOTP()5 OTP email sent successfully", debugTag)
+		log.Printf("%vLoginSendOTP OTP email sent successfully", debugTag)
 	}
 
 	handlerHelpers.WriteAcceptedText(w, "OTP sent")
@@ -409,18 +409,18 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	userID, user, err := handlerHelpers.VerifyOTPTokenAndLoadUser(debugTag+"VerifyOTP:", h.appConf.Db, "login-otp", payload.Token, false)
 	if err != nil {
 		if errors.Is(err, handlerHelpers.ErrAuthTokenInvalid) {
-			log.Printf("%vVerifyOTP()1 OTP token not found: %v", debugTag, err)
+			log.Printf("%vVerifyOTP OTP token not found: %v", debugTag, err)
 			http.Error(w, "invalid or expired OTP", http.StatusForbidden)
 			return
 		}
 
 		if errors.Is(err, handlerHelpers.ErrAuthUserNotFound) {
-			log.Printf("%vVerifyOTP()2 failed to read user: %v", debugTag, err)
+			log.Printf("%vVerifyOTP failed to read user: %v", debugTag, err)
 			http.Error(w, "user not found", http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("%vVerifyOTP()3 unexpected verification failure: %v", debugTag, err)
+		log.Printf("%vVerifyOTP unexpected verification failure: %v", debugTag, err)
 		http.Error(w, "failed to verify OTP", http.StatusInternalServerError)
 		return
 	}
@@ -429,12 +429,12 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	sessionExpiry := handlerHelpers.SessionExpiryFromRememberMe(payload.RememberMe)
 
 	if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"VerifyOTP:", w, h.appConf.Db, userID, h.appConf.Settings.Host, sessionExpiry); err != nil {
-		log.Printf("%vVerifyOTP()3 failed to create session token: %v", debugTag, err)
+		log.Printf("%vVerifyOTP failed to create session token: %v", debugTag, err)
 		http.Error(w, "failed to create session", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("%vVerifyOTP()4 OTP verified and session created for user %d (remember_me=%v)", debugTag, userID, payload.RememberMe)
+	log.Printf("%vVerifyOTP OTP verified and session created for user %d (remember_me=%v)", debugTag, userID, payload.RememberMe)
 
 	// Return user info
 	handlerHelpers.WriteJSON(w, http.StatusOK, map[string]any{
@@ -464,8 +464,8 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 	control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
 	urlSplit = strings.Split(control.PrevURL, "/")
 	if len(urlSplit) == 0 {
-		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()2 ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
-		err = errors.New(debugTag + "SetRestResource()1 - Resource info not found") //this is the error returned if a valid resource is not identified
+		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+		err = errors.New(debugTag + "SetRestResource - Resource info not found") //this is the error returned if a valid resource is not identified
 		return RestResource{}, err
 	}
 	control.AccessMethod = r.Method // get, put, post, del, ...
@@ -486,16 +486,16 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 			case 7:
 				control.ResourceName = urlSplit[5]
 			default:
-				log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()4 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
-				return RestResource{}, errors.New(debugTag + "setRestResource()4 invalid url")
+				log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+				return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
 			}
 		default:
-			log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()5 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
-			return RestResource{}, errors.New(debugTag + "setRestResource()5 invalid url")
+			log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+			return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
 		}
 	default:
-		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource()6 invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
-		return RestResource{}, errors.New(debugTag + "setRestResource()6 invalid url")
+		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+		return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
 	}
 	return control, err
 }
@@ -507,11 +507,11 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	restResource, err := h.setRestResource(r) //stores prev-URL for redirect
 	if err != nil {
-		log.Println(debugTag+"Handler.SessionCheckRestHandler()1", "err =", err, "restResource =", restResource, "r =", r)
+		log.Println(debugTag+"Handler.SessionCheckRestHandler", "err =", err, "restResource =", restResource, "r =", r)
 	}
 	sessionToken, err := r.Cookie("session")
 	if err == http.ErrNoCookie { // If there is no session cookie
-		log.Println(debugTag+"Handler.SessionCheckRestHandler()2 - Authentication required ", "sessionToken=", sessionToken, "err =", err)
+		log.Println(debugTag+"Handler.SessionCheckRestHandler - Authentication required ", "sessionToken=", sessionToken, "err =", err)
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 		w.Write([]byte("Logon required - You don't have access to the requested resource."))
 		return
@@ -520,15 +520,15 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 		token, err = dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionToken.Value)
 		//user.User.ID = user.Session.UserID
 		if err != nil { // could not find user sessionToken so user is not authorised
-			log.Println(debugTag+"Handler.SessionCheckRestHandler()3 - Not authorised ", "token =", token, "err =", err)
+			log.Println(debugTag+"Handler.SessionCheckRestHandler - Not authorised ", "token =", token, "err =", err)
 			w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 			w.Write([]byte("Token not authorised - You don't have access to the requested resource."))
 			return
 		} else { //Session cookie found, get user details and return to client
 			//user, err = h.UserReadQry(token.UserID)
-			user, err := dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate()7a ", h.appConf.Db, token.UserID)
+			user, err := dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate ", h.appConf.Db, token.UserID)
 			if err != nil {
-				log.Printf("%v %v %v %v %+v %v %+v", debugTag+"Handler.SessionCheckRestHandler()8 - User not found", "err =", err, "user =", user, "sessionToken =", sessionToken)
+				log.Printf("%v %v %v %v %+v %v %+v", debugTag+"Handler.SessionCheckRestHandler - User not found", "err =", err, "user =", user, "sessionToken =", sessionToken)
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte("User not found."))
 				return
@@ -557,14 +557,14 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	user, err := handlerHelpers.FindUserByUsernameOrEmail(debugTag+"LoginWithPassword:", h.appConf.Db, payload.Username, payload.Email)
 	if err != nil {
 		// Don't reveal whether user exists - send generic response for security
-		log.Printf("%vLoginWithPassword()1 user not found for password login: %v", debugTag, err)
+		log.Printf("%vLoginWithPassword user not found for password login: %v", debugTag, err)
 		handlerHelpers.WriteUnauthorizedText(w, "invalid username or password")
 		return
 	}
 
 	// Check if user account is active
 	if user.AccountStatusID.IsZero() || models.AccountStatus(user.AccountStatusID.Int64) != models.AccountActive {
-		log.Printf("%vLoginWithPassword()2 user account not active: %v", debugTag, user.ID)
+		log.Printf("%vLoginWithPassword user account not active: %v", debugTag, user.ID)
 		handlerHelpers.WriteUnauthorizedText(w, "invalid username or password")
 		return
 	}
@@ -572,14 +572,14 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	// Validate password using bcrypt
 	if user.Password.IsZero() {
 		// User has no password set
-		log.Printf("%vLoginWithPassword()3 user has no password set: %v", debugTag, user.ID)
+		log.Printf("%vLoginWithPassword user has no password set: %v", debugTag, user.ID)
 		handlerHelpers.WriteUnauthorizedText(w, "invalid username or password")
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password.String), []byte(payload.Password))
 	if err != nil {
-		log.Printf("%vLoginWithPassword()4 password validation failed for user %d: %v", debugTag, user.ID, err)
+		log.Printf("%vLoginWithPassword password validation failed for user %d: %v", debugTag, user.ID, err)
 		handlerHelpers.WriteUnauthorizedText(w, "invalid username or password")
 		return
 	}
@@ -602,9 +602,9 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 		!h.appConf.Settings.DevMode,
 	)
 	if err != nil {
-		log.Printf("%vvLoginWithPassword()6 failed to send OTP email: %v", debugTag, err)
+		log.Printf("%vLoginWithPassword failed to send OTP email: %v", debugTag, err)
 		if h.appConf.Settings.DevMode {
-			log.Printf("%vLoginWithPassword()6a DEV mode enabled; returning OTP in response due to email delivery failure", debugTag)
+			log.Printf("%vLoginWithPassword DEV mode enabled; returning OTP in response due to email delivery failure", debugTag)
 			handlerHelpers.WriteAcceptedJSON(w, map[string]string{
 				"status":  "otp_generated_dev",
 				"message": "OTP generated (email delivery failed in DEV mode)",
@@ -618,9 +618,9 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !emailSent {
-		log.Printf("%vvLoginWithPassword()8 EmailSvc not configured; OTP for %v: %v", debugTag, user.Email.String, tokenValue)
+		log.Printf("%vLoginWithPassword EmailSvc not configured; OTP for %v: %v", debugTag, user.Email.String, tokenValue)
 	} else {
-		log.Printf("%vLoginWithPassword()7 OTP email sent successfully", debugTag)
+		log.Printf("%vLoginWithPassword OTP email sent successfully", debugTag)
 	}
 
 	handlerHelpers.WriteAcceptedJSON(w, map[string]string{

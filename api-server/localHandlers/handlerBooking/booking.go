@@ -86,6 +86,10 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseUrlBooking, baseUrlTrip stri
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Returns owner bookings, or all bookings for admin/sysadmin roles.
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.Role)
@@ -106,9 +110,13 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Create()2 err=%+v", err)
+		log.Printf(debugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -127,9 +135,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Update()1 dest=%+v", record)
+		log.Printf(debugTag+"Update err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -151,6 +163,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
 }
 
@@ -174,9 +190,10 @@ func (h *Handler) ParentRecordValidation(record models.Booking) error {
 	validationRecord := models.Trip{}
 	err := h.appConf.Db.Get(&validationRecord, sqlBookingParentRecordValidation, parentID)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf(debugTag+"ParentRecordValidation()1 - Record not found: error message = %s, parentID = %v", err.Error(), parentID)
+		return fmt.Errorf("trip not found for trip_id=%v", parentID)
 	} else if err != nil {
-		return fmt.Errorf(debugTag+"ParentRecordValidation()2 - Internal Server Error:  error message = %s, parentID = %v", err.Error(), parentID)
+		log.Printf("%sParentRecordValidation() database error for trip_id=%v: %v", debugTag, parentID, err)
+		return fmt.Errorf("unable to validate trip record")
 	}
 
 	if record.FromDate.Before(validationRecord.FromDate) {

@@ -5,7 +5,7 @@
 3. Go to the api-server console and start the api-server process
 4. In the start up logs  - look for the URL line like the example below - Copy the entire URL from the logs
 ```log
-apiserver  | 2026/01/27 10:37:05 gmail.Handler.getTokenFromWeb()1 ... Go to the following link in your browser then type the authorization code:
+apiserver  | 2026/01/27 10:37:05 gmail.Handler.getTokenFromWeb ... Go to the following link in your browser then type the authorization code:
 apiserver  | https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=687205587230958857023948752tjtp8398fwo4faw98faw8faw48faw48hf.apps.googleusercontent.com&prompt=consent&redirect_uri=http%3A%2F%2Flocalhost&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.send&state=state-token
 ```
 
@@ -20,5 +20,5 @@ Note: The page itself won't load (you'll see "This site can't be reached" or sim
 
 9. Past the code into the console.
 You should see something like:
-`2026/01/08 22:23:XX gmail.saveToken()2 ... Saving credential file to: /etc/certs/gmail-tokens/client_token.json`
+`2026/01/08 22:23:XX gmail.saveToken ... Saving credential file to: /etc/certs/gmail-tokens/client_token.json`
 

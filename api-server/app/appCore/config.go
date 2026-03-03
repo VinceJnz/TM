@@ -45,6 +45,7 @@ func (c *Config) Run() {
 	if err = c.Settings.LoadEnv(); err != nil {
 		log.Fatalf("Unable to load environment settings: %v", err)
 	}
+	c.TestMode = c.Settings.DevMode
 	log.Printf("%sRun() environment settings loaded", debugTag)
 
 	// Initialize the database connection
@@ -54,7 +55,15 @@ func (c *Config) Run() {
 
 	}
 	// Start the email service
-	c.EmailSvc = gmail.New(c.Settings.EmailSecret, c.Settings.EmailToken, c.Settings.EmailAddr, c.Settings.EmailDebugAddr)
+	debugEmail := ""
+	if c.Settings.DevMode {
+		debugEmail = c.Settings.EmailDebugAddr
+	}
+	log.Printf("%sRun() DEV_MODE=%t, email_debug_override_active=%t", debugTag, c.Settings.DevMode, debugEmail != "")
+	c.EmailSvc, err = gmail.New(c.Settings.EmailSecret, c.Settings.EmailToken, c.Settings.EmailAddr, debugEmail, c.Settings.GmailAuthCode)
+	if err != nil {
+		log.Fatalf("Failed to initialize email gateway: %v", err)
+	}
 
 	// Start the payment service
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
