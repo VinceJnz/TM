@@ -394,9 +394,9 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		Expires: expiration, // Session cookies — cookies without a Max-Age or Expires attribute – are deleted when the current session ends.
 		//RawExpires: "",
 		//MaxAge:     0,
-		Secure:   true,  // A cookie with the Secure attribute is only sent to the server with an encrypted request over the HTTPS protocol
-		HttpOnly: false, //https --> true, http --> false // A cookie with the HttpOnly attribute can't be accessed by JavaScript
-		SameSite: http.SameSiteNoneMode,
+		Secure:   true,                 // A cookie with the Secure attribute is only sent to the server with an encrypted request over the HTTPS protocol
+		HttpOnly: true,                 // A cookie with the HttpOnly attribute can't be accessed by JavaScript
+		SameSite: http.SameSiteLaxMode, // Default-safe for auth/session cookies
 		//SameSite: http.SameSiteLaxMode,
 		//SameSite: http.SameSiteStrictMode, //Strict causes the browser to only send the cookie in response to requests originating from the cookie's origin site
 		//Raw:        "",

@@ -43,7 +43,6 @@ func main() {
 	app := appCore.New(debugFlag)
 	app.Run()
 	defer app.Close()
-	log.Printf("%smain(), debug: %v, App settings: %+v, os Env: %+v\n", debugTag, debugFlag, app.Settings, os.Environ())
 
 	r := mux.NewRouter()
 	// *****************************************************

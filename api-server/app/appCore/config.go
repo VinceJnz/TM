@@ -59,7 +59,14 @@ func (c *Config) Run() {
 	log.Printf(debugTag+"Run() Stripe gateway initialized with domain: %s", domain)
 	//go c.PaymentSvc.Start() // No longer needed as we are not using webhooks ??????
 
-	c.OAuthSvc, err = oAuthGateway.NewFromEnv()
+	c.OAuthSvc, err = oAuthGateway.New(oAuthGateway.GatewayConfig{
+		ClientID:       c.Settings.GoogleClientID,
+		ClientSecret:   c.Settings.GoogleClientSecret,
+		RedirectURL:    c.Settings.GoogleRedirectURL,
+		SessionKey:     c.Settings.SessionKey,
+		ClientRedirect: c.Settings.ClientRedirectURL,
+		DevMode:        c.Settings.DevMode,
+	})
 	if err != nil {
 		log.Fatalf("Failed to initialize oAuth Gateway: %v", err)
 	}

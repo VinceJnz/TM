@@ -112,18 +112,18 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	client := h.appConf.OAuthSvc.OAuthConfig.Client(context.Background(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		http.Error(w, "failed to get userinfo: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("%vcallbackHandler()7 failed to get userinfo: %v", debugTag, err)
+		http.Error(w, "failed to get userinfo", http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
 
 	var userInfo map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		http.Error(w, "failed to decode userinfo: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("%vcallbackHandler()8 failed to decode userinfo: %v", debugTag, err)
+		http.Error(w, "failed to decode userinfo", http.StatusInternalServerError)
 		return
 	}
-
-	log.Printf("%vcallbackHandler()7 userInfo: %+v", debugTag, userInfo) // for debugging
 
 	// validate minimal fields
 	sub, _ := userInfo["sub"].(string)
@@ -337,7 +337,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyEmail:del", h.appConf.Db, tok.ID)
 
 	// Create session cookie
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyEmail", h.appConf.Db, userID, r.RemoteAddr, time.Time{})
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyEmail", h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{})
 	if err != nil {
 		log.Printf("%v failed to create session token: %v", debugTag, err)
 		http.Error(w, "failed to create session", http.StatusInternalServerError)

@@ -106,12 +106,11 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 		if success, err := h.appConf.EmailSvc.SendMail(user.Email.String, subject, body); err != nil {
 			log.Printf("%vRequestLoginToken()3 failed to send login token email: %v", debugTag, err)
 			// Fall back to logging the token for debugging
-			log.Printf("%vRequestLoginToken()4 login token for %v: %v", debugTag, user.Email.String, tokenCookie.Value)
 		} else {
 			log.Printf("%vRequestLoginToken()5 email sent successfully: %v", debugTag, success)
 		}
 	} else {
-		log.Printf("%vRequestLoginToken()6 EmailSvc not configured; token for %v: %v", debugTag, user.Email.String, tokenCookie.Value)
+		log.Printf("%vRequestLoginToken()6 EmailSvc not configured; token for %v not sent", debugTag, user.Email.String)
 	}
 
 	w.WriteHeader(http.StatusAccepted)
@@ -431,7 +430,7 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		sessionExpiry = time.Time{} // Use default expiry (can be configured in CreateSessionToken)
 	}
 
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyOTP:CreateSessionToken", h.appConf.Db, userID, r.RemoteAddr, sessionExpiry)
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyOTP:CreateSessionToken", h.appConf.Db, userID, h.appConf.Settings.Host, sessionExpiry)
 	if err != nil {
 		log.Printf("%vVerifyOTP()3 failed to create session token: %v", debugTag, err)
 		http.Error(w, "failed to create session", http.StatusInternalServerError)
@@ -778,7 +777,7 @@ func (h *Handler) VerifyPasswordOTP(w http.ResponseWriter, r *http.Request) {
 		sessionExpiry = time.Time{} // Use default expiry
 	}
 
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyPasswordOTP", h.appConf.Db, userID, r.RemoteAddr, sessionExpiry)
+	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyPasswordOTP", h.appConf.Db, userID, h.appConf.Settings.Host, sessionExpiry)
 	if err != nil {
 		log.Printf("%v failed to create session token: %v", debugTag, err)
 		http.Error(w, "failed to create session", http.StatusInternalServerError)

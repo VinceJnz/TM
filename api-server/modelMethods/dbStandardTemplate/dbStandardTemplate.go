@@ -23,7 +23,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		return
 	} else if err != nil {
 		log.Printf(debugTag+debugStr+"GetAll()2 %v\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -40,7 +40,7 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 		return
 	} else if err != nil {
 		log.Printf(debugTag+debugStr+"Get()2 err=%v\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -79,7 +79,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	err = tx.QueryRow(query, args...).Scan(dest)
 	if err != nil {
 		tx.Rollback() // Rollback on error
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -106,7 +106,7 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	if err != nil {
 		tx.Rollback() // Rollback on error
 		log.Printf(debugTag+debugStr+"Update()2 err=%+v, result=%+v", err, result)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -134,7 +134,7 @@ func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	if err != nil {
 		tx.Rollback()
 		log.Printf(debugTag+debugStr+"Delete()1 result=%+v", result)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 

@@ -27,6 +27,11 @@ type settings struct {
 	EmailToken     string `json:"EmailToken"`
 	EmailSecret    string `json:"EmailSecret"`
 	PaymentKey     string `json:"PaymentKey"`
+	GoogleClientID string `json:"GoogleClientID"`
+	GoogleClientSecret string `json:"GoogleClientSecret"`
+	GoogleRedirectURL string `json:"GoogleRedirectURL"`
+	SessionKey string `json:"SessionKey"`
+	ClientRedirectURL string `json:"ClientRedirectURL"`
 	EmailDebugAddr string `json:"EmailDebugAddr"`
 	DevMode        bool   `json:"DevMode"`
 }
@@ -87,7 +92,6 @@ func (s *settings) LoadEnv() error {
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}
-	log.Printf("%sLoadEnv() Environment variables loaded successfully: %+v\n", debugTag, os.Environ())
 	s.Host = os.Getenv("HOST")
 	s.PortHttp = os.Getenv("HTTP_PORT")
 	s.PortHttps = os.Getenv("HTTPS_PORT")
@@ -107,10 +111,14 @@ func (s *settings) LoadEnv() error {
 	s.EmailToken = os.Getenv("EMAIL_TOKEN")
 	s.EmailSecret = os.Getenv("EMAIL_SECRET")
 	s.PaymentKey = os.Getenv("PAYMENT_KEY")
+	s.GoogleClientID = os.Getenv("GOOGLE_CLIENT_ID")
+	s.GoogleClientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
+	s.GoogleRedirectURL = os.Getenv("GOOGLE_REDIRECT_URL")
+	s.SessionKey = os.Getenv("SESSION_KEY")
+	s.ClientRedirectURL = os.Getenv("CLIENT_REDIRECT_URL")
 	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
 	s.DevMode = os.Getenv("DEV_MODE") == "true"
 	s.AppTitle = os.Getenv("APP_TITLE")
-	log.Printf("%sLoadEnv() Settings loaded from environment variables: %+v\n", debugTag, s)
 	if err := s.ValidateEnv(); err != nil {
 		return err
 	}
