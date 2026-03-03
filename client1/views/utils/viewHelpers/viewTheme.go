@@ -234,7 +234,26 @@ fieldset {
 	font-size: 13px;
 }
 
-#statusOutput > div {
+#statusOutputHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+	font-weight: 600;
+	gap: 8px;
+}
+
+#statusOutputToggle {
+	padding: 4px 8px;
+	border: 1px solid var(--tm-border);
+	border-radius: 6px;
+	background: var(--tm-surface);
+	color: var(--tm-text);
+	cursor: pointer;
+	font-size: 12px;
+}
+
+#statusOutputMessages > div {
 	padding: 6px 8px;
 	border-radius: 6px;
 	background: var(--tm-surface-muted);
