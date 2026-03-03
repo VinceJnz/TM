@@ -52,6 +52,7 @@ func (v *View) logoutComplete(event eventProcessor.Event) {
 	v.elements.userDisplay.Set("innerHTML", "")
 	v.resetMenu(event)
 	v.ResetViewItems()
+	v.menuOnClick("Home", true, nil)()
 }
 
 // loginComplete is an event handler the updates the login status in the Navbar on the main page.
@@ -63,6 +64,7 @@ func (v *View) loginComplete(event eventProcessor.Event) {
 	}
 	v.elements.userDisplay.Set("innerHTML", username)
 	v.MenuProcess()
+	v.menuOnClick("Home", true, nil)()
 }
 
 // resetMenu is an event handler that resets the menu to display only the default menu items.

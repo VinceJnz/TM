@@ -256,6 +256,7 @@ func (v *View) Setup() {
 
 	// Check if the menu items can be loaded, i.e. is the user authenticated?
 	v.MenuProcess() // Load the menu
+	v.menuOnClick("Home", true, nil)()
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
