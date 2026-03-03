@@ -34,6 +34,7 @@ func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
 	// Public endpoints - accessible without authentication
 	// Menu user endpoint (public so client can check auth status on page load)
 	r.HandleFunc(baseURL+"/menuUser/", h.MenuUserGet).Methods("GET")
+	r.HandleFunc(baseURL+"/content/{page}/", h.ContentGet).Methods("GET")
 	// Authentication status check (does not require auth)
 	r.HandleFunc(baseURL+"/status", h.AuthStatus).Methods("GET")
 	// Email/OTP registration and login
