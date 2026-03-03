@@ -10,6 +10,7 @@ import (
 	"client1/v2/views/account/logoutView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
+	"client1/v2/views/contentView"
 	"client1/v2/views/groupBookingView"
 	"client1/v2/views/myBookingsView"
 	"client1/v2/views/resourceView"
@@ -217,9 +218,12 @@ func (v *View) Setup() {
 	//v.AddViewItem("oAuth Register2", "", true, oAuthRegistrationProcess.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	//v.AddViewItem("oAuth Login", "", true, oAuthLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	v.AddViewItem("Login / Register", "", true, basicAuthLoginView.New(v.document, v.events, v.appCore), true, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("Home", "", true, nil, true, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("About", "", true, nil, true, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("Contact", "", true, nil, true, roleUser, v.elements.sidemenu, menuSectionRoot)
+	homeContent := contentView.New(v.document, v.appCore, "home", "Home")
+	aboutContent := contentView.New(v.document, v.appCore, "about", "About")
+	contactContent := contentView.New(v.document, v.appCore, "contact", "Contact")
+	v.AddViewItem("Home", "", true, homeContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("About", "", true, aboutContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Contact", "", true, contactContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Trip Participant Status", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
