@@ -39,6 +39,7 @@ func main() {
 	}
 
 	view := mainView.New(appCore)
+	defer view.Destroy()
 	view.Setup()
 
 	<-c

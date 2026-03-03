@@ -113,6 +113,12 @@ type View struct {
 	menuTitles          map[string]js.Value
 	menuSectionsByTitle map[string]string
 	menuSections        map[string]sectionElement
+	routeByTitle        map[string]string
+	titleByRoute        map[string]string
+	hashChangeHandler   js.Func
+	hashChangeSet       bool
+	unloadHandler       js.Func
+	unloadHandlerSet    bool
 	Children            children
 }
 
@@ -126,6 +132,8 @@ func New(appCore *appCore.AppCore) *View {
 		menuTitles:          map[string]js.Value{},
 		menuSectionsByTitle: map[string]string{},
 		menuSections:        map[string]sectionElement{},
+		routeByTitle:        map[string]string{},
+		titleByRoute:        map[string]string{},
 	}
 
 	v.events = eventProcessor.New()
@@ -256,7 +264,26 @@ func (v *View) Setup() {
 
 	// Check if the menu items can be loaded, i.e. is the user authenticated?
 	v.MenuProcess() // Load the menu
-	v.menuOnClick("Home", true, nil)()
+	v.setupRouting()
+}
+
+func (v *View) Destroy() {
+	if v == nil {
+		return
+	}
+	window := js.Global().Get("window")
+	if v.hashChangeSet {
+		window.Call("removeEventListener", "hashchange", v.hashChangeHandler)
+		v.hashChangeHandler.Release()
+		v.hashChangeHandler = js.Func{}
+		v.hashChangeSet = false
+	}
+	if v.unloadHandlerSet {
+		window.Call("removeEventListener", "beforeunload", v.unloadHandler)
+		v.unloadHandler.Release()
+		v.unloadHandler = js.Func{}
+		v.unloadHandlerSet = false
+	}
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
@@ -286,6 +313,12 @@ func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editor
 
 	onClickFn := v.menuOnClick(title, menuAction, element)            // Set up menu onClick function
 	fetchBtn := viewHelpers.HRef(onClickFn, v.document, title, title) // Set up menu button
+	if menuAction {
+		route := v.buildRoute(title, ApiURL)
+		v.routeByTitle[title] = route
+		v.titleByRoute[route] = title
+		fetchBtn.Set("href", "#"+route)
+	}
 	fetchBtn.Set("className", "menu-item")
 	if !defaultDisplay {
 		fetchBtn.Get("style").Call("setProperty", "display", "none")
@@ -376,24 +409,111 @@ func normalizeRole(role string) string {
 	}
 }
 
-func (v *View) menuOnClick(PageTitle string, menuAction bool, element editorElement) func() {
-	fn := func() { // Create a function to hide the current element and display the new element
-		v.closeSideMenu() // onclick, close the side menu
-		if menuAction {   // Some menu items do nothing else
-			val, ok := v.childElements[v.menuChoice2] // get current menu choice
-			if ok {
-				if val != nil { // Check the the element is not nil
-					val.Hide() // Hide current editor
-				}
-			}
-			v.menuChoice2 = PageTitle                        // Set new menu choice
-			v.elements.pageTitle.Set("innerHTML", PageTitle) // set the title for the element when it is displayed
-			v.setActiveMenuTitle(PageTitle)
-			if element != nil { // Some menu choices do not display an element
-				element.Display()    // Display new editor
-				element.FetchItems() // Fetch new editor data
+func (v *View) setupRouting() {
+	v.hashChangeHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		v.applyRouteFromLocation()
+		return nil
+	})
+	v.hashChangeSet = true
+	window := js.Global().Get("window")
+	window.Call("addEventListener", "hashchange", v.hashChangeHandler)
+	v.unloadHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		v.Destroy()
+		return nil
+	})
+	v.unloadHandlerSet = true
+	window.Call("addEventListener", "beforeunload", v.unloadHandler)
+	v.applyRouteFromLocation()
+}
+
+func (v *View) applyRouteFromLocation() {
+	hash := js.Global().Get("location").Get("hash").String()
+	route := normalizeHashRoute(hash)
+	title, ok := v.titleByRoute[route]
+	if !ok {
+		title = "Home"
+	}
+	element := v.childElements[title]
+	v.navigateTo(title, true, element, false)
+	if !ok || hash == "" {
+		v.updateRoute(title)
+	}
+}
+
+func (v *View) buildRoute(title, apiURL string) string {
+	if strings.EqualFold(strings.TrimSpace(title), "Home") {
+		return "/"
+	}
+	if apiURL != "" {
+		route := strings.ToLower(strings.TrimSpace(apiURL))
+		if !strings.HasPrefix(route, "/") {
+			route = "/" + route
+		}
+		return route
+	}
+	slug := strings.ToLower(strings.TrimSpace(title))
+	slug = strings.ReplaceAll(slug, "&", "")
+	slug = strings.ReplaceAll(slug, "/", "-")
+	slug = strings.ReplaceAll(slug, " ", "-")
+	for strings.Contains(slug, "--") {
+		slug = strings.ReplaceAll(slug, "--", "-")
+	}
+	slug = strings.Trim(slug, "-")
+	if slug == "" {
+		return "/"
+	}
+	return "/" + slug
+}
+
+func normalizeHashRoute(hash string) string {
+	route := strings.TrimSpace(strings.TrimPrefix(hash, "#"))
+	if route == "" || route == "/" {
+		return "/"
+	}
+	if !strings.HasPrefix(route, "/") {
+		route = "/" + route
+	}
+	return strings.ToLower(route)
+}
+
+func (v *View) updateRoute(title string) {
+	route, ok := v.routeByTitle[title]
+	if !ok {
+		return
+	}
+	newHash := "#" + route
+	location := js.Global().Get("location")
+	if location.Get("hash").String() == newHash {
+		return
+	}
+	location.Set("hash", newHash)
+}
+
+func (v *View) navigateTo(PageTitle string, menuAction bool, element editorElement, updateRoute bool) {
+	v.closeSideMenu() // onclick, close the side menu
+	if menuAction {   // Some menu items do nothing else
+		val, ok := v.childElements[v.menuChoice2] // get current menu choice
+		if ok {
+			if val != nil { // Check the the element is not nil
+				val.Hide() // Hide current editor
 			}
 		}
+		v.menuChoice2 = PageTitle                        // Set new menu choice
+		v.elements.pageTitle.Set("innerHTML", PageTitle) // set the title for the element when it is displayed
+		v.setActiveMenuTitle(PageTitle)
+		if element != nil { // Some menu choices do not display an element
+			element.Display()    // Display new editor
+			element.FetchItems() // Fetch new editor data
+		}
+		if updateRoute {
+			v.updateRoute(PageTitle)
+		}
+	}
+}
+
+func (v *View) menuOnClick(PageTitle string, menuAction bool, element editorElement) func() {
+	fn := func() { // Create a function to hide the current element and display the new element
+		v.navigateTo(PageTitle, menuAction, element, true)
 	}
 	return fn
 }
