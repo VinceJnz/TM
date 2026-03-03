@@ -3,12 +3,11 @@ package appCore
 import (
 	"fmt"
 	"log"
-	"os"
+	"strings"
 	"time"
 
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/jmoiron/sqlx"
-	"github.com/joho/godotenv"
 )
 
 /*
@@ -17,29 +16,26 @@ set DB_PASSWORD api_password
 set DB_NAME mydatabase
 */
 
-func InitDB() (*sqlx.DB, error) {
+func InitDB(dataSource string) (*sqlx.DB, error) {
 	var err error
 	var db *sqlx.DB
+	connStr := strings.TrimSpace(dataSource)
 
-	err = godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file")
+	if connStr == "" {
+		return nil, fmt.Errorf("missing database connection string in loaded settings (DataSource)")
 	}
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"))
 
 	// Retry up to 3 times
 	for i := 0; i < 3; i++ {
 		db, err = sqlx.Connect("postgres", connStr)
 		if err != nil {
-			log.Println(debugTag+"InitDB()1 ", err)
+			log.Printf("%sInitDB()1 connect attempt %d/3 failed: %v", debugTag, i+1, err)
 		} else {
-			log.Println(debugTag+"InitDB()2 connected", err)
+			log.Printf("%sInitDB()2 connected", debugTag)
 			return db, nil
 		}
 		time.Sleep(1 * time.Second)
 	}
-	log.Println(debugTag+"InitDB()3 ", err)
-	return nil, err
+	log.Printf("%sInitDB()3 unable to connect after retries: %v", debugTag, err)
+	return nil, fmt.Errorf("unable to connect to database after retries: %w", err)
 }

@@ -46,7 +46,7 @@ const (
 // e.g. the order is Group, Owner, World
 // Deny would take preferance over Allow - but we don't have this concept yet.
 //
-// ????? This may need to be rewritten and called from within each handler. ????????????
+// This access check may be moved closer to handler-level authorization logic in a future refactor.
 // for example...
 // CheckAccess Checks that the user is authorised to take this action
 // Resource = name of the data resource being accesses being accessed
@@ -237,35 +237,18 @@ func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Tok
 }
 
 const (
-	//Finds records associated with a users access
-	//no access is allowed if no records are found
-
-	sqlAccessCheck = `SELECT DISTINCT eal.ID, eal.Name
-	FROM st_user stu
-	 JOIN st_user_group stug ON sug.User_ID=stu.ID
-	 JOIN st_group_resource stgr ON sgr.Group_ID=sug.Group_ID
-	 JOIN et_resource etr ON etr.ID=sgr.Resource_ID
-	 JOIN et_access_level etal ON etal.ID = sgr.Access_level_ID 
-	WHERE stu.ID=$1 AND etr.ID=$2`
-)
-
-func AccessCheckXX(debugStr string, Db *sqlx.DB, userID int, resourceID int, accessLevelID int) error {
-	var err error
-	var result int
-	err = Db.QueryRow(sqlAccessCheck, userID, resourceID, accessLevelID).Scan(&result)
-	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"AccessCheck1", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
-		return err
-	}
-
-	return nil
-}
-
-const (
-	sqlUserFind        = `SELECT id FROM st_users WHERE id = $1`
-	sqlUserRead        = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE id = $1`
-	sqlUserNameRead    = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE username = $1`
-	sqlUserEmailRead   = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE email = $1`
+	sqlUserFind         = `SELECT id FROM st_users WHERE id = $1`
+	sqlUserRead         = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE id = $1`
+	sqlUserNameRead     = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE username = $1`
+	sqlUserEmailRead    = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE email = $1`
+	sqlUserEmailsByRole = `SELECT DISTINCT stu.email
+	FROM st_users stu
+		JOIN st_user_group stug ON stug.user_id = stu.id
+		JOIN st_group stg ON stg.id = stug.group_id
+	WHERE LOWER(stg.role) = LOWER($1)
+		AND stu.email IS NOT NULL
+		AND stu.email <> ''
+	ORDER BY stu.email`
 	sqlUserInsert      = `INSERT INTO st_users (name, username, email, user_address, user_birth_date, user_password, user_account_status_id, user_account_hidden, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
 	sqlUserUpdate      = `UPDATE st_users SET name = $1, username = $2, email = $3, user_address = $4, user_birth_date = $5, user_password = $6, user_account_status_id = $7, user_account_hidden = $8, provider = $9, provider_id = $10 WHERE id = $11`
 	sqlUserDelProvider = `UPDATE st_users SET provider = null , provider_id = null WHERE id = $1`
@@ -296,6 +279,16 @@ func UserEmailReadQry(debugStr string, Db *sqlx.DB, email string) (models.User, 
 		return models.User{}, err
 	}
 	return record, nil
+}
+
+func UserEmailsByRole(debugStr string, Db *sqlx.DB, role string) ([]string, error) {
+	var emails []string
+	err := Db.Select(&emails, sqlUserEmailsByRole, role)
+	if err != nil {
+		log.Printf("%vUserEmailsByRole() failed: role=%q err=%v", debugTag+debugStr, role, err)
+		return nil, err
+	}
+	return emails, nil
 }
 
 func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error) {

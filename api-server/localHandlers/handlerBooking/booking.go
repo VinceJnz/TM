@@ -6,7 +6,6 @@ import (
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,44 +34,6 @@ const (
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id;`
 
-	X3_qryGetAll = `SELECT atb.*,
-				ebs.status, COUNT(stu.name) as participants,
-				SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
-				--SUM(attc.amount) AS booking_cost,
-				att.trip_name
-				FROM at_trips att
-				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
-				LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
-					 JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
-				LEFT JOIN st_users stu ON stu.id=atbp.person_id
-				LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
-				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
-										AND attc.member_status_id=stu.member_status_id
-										AND attc.user_age_group_id=stu.user_age_group_id
-				WHERE atb.owner_id = $1 OR $2 IN ('admin', 'sysadmin')
-				GROUP BY att.id, att.trip_name, atb.id, ebs.status
-				ORDER BY att.trip_name, atb.id`
-
-	X2_qryGetAll = `SELECT atb.id, atb.owner_id, atb.trip_id, atb.notes, atb.from_date, atb.to_date, atb.booking_status_id, ebs.status, atb.booking_date, atb.payment_date, atb.booking_price, atb.created, atb.modified,
-						att.trip_name, SUM(attc.amount) AS booking_cost, COUNT(stu.name) as participants
-				FROM at_trips att
-				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
-				LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
-					 JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
-				LEFT JOIN st_users stu ON stu.id=atbp.person_id
-				LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
-				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
-										AND attc.member_status_id=stu.member_status_id
-										AND attc.user_age_group_id=stu.user_age_group_id
-				WHERE atb.owner_id = $1 OR $2 IN ('admin', 'sysadmin')
-				GROUP BY att.id, att.trip_name, atb.id, ebs.status
-				ORDER BY att.trip_name, atb.id`
-
-	X1_qryGetAll = `SELECT ab.id, ab.owner_id, ab.trip_id, ab.notes, ab.from_date, ab.to_date, ab.booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, ab.created, ab.modified
-					FROM public.at_bookings ab
-						JOIN public.et_booking_status ebs on ebs.id=ab.booking_status_id
-					WHERE ab.owner_id = $1 OR $2 IN ('admin', 'sysadmin')`
-
 	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, created, modified 
 					FROM at_bookings WHERE id = $1`
 
@@ -94,32 +55,6 @@ const (
 		WHERE atb.trip_id = $1
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id`
-
-	X2_qryGetList = `SELECT atb.*,
-					ebs.status, COUNT(stu.name) as participants,
-					--SUM(attc.amount) AS booking_cost,
-					SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
-					att.trip_name
-				FROM at_trips att
-				LEFT JOIN at_bookings atb ON atb.trip_id=att.id
-				LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
-					 JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
-				LEFT JOIN st_users stu ON stu.id=atbp.person_id
-				LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
-				LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
-										AND attc.member_status_id=stu.member_status_id
-										AND attc.user_age_group_id=stu.user_age_group_id
-				WHERE atb.trip_id = $1
-				GROUP BY att.id, att.trip_name, atb.id, ebs.status
-				ORDER BY att.trip_name, atb.id`
-
-	X1_qryGetList = `SELECT atb.*, ebs.status, atbpcount.participants
-				FROM public.at_bookings atb
-				JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
-				LEFT JOIN (SELECT atbp.booking_id, COUNT(atbp.id) as participants
-					FROM public.at_booking_people atbp
-					GROUP BY atbp.booking_id) atbpcount ON atbpcount.booking_id=atb.id
-				WHERE atb.trip_id = $1`
 
 	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
         			VALUES ($1, $2, $3, $4, $5, $6) 
@@ -152,8 +87,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseUrlBooking, baseUrlTrip stri
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
-	//dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.Role)
+	// Returns owner bookings, or all bookings for admin/sysadmin roles.
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.Role)
 }
 
@@ -173,7 +107,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -194,14 +128,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 	record.ID = id
 
-	//Need to add this validation in ?????????????????????????????????
 	if err := h.RecordValidation(record); err != nil {
 		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
 		return

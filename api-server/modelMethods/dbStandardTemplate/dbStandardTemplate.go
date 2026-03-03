@@ -150,7 +150,7 @@ func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // GetID retrieves the ID parameter from the request URL and returns it as an integer.
 // If the ID is not provided or is invalid, it returns a 400 Bad Request error.
-// TODO: Consider returning an error type.
+// Note: this helper currently writes HTTP errors directly and returns 0 on failure.
 func GetID(w http.ResponseWriter, r *http.Request) int {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
@@ -163,7 +163,7 @@ func GetID(w http.ResponseWriter, r *http.Request) int {
 
 // GetSession retrieves the session from the request context using the provided SessionIDKey.
 // It returns the session if found, or an empty session and an error response if not found.
-// TODO: Consider returning an error type instead of writing directly to the response.
+// Note: this helper currently writes HTTP errors directly and returns nil on failure.
 func GetSession(w http.ResponseWriter, r *http.Request, SessionIDKey appCore.ContextKey) *models.Session {
 	session, ok := r.Context().Value(SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	if !ok {

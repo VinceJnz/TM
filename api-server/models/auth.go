@@ -61,7 +61,7 @@ type Token struct {
 // Session = access control information derived from a user's access levels and the requested resource. This info is passed to handlers in the ctx.
 type Session struct {
 	UserID         int
-	PrevURL        string //????
+	PrevURL        string
 	ResourceName   string
 	ResourceID     int
 	AccessMethod   string

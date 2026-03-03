@@ -4,14 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
-	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -76,45 +72,10 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 		}
 	}
 
-	tok, err := config.Exchange(context.TODO(), authCode, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	tok, err := config.Exchange(context.Background(), authCode, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	if err != nil {
 		log.Fatalf(debugTag+"Handler.getTokenFromWeb()3 ... Unable to retrieve token from web %v", err)
 	}
-	return tok
-}
-
-// RenewToken renew the token ???????
-func RenewToken1X(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oauth2.Token {
-
-	urlValue := url.Values{"client_id": {config.ClientID}, "client_secret": {config.ClientSecret}, "refresh_token": {tok.RefreshToken}, "grant_type": {"refresh_token"}}
-	log.Printf(debugTag+"RenewToken()1 urlValue = %v\n", urlValue)
-
-	resp, err := http.PostForm("https://www.googleapis.com/oauth2/v3/token", urlValue)
-	if err != nil {
-		//log.Panic("Error when renew token %v", err)
-		log.Printf(debugTag+"RenewToken()2 Error when renewing token %v\n", err)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf(debugTag+"RenewToken()3 body = %s\n", body)
-	//var refresh_token RefreshToken
-	var refresh_token oauth2.Token
-	json.Unmarshal([]byte(body), &refresh_token)
-
-	log.Printf(debugTag+"RenewToken()4 refresh_token = %+v\n", refresh_token)
-
-	then := time.Now()
-	//then = then.Add(time.Duration(refresh_token.ExpiresIn) * time.Second)
-	then = then.Add(24 * 6 * time.Hour)
-
-	tok.Expiry = then
-	tok.AccessToken = refresh_token.AccessToken
-	saveToken(cacheFile, tok)
-
 	return tok
 }
 
@@ -207,39 +168,4 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 		return false, err
 	}
 	return true, nil
-}
-
-func (s *Gateway) SendMail2(from string, to string, title string, message string) (bool, error) {
-	// Create the message
-	if s.debugEmailAddress != "" {
-		log.Printf(debugTag+"Handler.SendMail2()1 ... Debug email address configured, overriding recipient. Original to: %s, title: %s", to, title)
-		to = s.debugEmailAddress
-	}
-	msgStr := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s", from, to, title, message)
-	msg := []byte(msgStr)
-	// Get raw
-	gMessage := &gmail.Message{Raw: base64.URLEncoding.EncodeToString(msg)}
-
-	// Send the message
-	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
-	if err != nil {
-		log.Println(debugTag+"Handler.SendMail()1 ... Could not send mail>", err, "from:", from, "to:", to, "title:", title, "message:", message)
-		return false, err
-	}
-	return true, nil
-}
-
-func (s *Gateway) Demo(emailAddress string) (bool, error) {
-	// Send a demo message
-	if emailAddress == "" {
-		return false, errors.New(debugTag + "Handler.Demo()1 ... error: emailAddress is empty")
-	}
-	from := emailAddress
-	to := emailAddress
-	if s.debugEmailAddress != "" {
-		log.Printf(debugTag+"Handler.Demo()1 ... Debug email address configured, overriding recipient. Original to: %s, title: %s", to, "Gmail With Go")
-		to = s.debugEmailAddress
-	}
-	ret, err := s.SendMail2(from, to, "Gmail With Go", "It worked!")
-	return ret, err
 }

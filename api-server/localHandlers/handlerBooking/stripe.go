@@ -81,7 +81,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) { //, s
 	// which neeeds to be passed to stripe to create the checkout session
 	// Trip details include trip name, trip cost, trip Max Participants etc.
 	// Booking details include booking id, booking person, place in booking queue etc.
-	// compare with Participant Status query in tripParticipantStatus.go ????
+	// Compare with participant-status behavior in tripParticipantStatus flow if this query changes.
 
 	// Get booking ID from URL parameter
 	bookingID := dbStandardTemplate.GetID(w, r)
@@ -380,20 +380,10 @@ func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentIn
 		return errors.New("payment disallowed: the booking cost is zero")
 	}
 
-	// User validation passed ????
 	if bookingItem.OwnerID != appSessionUserID {
 		return errors.New("unauthorized: user is not the booking owner")
 	}
 
-	return nil
-}
-
-func (h *Handler) validateUser(bookingItem *models.BookingPaymentInfo, appSessionUserID int64) error {
-
-	// User validation passed ????
-	if bookingItem.OwnerID != appSessionUserID {
-		return errors.New("unauthorized: user is not the booking owner")
-	}
 	return nil
 }
 

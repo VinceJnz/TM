@@ -1,6 +1,7 @@
 package handlerOAuth
 
 import (
+	handlerHelpers "api-server/v2/localHandlers/helpers"
 	"context"
 	"encoding/json"
 	"log"
@@ -62,7 +63,7 @@ func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"loginHandler:", h.appConf.Db, true, 0, h.appConf.Settings.Host, "oauth-state", time.Now().Add(10*time.Minute))
 	if err != nil {
 		log.Printf("%v loginHandler failed to create oauth-state token: %v", debugTag, err)
-		http.Error(w, "failed to create oauth state", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to create oauth state")
 		return
 	}
 	http.SetCookie(w, tokenCookie)
@@ -79,12 +80,12 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate state by looking up the DB-backed oauth-state token
 	state := r.URL.Query().Get("state")
 	if state == "" {
-		http.Error(w, "invalid state", http.StatusForbidden)
+		handlerHelpers.WriteForbidden(w, "invalid state")
 		return
 	}
 	tok, err := dbAuthTemplate.FindToken(debugTag+"callbackHandler:find_state", h.appConf.Db, "oauth-state", state)
 	if err != nil {
-		http.Error(w, "invalid state", http.StatusForbidden)
+		handlerHelpers.WriteForbidden(w, "invalid state")
 		return
 	}
 	// Don't delete the state token yet - CompleteRegistration may need it.
@@ -105,7 +106,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			log.Printf("%vcallbackHandler()6 token exchange failed: %v", debugTag, err)
 		}
-		http.Error(w, "failed to exchange token: "+err.Error(), http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to exchange token")
 		return
 	}
 
@@ -113,7 +114,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
 		log.Printf("%vcallbackHandler()7 failed to get userinfo: %v", debugTag, err)
-		http.Error(w, "failed to get userinfo", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to get userinfo")
 		return
 	}
 	defer resp.Body.Close()
@@ -121,14 +122,14 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	var userInfo map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		log.Printf("%vcallbackHandler()8 failed to decode userinfo: %v", debugTag, err)
-		http.Error(w, "failed to decode userinfo", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to decode userinfo")
 		return
 	}
 
 	// validate minimal fields
 	sub, _ := userInfo["sub"].(string)
 	if sub == "" {
-		http.Error(w, "userinfo missing sub", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "userinfo missing sub")
 		return
 	}
 
@@ -150,7 +151,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v failed to upsert user: %v", debugTag, err)
-		http.Error(w, "failed to create user", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to create user")
 		return
 	}
 
@@ -169,20 +170,18 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create and set session cookie so subsequent API calls (e.g., /ensure) will be authenticated.
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"callbackHandler", h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{})
-	if err != nil {
+	if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"callbackHandler:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
 		log.Printf("%v failed to create session token: %v", debugTag, err)
-		http.Error(w, "failed to create session", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to create session")
 		return
 	}
-	http.SetCookie(w, sessionToken)
 	log.Printf("%vcallbackHandler()10.5 session cookie created for user %d", debugTag, userID)
 
 	// Load the user to check if they have a username (indicates returning user vs new user)
 	user, err = dbAuthTemplate.UserReadQry(debugTag+"callbackHandler:check_username", h.appConf.Db, userID)
 	if err != nil {
 		log.Printf("%v failed to load user for username check: %v", debugTag, err)
-		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to load user")
 		return
 	}
 
@@ -207,17 +206,17 @@ func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
 	// Prefer an established DB session. If present, return the user info.
 	sc, err := r.Cookie("session")
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		handlerHelpers.WriteUnauthorizedText(w, "unauthorized")
 		return
 	}
 	dbTok, err := dbAuthTemplate.FindSessionToken(debugTag+"meHandler:find_session", h.appConf.Db, sc.Value)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		handlerHelpers.WriteUnauthorizedText(w, "unauthorized")
 		return
 	}
 	user, err := dbAuthTemplate.UserReadQry(debugTag+"meHandler:user", h.appConf.Db, dbTok.UserID)
 	if err != nil {
-		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to load user")
 		return
 	}
 	resp := map[string]any{
@@ -225,7 +224,7 @@ func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
 		"email":   user.Email.String,
 		"name":    user.Name,
 	}
-	json.NewEncoder(w).Encode(resp)
+	handlerHelpers.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) logoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -255,8 +254,7 @@ func (h *Handler) debugHandler(w http.ResponseWriter, r *http.Request) {
 			"same_site": h.appConf.OAuthSvc.Store.Options.SameSite,
 		},
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(info)
+	handlerHelpers.WriteJSON(w, http.StatusOK, info)
 }
 
 // OAuthEnsure is a convenience endpoint that triggers the OAuth->DB upsert and creates a server-side
@@ -266,7 +264,7 @@ func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
 	// Session should have been attached by the middleware (RequireOAuthOrSessionAuth).
 	sessI := r.Context().Value(h.appConf.SessionIDKey)
 	if sessI == nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		handlerHelpers.WriteUnauthorizedText(w, "unauthorized")
 		return
 	}
 	sess, ok := sessI.(*models.Session)
@@ -276,11 +274,10 @@ func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := dbAuthTemplate.UserReadQry(debugTag+"OAuthEnsure ", h.appConf.Db, sess.UserID)
 	if err != nil {
-		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to load user")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	handlerHelpers.WriteJSON(w, http.StatusOK, user)
 }
 
 // VerifyEmail validates the email verification token and creates a session cookie.
@@ -292,7 +289,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Token string `json:"token"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err == nil && req.Token != "" {
+		if err := handlerHelpers.DecodeJSONBody(r, &req); err == nil && req.Token != "" {
 			tokenStr = req.Token
 		}
 	}
@@ -306,14 +303,14 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	tok, err := dbAuthTemplate.FindToken(debugTag+"VerifyEmail:find", h.appConf.Db, "email-verification", tokenStr)
 	if err != nil {
 		log.Printf("%v verification token not found or invalid: %v", debugTag, err)
-		http.Error(w, "invalid or expired verification token", http.StatusForbidden)
+		handlerHelpers.WriteForbidden(w, "invalid or expired verification token")
 		return
 	}
 
 	userID := tok.UserID
 	if userID == 0 {
 		log.Printf("%v verification token has no associated user", debugTag)
-		http.Error(w, "invalid verification token", http.StatusForbidden)
+		handlerHelpers.WriteForbidden(w, "invalid verification token")
 		return
 	}
 
@@ -321,7 +318,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	user, err := dbAuthTemplate.UserReadQry(debugTag+"VerifyEmail:read", h.appConf.Db, userID)
 	if err != nil {
 		log.Printf("%v failed to read user: %v", debugTag, err)
-		http.Error(w, "user not found", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "user not found")
 		return
 	}
 
@@ -329,7 +326,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	_, err = dbAuthTemplate.UserWriteQry(debugTag+"VerifyEmail:write", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v failed to update user: %v", debugTag, err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "internal server error")
 		return
 	}
 
@@ -337,19 +334,16 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyEmail:del", h.appConf.Db, tok.ID)
 
 	// Create session cookie
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugTag+"VerifyEmail", h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{})
-	if err != nil {
+	if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"VerifyEmail:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
 		log.Printf("%v failed to create session token: %v", debugTag, err)
-		http.Error(w, "failed to create session", http.StatusInternalServerError)
+		handlerHelpers.WriteInternalServerError(w, "failed to create session")
 		return
 	}
 
-	http.SetCookie(w, sessionToken)
 	log.Printf("%v email verified and session created for user %d", debugTag, userID)
 
 	// Return user info
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	handlerHelpers.WriteJSON(w, http.StatusOK, map[string]any{
 		"status":  "verified",
 		"user_id": userID,
 		"email":   user.Email.String,
@@ -362,35 +356,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%vCompleteRegistration()0: r = %+v\n", debugTag, r)
 
-	var userID int
-
-	// Try 1: Check for DB session cookie
-	if sc, err := r.Cookie("session"); err == nil {
-		log.Printf("%vCompleteRegistration() found session cookie: %s", debugTag, sc.Value)
-		if dbToken, err := dbAuthTemplate.FindSessionToken(debugTag+"CompleteRegistration:session", h.appConf.Db, sc.Value); err == nil {
-			userID = dbToken.UserID
-			log.Printf("%vCompleteRegistration() using DB session for user %d", debugTag, userID)
-		} else {
-			log.Printf("%vCompleteRegistration() session cookie lookup failed: %v", debugTag, err)
-		}
-	} else {
-		log.Printf("%vCompleteRegistration() no session cookie found: %v", debugTag, err)
-	}
-
-	// Try 2: If no DB session, check for oauth-state token (fallback for popup case)
-	if userID == 0 {
-		if c, err := r.Cookie("oauth-state"); err == nil {
-			log.Printf("%vCompleteRegistration() found oauth-state cookie: %s", debugTag, c.Value)
-			if dbToken, err := dbAuthTemplate.FindToken(debugTag+"CompleteRegistration:oauth-state", h.appConf.Db, "oauth-state", c.Value); err == nil {
-				userID = dbToken.UserID
-				log.Printf("%vCompleteRegistration() using oauth-state token for user %d", debugTag, userID)
-			} else {
-				log.Printf("%vCompleteRegistration() oauth-state token lookup failed: %v", debugTag, err)
-			}
-		} else {
-			log.Printf("%vCompleteRegistration() no oauth-state cookie found: %v", debugTag, err)
-		}
-	}
+	userID := handlerHelpers.ResolveUserIDFromSessionOrOAuthState(debugTag+"CompleteRegistration:", r, h.appConf.Db)
 
 	if userID == 0 {
 		log.Printf("%vCompleteRegistration() no valid authentication found, redirecting to OAuth login", debugTag)
@@ -407,7 +373,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		BirthDate     string `json:"birth_date"`
 		AccountHidden *bool  `json:"account_hidden"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := handlerHelpers.DecodeJSONBody(r, &req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -463,6 +429,5 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to update user", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	handlerHelpers.WriteJSON(w, http.StatusOK, user)
 }

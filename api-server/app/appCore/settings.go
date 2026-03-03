@@ -3,6 +3,7 @@ package appCore
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -11,29 +12,29 @@ import (
 )
 
 type settings struct {
-	AppTitle       string `json:"AppTitle"`
-	Host           string `json:"Host"`
-	PortHttp       string `json:"PortHttp"`
-	PortHttps      string `json:"PortHttps"`
-	DataSource     string `json:"DataSource"`
-	APIprefix      string `json:"APIprefix"`
-	ServerCaCert   string `json:"ServerCaCert"`
-	ClientCaCert   string `json:"ClientCaCert"`
-	ServerKey      string `json:"ServerKey"`
-	ServerCert     string `json:"ServerCert"`
-	CertOpt        int    `json:"CertOpt"`
-	LogFile        string `json:"LogFile"`
-	EmailAddr      string `json:"EmailAddr"`
-	EmailToken     string `json:"EmailToken"`
-	EmailSecret    string `json:"EmailSecret"`
-	PaymentKey     string `json:"PaymentKey"`
-	GoogleClientID string `json:"GoogleClientID"`
+	AppTitle           string `json:"AppTitle"`
+	Host               string `json:"Host"`
+	PortHttp           string `json:"PortHttp"`
+	PortHttps          string `json:"PortHttps"`
+	DataSource         string `json:"DataSource"`
+	APIprefix          string `json:"APIprefix"`
+	ServerCaCert       string `json:"ServerCaCert"`
+	ClientCaCert       string `json:"ClientCaCert"`
+	ServerKey          string `json:"ServerKey"`
+	ServerCert         string `json:"ServerCert"`
+	CertOpt            int    `json:"CertOpt"`
+	LogFile            string `json:"LogFile"`
+	EmailAddr          string `json:"EmailAddr"`
+	EmailToken         string `json:"EmailToken"`
+	EmailSecret        string `json:"EmailSecret"`
+	PaymentKey         string `json:"PaymentKey"`
+	GoogleClientID     string `json:"GoogleClientID"`
 	GoogleClientSecret string `json:"GoogleClientSecret"`
-	GoogleRedirectURL string `json:"GoogleRedirectURL"`
-	SessionKey string `json:"SessionKey"`
-	ClientRedirectURL string `json:"ClientRedirectURL"`
-	EmailDebugAddr string `json:"EmailDebugAddr"`
-	DevMode        bool   `json:"DevMode"`
+	GoogleRedirectURL  string `json:"GoogleRedirectURL"`
+	SessionKey         string `json:"SessionKey"`
+	ClientRedirectURL  string `json:"ClientRedirectURL"`
+	EmailDebugAddr     string `json:"EmailDebugAddr"`
+	DevMode            bool   `json:"DevMode"`
 }
 
 func (s *settings) SaveJson() error {
@@ -90,13 +91,23 @@ func (s *settings) LoadEnv() error {
 	var err error
 	err = godotenv.Load() //default is to load .env file in the current directory
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		return fmt.Errorf("error loading .env file (required): %w", err)
 	}
 	s.Host = os.Getenv("HOST")
 	s.PortHttp = os.Getenv("HTTP_PORT")
 	s.PortHttps = os.Getenv("HTTPS_PORT")
 	s.APIprefix = os.Getenv("API_PATH_PREFIX")
 	s.DataSource = os.Getenv("DATA_SOURCE")
+	if s.DataSource == "" {
+		dbHost := os.Getenv("DB_HOST")
+		dbPort := os.Getenv("DB_PORT")
+		dbUser := os.Getenv("DB_USER")
+		dbPassword := os.Getenv("DB_PASSWORD")
+		dbName := os.Getenv("DB_NAME")
+		if dbHost != "" && dbPort != "" && dbUser != "" && dbPassword != "" && dbName != "" {
+			s.DataSource = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+		}
+	}
 	s.ServerCaCert = os.Getenv("SERVER_CA_CERT")
 	s.ClientCaCert = os.Getenv("CLIENT_CA_CERT")
 	s.ServerKey = os.Getenv("SERVER_KEY")
@@ -127,47 +138,31 @@ func (s *settings) LoadEnv() error {
 
 // Validate checks all the json inputs for valid values
 func (s *settings) ValidateEnv() error {
-	if os.Getenv("HOST") == "" {
+	if s.Host == "" {
 		log.Printf("%sValidateEnv() Warning: HOST is not set, using default value\n", debugTag)
 		return errors.New("empty setting: HOST missing")
 	}
-	if os.Getenv("HTTP_PORT") == "" {
+	if s.PortHttp == "" {
 		log.Printf("%sValidateEnv() Warning: HTTP_PORT is not set, using default value\n", debugTag)
 		return errors.New("empty setting: HTTP_PORT missing")
 	}
-	if os.Getenv("HTTPS_PORT") == "" {
+	if s.PortHttps == "" {
 		log.Printf("%sValidateEnv() Warning: HTTPS_PORT is not set, using default value\n", debugTag)
 		return errors.New("empty setting: HTTPS_PORT missing")
 	}
-	if os.Getenv("API_PATH_PREFIX") == "" {
+	if s.APIprefix == "" {
 		log.Printf("%sValidateEnv() Warning: API_PATH_PREFIX is not set, using default value\n", debugTag)
 		return errors.New("empty setting: API_PATH_PREFIX missing")
 	}
-	if os.Getenv("DB_USER") == "" {
-		log.Printf("%sValidateEnv() Warning: DB_USER is not set, using default value\n", debugTag)
-		return errors.New("empty setting: DB_USER missing")
+	if s.DataSource == "" {
+		log.Printf("%sValidateEnv() Warning: DATA_SOURCE (or DB_* fallback) is not set, using default value\n", debugTag)
+		return errors.New("empty setting: DATA_SOURCE missing")
 	}
-	if os.Getenv("DB_PASSWORD") == "" {
-		log.Printf("%sValidateEnv() Warning: DB_PASSWORD is not set, using default value\n", debugTag)
-		return errors.New("empty setting: DB_PASSWORD missing")
-	}
-	if os.Getenv("DB_NAME") == "" {
-		log.Printf("%sValidateEnv() Warning: DB_NAME is not set, using default value\n", debugTag)
-		return errors.New("empty setting: DB_NAME missing")
-	}
-	if os.Getenv("DB_HOST") == "" {
-		log.Printf("%sValidateEnv() Warning: DB_HOST is not set, using default value\n", debugTag)
-		return errors.New("empty setting: DB_HOST missing")
-	}
-	if os.Getenv("DB_PORT") == "" {
-		log.Printf("%sValidateEnv() Warning: DB_PORT is not set, using default value\n", debugTag)
-		return errors.New("empty setting: DB_PORT missing")
-	}
-	if os.Getenv("APP_TITLE") == "" {
+	if s.AppTitle == "" {
 		log.Printf("%sValidateEnv() Warning: APP_TITLE is not set, using default value\n", debugTag)
 		return errors.New("empty setting: APP_TITLE missing")
 	}
-	if os.Getenv("EMAIL_DEBUG_ADDR") != "" {
+	if s.EmailDebugAddr != "" {
 		log.Printf("%sValidateEnv() Warning: EMAIL_DEBUG_ADDR is set, using DEBUG value\n", debugTag)
 		return errors.New("nonempty setting: EMAIL_DEBUG_ADDR should be empty in production")
 	}

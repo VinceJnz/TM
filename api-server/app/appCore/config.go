@@ -42,10 +42,13 @@ func New(testMode bool) *Config {
 func (c *Config) Run() {
 	var err error
 	// Load environment variables
-	c.Settings.LoadEnv()
+	if err = c.Settings.LoadEnv(); err != nil {
+		log.Fatalf("Unable to load environment settings: %v", err)
+	}
+	log.Printf("%sRun() environment settings loaded", debugTag)
 
 	// Initialize the database connection
-	c.Db, err = InitDB()
+	c.Db, err = InitDB(c.Settings.DataSource)
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 
@@ -57,7 +60,7 @@ func (c *Config) Run() {
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
 	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain, c.TestMode)
 	log.Printf(debugTag+"Run() Stripe gateway initialized with domain: %s", domain)
-	//go c.PaymentSvc.Start() // No longer needed as we are not using webhooks ??????
+	//go c.PaymentSvc.Start() // No longer needed as webhooks are not used.
 
 	c.OAuthSvc, err = oAuthGateway.New(oAuthGateway.GatewayConfig{
 		ClientID:       c.Settings.GoogleClientID,
@@ -75,8 +78,4 @@ func (c *Config) Run() {
 
 func (c *Config) Close() {
 	c.Db.Close()
-}
-
-func (c *Config) Access() {
-
 }

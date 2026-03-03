@@ -107,7 +107,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.BookingPeople
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -127,7 +127,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return

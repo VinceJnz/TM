@@ -6,7 +6,6 @@ import (
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -32,7 +31,7 @@ const (
 										AND attc.member_status_id=stu.member_status_id
 										AND attc.user_age_group_id=stu.user_age_group_id
 				LEFT JOIN st_users stu2 ON stu2.id=atb.owner_id
-				WHERE atb.owner_id = $1 --OR true=$2 -- TODO: Can this be removed? Should users only see their own bookings in this endpoint?
+				WHERE atb.owner_id = $1
 				GROUP BY att.id, att.trip_name, atb.id, stu2.name, ebs.status
 				ORDER BY att.trip_name, atb.id`
 
@@ -83,7 +82,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	// Includes code to check if the user has access. ???????? Query needs to be checked ???????????????????
+	// Returns bookings owned by the authenticated user.
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MyBooking{}, qryGetAll, session.UserID)
 }
 
@@ -103,7 +102,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Create()2 err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -127,14 +126,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Update()1 dest=%+v", record)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 	record.ID = id
 
-	//Need to add this validation in ?????????????????????????????????
 	if err := h.RecordValidation(record); err != nil {
 		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
 		return
