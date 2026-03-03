@@ -1,8 +1,6 @@
 package handlerTripStatus
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 
 	"api-server/v2/app/appCore"
@@ -29,10 +27,29 @@ const (
 
 type Handler struct {
 	appConf *appCore.Config
+	crud    *dbStandardTemplate.ResourceCRUD[models.TripType]
 }
 
 func New(appConf *appCore.Config) *Handler {
-	return &Handler{appConf: appConf}
+	h := &Handler{appConf: appConf}
+	h.crud = dbStandardTemplate.NewResourceCRUD(dbStandardTemplate.ResourceCRUDConfig[models.TripType]{
+		DebugTag: debugTag,
+		Db:       h.appConf.Db,
+		Queries: dbStandardTemplate.CRUDQueries{
+			GetAll: qryGetAll,
+			Get:    qryGet,
+			Create: qryCreate,
+			Update: qryUpdate,
+			Delete: qryDelete,
+		},
+		NewListDest: func() any { return &[]models.TripStatus{} },
+		NewRecord:   func() *models.TripType { return &models.TripType{} },
+		IDDest:      func(record *models.TripType) any { return &record.ID },
+		SetID:       func(record *models.TripType, id int) { record.ID = id },
+		CreateArgs:  func(record *models.TripType) []any { return []any{record.Type} },
+		UpdateArgs:  func(id int, record *models.TripType) []any { return []any{record.Type, id} },
+	})
+	return h
 }
 
 // RegisterRoutes registers handler routes on the provided router.
@@ -42,43 +59,25 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.TripStatus{}, qryGetAll)
+	h.crud.GetAll(w, r)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.TripStatus{}, qryGet, id)
+	h.crud.Get(w, r)
 }
 
 // Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.TripType
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Create()2 err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Type)
+	h.crud.Create(w, r)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var record models.TripType
-	id := dbStandardTemplate.GetID(w, r)
-
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		log.Printf(debugTag+"Update()1 dest=%+v", record)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	record.ID = id
-
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Type, id)
+	h.crud.Update(w, r)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	h.crud.Delete(w, r)
 }
