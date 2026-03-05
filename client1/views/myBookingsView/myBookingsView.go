@@ -116,6 +116,7 @@ type ItemEditor struct {
 	CurrentRecord TableData
 	ItemState     viewHelpers.ItemState
 	Records       []TableData
+	RowSummaryDiv map[int]js.Value
 	UiComponents  UI
 	VoucherMap    map[string]VoucherData
 	Div           js.Value
@@ -136,6 +137,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
 
 	editor.ItemState = viewHelpers.ItemStateNone
+	editor.RowSummaryDiv = map[int]js.Value{}
 	editor.VoucherMap = map[string]VoucherData{}
 
 	// Create a div for the item editor
@@ -172,6 +174,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 func (editor *ItemEditor) ResetView() {
 	editor.RecordState = RecordStateReloadRequired
+	editor.RowSummaryDiv = map[int]js.Value{}
 	editor.EditDiv.Set("innerHTML", "")
 	editor.ListDiv.Set("innerHTML", "")
 }
@@ -610,8 +613,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
-	editor.RecordState = RecordStateReloadRequired
-	editor.FetchItems() // Refresh the item list
+	editor.refreshBookingRow(item.ID)
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
@@ -699,8 +701,53 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 	}()
 }
 
+func (editor *ItemEditor) bookingSummaryText(record TableData) string {
+	ownerDisplay := editor.bookingOwnerDisplay(record)
+	return "Trip: " + record.TripName + " (BOOKED by:" + ownerDisplay + ", Notes:" + record.Notes + ", Status:" + record.BookingStatus + ", From:" + record.FromDate.Format(viewHelpers.Layout) + " - To:" + record.ToDate.Format(viewHelpers.Layout) + ", Participants:" + strconv.Itoa(record.Participants) + ", Cost:$" + record.BookingCost.StringFixedBank(2) + ")"
+}
+
+func (editor *ItemEditor) refreshBookingRow(bookingID int) {
+	var updated TableData
+
+	success := func(err error) {
+		updatedExisting := false
+		for index := range editor.Records {
+			if editor.Records[index].ID == bookingID {
+				editor.Records[index] = updated
+				updatedExisting = true
+				break
+			}
+		}
+
+		if !updatedExisting {
+			editor.RecordState = RecordStateReloadRequired
+			editor.FetchItems()
+			return
+		}
+
+		if summaryDiv, ok := editor.RowSummaryDiv[bookingID]; ok && !summaryDiv.IsUndefined() && !summaryDiv.IsNull() {
+			summaryDiv.Set("innerHTML", editor.bookingSummaryText(updated))
+			return
+		}
+
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+	}
+
+	fail := func(err error) {
+		log.Printf(debugTag+"refreshBookingRow() error for booking %d: %v", bookingID, err)
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+	}
+
+	go func() {
+		editor.client.NewRequest(http.MethodGet, ApiURL+"/"+strconv.Itoa(bookingID), &updated, nil, success, fail)
+	}()
+}
+
 func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
+	editor.RowSummaryDiv = map[int]js.Value{}
 
 	// Add New Item button
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
@@ -708,18 +755,24 @@ func (editor *ItemEditor) populateItemList() {
 
 	for _, i := range editor.Records {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
-		ownerDisplay := editor.bookingOwnerDisplay(record)
+		bookingID := record.ID
 
 		// Create and add child views to Item
 		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.appCore, record.ID)
+		bookingPeople.SetOnItemsChanged(func() {
+			editor.refreshBookingRow(bookingID)
+		})
 		//editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
 		//paymentView := bookingPaymentView.New(editor.document, editor.events, editor.appCore, bookingPaymentView.ParentData{ID: record.ID})
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", "Trip: "+record.TripName+" (BOOKED by:"+ownerDisplay+", Notes:"+record.Notes+", Status:"+record.BookingStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+", Cost:$"+record.BookingCost.StringFixedBank(2)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+
+		summaryDiv := editor.document.Call("createElement", "div")
+		summaryDiv.Set("innerHTML", editor.bookingSummaryText(record))
+		editor.RowSummaryDiv[record.ID] = summaryDiv
+		itemDiv.Call("appendChild", summaryDiv)
 
 		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.IsAdminOrHigher() {
 			// Create an edit button

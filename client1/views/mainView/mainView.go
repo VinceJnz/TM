@@ -9,7 +9,6 @@ import (
 	"client1/v2/views/account/basicAuthLoginView"
 	"client1/v2/views/account/logoutView"
 	"client1/v2/views/bookingStatusView"
-	"client1/v2/views/bookingView"
 	"client1/v2/views/bookingVoucherView"
 	"client1/v2/views/contentView"
 	"client1/v2/views/groupBookingView"
@@ -225,7 +224,7 @@ func (v *View) Setup() {
 	v.AddViewItem("Home", "", true, homeContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("About", "", true, aboutContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Contact", "", true, contactContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
+	//v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Trip Participant Status", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)

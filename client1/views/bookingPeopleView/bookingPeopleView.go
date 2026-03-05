@@ -73,6 +73,7 @@ type ItemEditor struct {
 	document      js.Value
 	events        *eventProcessor.EventProcessor
 	baseURL       string
+	onItemsChanged func()
 	CurrentRecord TableData
 	ItemState     ItemState
 	Records       []TableData
@@ -161,6 +162,16 @@ func (editor *ItemEditor) Hide() {
 func (editor *ItemEditor) Display() {
 	editor.Div.Get("style").Call("setProperty", "display", "block")
 	editor.ViewState = ViewStateBlock
+}
+
+func (editor *ItemEditor) SetOnItemsChanged(callback func()) {
+	editor.onItemsChanged = callback
+}
+
+func (editor *ItemEditor) notifyItemsChanged() {
+	if editor.onItemsChanged != nil {
+		editor.onItemsChanged()
+	}
 }
 
 // NewItemData initializes a new item for adding
@@ -274,6 +285,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
+	editor.notifyItemsChanged()
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
@@ -284,6 +296,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
+	editor.notifyItemsChanged()
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record added successfully")
 }
@@ -315,6 +328,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems() // Refresh the item list
+		editor.notifyItemsChanged()
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Item record deleted successfully")
 	}()
