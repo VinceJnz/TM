@@ -749,8 +749,14 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 	editor.RowSummaryDiv = map[int]js.Value{}
 
+	processHint := editor.document.Call("createElement", "small")
+	processHint.Set("innerHTML", "Booking flow: 1) Create booking  2) Manage people  3) Make payment")
+	processHint.Get("style").Set("display", "block")
+	processHint.Get("style").Set("marginBottom", "8px")
+	editor.ListDiv.Call("appendChild", processHint)
+
 	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Create Booking", "addNewItemButton")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
@@ -786,21 +792,11 @@ func (editor *ItemEditor) populateItemList() {
 				return nil
 			}))
 			itemDiv.Call("appendChild", editButton)
-
-			// Create a delete button
-			deleteButton := editor.document.Call("createElement", "button")
-			deleteButton.Set("innerHTML", "Delete")
-			deleteButton.Set("className", "btn btn-danger")
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-				editor.deleteItem(record.ID)
-				return nil
-			}))
-			itemDiv.Call("appendChild", deleteButton)
 		}
 
 		// Create a toggle modify-people-list button
 		peopleButton := editor.document.Call("createElement", "button")
-		peopleButton.Set("innerHTML", "People")
+		peopleButton.Set("innerHTML", "Manage People")
 		peopleButton.Set("className", "btn btn-secondary")
 		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			bookingPeople.FetchItems()
@@ -810,7 +806,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", peopleButton)
 
 		bookingPayment := editor.document.Call("createElement", "button")
-		bookingPayment.Set("innerHTML", "Payment")
+		bookingPayment.Set("innerHTML", "Make Payment")
 		bookingPayment.Set("className", "btn btn-primary")
 		bookingPayment.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			editor.CurrentRecord = record
@@ -821,6 +817,18 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		}))
 		itemDiv.Call("appendChild", bookingPayment)
+
+		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.IsAdminOrHigher() {
+			// Create a delete button
+			deleteButton := editor.document.Call("createElement", "button")
+			deleteButton.Set("innerHTML", "Delete")
+			deleteButton.Set("className", "btn btn-danger")
+			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+				editor.deleteItem(record.ID)
+				return nil
+			}))
+			itemDiv.Call("appendChild", deleteButton)
+		}
 
 		itemDiv.Call("appendChild", bookingPeople.Div)
 

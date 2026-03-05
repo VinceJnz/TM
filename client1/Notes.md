@@ -80,3 +80,18 @@ func SubmitItemEdit(this js.Value, args []js.Value) interface{} {
 }
 ```
 
+
+## Trips and Booking views
+
+A bit of a rethink...
+The purpose of the trips view is:
+
+To display a list of trips for user to see the trips, and so users can see the bookings against each trip.
+Allow a user to make a booking against a trip.
+Allow admins to edit/create/delete trips. (May want users to be able to set up trips so that others can join it.)
+The purpose of MyBookings is:
+
+Allow a user to see their bookings and make new bookings.
+The purpose of the Trip Participant Status view:
+
+Allow users to see the status of bookings and participants. Ultimately this could be integrated into the MyBookings view and the trips view.
