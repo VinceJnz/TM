@@ -85,8 +85,11 @@ func main() {
 	})
 	adminProtected := protected.PathPrefix("").Subrouter()
 	adminProtected.Use(auth.RequireRole("admin"))
+	trustedProtected := protected.PathPrefix("").Subrouter()
+	trustedProtected.Use(auth.RequireRole("trustedusers"))
 	sysadminProtected := protected.PathPrefix("").Subrouter()
 	sysadminProtected.Use(auth.RequireRole("sysadmin"))
+	_ = trustedProtected // Reserved for future trusted-only endpoints.
 
 	// Auth handlers - Protected routes (requires authentication)
 	auth.RegisterRoutesProtected(protected, "/auth") // Protected auth endpoints (menuUser, logout, etc.)

@@ -13,17 +13,21 @@ import (
 )
 
 const (
-	roleUser     = "user"
-	roleAdmin    = "admin"
-	roleSysadmin = "sysadmin"
+	roleUser         = "user"
+	roleTrustedUsers = "trustedusers"
+	roleAdmin        = "admin"
+	roleSysadmin     = "sysadmin"
 )
 
 func normalizeRole(role string) string {
-	switch strings.ToLower(strings.TrimSpace(role)) {
+	normalized := strings.ToLower(strings.TrimSpace(role))
+	switch normalized {
 	case roleSysadmin:
 		return roleSysadmin
 	case roleAdmin:
 		return roleAdmin
+	case roleTrustedUsers, "trusted_users", "trusted-user", "trusted user", "trusted":
+		return roleTrustedUsers
 	default:
 		return roleUser
 	}
@@ -32,8 +36,10 @@ func normalizeRole(role string) string {
 func roleRank(role string) int {
 	switch normalizeRole(role) {
 	case roleSysadmin:
-		return 3
+		return 4
 	case roleAdmin:
+		return 3
+	case roleTrustedUsers:
 		return 2
 	default:
 		return 1

@@ -32,8 +32,9 @@ const (
 	GROUP BY etat.ID, stg.Role
 	ORDER BY
 		CASE LOWER(stg.Role::text)
-			WHEN 'sysadmin' THEN 3
-			WHEN 'admin' THEN 2
+			WHEN 'sysadmin' THEN 4
+			WHEN 'admin' THEN 3
+			WHEN 'trustedusers' THEN 2
 			WHEN 'user' THEN 1
 			ELSE 0
 		END DESC,

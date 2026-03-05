@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
@@ -14,6 +15,15 @@ import (
 )
 
 const debugTag = "handlerTrip."
+
+func canCreateTrip(role string) bool {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "trustedusers", "trusted_users", "trusted-user", "trusted user", "trusted", "admin", "sysadmin":
+		return true
+	default:
+		return false
+	}
+}
 
 const (
 	qryGetAll = `SELECT att.*, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
@@ -67,6 +77,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if !canCreateTrip(session.Role) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {

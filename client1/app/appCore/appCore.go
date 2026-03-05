@@ -15,9 +15,10 @@ const debugTag = "appCore."
 const ApiURL = "/auth"
 
 const (
-	RoleUser     = "user"
-	RoleAdmin    = "admin"
-	RoleSysadmin = "sysadmin"
+	RoleUser         = "user"
+	RoleTrustedUsers = "trustedusers"
+	RoleAdmin        = "admin"
+	RoleSysadmin     = "sysadmin"
 )
 
 // UserItem contains the basic user info for driving the display of the client menu
@@ -89,11 +90,14 @@ func (ac *AppCore) SetUser(user User) {
 }
 
 func NormalizeRole(role string) string {
-	switch strings.ToLower(strings.TrimSpace(role)) {
+	normalized := strings.ToLower(strings.TrimSpace(role))
+	switch normalized {
 	case RoleSysadmin:
 		return RoleSysadmin
 	case RoleAdmin:
 		return RoleAdmin
+	case RoleTrustedUsers, "trusted_users", "trusted-user", "trusted user", "trusted":
+		return RoleTrustedUsers
 	default:
 		return RoleUser
 	}
@@ -108,9 +112,10 @@ func (ac *AppCore) CurrentRole() string {
 
 func (ac *AppCore) IsAtLeastRole(requiredRole string) bool {
 	roleRank := map[string]int{
-		RoleUser:     1,
-		RoleAdmin:    2,
-		RoleSysadmin: 3,
+		RoleUser:         1,
+		RoleTrustedUsers: 2,
+		RoleAdmin:        3,
+		RoleSysadmin:     4,
 	}
 	userRoleRank, ok := roleRank[NormalizeRole(ac.CurrentRole())]
 	if !ok {
@@ -125,4 +130,12 @@ func (ac *AppCore) IsAtLeastRole(requiredRole string) bool {
 
 func (ac *AppCore) IsAdminOrHigher() bool {
 	return ac.IsAtLeastRole(RoleAdmin)
+}
+
+func (ac *AppCore) IsTrustedUserOrHigher() bool {
+	return ac.IsAtLeastRole(RoleTrustedUsers)
+}
+
+func (ac *AppCore) IsTrustedUser() bool {
+	return ac.CurrentRole() == RoleTrustedUsers
 }

@@ -133,9 +133,10 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 
 func canDisplayByRole(userRole, requiredRole string) bool {
 	roleRank := map[string]int{
-		roleUser:     1,
-		roleAdmin:    2,
-		roleSysadmin: 3,
+		roleUser:         1,
+		roleTrustedUsers: 2,
+		roleAdmin:        3,
+		roleSysadmin:     4,
 	}
 	userValue, ok := roleRank[normalizeRole(userRole)]
 	if !ok {

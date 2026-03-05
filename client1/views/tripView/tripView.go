@@ -464,12 +464,38 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 	}()
 }
 
+func (editor *ItemEditor) canCreateTrips() bool {
+	return editor.appCore.IsTrustedUserOrHigher()
+}
+
+func (editor *ItemEditor) canManageTrip(record TableData) bool {
+	if editor.appCore.IsAdminOrHigher() {
+		return true
+	}
+
+	if editor.appCore.IsTrustedUser() {
+		return record.OwnerID == editor.appCore.GetUser().UserID
+	}
+
+	return false
+}
+
 func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
-	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
-	editor.ListDiv.Call("appendChild", addNewItemButton)
+	if !editor.canCreateTrips() {
+		roleHint := editor.document.Call("createElement", "small")
+		roleHint.Set("innerHTML", "Trip editing is available for trusted users and admins.")
+		roleHint.Get("style").Set("display", "block")
+		roleHint.Get("style").Set("marginBottom", "8px")
+		editor.ListDiv.Call("appendChild", roleHint)
+	}
+
+	if editor.canCreateTrips() {
+		// Add New Item button
+		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+		editor.ListDiv.Call("appendChild", addNewItemButton)
+	}
 
 	for _, i := range editor.Records {
 		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
@@ -480,7 +506,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("innerHTML", record.Name+" (Status:"+record.TripStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.IsAdminOrHigher() {
+		if editor.canManageTrip(record) {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
