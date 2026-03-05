@@ -19,7 +19,7 @@ import (
 
 const (
 	qryGetBookingForPayment = `SELECT 
-		atb.id, atb.owner_id, atb.trip_id, atb.from_date, atb.to_date, 
+		atb.id, atb.owner_id, atb.trip_id, atb.from_date, atb.to_date, atb.booking_price,
 		atb.booking_status_id, atb.stripe_session_id, atb.amount_paid,
 		att.trip_name, att.description, att.max_participants,
 		COUNT(atbp.id) as participants,
@@ -115,6 +115,11 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create Stripe checkout session
+	chargeAmount := bookingItem.BookingCost.ValueOrZero()
+	if bookingItem.BookingPrice.ValueOrZero() > 0 {
+		chargeAmount = bookingItem.BookingPrice.ValueOrZero()
+	}
+
 	params := &stripe.CheckoutSessionParams{
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
@@ -124,7 +129,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 						Description: stripe.String("Trip description: " + bookingItem.Description.String),
 						Name:        stripe.String("Trip name = " + bookingItem.TripName.String),
 					},
-					UnitAmount: stripe.Int64(int64(bookingItem.BookingCost.ValueOrZero() * 100)), //Amount in cents
+					UnitAmount: stripe.Int64(int64(chargeAmount * 100)), //Amount in cents
 				},
 				Quantity: stripe.Int64(1),
 			},

@@ -19,7 +19,7 @@ const (
 type Booking struct {
 	ID              int                 `json:"id" db:"id"`
 	OwnerID         int                 `json:"owner_id" db:"owner_id"`
-	OwnerName       zero.String         `json:"owner_username" db:"owner_username"`
+	OwnerName       zero.String         `json:"owner_name" db:"owner_username"`
 	TripID          zero.Int            `json:"trip_id" db:"trip_id"`
 	Notes           string              `json:"notes" db:"notes"`
 	FromDate        time.Time           `json:"from_date" db:"from_date"`
@@ -36,7 +36,7 @@ type Booking struct {
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
 	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
 	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
-	Currency        zero.String         `json:"currency" db:"currency"` // Currency code for the booking price
+	Currency        zero.String         `json:"currency" db:"currency"`       // Currency code for the booking price
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
 }
@@ -46,6 +46,17 @@ type BookingStatus struct {
 	Status   string    `json:"status" db:"status"`
 	Created  time.Time `json:"created" db:"created"`
 	Modified time.Time `json:"modified" db:"modified"`
+}
+
+type BookingVoucher struct {
+	ID              int        `json:"id" db:"id"`
+	Code            string     `json:"code" db:"code"`
+	DiscountPercent *float64   `json:"discount_percent" db:"discount_percent"`
+	FixedCost       *float64   `json:"fixed_cost" db:"fixed_cost"`
+	ExpiryDate      *time.Time `json:"expiry_date" db:"expiry_date"`
+	IsActive        bool       `json:"is_active" db:"is_active"`
+	Created         time.Time  `json:"created" db:"created"`
+	Modified        time.Time  `json:"modified" db:"modified"`
 }
 
 type BookingPeople struct {
@@ -89,7 +100,7 @@ type MyBooking struct {
 	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
 	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
 	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
-	Currency        zero.String         `json:"currency" db:"currency"` // Currency code for the booking price
+	Currency        zero.String         `json:"currency" db:"currency"`       // Currency code for the booking price
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
 }
@@ -100,6 +111,7 @@ type BookingPaymentInfo struct {
 	TripID              int64       `db:"trip_id"`
 	FromDate            time.Time   `db:"from_date"`
 	ToDate              time.Time   `db:"to_date"`
+	BookingPrice        zero.Float  `db:"booking_price"`
 	BookingStatusID     zero.Int    `db:"booking_status_id"` // The status of the booking payment (Not_paid, Full_amountPaid, Partial_amount_Paid)
 	BookingStatus       zero.String `json:"booking_status" db:"booking_status"`
 	StripeSessionID     zero.String `db:"stripe_session_id"`

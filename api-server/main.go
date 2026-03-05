@@ -8,6 +8,7 @@ import (
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
+	"api-server/v2/localHandlers/handlerBookingVoucher"
 	"api-server/v2/localHandlers/handlerGroupBooking"
 	"api-server/v2/localHandlers/handlerMemberStatus"
 	"api-server/v2/localHandlers/handlerMyBookings"
@@ -97,7 +98,8 @@ func main() {
 	handlerMyBookings.New(app).RegisterRoutes(protected, "/myBookings")       // MyBookings routes
 	handlerBooking.New(app).RegisterRoutes(protected, "/bookings", "/trips")  // Booking routes
 	handlerBookingPeople.New(app).RegisterRoutes(protected, "/bookingPeople") // BookingPeople routes
-	handlerTrip.New(app).RegisterRoutes(protected, "/trips")                  // Trip routes
+	handlerBookingVoucher.New(app).RegisterRoutesProtected(protected, "/bookingVouchers")
+	handlerTrip.New(app).RegisterRoutes(protected, "/trips") // Trip routes
 
 	// Add route groups (admin and above)
 	handlerSeasons.New(app).RegisterRoutes(adminProtected, "/seasons")                     // Seasons routes
@@ -108,12 +110,13 @@ func main() {
 	handlerUserAccountStatus.New(app).RegisterRoutes(adminProtected, "/userAccountStatus") // UserAccountStatus routes
 	handlerGroupBooking.New(app).RegisterRoutes(adminProtected, "/groupBooking")           // GroupBookings routes
 	handlerBookingStatus.New(app).RegisterRoutes(adminProtected, "/bookingStatus")         // BookingStatus routes
-	handlerTripType.New(app).RegisterRoutes(adminProtected, "/tripType")                   // TripType routes
-	handlerTripStatus.New(app).RegisterRoutes(adminProtected, "/tripStatus")               // TripStatus routes
-	handlerTripDifficulty.New(app).RegisterRoutes(adminProtected, "/tripDifficulty")       // TripDifficulty routes
-	handlerTripCost.New(app).RegisterRoutes(adminProtected, "/tripCosts")                  // TripCost routes
-	handlerTripCostGroup.New(app).RegisterRoutes(adminProtected, "/tripCostGroups")        // TripCostGroup routes
-	handlerResource.New(app).RegisterRoutes(adminProtected, "/securityResource")           // Resource routes
+	handlerBookingVoucher.New(app).RegisterRoutesAdmin(adminProtected, "/bookingVouchers")
+	handlerTripType.New(app).RegisterRoutes(adminProtected, "/tripType")             // TripType routes
+	handlerTripStatus.New(app).RegisterRoutes(adminProtected, "/tripStatus")         // TripStatus routes
+	handlerTripDifficulty.New(app).RegisterRoutes(adminProtected, "/tripDifficulty") // TripDifficulty routes
+	handlerTripCost.New(app).RegisterRoutes(adminProtected, "/tripCosts")            // TripCost routes
+	handlerTripCostGroup.New(app).RegisterRoutes(adminProtected, "/tripCostGroups")  // TripCostGroup routes
+	handlerResource.New(app).RegisterRoutes(adminProtected, "/securityResource")     // Resource routes
 
 	// Add route groups (sysadmin only)
 	handlerSecurityGroup.New(app).RegisterRoutes(sysadminProtected, "/securityGroup")                 // SecurityGroup routes

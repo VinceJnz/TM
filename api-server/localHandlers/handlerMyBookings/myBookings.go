@@ -53,14 +53,14 @@ const (
 				GROUP BY att.id, att.trip_name, atb.id, ebs.status
 				ORDER BY att.trip_name, atb.id`
 
-	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id) 
-        			VALUES ($1, $2, $3, $4, $5, $6) 
+	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_price) 
+	        		VALUES ($1, $2, $3, $4, $5, $6, $7) 
 					RETURNING id`
 	qryUpdateAdmin = `UPDATE at_bookings 
 					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_date, payment_date, booking_price) = ($2, $3, $4, $5, $6, $7, $8, $9, $10)
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
-					SET (notes, from_date, to_date, booking_status_id) = ($4, $5, $6, $7)
+					SET (notes, from_date, to_date, booking_status_id, booking_price) = ($4, $5, $6, $7, $8)
 					WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
 	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
 )
@@ -121,7 +121,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
 
 	// Send notification email to user
 	if h.appConf.EmailSvc != nil && session.Email != "" {
@@ -157,7 +157,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if session.Role == "admin" || session.Role == "sysadmin" {
 		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
 	} else {
-		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
 	}
 }
 

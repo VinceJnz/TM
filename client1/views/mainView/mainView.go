@@ -10,6 +10,7 @@ import (
 	"client1/v2/views/account/logoutView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingView"
+	"client1/v2/views/bookingVoucherView"
 	"client1/v2/views/contentView"
 	"client1/v2/views/groupBookingView"
 	"client1/v2/views/myBookingsView"
@@ -233,6 +234,7 @@ func (v *View) Setup() {
 	sysadminMenu := v.AddMenuSection(menuSectionSysadminCaption, menuSectionSysadmin, false, v.elements.sidemenu)
 
 	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Booking Vouchers", bookingVoucherView.ApiURL, true, bookingVoucherView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
 	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
 	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
 	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
