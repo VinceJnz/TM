@@ -225,9 +225,9 @@ func (v *View) Setup() {
 	v.AddViewItem("About", "", true, aboutContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Contact", "", true, contactContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
 	//v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 	v.AddViewItem("Trip Participant Status", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
 
 	adminMenu := v.AddMenuSection(menuSectionAdminCaption, menuSectionAdmin, false, v.elements.sidemenu)
 	sysadminMenu := v.AddMenuSection(menuSectionSysadminCaption, menuSectionSysadmin, false, v.elements.sidemenu)

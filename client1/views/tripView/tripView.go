@@ -510,7 +510,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Create a toggle child list button
 		bookingButton := editor.document.Call("createElement", "button")
-		bookingButton.Set("innerHTML", "Bookings")
+		bookingButton.Set("innerHTML", "Start booking")
 		bookingButton.Set("className", "btn btn-secondary")
 		bookingButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			booking.FetchItems()
