@@ -68,15 +68,15 @@ type children struct {
 }
 
 type ItemEditor struct {
-	appCore       *appCore.AppCore
-	client        *httpProcessor.Client
-	document      js.Value
-	events        *eventProcessor.EventProcessor
-	baseURL       string
+	appCore        *appCore.AppCore
+	client         *httpProcessor.Client
+	document       js.Value
+	events         *eventProcessor.EventProcessor
+	baseURL        string
 	onItemsChanged func()
-	CurrentRecord TableData
-	ItemState     ItemState
-	Records       []TableData
+	CurrentRecord  TableData
+	ItemState      ItemState
+	Records        []TableData
 	//ItemList       []Item
 	UiComponents UI
 	Div          js.Value
