@@ -354,26 +354,7 @@ func (editor *ItemEditor) applyVoucherToBookingPrice(voucher VoucherData, hasVou
 		return
 	}
 
-	if voucher.FixedCost != nil {
-		fixedCost := decimal.NewFromFloat(*voucher.FixedCost)
-		if fixedCost.IsNegative() {
-			fixedCost = decimal.Zero
-		}
-		editor.UiComponents.BookingPrice.Set("value", fixedCost.RoundBank(2).StringFixed(2))
-		return
-	}
-
-	discountPercent := decimal.Zero
-	if voucher.DiscountPercent != nil {
-		discountPercent = decimal.NewFromFloat(*voucher.DiscountPercent)
-	}
-
-	multiplier := decimal.NewFromInt(1).Sub(discountPercent.Div(decimal.NewFromInt(100)))
-	if multiplier.IsNegative() {
-		multiplier = decimal.Zero
-	}
-
-	calculatedPrice := basePrice.Mul(multiplier).RoundBank(2)
+	calculatedPrice := viewHelpers.CalculateVoucherBookingPrice(basePrice, voucher.DiscountPercent, voucher.FixedCost)
 	editor.UiComponents.BookingPrice.Set("value", calculatedPrice.StringFixed(2))
 }
 
@@ -643,8 +624,7 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "updateStatus", DebugTag: debugTag, Data: newState})
-	editor.ItemState = newState
+	viewHelpers.SetItemState(editor.events, &editor.ItemState, newState, debugTag)
 }
 
 // Event handlers and event data types
