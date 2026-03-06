@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
@@ -15,15 +14,6 @@ import (
 )
 
 const debugTag = "handlerTrip."
-
-func canCreateTrip(role string) bool {
-	switch strings.ToLower(strings.TrimSpace(role)) {
-	case "trustedusers", "trusted_users", "trusted-user", "trusted user", "trusted", "admin", "sysadmin":
-		return true
-	default:
-		return false
-	}
-}
 
 const (
 	qryGetAll = `SELECT att.*, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
@@ -41,8 +31,8 @@ const (
 					LEFT JOIN public.et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`
 	qryCreate = `INSERT INTO at_trips (owner_id, trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
-	qryUpdate = `UPDATE at_trips SET (trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) = ($4, $5, $6, $7, $8, $9, $10, $11, $12) WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
-	qryDelete = `DELETE FROM at_trips WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
+	qryUpdate = `UPDATE at_trips SET (trip_name, location, difficulty_level_id, from_date, to_date, max_participants, trip_status_id, trip_type_id, trip_cost_group_id) = ($4, $5, $6, $7, $8, $9, $10, $11, $12) WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
+	qryDelete = `DELETE FROM at_trips WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
 )
 
 type Handler struct {
@@ -77,10 +67,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	if !canCreateTrip(session.Role) {
-		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
@@ -125,7 +111,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf(debugTag + "Update processing the update")
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
+	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AccessScope, record.Name, record.Location, record.DifficultyID, record.FromDate, record.ToDate, record.MaxParticipants, record.TripStatusID, record.TripTypeID, record.TripCostGroupID)
 }
 
 // Delete: removes a record identified by id
@@ -136,7 +122,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AccessScope)
 }
 
 func (h *Handler) RecordValidation(record models.Trip) error {

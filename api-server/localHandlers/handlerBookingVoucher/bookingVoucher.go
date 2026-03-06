@@ -93,7 +93,7 @@ func validateVoucher(v *models.BookingVoucher) error {
 
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session != nil && (session.Role == "admin" || session.Role == "sysadmin") {
+	if dbStandardTemplate.CanAccessAny(session) {
 		dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingVoucher{}, qryGetAllAdmin)
 		return
 	}

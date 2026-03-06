@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
@@ -172,6 +173,15 @@ func GetSession(w http.ResponseWriter, r *http.Request, SessionIDKey appCore.Con
 		return nil
 	}
 	return session
+}
+
+// CanAccessAny reports whether the current request is authorized with any-scope access.
+func CanAccessAny(session *models.Session) bool {
+	if session == nil {
+		return false
+	}
+	scope := strings.ToLower(strings.TrimSpace(session.AccessScope))
+	return scope == "any"
 }
 
 func ReturnError(w http.ResponseWriter, r *http.Request, err error) {

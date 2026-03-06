@@ -10,8 +10,10 @@ import (
 
 // MenuItem contains data for a menu item
 type MenuItem struct {
-	UserID   int    `json:"user_id"`
-	Resource string `json:"resource"`
+	UserID      int    `json:"user_id"`
+	Resource    string `json:"resource"`
+	AccessLevel string `json:"access_level"`
+	AccessScope string `json:"access_scope"`
 }
 
 // MenuItem contains a list of valid menu items to display
@@ -93,8 +95,6 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 
 	v.resetMenu(event)
 
-	userRole := effectiveMenuUserRole(menuData.MenuUser)
-
 	allowedResources := map[string]bool{}
 	for _, o := range menuData.MenuList {
 		allowedResources[strings.ToLower(o.Resource)] = true
@@ -105,10 +105,7 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 		if item.defaultDisplay {
 			continue
 		}
-		if !canDisplayByRole(userRole, item.requiredRole) {
-			continue
-		}
-		if shouldFilterByResource(userRole) && !allowedResources[key] {
+		if !allowedResources[key] {
 			continue
 		}
 		item.button.Get("style").Call("removeProperty", "display")
@@ -129,31 +126,4 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 		section.header.Set("aria-expanded", "false")
 		section.header.Get("classList").Call("remove", "btn-active")
 	}
-}
-
-func canDisplayByRole(userRole, requiredRole string) bool {
-	roleRank := map[string]int{
-		roleUser:         1,
-		roleTrustedUsers: 2,
-		roleAdmin:        3,
-		roleSysadmin:     4,
-	}
-	userValue, ok := roleRank[normalizeRole(userRole)]
-	if !ok {
-		return false
-	}
-	requiredValue, ok := roleRank[normalizeRole(requiredRole)]
-	if !ok {
-		return false
-	}
-	return userValue >= requiredValue
-}
-
-func effectiveMenuUserRole(menuUser appCore.User) string {
-	return normalizeRole(menuUser.Role)
-}
-
-func shouldFilterByResource(userRole string) bool {
-	normalized := normalizeRole(userRole)
-	return normalized == roleUser
 }

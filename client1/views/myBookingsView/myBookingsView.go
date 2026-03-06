@@ -277,7 +277,7 @@ func (editor *ItemEditor) populateEditForm() {
 		editor.applyVoucherToBookingPrice(editor.getVoucherFromUI())
 	}
 
-	if editor.appCore.IsAdminOrHigher() {
+	if editor.appCore.CanManageAny("bookings") {
 		localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
 		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
@@ -569,7 +569,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	}
 	editor.CurrentRecord.BookingPrice.UnmarshalText([]byte(editor.UiComponents.BookingPrice.Get("value").String()))
 
-	if editor.appCore.IsAdminOrHigher() {
+	if editor.appCore.CanManageAny("bookings") {
 		editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BookingDate.Get("value").String())
 		if err != nil {
 			log.Println("Error parsing value:", err)
@@ -780,7 +780,7 @@ func (editor *ItemEditor) populateItemList() {
 		editor.RowSummaryDiv[record.ID] = summaryDiv
 		itemDiv.Call("appendChild", summaryDiv)
 
-		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.IsAdminOrHigher() {
+		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookings") {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
@@ -818,7 +818,7 @@ func (editor *ItemEditor) populateItemList() {
 		}))
 		itemDiv.Call("appendChild", bookingPayment)
 
-		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.IsAdminOrHigher() {
+		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookings") {
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")

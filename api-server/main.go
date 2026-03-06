@@ -3,7 +3,7 @@ package main
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/handlerAccessLevel"
-	"api-server/v2/localHandlers/handlerAccessType"
+	"api-server/v2/localHandlers/handlerAccessScope"
 	"api-server/v2/localHandlers/handlerAuth"
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
@@ -83,13 +83,6 @@ func main() {
 	protected.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "protected") // Then logging
 	})
-	adminProtected := protected.PathPrefix("").Subrouter()
-	adminProtected.Use(auth.RequireRole("admin"))
-	trustedProtected := protected.PathPrefix("").Subrouter()
-	trustedProtected.Use(auth.RequireRole("trustedusers"))
-	sysadminProtected := protected.PathPrefix("").Subrouter()
-	sysadminProtected.Use(auth.RequireRole("sysadmin"))
-	_ = trustedProtected // Reserved for future trusted-only endpoints.
 
 	// Auth handlers - Protected routes (requires authentication)
 	auth.RegisterRoutesProtected(protected, "/auth") // Protected auth endpoints (menuUser, logout, etc.)
@@ -104,29 +97,29 @@ func main() {
 	handlerBookingVoucher.New(app).RegisterRoutesProtected(protected, "/bookingVouchers")
 	handlerTrip.New(app).RegisterRoutes(protected, "/trips") // Trip routes
 
-	// Add route groups (admin and above)
-	handlerSeasons.New(app).RegisterRoutes(adminProtected, "/seasons")                     // Seasons routes
-	handlerUser.New(app).RegisterRoutes(adminProtected, "/users")                          // User routes
-	handlerUserAgeGroups.New(app).RegisterRoutes(adminProtected, "/userAgeGroups")         // UserAgeGroup routes
-	handlerUserPayments.New(app).RegisterRoutes(adminProtected, "/userPayments")           // UserPayments routes
-	handlerMemberStatus.New(app).RegisterRoutes(adminProtected, "/userMemberStatus")       // UserMemberStatus routes
-	handlerUserAccountStatus.New(app).RegisterRoutes(adminProtected, "/userAccountStatus") // UserAccountStatus routes
-	handlerGroupBooking.New(app).RegisterRoutes(adminProtected, "/groupBooking")           // GroupBookings routes
-	handlerBookingStatus.New(app).RegisterRoutes(adminProtected, "/bookingStatus")         // BookingStatus routes
-	handlerBookingVoucher.New(app).RegisterRoutesAdmin(adminProtected, "/bookingVouchers")
-	handlerTripType.New(app).RegisterRoutes(adminProtected, "/tripType")             // TripType routes
-	handlerTripStatus.New(app).RegisterRoutes(adminProtected, "/tripStatus")         // TripStatus routes
-	handlerTripDifficulty.New(app).RegisterRoutes(adminProtected, "/tripDifficulty") // TripDifficulty routes
-	handlerTripCost.New(app).RegisterRoutes(adminProtected, "/tripCosts")            // TripCost routes
-	handlerTripCostGroup.New(app).RegisterRoutes(adminProtected, "/tripCostGroups")  // TripCostGroup routes
-	handlerResource.New(app).RegisterRoutes(adminProtected, "/securityResource")     // Resource routes
+	// Add route groups previously role-gated; capability checks are enforced by RequireSessionAuth.
+	handlerSeasons.New(app).RegisterRoutes(protected, "/seasons")                     // Seasons routes
+	handlerUser.New(app).RegisterRoutes(protected, "/users")                          // User routes
+	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups")         // UserAgeGroup routes
+	handlerUserPayments.New(app).RegisterRoutes(protected, "/userPayments")           // UserPayments routes
+	handlerMemberStatus.New(app).RegisterRoutes(protected, "/userMemberStatus")       // UserMemberStatus routes
+	handlerUserAccountStatus.New(app).RegisterRoutes(protected, "/userAccountStatus") // UserAccountStatus routes
+	handlerGroupBooking.New(app).RegisterRoutes(protected, "/groupBooking")           // GroupBookings routes
+	handlerBookingStatus.New(app).RegisterRoutes(protected, "/bookingStatus")         // BookingStatus routes
+	handlerBookingVoucher.New(app).RegisterRoutesAdmin(protected, "/bookingVouchers")
+	handlerTripType.New(app).RegisterRoutes(protected, "/tripType")             // TripType routes
+	handlerTripStatus.New(app).RegisterRoutes(protected, "/tripStatus")         // TripStatus routes
+	handlerTripDifficulty.New(app).RegisterRoutes(protected, "/tripDifficulty") // TripDifficulty routes
+	handlerTripCost.New(app).RegisterRoutes(protected, "/tripCosts")            // TripCost routes
+	handlerTripCostGroup.New(app).RegisterRoutes(protected, "/tripCostGroups")  // TripCostGroup routes
+	handlerResource.New(app).RegisterRoutes(protected, "/securityResource")     // Resource routes
 
-	// Add route groups (sysadmin only)
-	handlerSecurityGroup.New(app).RegisterRoutes(sysadminProtected, "/securityGroup")                 // SecurityGroup routes
-	handlerSecurityGroupResource.New(app).RegisterRoutes(sysadminProtected, "/securityGroupResource") // SecurityGroupResource routes
-	handlerSecurityUserGroup.New(app).RegisterRoutes(sysadminProtected, "/securityUserGroup")         // SecurityUserGroup routes
-	handlerAccessLevel.New(app).RegisterRoutes(sysadminProtected, "/securityAccessLevel")             // AccessLevel routes
-	handlerAccessType.New(app).RegisterRoutes(sysadminProtected, "/securityAccessType")               // AccessType routes
+	handlerSecurityGroup.New(app).RegisterRoutes(protected, "/securityGroup")                 // SecurityGroup routes
+	handlerSecurityGroupResource.New(app).RegisterRoutes(protected, "/securityGroupResource") // SecurityGroupResource routes
+	handlerSecurityUserGroup.New(app).RegisterRoutes(protected, "/securityUserGroup")         // SecurityUserGroup routes
+	handlerAccessLevel.New(app).RegisterRoutes(protected, "/securityAccessLevel")             // AccessLevel routes
+	handlerAccessScope.New(app).RegisterRoutes(protected, "/securityAccessScope")             // AccessScope routes
+	handlerAccessScope.New(app).RegisterRoutes(protected, "/securityAccessType")              // Legacy alias for AccessScope routes
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"

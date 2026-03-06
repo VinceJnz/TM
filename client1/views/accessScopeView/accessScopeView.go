@@ -1,4 +1,4 @@
-package accessTypeView
+package accessScopeView
 
 import (
 	"client1/v2/app/appCore"
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const debugTag = "accessTypeView."
+const debugTag = "accessScopeView."
 
 type ItemState int
 
@@ -41,7 +41,7 @@ const (
 )
 
 // ********************* This needs to be changed for each api **********************
-const ApiURL = "/securityAccessType"
+const ApiURL = "/securityAccessScope"
 
 // ********************* This needs to be changed for each api **********************
 type TableData struct {

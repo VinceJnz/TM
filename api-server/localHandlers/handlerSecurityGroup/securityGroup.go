@@ -14,10 +14,11 @@ import (
 const debugTag = "handlerSecurityGroup."
 
 const (
-	qryGetAll = `SELECT id, name, description, role FROM st_group`
-	qryGet    = `SELECT id, name, description, role FROM st_group WHERE id = $1`
-	qryCreate = `INSERT INTO st_group (name, description, role) VALUES ($1, $2, $3) RETURNING id`
-	qryUpdate = `UPDATE st_group SET name = $1, description = $2, role = $3 WHERE id = $4`
+	qryGetAll = `SELECT id, name, description FROM st_group`
+	qryGet    = `SELECT id, name, description FROM st_group WHERE id = $1`
+	qryCreate = `INSERT INTO st_group (name, description) VALUES ($1, $2) RETURNING id`
+	qryUpdate = `UPDATE st_group SET name = $1, description = $2 WHERE id = $3`
+
 	qryDelete = `DELETE FROM st_group WHERE id = $1`
 )
 
@@ -42,9 +43,9 @@ func New(appConf *appCore.Config) *Handler {
 		NewRecord:   func() *models.Group { return &models.Group{} },
 		IDDest:      func(record *models.Group) any { return &record.ID },
 		SetID:       func(record *models.Group, id int) { record.ID = id },
-		CreateArgs:  func(record *models.Group) []any { return []any{record.Name, record.Description, record.Role} },
+		CreateArgs:  func(record *models.Group) []any { return []any{record.Name, record.Description} },
 		UpdateArgs: func(id int, record *models.Group) []any {
-			return []any{record.Name, record.Description, record.Role, id}
+			return []any{record.Name, record.Description, id}
 		},
 	})
 	return h

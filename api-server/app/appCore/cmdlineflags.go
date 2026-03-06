@@ -22,9 +22,9 @@ func (s *settings) Flags() error {
 		apiPrefix    = flags.String("apiprefix", "/api/v1", "The api prefix, defaults to /api/v1")
 		serverCert   = flags.String("servercert", "", "Required, the file name of the server's certificate file")
 		serverKey    = flags.String("serverkey", "", "Required, the file name of the server's private key file")
-		serverCaCert = flags.String("servercacert", "", "Required, the certificate file name of the CA that signed the client’s certificate")
-		clientCaCert = flags.String("clientcacert", "", "Required, the certificate file name of the CA that signed the client’s certificate")
-		certOpt      = flags.Int("certopt", int(tls.NoClientCert), "Optional, authorization types for authorizing/validating a client’s certificate")
+		serverCaCert = flags.String("servercacert", "", "Required, the certificate file name of the CA that signed the clientâ€™s certificate")
+		clientCaCert = flags.String("clientcacert", "", "Required, the certificate file name of the CA that signed the clientâ€™s certificate")
+		certOpt      = flags.Int("certopt", int(tls.NoClientCert), "Optional, authorization types for authorizing/validating a clientâ€™s certificate")
 		emailToken   = flags.String("emailtoken", "./certs/gmail/client_token.json", "Optional, the token file name for email server access")
 		emailSecret  = flags.String("emailsecret", "./certs/gmail/client_secret.json", "Optional, the secret file for configuration of email access")
 		emailAddr    = flags.String("emailaddr", "", "Required, the email address used by the server for sending emails")
@@ -50,9 +50,9 @@ Options:
   -porthttps    Optional, the https port for the server to listen on, defaults to 8185.
   -srvcert      Required, the name the server's certificate file.
   -srvkey       Required, the name the server's key certificate file.
-  -servercacert Required, the certificate file name of the CA that signed the client’s certificate.
-  -clientcacert Required, the certificate file name of the CA that signed the client’s certificate.
-  -certopt      Optional, authorization types for authorizing/validating a client’s certificate.
+  -servercacert Required, the certificate file name of the CA that signed the clientâ€™s certificate.
+  -clientcacert Required, the certificate file name of the CA that signed the clientâ€™s certificate.
+  -certopt      Optional, authorization types for authorizing/validating a clientâ€™s certificate.
                     0=NoClientCert, 1=RequireAnyClientCert, 2=RequireAndVerifyClientCert,
                     3=VerifyClientCertIfGiven, 4=RequireAndVerifyClientCert'.
   -emailtoken   Required, the path and name the json token file for email access.

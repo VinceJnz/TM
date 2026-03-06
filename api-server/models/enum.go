@@ -14,13 +14,16 @@ type AccessLevel struct { // -- Example: 'none', 'get', 'post', 'put', 'delete' 
 	Modified    time.Time   `json:"modified" db:"modified"`
 }
 
-type AccessType struct { // -- Example: 'admin', 'owner', 'user'
+type AccessScope struct { // -- Example scope: 'any', 'own'
 	ID          int         `json:"id" db:"id"`
 	Name        string      `json:"name" db:"name"`
 	Description zero.String `json:"description" db:"description"`
 	Created     time.Time   `json:"created" db:"created"`
 	Modified    time.Time   `json:"modified" db:"modified"`
 }
+
+// Deprecated: AccessType is a legacy compatibility alias. Prefer AccessScope.
+type AccessType = AccessScope
 
 type Resource struct { //-- Example: 'trips', 'users', 'bookings', 'member_status' (the url to to access the resource)
 	ID          int         `json:"id" db:"id"`
@@ -32,9 +35,10 @@ type Resource struct { //-- Example: 'trips', 'users', 'bookings', 'member_statu
 
 // Resource is the enumeration of the url name of the Resource being accessed
 type AccessCheck struct {
-	AccessTypeID int
+	AccessScopeID int
+	AccessScope   string
 	//AdminFlag    bool
-	Role string
+	Group string
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed
@@ -42,12 +46,12 @@ type MenuUser struct {
 	UserID int    `json:"user_id" db:"user_id"`
 	Name   string `json:"name" db:"name"`
 	Group  string `json:"group" db:"group"`
-	Role   string `json:"role" db:"role"`
 }
 
 // Resource is the enumeration of the url name of the Resource being accessed
 type MenuItem struct {
-	UserID int    `json:"user_id" db:"user_id"`
-	Name   string `json:"resource" db:"resource"`
-	Role   string `json:"role" db:"role"`
+	UserID      int    `json:"user_id" db:"user_id"`
+	Name        string `json:"resource" db:"resource"`
+	AccessLevel string `json:"access_level" db:"access_level"`
+	AccessScope string `json:"access_scope" db:"access_scope"`
 }

@@ -5,7 +5,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/accessLevelView"
-	"client1/v2/views/accessTypeView"
+	"client1/v2/views/accessScopeView"
 	"client1/v2/views/resourceView"
 	"client1/v2/views/securityGroupView"
 	"client1/v2/views/utils/viewHelpers"
@@ -56,8 +56,8 @@ type TableData struct {
 	Resource      string    `json:"resource"`
 	AccessLevelID int       `json:"access_level_id"`
 	AccessLevel   string    `json:"access_level"`
-	AccessTypeID  int       `json:"access_type_id"`
-	AccessType    string    `json:"access_type"`
+	AccessScopeID int       `json:"access_scope_id"`
+	AccessScope   string    `json:"access_scope"`
 	Created       time.Time `json:"created"`
 	Modified      time.Time `json:"modified"`
 }
@@ -67,7 +67,7 @@ type UI struct {
 	GroupID       js.Value
 	ResourceID    js.Value
 	AccessLevelID js.Value
-	AccessTypeID  js.Value
+	AccessScopeID js.Value
 }
 
 type children struct {
@@ -75,7 +75,7 @@ type children struct {
 	Group       *securityGroupView.ItemEditor
 	Resource    *resourceView.ItemEditor
 	AccessLevel *accessLevelView.ItemEditor
-	AccessType  *accessTypeView.ItemEditor
+	AccessScope *accessScopeView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -145,8 +145,8 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.Children.AccessLevel = accessLevelView.New(editor.document, eventProcessor, editor.appCore)
 	//editor.Children.AccessLevel.FetchItems()
 
-	editor.Children.AccessType = accessTypeView.New(editor.document, eventProcessor, editor.appCore)
-	//editor.Children.AccessType.FetchItems()
+	editor.Children.AccessScope = accessScopeView.New(editor.document, eventProcessor, editor.appCore)
+	//editor.Children.AccessScope.FetchItems()
 
 	return editor
 }
@@ -242,14 +242,14 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.AccessLevelID, editor.UiComponents.AccessLevelID = editor.Children.AccessLevel.NewDropdown(editor.CurrentRecord.AccessLevelID, "Access Level", "itemAccessLevel")
 	//editor.UiComponents.AccessLevelID.Call("setAttribute", "required", "true")
 
-	localObjs.AccessTypeID, editor.UiComponents.AccessTypeID = editor.Children.AccessType.NewDropdown(editor.CurrentRecord.AccessTypeID, "Access Type", "itemAccessType")
-	//editor.UiComponents.AccessTypeID.Call("setAttribute", "required", "true")
+	localObjs.AccessScopeID, editor.UiComponents.AccessScopeID = editor.Children.AccessScope.NewDropdown(editor.CurrentRecord.AccessScopeID, "Access Scope", "itemAccessScope")
+	//editor.UiComponents.AccessScopeID.Call("setAttribute", "required", "true")
 
 	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.GroupID)
 	form.Call("appendChild", localObjs.ResourceID)
 	form.Call("appendChild", localObjs.AccessLevelID)
-	form.Call("appendChild", localObjs.AccessTypeID)
+	form.Call("appendChild", localObjs.AccessScopeID)
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -309,9 +309,9 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing access_level_id:", err)
 		return nil
 	}
-	editor.CurrentRecord.AccessTypeID, err = strconv.Atoi(editor.UiComponents.AccessTypeID.Get("value").String())
+	editor.CurrentRecord.AccessScopeID, err = strconv.Atoi(editor.UiComponents.AccessScopeID.Get("value").String())
 	if err != nil {
-		log.Println("Error parsing access_type_id:", err)
+		log.Println("Error parsing access_scope_id:", err)
 		return nil
 	}
 
@@ -364,7 +364,7 @@ func (editor *ItemEditor) FetchItems() {
 		editor.Children.Group.FetchItems()
 		editor.Children.Resource.FetchItems()
 		editor.Children.AccessLevel.FetchItems()
-		editor.Children.AccessType.FetchItems()
+		editor.Children.AccessScope.FetchItems()
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
@@ -404,7 +404,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// ********************* This needs to be changed for each api **********************
-		itemDiv.Set("innerHTML", record.Group+" ("+record.Resource+", "+record.AccessLevel+", "+record.AccessType+")")
+		itemDiv.Set("innerHTML", record.Group+" ("+record.Resource+", "+record.AccessLevel+", "+record.AccessScope+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

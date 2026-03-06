@@ -48,7 +48,6 @@ func (v *View) resetMenu2() {
 func (v *View) updateMenu2(menuData UpdateMenu) {
 	v.resetMenu2()
 
-	userRole := effectiveMenuUserRole(menuData.MenuUser)
 	allowedResources := map[string]bool{}
 	for _, o := range menuData.MenuList {
 		allowedResources[strings.ToLower(o.Resource)] = true
@@ -59,10 +58,7 @@ func (v *View) updateMenu2(menuData UpdateMenu) {
 		if item.defaultDisplay {
 			continue
 		}
-		if !canDisplayByRole(userRole, item.requiredRole) {
-			continue
-		}
-		if shouldFilterByResource(userRole) && !allowedResources[key] {
+		if !allowedResources[key] {
 			continue
 		}
 		item.button.Get("style").Call("removeProperty", "display")

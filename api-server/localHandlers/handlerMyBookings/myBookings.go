@@ -61,8 +61,8 @@ const (
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
 					SET (notes, from_date, to_date, booking_status_id, booking_price) = ($4, $5, $6, $7, $8)
-					WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
-	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
+					WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
+	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
 )
 
 type Handler struct {
@@ -154,10 +154,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.Role == "admin" || session.Role == "sysadmin" {
+	if dbStandardTemplate.CanAccessAny(session) {
 		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
 	} else {
-		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AccessScope, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
 	}
 }
 
@@ -169,7 +169,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AccessScope)
 }
 
 func (h *Handler) RecordValidation(record models.Booking) error {

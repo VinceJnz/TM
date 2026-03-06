@@ -16,26 +16,23 @@ const debugTag = "dbAuthTemplate."
 // sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
 // NOTE: If the group (stg) admin_flag is set then access is given regardless of the resource or action settings.
 const (
-	sqlUserCheckAccess = `SELECT etat.ID, stg.Role
+	sqlUserCheckAccess = `SELECT etat.ID, etat.name AS access_scope, stg.name AS "group"
 	FROM st_users stu
-		JOIN st_user_group stug ON stug.User_ID=stu.ID
-		JOIN st_group stg ON stg.ID=stug.Group_ID
-		JOIN st_group_resource stgr ON stgr.Group_ID=stg.ID
-		JOIN et_resource etr ON etr.ID=stgr.Resource_ID
-		JOIN et_access_level etal ON etal.ID=stgr.Access_level_ID
-		JOIN et_access_type etat ON etat.ID=stgr.Access_type_ID
+		JOIN st_user_group stug ON stug.user_id=stu.id
+		JOIN st_group stg ON stg.id=stug.group_id
+		JOIN st_group_resource stgr ON stgr.group_id=stg.id
+		JOIN et_resource etr ON etr.id=stgr.resource_id
+		JOIN et_access_level etal ON etal.id=stgr.access_level_id
+		JOIN et_access_scope etat ON etat.id=stgr.access_scope_id
 	WHERE stu.ID=$1
 		AND stu.user_account_status_id=$4
-		AND ((UPPER(etr.Name)=UPPER($2)
-		AND UPPER(etal.Name)=UPPER($3))
-			 OR stg.Role IN ('admin', 'sysadmin'))
-	GROUP BY etat.ID, stg.Role
+		AND UPPER(etr.Name)=UPPER($2)
+		AND UPPER(etal.Name)=UPPER($3)
+	GROUP BY etat.ID, etat.name, stg.name
 	ORDER BY
-		CASE LOWER(stg.Role::text)
-			WHEN 'sysadmin' THEN 4
-			WHEN 'admin' THEN 3
-			WHEN 'trustedusers' THEN 2
-			WHEN 'user' THEN 1
+		CASE LOWER(etat.name::text)
+			WHEN 'any' THEN 2
+			WHEN 'own' THEN 1
 			ELSE 0
 		END DESC,
 		etat.ID DESC
@@ -56,7 +53,7 @@ func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, Act
 	var err error
 	var access models.AccessCheck
 
-	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessTypeID, &access.Role)
+	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessScopeID, &access.AccessScope, &access.Group)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
 		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"UserCheckAccess Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
 		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
@@ -246,7 +243,7 @@ const (
 	FROM st_users stu
 		JOIN st_user_group stug ON stug.user_id = stu.id
 		JOIN st_group stg ON stg.id = stug.group_id
-	WHERE LOWER(stg.role) = LOWER($1)
+		WHERE LOWER(stg.name) = LOWER($1)
 		AND stu.email IS NOT NULL
 		AND stu.email <> ''
 	ORDER BY stu.email`
@@ -385,7 +382,7 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		Value:   GenerateSecureToken(),
 		Path:    "/",
 		Domain:  host,
-		Expires: expiration, // Session cookies — cookies without a Max-Age or Expires attribute – are deleted when the current session ends.
+		Expires: expiration, // Session cookies â€” cookies without a Max-Age or Expires attribute â€“ are deleted when the current session ends.
 		//RawExpires: "",
 		//MaxAge:     0,
 		Secure:   true,                 // A cookie with the Secure attribute is only sent to the server with an encrypted request over the HTTPS protocol

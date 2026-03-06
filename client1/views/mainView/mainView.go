@@ -5,7 +5,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/accessLevelView"
-	"client1/v2/views/accessTypeView"
+	"client1/v2/views/accessScopeView"
 	"client1/v2/views/account/basicAuthLoginView"
 	"client1/v2/views/account/logoutView"
 	"client1/v2/views/bookingStatusView"
@@ -36,11 +36,6 @@ import (
 const debugTag = "mainView."
 
 const (
-	roleUser         = "user"
-	roleTrustedUsers = "trustedusers"
-	roleAdmin        = "admin"
-	roleSysadmin     = "sysadmin"
-
 	menuSectionRoot     = "root"
 	menuSectionAdmin    = "admin"
 	menuSectionSysadmin = "sysadmin"
@@ -71,7 +66,6 @@ type TableData struct {
 type buttonElement struct {
 	button         js.Value
 	defaultDisplay bool
-	requiredRole   string
 	section        string
 }
 
@@ -211,45 +205,45 @@ func (v *View) Setup() {
 	}))
 
 	// Add the logout button to the navbar
-	v.AddViewItem("Logout", "", true, logoutView.New(v.document, v.events, v.appCore), true, roleUser, v.elements.topmenu, menuSectionRoot)
+	v.AddViewItem("Logout", "", true, logoutView.New(v.document, v.events, v.appCore), true, v.elements.topmenu, menuSectionRoot)
 
 	// Add all the menu options to the sidemenu
-	v.AddViewItem("&times;", "", false, nil, true, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("&times;", "", false, nil, true, v.elements.sidemenu, menuSectionRoot)
 	//v.AddViewItem("oAuth Register", "", true, oAuthRegistrationView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	//v.AddViewItem("oAuth Register2", "", true, oAuthRegistrationProcess.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
 	//v.AddViewItem("oAuth Login", "", true, oAuthLoginView.New(v.document, v.events, v.appCore), true, false, v.elements.sidemenu)
-	v.AddViewItem("Login / Register", "", true, basicAuthLoginView.New(v.document, v.events, v.appCore), true, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Login / Register", "", true, basicAuthLoginView.New(v.document, v.events, v.appCore), true, v.elements.sidemenu, menuSectionRoot)
 	homeContent := contentView.New(v.document, v.appCore, "home", "Home")
 	aboutContent := contentView.New(v.document, v.appCore, "about", "About")
 	contactContent := contentView.New(v.document, v.appCore, "contact", "Contact")
-	v.AddViewItem("Home", "", true, homeContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("About", "", true, aboutContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("Contact", "", true, contactContent, true, roleUser, v.elements.sidemenu, menuSectionRoot)
-	//v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
-	v.AddViewItem("Trip Participant Status", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, roleUser, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Home", "", true, homeContent, true, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("About", "", true, aboutContent, true, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Contact", "", true, contactContent, true, v.elements.sidemenu, menuSectionRoot)
+	//v.AddViewItem("Bookings", bookingView.ApiURL, true, bookingView.New(v.document, v.events, v.appCore), false, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("My Bookings", myBookingsView.ApiURL, true, myBookingsView.New(v.document, v.events, v.appCore), false, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Trips", tripView.ApiURL, true, tripView.New(v.document, v.events, v.appCore), false, v.elements.sidemenu, menuSectionRoot)
+	v.AddViewItem("Trip Participant Status", tripParticipantStatusReport.ApiURL, true, tripParticipantStatusReport.New(v.document, v.events, v.appCore), false, v.elements.sidemenu, menuSectionRoot)
 
 	adminMenu := v.AddMenuSection(menuSectionAdminCaption, menuSectionAdmin, false, v.elements.sidemenu)
 	sysadminMenu := v.AddMenuSection(menuSectionSysadminCaption, menuSectionSysadmin, false, v.elements.sidemenu)
 
-	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Booking Vouchers", bookingVoucherView.ApiURL, true, bookingVoucherView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Trip Status", tripStatusView.ApiURL, true, tripStatusView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Trip Type", tripTypeView.ApiURL, true, tripTypeView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Season", seasonView.ApiURL, true, seasonView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("User Member Status", userMemberStatusView.ApiURL, true, userMemberStatusView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.appCore), false, roleAdmin, adminMenu, menuSectionAdmin)
-	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
-	v.AddViewItem("Access Type", accessTypeView.ApiURL, true, accessTypeView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
-	v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
-	v.AddViewItem("Security Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
-	v.AddViewItem("Security Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, roleSysadmin, sysadminMenu, menuSectionSysadmin)
+	v.AddViewItem("Booking Status", bookingStatusView.ApiURL, true, bookingStatusView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Booking Vouchers", bookingVoucherView.ApiURL, true, bookingVoucherView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Group Booking", groupBookingView.ApiURL, true, groupBookingView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Trip Cost Group", tripCostGroupView.ApiURL, true, tripCostGroupView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Trip Difficulty", tripDifficultyView.ApiURL, true, tripDifficultyView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Trip Status", tripStatusView.ApiURL, true, tripStatusView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Trip Type", tripTypeView.ApiURL, true, tripTypeView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Season", seasonView.ApiURL, true, seasonView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("User", userView.ApiURL, true, userView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("User Age Group", userAgeGroupView.ApiURL, true, userAgeGroupView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("User Member Status", userMemberStatusView.ApiURL, true, userMemberStatusView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Resource", resourceView.ApiURL, true, resourceView.New(v.document, v.events, v.appCore), false, adminMenu, menuSectionAdmin)
+	v.AddViewItem("Access Level", accessLevelView.ApiURL, true, accessLevelView.New(v.document, v.events, v.appCore), false, sysadminMenu, menuSectionSysadmin)
+	v.AddViewItem("Access Scope", accessScopeView.ApiURL, true, accessScopeView.New(v.document, v.events, v.appCore), false, sysadminMenu, menuSectionSysadmin)
+	v.AddViewItem("User Group", securityUserGroupView.ApiURL, true, securityUserGroupView.New(v.document, v.events, v.appCore), false, sysadminMenu, menuSectionSysadmin)
+	v.AddViewItem("Security Group", securityGroupView.ApiURL, true, securityGroupView.New(v.document, v.events, v.appCore), false, sysadminMenu, menuSectionSysadmin)
+	v.AddViewItem("Security Group Resource", securityGroupResourceView.ApiURL, true, securityGroupResourceView.New(v.document, v.events, v.appCore), false, sysadminMenu, menuSectionSysadmin)
 	//v.AddViewItem("User Account Status", userAccountStatusView.ApiURL, true, userAccountStatusView.New(v.document, v.events, v.client), false, true, v.elements.sidemenu)
 	log.Printf("%v %v", debugTag+"Setup()", "Menu items added")
 
@@ -305,7 +299,7 @@ func (v *View) ResetViewItems() {
 	}
 }
 
-func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editorElement, defaultDisplay bool, requiredRole string, menu js.Value, section string) {
+func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editorElement, defaultDisplay bool, menu js.Value, section string) {
 	var buttonName string
 	v.childElements[title] = element // Store new element in map
 
@@ -335,7 +329,7 @@ func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editor
 	}
 	v.menuTitles[title] = fetchBtn
 	v.menuSectionsByTitle[title] = section
-	v.menuButtons[buttonName] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay, requiredRole: normalizeRole(requiredRole), section: section}
+	v.menuButtons[buttonName] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay, section: section}
 	menu.Call("appendChild", fetchBtn) // Append the button to the side menu
 	if element != nil {
 		v.elements.mainContent.Call("appendChild", element.GetDiv()) // Append the new element div to the main content
@@ -402,20 +396,6 @@ func (v *View) setActiveMenuTitle(title string) {
 	val.content.Get("style").Call("removeProperty", "display")
 	val.header.Set("aria-expanded", "true")
 	val.header.Get("classList").Call("add", "btn-active")
-}
-
-func normalizeRole(role string) string {
-	normalized := strings.ToLower(strings.TrimSpace(role))
-	switch normalized {
-	case roleSysadmin:
-		return roleSysadmin
-	case roleAdmin:
-		return roleAdmin
-	case roleTrustedUsers, "trusted_users", "trusted-user", "trusted user", "trusted":
-		return roleTrustedUsers
-	default:
-		return roleUser
-	}
 }
 
 func (v *View) setupRouting() {

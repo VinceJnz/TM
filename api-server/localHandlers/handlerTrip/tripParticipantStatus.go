@@ -32,7 +32,7 @@ const (
 				booking_order.person_id,
 				--stu.name as person_name,
 				CASE
-                    WHEN stu.user_account_hidden AND $1 IN ('admin', 'sysadmin') THEN 'name hidden'
+				WHEN stu.user_account_hidden AND LOWER($1)='any' THEN 'name hidden'
                     ELSE stu.name
                 END as person_name,
 				--booking_order.booking_status_id,
@@ -57,7 +57,7 @@ func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("%vGetParticipantStatus session=%+v\n", debugTag, session)
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.TripParticipantStatus{}, sqlGetParticipantStatus, session.Role)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.TripParticipantStatus{}, sqlGetParticipantStatus, session.AccessScope)
 	/*
 		records := []models.TripParticipantStatus{}
 		err := h.appConf.Db.Select(&records, sqlGetParticipantStatus)

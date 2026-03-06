@@ -58,6 +58,15 @@ func (editor *View) getMenuList() {
 			log.Printf("%v %v %v %v %+v", debugTag+"getMenuList()2 success: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		}
 		editor.CurrentRecord.MenuList = menuList // Save the salt to the current record
+		capabilities := make([]appCore.Capability, 0, len(menuList))
+		for _, item := range menuList {
+			capabilities = append(capabilities, appCore.Capability{
+				Resource:    item.Resource,
+				AccessLevel: item.AccessLevel,
+				AccessScope: item.AccessScope,
+			})
+		}
+		editor.appCore.SetCapabilities(capabilities)
 		editor.ItemState.UpdateStatus(viewHelpers.ItemStateNone, debugTag)
 		// Next process step
 		editor.menuComplete()

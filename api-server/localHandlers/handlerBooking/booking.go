@@ -30,7 +30,7 @@ const (
 									AND attc.member_status_id=stu.member_status_id
 									AND attc.user_age_group_id=stu.user_age_group_id
 			JOIN st_users stu2 ON stu2.id=atb.owner_id
-		WHERE atb.owner_id = $1 OR $2 IN ('admin', 'sysadmin')
+		WHERE atb.owner_id = $1 OR LOWER($2)= 'any'
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id;`
 
@@ -64,8 +64,8 @@ const (
 					WHERE id = $1`
 	qryUpdate = `UPDATE at_bookings 
 					SET (notes, from_date, to_date, booking_status_id, booking_price) = ($4, $5, $6, $7, $8)
-					WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
-	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR $3 IN ('admin', 'sysadmin'))`
+					WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
+	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
 )
 
 type Handler struct {
@@ -91,8 +91,8 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Returns owner bookings, or all bookings for admin/sysadmin roles.
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.Role)
+	// Returns owner bookings unless the current capability grants any-scope access.
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetAll, session.UserID, session.AccessScope)
 }
 
 // Get: retrieves and returns a single record identified by id
@@ -152,10 +152,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.Role == "admin" || session.Role == "sysadmin" {
+	if dbStandardTemplate.CanAccessAny(session) {
 		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
 	} else {
-		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.Role, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AccessScope, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
 	}
 }
 
@@ -167,7 +167,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.Role)
+	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AccessScope)
 }
 
 func (h *Handler) RecordValidation(record models.Booking) error {

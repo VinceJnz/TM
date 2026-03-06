@@ -14,19 +14,17 @@ const debugTag = "appCore."
 
 const ApiURL = "/auth"
 
-const (
-	RoleUser         = "user"
-	RoleTrustedUsers = "trustedusers"
-	RoleAdmin        = "admin"
-	RoleSysadmin     = "sysadmin"
-)
+type Capability struct {
+	Resource    string `json:"resource"`
+	AccessLevel string `json:"access_level"`
+	AccessScope string `json:"access_scope"`
+}
 
 // UserItem contains the basic user info for driving the display of the client menu
 type User struct {
 	UserID int    `json:"user_id"`
 	Name   string `json:"name"`
 	Group  string `json:"group"`
-	Role   string `json:"role"`
 }
 
 type AppCore struct {
@@ -34,6 +32,7 @@ type AppCore struct {
 	Events           *eventProcessor.EventProcessor
 	Document         js.Value
 	User             User
+	Capabilities     []Capability
 	unloadHandler    js.Func // holds the beforeunload handler so it can be removed/released
 	unloadHandlerSet bool    // true if unloadHandler is set
 }
@@ -89,53 +88,71 @@ func (ac *AppCore) SetUser(user User) {
 	ac.User = user
 }
 
-func NormalizeRole(role string) string {
-	normalized := strings.ToLower(strings.TrimSpace(role))
-	switch normalized {
-	case RoleSysadmin:
-		return RoleSysadmin
-	case RoleAdmin:
-		return RoleAdmin
-	case RoleTrustedUsers, "trusted_users", "trusted-user", "trusted user", "trusted":
-		return RoleTrustedUsers
-	default:
-		return RoleUser
-	}
+func normalizeCapabilityText(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
-func (ac *AppCore) CurrentRole() string {
+func (ac *AppCore) SetCapabilities(capabilities []Capability) {
 	if ac == nil {
-		return RoleUser
+		return
 	}
-	return NormalizeRole(ac.User.Role)
+	ac.Capabilities = capabilities
 }
 
-func (ac *AppCore) IsAtLeastRole(requiredRole string) bool {
-	roleRank := map[string]int{
-		RoleUser:         1,
-		RoleTrustedUsers: 2,
-		RoleAdmin:        3,
-		RoleSysadmin:     4,
-	}
-	userRoleRank, ok := roleRank[NormalizeRole(ac.CurrentRole())]
-	if !ok {
+func (ac *AppCore) HasAccess(resource string, levels []string, scopes []string) bool {
+	if ac == nil {
 		return false
 	}
-	requiredRoleRank, ok := roleRank[NormalizeRole(requiredRole)]
-	if !ok {
+
+	resource = normalizeCapabilityText(resource)
+	if resource == "" {
 		return false
 	}
-	return userRoleRank >= requiredRoleRank
+
+	allowedLevels := map[string]bool{}
+	if len(levels) > 0 {
+		for _, level := range levels {
+			allowedLevels[normalizeCapabilityText(level)] = true
+		}
+	}
+
+	allowedScopes := map[string]bool{}
+	if len(scopes) > 0 {
+		for _, scope := range scopes {
+			allowedScopes[normalizeCapabilityText(scope)] = true
+		}
+	}
+
+	for _, capability := range ac.Capabilities {
+		if normalizeCapabilityText(capability.Resource) != resource {
+			continue
+		}
+
+		level := normalizeCapabilityText(capability.AccessLevel)
+		scope := normalizeCapabilityText(capability.AccessScope)
+
+		if len(allowedLevels) > 0 && !allowedLevels[level] {
+			continue
+		}
+
+		if len(allowedScopes) > 0 && !allowedScopes[scope] {
+			continue
+		}
+
+		return true
+	}
+
+	return false
 }
 
-func (ac *AppCore) IsAdminOrHigher() bool {
-	return ac.IsAtLeastRole(RoleAdmin)
+func (ac *AppCore) CanManageAny(resource string) bool {
+	return ac.HasAccess(resource, []string{"put", "delete"}, []string{"any"})
 }
 
-func (ac *AppCore) IsTrustedUserOrHigher() bool {
-	return ac.IsAtLeastRole(RoleTrustedUsers)
+func (ac *AppCore) CanCreate(resource string) bool {
+	return ac.HasAccess(resource, []string{"post"}, []string{"own", "any"})
 }
 
-func (ac *AppCore) IsTrustedUser() bool {
-	return ac.CurrentRole() == RoleTrustedUsers
+func (ac *AppCore) CanManageOwn(resource string) bool {
+	return ac.HasAccess(resource, []string{"put", "delete"}, []string{"own", "any"})
 }

@@ -465,15 +465,15 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) canCreateTrips() bool {
-	return editor.appCore.IsTrustedUserOrHigher()
+	return editor.appCore.CanCreate("trips")
 }
 
 func (editor *ItemEditor) canManageTrip(record TableData) bool {
-	if editor.appCore.IsAdminOrHigher() {
+	if editor.appCore.CanManageAny("trips") {
 		return true
 	}
 
-	if editor.appCore.IsTrustedUser() {
+	if editor.appCore.CanManageOwn("trips") {
 		return record.OwnerID == editor.appCore.GetUser().UserID
 	}
 

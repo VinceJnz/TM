@@ -4,47 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"strings"
 
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
-
-	"github.com/gorilla/mux"
 )
-
-const (
-	roleUser         = "user"
-	roleTrustedUsers = "trustedusers"
-	roleAdmin        = "admin"
-	roleSysadmin     = "sysadmin"
-)
-
-func normalizeRole(role string) string {
-	normalized := strings.ToLower(strings.TrimSpace(role))
-	switch normalized {
-	case roleSysadmin:
-		return roleSysadmin
-	case roleAdmin:
-		return roleAdmin
-	case roleTrustedUsers, "trusted_users", "trusted-user", "trusted user", "trusted":
-		return roleTrustedUsers
-	default:
-		return roleUser
-	}
-}
-
-func roleRank(role string) int {
-	switch normalizeRole(role) {
-	case roleSysadmin:
-		return 4
-	case roleAdmin:
-		return 3
-	case roleTrustedUsers:
-		return 2
-	default:
-		return 1
-	}
-}
 
 // The function RequireSessionAuth needs to do the following:
 //1. Check to see the the users is already logged in (It already deos this)
@@ -98,10 +61,10 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 					ResourceID:     0,
 					AccessMethod:   resource.AccessMethod,
 					AccessMethodID: 0,
-					AccessType:     "",
-					AccessTypeID:   accessCheck.AccessTypeID,
+					AccessScope:    accessCheck.AccessScope,
+					AccessScopeID:  accessCheck.AccessScopeID,
 					//AdminFlag:      accessCheck.AdminFlag,
-					Role:  accessCheck.Role,
+					Group: accessCheck.Group,
 					Email: user.Email.String,
 				}
 				// 7) Give the user access
@@ -117,38 +80,4 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 			"message": "authentication required",
 		}, "RequireSessionAuth")
 	})
-}
-
-func (h *Handler) RequireRole(minRole string) mux.MiddlewareFunc {
-	required := roleRank(minRole)
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session)
-			if !ok || session == nil {
-				writeJSONResponse(w, http.StatusUnauthorized, map[string]string{
-					"error":   "unauthorized",
-					"message": "authentication required",
-				}, "RequireRole()")
-				return
-			}
-
-			if roleRank(session.Role) < required {
-				writeJSONResponse(w, http.StatusForbidden, map[string]string{
-					"error":   "forbidden",
-					"message": "insufficient role",
-				}, "RequireRole()")
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-func (h *Handler) RequireAdmin(next http.Handler) http.Handler {
-	return h.RequireRole(roleAdmin)(next)
-}
-
-func (h *Handler) RequireSysadmin(next http.Handler) http.Handler {
-	return h.RequireRole(roleSysadmin)(next)
 }

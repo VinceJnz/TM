@@ -317,7 +317,7 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
 	<div class="container">
-		<div class="success-icon">✓</div>
+		<div class="success-icon">âœ“</div>
 		<h1>Payment Completed Successfully</h1>
 		<p>Your booking has been confirmed.</p>
 		<p>You can now close this window.</p>
@@ -379,7 +379,7 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
 	<div class="container">
-		<div class="cancel-icon">✕</div>
+		<div class="cancel-icon">âœ•</div>
 		<h1>Payment Cancelled</h1>
 		<p>Your payment was not completed.</p>
 		<p>You can now close this window.</p>
