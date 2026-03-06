@@ -26,10 +26,7 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/bookings"
-
-// ********************* This needs to be changed for each api **********************
 
 type TableData struct {
 	//ID        int   `json:"id"`

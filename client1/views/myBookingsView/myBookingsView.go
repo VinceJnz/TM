@@ -41,12 +41,10 @@ type PaymentProcess struct {
 	eventCleanup  *eventCleanup
 }
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/myBookings"
 const ApiURL1 = "/bookings"
 const ApiURLVouchers = "/bookingVouchers"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID              int             `json:"id"`
 	OwnerID         int             `json:"owner_id"`
@@ -71,7 +69,6 @@ type TableData struct {
 	Modified        time.Time       `json:"modified"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	TripID          js.Value
 	Notes           js.Value
@@ -209,7 +206,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.CurrentRecord = TableData{}
 	editor.preselectNearestTripForAdd()
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
 	//editor.CurrentRecord.TripID = editor.ParentData.ID
 	//editor.CurrentRecord.FromDate = editor.ParentData.FromDate
 	//editor.CurrentRecord.ToDate = editor.ParentData.ToDate
@@ -228,7 +224,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	//var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
 	var localObjs UI
 
@@ -531,7 +526,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		//log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	// ********************* This needs to be changed for each api **********************
 	var err error
 
 	editor.syncSelectedTripRecord()

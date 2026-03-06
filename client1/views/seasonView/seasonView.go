@@ -40,10 +40,8 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/seasons"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID       int       `json:"id"`
 	Season   string    `json:"season"`
@@ -51,7 +49,6 @@ type TableData struct {
 	Modified time.Time `json:"modified"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	Season js.Value
 }
@@ -158,8 +155,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
-
 	editor.populateEditForm()
 	return nil
 }
@@ -205,13 +200,11 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
 	localObjs.Season, editor.UiComponents.Season = viewHelpers.StringEdit(editor.CurrentRecord.Season, editor.document, "Season", "text", "itemSeason")
 	editor.UiComponents.Season.Call("setAttribute", "required", "true")
 
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Season)
 
 	// Create submit button
@@ -253,7 +246,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	// ********************* This needs to be changed for each api **********************
 	//var err error
 	editor.CurrentRecord.Season = editor.UiComponents.Season.Get("value").String()
 
@@ -344,7 +336,6 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", record.Season)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 

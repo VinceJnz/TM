@@ -41,10 +41,8 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/bookingPeople"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID        int       `json:"id"`
 	OwnerID   int       `json:"owner_id"`
@@ -56,7 +54,6 @@ type TableData struct {
 	Modified  time.Time `json:"modified"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	PersonID js.Value
 	Notes    js.Value
@@ -179,7 +176,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{} // Clears current item
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.BookingID = editor.ParentID
 
 	editor.populateEditForm()
@@ -196,7 +192,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
 	localObjs.PersonID, editor.UiComponents.PersonID = editor.Children.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson")
@@ -205,7 +200,6 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
 	editor.UiComponents.Notes.Call("setAttribute", "required", "true")
 
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.PersonID)
 	form.Call("appendChild", localObjs.Notes)
 
@@ -248,7 +242,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	// ********************* This needs to be changed for each api **********************
 	var err error
 
 	editor.CurrentRecord.PersonID, err = strconv.Atoi(editor.UiComponents.PersonID.Get("value").String())
@@ -347,7 +340,6 @@ func (editor *ItemEditor) populateItemList() {
 		// Create and add child views to Item
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", record.Person+" (Notes: "+record.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 

@@ -39,10 +39,8 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/groupBooking"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID        int    `json:"id"`
 	GroupName string `json:"group_name"`
@@ -51,7 +49,6 @@ type TableData struct {
 	Modified  string `json:"modified"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	GroupName js.Value
 }
@@ -162,7 +159,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
 	// none
 
 	editor.populateEditForm()
@@ -179,14 +175,12 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
 	localObjs.GroupName, editor.UiComponents.GroupName = viewHelpers.StringEdit(editor.CurrentRecord.GroupName, editor.document, "Group Name", "text", "itemGroupName")
 	editor.UiComponents.GroupName.Set("min", 0)
 	editor.UiComponents.GroupName.Call("setAttribute", "required", "true")
 
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.GroupName)
 
 	// Create submit button
@@ -228,7 +222,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	// ********************* This needs to be changed for each api **********************
 	//var err error
 
 	editor.CurrentRecord.GroupName = editor.UiComponents.GroupName.Get("value").String()
@@ -320,7 +313,6 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", "Group Name: "+record.GroupName+" ")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 

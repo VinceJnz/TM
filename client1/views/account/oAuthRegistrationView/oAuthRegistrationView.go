@@ -40,11 +40,9 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/auth/oauth"
 const ApiURL2 = "/api/v1" + ApiURL
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	Name          string    `json:"name"`
 	Username      string    `json:"username"`
@@ -55,7 +53,6 @@ type TableData struct {
 	//Modified        time.Time `json:"modified"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	Name          js.Value
 	Username      js.Value
@@ -196,8 +193,6 @@ func (editor *ItemEditor) NewItemData() {
 	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
-
 	editor.populateEditForm()
 	//return nil
 }
@@ -216,7 +211,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.Elements.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
 	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
@@ -232,7 +226,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.AccountHidden.Set("defaultChecked", true)
 	editor.UiComponents.AccountHidden.Set("Checked", editor.CurrentRecord.AccountHidden)
 
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Address)
 	form.Call("appendChild", localObjs.BirthDate)
@@ -248,7 +241,6 @@ func (editor *ItemEditor) populateEditForm() {
 	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
 	form.Call("appendChild", buttonRow)
 
-	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item
 
 	// Append form to editor div
@@ -281,7 +273,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		//log.Println(debugTag + "SubmitItemEdit()1 prevent event default")
 	}
 
-	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	if len(editor.CurrentRecord.Username) < 3 || len(editor.CurrentRecord.Username) > 20 {
 		js.Global().Call("alert", "Username is required and must be 3-20 characters")

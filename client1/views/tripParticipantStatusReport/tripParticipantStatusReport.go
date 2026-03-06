@@ -40,10 +40,8 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/tripsReport"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	TripID          int       `json:"trip_id"`
 	TripName        string    `json:"trip_name"`
@@ -58,7 +56,6 @@ type TableData struct {
 	BookingStatus   string    `json:"booking_status"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	Status js.Value
 }

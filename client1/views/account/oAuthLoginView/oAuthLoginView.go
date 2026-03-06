@@ -38,12 +38,10 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 // const ApiURL = "/oAuth"
 // const ApiURL = "/api/v1/auth/google/"
 const ApiURL = "/api/v1/auth/oauth/"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	Username string `json:"username"`
 	Password string `json:"user_password"` //This will probably not be used (see: salt, verifier)

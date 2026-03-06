@@ -49,10 +49,8 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/users"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID       int    `json:"id"`
 	Name     string `json:"name"`
@@ -72,7 +70,6 @@ type TableData struct {
 	Modified        time.Time `json:"modified"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	Name        js.Value
 	Username    js.Value
@@ -183,8 +180,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
-
 	editor.populateEditForm()
 	return nil
 }
@@ -227,7 +222,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
 	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
@@ -246,7 +240,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.PasswordChk.Call("setAttribute", "required", "true")
 	editor.UiComponents.PasswordChk.Call("addEventListener", "change", js.FuncOf(editor.ValidatePasswords))
 
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Email)
@@ -297,7 +290,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	// ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
@@ -390,7 +382,6 @@ func (editor *ItemEditor) populateItemList() {
 
 			itemDiv := editor.document.Call("createElement", "div")
 			itemDiv.Set("id", debugTag+"itemDiv")
-			// ********************* This needs to be changed for each api **********************
 			itemDiv.Set("innerHTML", record.Name+" ("+record.Email+")")
 			itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 

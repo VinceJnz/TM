@@ -142,9 +142,7 @@ func (v *ItemEditor) populateEditForm(record ItemRecord) {
 	v.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(v.SubmitItemEdit, v.document, "editForm")
 
-	// Create ui objects and input fields with html validation as necessary // ********************* This needs to be changed for each api **********************
 	// Add an interface call that sets up all the fields and returns them in a slice (uiObjs)
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	for _, v := range record.CreateUiFields() {
 		form.Call("appendChild", v)
 	}
@@ -197,7 +195,6 @@ func (v *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 	}
 
 	// Add an interface call that processes the data items
-	// ********************* This needs to be changed for each api **********************
 	/*
 		var err error
 
@@ -298,7 +295,6 @@ func (v *ItemEditor) populateItemList() {
 
 		itemDiv := v.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
 		// Add call to interface that can be used for populating the itemDiv text
 		itemDiv.Set("innerHTML", record.ItemListText())
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")

@@ -38,15 +38,12 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/auth"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	Message string `json:"id"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	//Name     js.Value
 }
@@ -153,8 +150,6 @@ func (editor *ItemEditor) NewItemData() {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
-
 	editor.populateEditForm()
 	//return nil
 }
@@ -175,10 +170,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.elements.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	//var localObjs UI
-
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 
 	// Create form buttons
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -190,7 +182,6 @@ func (editor *ItemEditor) populateEditForm() {
 	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
 	form.Call("appendChild", buttonRow)
 
-	// ********************* This needs to be changed for each api **********************
 	// Create and add child views and buttons to Item
 
 	// Append child components to editor div
@@ -222,8 +213,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		event.Call("preventDefault")
 		log.Println(debugTag + "SubmitItemEdit()1 prevent event default")
 	}
-
-	// ********************* This needs to be changed for each api **********************
 
 	// Create form buttons
 	//submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")

@@ -53,10 +53,8 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/auth"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	Username      string    `json:"username"`
 	Password      string    `json:"user_password"`

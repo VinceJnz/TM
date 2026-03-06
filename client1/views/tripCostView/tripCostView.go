@@ -43,10 +43,8 @@ const (
 	RecordStateCurrent
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/tripCosts"
 
-// ********************* This needs to be changed for each api **********************
 type TableData struct {
 	ID              int       `json:"id"`
 	TripCostGroupID int       `json:"trip_cost_group_id"`
@@ -61,7 +59,6 @@ type TableData struct {
 	Modified        time.Time `json:"modified"`
 }
 
-// ********************* This needs to be changed for each api **********************
 type UI struct {
 	UserStatusID   js.Value
 	UserAgeGroupID js.Value
@@ -185,7 +182,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
-	// Set default values for the new record // ********************* This needs to be changed for each api **********************
 	editor.CurrentRecord.TripCostGroupID = editor.ParentData.ID
 
 	editor.populateEditForm()
@@ -202,7 +198,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	// Create input fields and add html validation as necessary // ********************* This needs to be changed for each api **********************
 	var localObjs UI
 
 	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member", "itemUserStatusID")
@@ -218,7 +213,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Amount.Set("min", 0)
 	editor.UiComponents.Amount.Call("setAttribute", "required", "true")
 
-	// Append fields to form // ********************* This needs to be changed for each api **********************
 	form.Call("appendChild", localObjs.UserStatusID)
 	form.Call("appendChild", localObjs.UserAgeGroupID)
 	form.Call("appendChild", localObjs.SeasonID)
@@ -263,7 +257,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	// ********************* This needs to be changed for each api **********************
 	var err error
 
 	editor.CurrentRecord.MemberStatusID, err = strconv.Atoi(editor.UiComponents.UserStatusID.Get("value").String())
@@ -380,7 +373,6 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		// ********************* This needs to be changed for each api **********************
 		itemDiv.Set("innerHTML", "Cost category: "+record.Season+", "+record.MemberStatus+", "+record.UserAgeGroup+", $"+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" ")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 

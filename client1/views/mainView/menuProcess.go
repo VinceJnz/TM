@@ -8,7 +8,6 @@ import (
 	"net/http"
 )
 
-// ********************* This needs to be changed for each api **********************
 const ApiURL = "/auth"
 
 func (editor *View) MenuProcess() {
