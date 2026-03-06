@@ -485,7 +485,12 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 			case 6:
 				control.ResourceName = urlSplit[3]
 			case 7:
-				control.ResourceName = urlSplit[5]
+				if urlSplit[4] == "checkout" {
+					// Keep checkout actions (create/check/success/cancel) bound to the bookings resource.
+					control.ResourceName = urlSplit[3]
+				} else {
+					control.ResourceName = urlSplit[5]
+				}
 			default:
 				log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
 				return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
