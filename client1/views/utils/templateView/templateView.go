@@ -91,11 +91,11 @@ type ItemEditor2 struct {
 */
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
+	editor.events = events
 	editor.client = appCore.HttpClient
 
 	return editor
@@ -134,7 +134,7 @@ func (v *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (v *ItemEditor) onCompletionMsg(Msg string) {
-	v.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	v.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -225,9 +225,7 @@ func (v *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 			return nil
 		}
 
-		// Need to investigate the technique for passing values into a go routine ?????????
-		// I think I need to pass a copy of the current item to the go routine or use some other technique
-		// to avoid the data being overwritten etc.
+		// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 		switch v.ItemState {
 		case ItemStateEditing:
 			go v.UpdateItem(v.CurrentRecord)

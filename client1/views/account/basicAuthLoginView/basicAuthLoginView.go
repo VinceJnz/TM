@@ -179,7 +179,7 @@ func (editor *ItemEditor) Display() {
 }
 
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data

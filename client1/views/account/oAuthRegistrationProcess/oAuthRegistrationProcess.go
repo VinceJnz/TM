@@ -43,12 +43,12 @@ type Process struct {
 }
 
 // New creates a new OAuth registration process view that implements editorElement interface
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *Process {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *Process {
 	p := &Process{
 		appCore:  appCore,
 		client:   appCore.HttpClient,
 		document: document,
-		events:   eventProcessor,
+		events:   events,
 	}
 
 	// Create container div
@@ -223,7 +223,7 @@ func (p *Process) setupParentMessageListener() {
 			// Trigger loginComplete event so the app updates
 			if p.events != nil && success {
 				p.events.ProcessEvent(eventProcessor.Event{
-					Type:     "loginComplete",
+					Type:     eventProcessor.EventTypeLoginComplete,
 					DebugTag: debugTag,
 					Data:     username,
 				})
@@ -238,7 +238,7 @@ func (p *Process) setupParentMessageListener() {
 			// Trigger loginComplete event so the app updates
 			if p.events != nil && success {
 				p.events.ProcessEvent(eventProcessor.Event{
-					Type:     "loginComplete",
+					Type:     eventProcessor.EventTypeLoginComplete,
 					DebugTag: debugTag,
 					Data:     "authenticated",
 				})

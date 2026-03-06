@@ -83,8 +83,6 @@ type ParentData struct {
 }
 
 type children struct {
-	//Add child structures as necessary
-	//BookingPeople *bookingPeopleView.ItemEditor
 	BookingStatus *bookingStatusView.ItemEditor
 }
 
@@ -110,12 +108,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, parentData ...ParentData) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
-	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
+	editor.events = events
+	editor.client = appCore.HttpClient
 
 	editor.ItemState = viewHelpers.ItemStateNone
 	editor.RowSummaryDiv = map[int]js.Value{}
@@ -141,10 +139,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	}
 
 	editor.RecordState = RecordStateReloadRequired
-
-	// Create child editors here
-	editor.Children.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, editor.appCore)
-	//editor.Children.BookingStatus.FetchItems()
+	editor.Children.BookingStatus = bookingStatusView.New(editor.document, events, editor.appCore)
 
 	return editor
 }
@@ -195,7 +190,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -203,7 +198,6 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
-	//var NotesObj, FromDateObj, ToDateObj, BookingStatusObj js.Value
 	var localObjs UI
 
 	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
@@ -245,10 +239,8 @@ func (editor *ItemEditor) populateEditForm() {
 
 	if editor.appCore.CanManageAny("bookings") {
 		localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
-		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
 		localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.Layout), editor.document, "Payment", "date", "itemPaymentDate")
-		//editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
 		form.Call("appendChild", localObjs.BookingDate)
 		form.Call("appendChild", localObjs.PaymentDate)
@@ -363,7 +355,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
-		//log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
 	var err error
@@ -377,7 +368,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if err != nil {
 		log.Println("Error parsing value:", err)
 	}
-	//editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
 	editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing value:", err)
@@ -397,9 +387,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 
 	}
 
-	// Need to investigate the technique for passing values into a go routine ?????????
-	// I think I need to pass a copy of the current item to the go routine or use some other technique
-	// to avoid the data being overwritten etc.
+	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
 	case viewHelpers.ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
@@ -455,7 +443,7 @@ func (editor *ItemEditor) FetchItems() {
 		editor.FetchVouchers()
 
 		localApiURL := ApiURL
-		if editor.ParentData.ID != 0 { // This creates a ULR the gets the items for a specific parent record
+		if editor.ParentData.ID != 0 { // This creates a URL that gets items for a specific parent record.
 			localApiURL = "/trips/" + strconv.Itoa(editor.ParentData.ID) + ApiURL
 		}
 		go func() {
@@ -557,15 +545,13 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
-		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
+		record := i // Capture loop value so callbacks use the correct record.
 		bookingID := record.ID
 
-		// Create and add child views to Item
 		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.appCore, record.ID)
 		bookingPeople.SetOnItemsChanged(func() {
 			editor.refreshBookingRow(bookingID)
 		})
-		//editor.ItemList = append(editor.ItemList, Item{Record: record, BookingPeople: bookingPeople})
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
@@ -620,5 +606,3 @@ func (editor *ItemEditor) populateItemList() {
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	viewHelpers.SetItemState(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types

@@ -60,7 +60,6 @@ type UI struct {
 }
 
 type children struct {
-	//Add child structures as necessary
 	Group *securityGroupView.ItemEditor
 	User  *userView.ItemEditor
 }
@@ -86,12 +85,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
-	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
+	editor.events = events
+	editor.client = appCore.HttpClient
 
 	editor.ItemState = ItemStateNone
 
@@ -120,14 +119,9 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	}
 
 	editor.RecordState = RecordStateReloadRequired
+	editor.Children.User = userView.New(editor.document, events, editor.appCore)
 
-	// Create child editors here
-	//..........
-	editor.Children.User = userView.New(editor.document, eventProcessor, editor.appCore)
-	//editor.Children.User.FetchItems()
-
-	editor.Children.Group = securityGroupView.New(editor.document, eventProcessor, editor.appCore)
-	//editor.Children.Group.FetchItems()
+	editor.Children.Group = securityGroupView.New(editor.document, events, editor.appCore)
 
 	return editor
 }
@@ -170,8 +164,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.populateEditForm()
 	return nil
 }
-
-// ?????????????????????? document ref????????????
 func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
 	// Create a div for displaying Dropdown
 	fieldset := editor.document.Call("createElement", "fieldset")
@@ -179,16 +171,6 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
-
-	//for _, item := range editor.Records {
-	//	optionElement := editor.document.Call("createElement", "option")
-	//	optionElement.Set("value", item.ID)
-	//	optionElement.Set("text", item.Name)
-	//	if value == item.ID {
-	//		optionElement.Set("selected", true)
-	//	}
-	//	StateDropDown.Call("appendChild", optionElement)
-	//}
 
 	// Create a label element
 	label := viewHelpers.Label(editor.document, labelText, htmlID)
@@ -201,7 +183,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -271,9 +253,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing group id:", err)
 	}
 
-	// Need to investigate the technique for passing values into a go routine ?????????
-	// I think I need to pass a copy of the current item to the go routine or use some other technique
-	// to avoid the data being overwritten etc.
+	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
 	case ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
@@ -350,11 +330,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
-		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
-
-		// Create and add child views to Item
-		//editor.ItemList = append(editor.ItemList, Item{Record: record})
-		//
+		record := i // Capture loop value so callbacks use the correct record.
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
@@ -391,5 +367,3 @@ func (editor *ItemEditor) populateItemList() {
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types

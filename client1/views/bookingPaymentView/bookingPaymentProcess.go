@@ -209,12 +209,12 @@ func (p *ItemEditor) paymentWindowDestroy() {
 	// Or rely on the /success and /cancel callbacks from Stripe
 
 	/*
-		success := func(err error, data *httpProcessor.ReturnData) {
-			log.Printf("%vpaymentWindowDestroy() success", debugTag)
-			// Refresh the booking list to show updated payment status
-			p.RecordState = RecordStateReloadRequired
-			//p.FetchItems() //?????????
-		}
+			success := func(err error, data *httpProcessor.ReturnData) {
+				log.Printf("%vpaymentWindowDestroy() success", debugTag)
+				// Refresh the booking list to show updated payment status
+				p.RecordState = RecordStateReloadRequired
+				//p.FetchItems()
+			}
 
 		fail := func(err error, data *httpProcessor.ReturnData) {
 			log.Printf("%vpaymentWindowDestroy() error: %v", debugTag, err)

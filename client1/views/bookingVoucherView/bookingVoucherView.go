@@ -77,11 +77,11 @@ type ItemEditor struct {
 	RecordState   RecordState
 }
 
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
 	editor := &ItemEditor{}
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
+	editor.events = events
 	editor.client = appCore.HttpClient
 	editor.ItemState = ItemStateNone
 	editor.RecordState = RecordStateReloadRequired
@@ -138,7 +138,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 }
 
 func (editor *ItemEditor) onCompletionMsg(msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: msg})
 }
 
 func (editor *ItemEditor) populateEditForm() {

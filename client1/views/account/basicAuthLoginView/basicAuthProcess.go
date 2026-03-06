@@ -176,7 +176,7 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 				}
 			}
 			if editor.events != nil {
-				editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: "basicAuthLoginView", Data: name})
+				editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLoginComplete, DebugTag: "basicAuthLoginView", Data: name})
 			}
 		},
 		func(err error) {

@@ -89,8 +89,8 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
-	editor := &ItemEditor{appCore: appCore, document: document, events: eventProcessor}
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+	editor := &ItemEditor{appCore: appCore, document: document, events: events}
 	if appCore != nil {
 		editor.client = appCore.HttpClient
 	}
@@ -165,7 +165,7 @@ func (editor *ItemEditor) NewItemData() {
 }
 
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 func (editor *ItemEditor) setActiveButtons(activeID string, buttonIDs ...string) {
@@ -327,5 +327,3 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	viewHelpers.SetItemState(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types

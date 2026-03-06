@@ -41,7 +41,7 @@ const (
 )
 
 const ApiURL = "/auth/oauth"
-const ApiURL2 = "/api/v1" + ApiURL
+const ApiURLWithPrefix = "/api/v1" + ApiURL
 
 type TableData struct {
 	Name          string    `json:"name"`
@@ -76,7 +76,6 @@ type viewElements struct {
 }
 
 type children struct {
-	//Add child structures as necessary
 }
 
 type ItemEditor struct {
@@ -106,12 +105,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
-	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
+	editor.events = events
+	editor.client = appCore.HttpClient
 
 	editor.ItemState = viewHelpers.ItemStateNone
 
@@ -143,14 +142,11 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	if len(idList) == 1 {
 		editor.ParentID = idList[0]
 	}
-
-	// Create child editors here
-	//..........
 	editor.RecordState = RecordStateReloadRequired
 
 	// Listen for global loginComplete events
 	if editor.events != nil {
-		editor.events.AddEventHandler("loginComplete", editor.loginComplete)
+		editor.events.AddEventHandler(eventProcessor.EventTypeLoginComplete, editor.loginComplete)
 	}
 
 	// set up message listener for OAuth popup postMessage events
@@ -197,13 +193,12 @@ func (editor *ItemEditor) NewItemData() {
 	//return nil
 }
 
-// ?????????????????????? document ref????????????
 //func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
 //}
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -342,7 +337,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 			})
 	} else {
 		// Fallback: open popup but we can't persist registration without client
-		js.Global().Call("open", "https://localhost:8086"+ApiURL2+"/login", "oauth", "width=600,height=800")
+		js.Global().Call("open", "https://localhost:8086"+ApiURLWithPrefix+"/login", "oauth", "width=600,height=800")
 		js.Global().Call("alert", "Warning: registration info will not be saved when using fallback flow")
 	}
 	return nil
@@ -419,7 +414,7 @@ func (editor *ItemEditor) setupMessageListener() {
 			nameStr = nameVal.String()
 		}
 		if editor.events != nil {
-			editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: nameStr})
+			editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLoginComplete, DebugTag: debugTag, Data: nameStr})
 		}
 		return nil
 	})
@@ -427,8 +422,6 @@ func (editor *ItemEditor) setupMessageListener() {
 	js.Global().Call("addEventListener", "message", editor.msgHandler)
 	editor.msgHandlerSet = true
 }
-
-// Event handlers and event data types
 
 //func (editor *ItemEditor) OnAction(action interface{}) {
 //	switch a := action.(type) {

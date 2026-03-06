@@ -62,7 +62,6 @@ type UI struct {
 
 type Item struct {
 	Record TableData
-	//Add child structures as necessary
 }
 
 type ItemEditor struct {
@@ -85,12 +84,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
-	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
+	editor.events = events
+	editor.client = appCore.HttpClient
 
 	editor.ItemState = viewHelpers.ItemStateNone
 
@@ -109,16 +108,11 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	}
 
 	editor.RecordState = RecordStateReloadRequired
-
-	// Create child editors here
-	//..........
-
 	return editor
 }
 
 func (editor *ItemEditor) ResetView() {
 	editor.RecordState = RecordStateReloadRequired
-	//editor.EditDiv.Set("innerHTML", "")
 	editor.ListDiv.Set("innerHTML", "")
 }
 
@@ -163,7 +157,6 @@ func (editor *ItemEditor) FetchItems() {
 		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
-		//.....
 		go func() {
 			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil, success, failure)
 		}()
@@ -178,11 +171,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	for _, i := range editor.Records {
-		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
-
-		// Create and add child views to Item
-		//
-		//
+		record := i // Capture loop value so callbacks use the correct record.
 		//Add trip headding (Assumes records are sorted by trip)
 		if tripID != record.TripID {
 			tripID = record.TripID
@@ -229,12 +218,9 @@ func (editor *ItemEditor) populateItemList() {
 
 			bookingDiv.Call("appendChild", itemDiv)
 		}
-		//editor.ListDiv.Call("appendChild", itemDiv)
 	}
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	viewHelpers.SetItemState(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types

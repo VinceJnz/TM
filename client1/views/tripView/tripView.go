@@ -69,7 +69,6 @@ type UI struct {
 }
 
 type children struct {
-	//Add child structures as necessary
 	Difficulty    *tripDifficultyView.ItemEditor
 	TripStatus    *tripStatusView.ItemEditor
 	TripType      *tripTypeView.ItemEditor
@@ -96,11 +95,11 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
+	editor.events = events
 	editor.client = appCore.HttpClient
 
 	editor.ItemState = viewHelpers.ItemStateNone
@@ -125,19 +124,16 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	}
 
 	editor.RecordState = RecordStateReloadRequired
-
-	// Create child editors here
-	//..........
-	editor.Children.Difficulty = tripDifficultyView.New(editor.document, eventProcessor, editor.appCore)
+	editor.Children.Difficulty = tripDifficultyView.New(editor.document, events, editor.appCore)
 	//editor.Children.Difficulty.FetchItems()
 
-	editor.Children.TripStatus = tripStatusView.New(editor.document, eventProcessor, editor.appCore)
+	editor.Children.TripStatus = tripStatusView.New(editor.document, events, editor.appCore)
 	//editor.Children.TripStatus.FetchItems()
 
-	editor.Children.TripType = tripTypeView.New(editor.document, eventProcessor, editor.appCore)
+	editor.Children.TripType = tripTypeView.New(editor.document, events, editor.appCore)
 	//editor.Children.TripType.FetchItems()
 
-	editor.Children.TripCostGroup = tripCostGroupView.New(editor.document, eventProcessor, editor.appCore)
+	editor.Children.TripCostGroup = tripCostGroupView.New(editor.document, events, editor.appCore)
 	//editor.Children.TripCostGroup.FetchItems()
 
 	return editor
@@ -229,7 +225,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -376,9 +372,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		return nil
 	}
 
-	// Need to investigate the technique for passing values into a go routine ?????????
-	// I think I need to pass a copy of the current item to the go routine or use some other technique
-	// to avoid the data being overwritten etc.
+	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
 	case viewHelpers.ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
@@ -545,5 +539,3 @@ func (editor *ItemEditor) populateItemList() {
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	viewHelpers.SetItemState(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types

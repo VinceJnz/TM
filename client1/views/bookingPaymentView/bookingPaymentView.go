@@ -43,7 +43,6 @@ type ParentData struct {
 }
 
 type children struct {
-	//Add child structures as necessary
 	//BookingPeople *bookingPeopleView.ItemEditor
 }
 
@@ -67,12 +66,12 @@ type ItemEditor struct {
 	//FieldNames  httpProcessor.FieldNames
 }
 
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, parentData ...ParentData) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, parentData ...ParentData) *ItemEditor {
 	editor := new(ItemEditor)
 	//editor.appCore = appCore
 	//editor.document = document
-	//editor.events = eventProcessor
-	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
+	//editor.events = events
+	editor.client = appCore.HttpClient
 
 	//editor.ItemState = viewHelpers.ItemStateNone
 
@@ -96,9 +95,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	}
 
 	editor.RecordState = RecordStateReloadRequired
-
-	// Create child editors here
-	//editor.Children.BookingStatus = bookingStatusView.New(editor.document, eventProcessor, editor.appCore)
+	//editor.Children.BookingStatus = bookingStatusView.New(editor.document, events, editor.appCore)
 	//editor.Children.BookingStatus.FetchItems()
 
 	return editor

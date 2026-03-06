@@ -12,6 +12,23 @@ const debugTag = "viewHelpers."
 // Define the date layout (format) and the string you want to parse
 const Layout = "2006-01-02" // The reference layout for Go's date parsing
 
+func newInputElement(doc js.Value, labelText, inputType, htmlID string) js.Value {
+	input := doc.Call("createElement", "input")
+	input.Set("id", htmlID)
+	input.Set("name", labelText)
+	input.Set("type", inputType)
+	return input
+}
+
+func newButtonElement(doc js.Value, buttonType, className, displayText, htmlID string) js.Value {
+	button := doc.Call("createElement", "button")
+	button.Set("id", htmlID)
+	button.Set("type", buttonType)
+	button.Set("className", className)
+	button.Set("innerHTML", displayText)
+	return button
+}
+
 // Label creates a label element with the given text and ID.
 func Label(doc js.Value, labelText string, htmlID string) js.Value {
 	// Create a label element
@@ -32,26 +49,15 @@ func Span(doc js.Value, htmlID string) js.Value {
 
 // Input creates an input element with the given value, type, and ID.
 func Input(value string, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
-	// Create an input element
-	input := doc.Call("createElement", "input")
-	input.Set("id", htmlID)
-	input.Set("name", labelText)
-	input.Set("type", inputType)
+	input := newInputElement(doc, labelText, inputType, htmlID)
 	input.Set("value", value)
 	return input
 }
 
 // Input creates an input element with the given value, type, and ID.
 func InputCheckBox(value bool, doc js.Value, labelText string, inputType string, htmlID string) js.Value {
-	// Create an input element
-	input := doc.Call("createElement", "input")
-	input.Set("id", htmlID)
-	input.Set("name", labelText)
-	input.Set("type", inputType)
-	//input.Set("value", true) // This is the return value
-	//if value {
+	input := newInputElement(doc, labelText, inputType, htmlID)
 	input.Set("checked", value)
-	//}
 	return input
 }
 
@@ -63,24 +69,14 @@ func Form(onSubmit func(this js.Value, args []js.Value) interface{}, doc js.Valu
 	return Form
 }
 
-// func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
-	button := doc.Call("createElement", "button")
-	button.Set("id", htmlID)
-	button.Set("type", "button")
-	button.Set("className", "btn")
-	button.Set("innerHTML", displayText)
+	button := newButtonElement(doc, "button", "btn", displayText, htmlID)
 	button.Call("addEventListener", "click", js.FuncOf(onClick))
 	return button
 }
 
-// func Button(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 func Button2(onClick func() interface{}, doc js.Value, displayText, htmlID string) js.Value {
-	button := doc.Call("createElement", "button")
-	button.Set("id", htmlID)
-	button.Set("type", "button")
-	button.Set("className", "btn")
-	button.Set("innerHTML", displayText)
+	button := newButtonElement(doc, "button", "btn", displayText, htmlID)
 	f := func(this js.Value, args []js.Value) interface{} {
 		onClick()
 		return nil
@@ -89,23 +85,12 @@ func Button2(onClick func() interface{}, doc js.Value, displayText, htmlID strin
 	return button
 }
 
-// func SubmitButton(listner func(this js.Value, args []js.Value) any, doc js.Value, displayText, htmlID string) js.Value {
 func SubmitButton(doc js.Value, displayText, htmlID string) js.Value {
-	button := doc.Call("createElement", "button")
-	button.Set("id", htmlID)
-	button.Set("type", "submit")
-	button.Set("className", "btn btn-primary")
-	button.Set("innerHTML", displayText)
-	return button
+	return newButtonElement(doc, "submit", "btn btn-primary", displayText, htmlID)
 }
 
-// func SubmitButton(listner func(this js.Value, args []js.Value) any, doc js.Value, displayText, htmlID string) js.Value {
 func SubmitValidateButton(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
-	button := doc.Call("createElement", "button")
-	button.Set("id", htmlID)
-	button.Set("type", "submit")
-	button.Set("className", "btn btn-primary")
-	button.Set("innerHTML", displayText)
+	button := newButtonElement(doc, "submit", "btn btn-primary", displayText, htmlID)
 	if onClick != nil {
 		f := func(this js.Value, args []js.Value) any {
 			onClick()
@@ -117,11 +102,7 @@ func SubmitValidateButton(onClick func(), doc js.Value, displayText, htmlID stri
 }
 
 func SubmitValidateButton2(onClick func(this js.Value, args []js.Value) any, doc js.Value, displayText, htmlID string) js.Value {
-	button := doc.Call("createElement", "button")
-	button.Set("id", htmlID)
-	button.Set("type", "submit")
-	button.Set("className", "btn btn-primary")
-	button.Set("innerHTML", displayText)
+	button := newButtonElement(doc, "submit", "btn btn-primary", displayText, htmlID)
 	if onClick != nil {
 		f := func(this js.Value, args []js.Value) any {
 			onClick(this, args)
@@ -140,14 +121,11 @@ func Div(doc js.Value, className string, htmlID string) js.Value {
 	return div
 }
 
-// func HRef(listner func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 func HRef(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 	link := doc.Call("createElement", "a")
 	link.Set("href", "#")
 	link.Set("innerHTML", displayText)
 	link.Set("id", htmlID)
-	//link.Set("type", "button")
-	//link.Set("innerHTML", displayText)
 	f := func(this js.Value, args []js.Value) any {
 		if len(args) > 0 {
 			args[0].Call("preventDefault")

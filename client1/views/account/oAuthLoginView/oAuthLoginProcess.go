@@ -147,5 +147,5 @@ func (editor *ItemEditor) authProcess() {
 // loginComplete triggered when login succeeds
 func (editor *ItemEditor) loginComplete(username string) {
 	editor.onCompletionMsg(debugTag + "Login successfully completed: " + username)
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "loginComplete", DebugTag: debugTag, Data: username})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLoginComplete, DebugTag: debugTag, Data: username})
 }

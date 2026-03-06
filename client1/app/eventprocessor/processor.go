@@ -7,6 +7,15 @@ import (
 
 const debugTag = "eventProcessor."
 
+const (
+	EventTypeUpdateStatus   = "updateStatus"
+	EventTypeDisplayMessage = "displayMessage"
+	EventTypeResetMenu      = "resetMenu"
+	EventTypeUpdateMenu     = "updateMenu"
+	EventTypeLoginComplete  = "loginComplete"
+	EventTypeLogoutComplete = "logoutComplete"
+)
+
 // Each event is registered in the EventProcessor map.
 // Each event has a unique name.
 // And event handler can call one or more events.

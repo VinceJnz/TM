@@ -53,7 +53,7 @@ func ValidateDatesFromLtTo(fromDateObj, toDateObj, msgObj js.Value, warningMsg s
 		msgObj.Call("setCustomValidity", warningMsg)
 		//return errors.New(warningMsg) // This seems to cause the js to hang
 	} else {
-		msgObj.Call("setCustomValidity", "") // Not sure if this is needed????
+		msgObj.Call("setCustomValidity", "")
 	}
 
 	return nil

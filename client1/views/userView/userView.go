@@ -79,7 +79,6 @@ type UI struct {
 }
 
 type children struct {
-	//Add child structures as necessary
 	userAgeGroup      userAgeGroupView.ItemEditor
 	userMemberStatus  userMemberStatusView.ItemEditor
 	userAccountStatus userAccountStatusView.ItemEditor
@@ -105,12 +104,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
-	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
+	editor.events = events
+	editor.client = appCore.HttpClient
 
 	editor.ItemState = ItemStateNone
 
@@ -134,17 +133,11 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	}
 
 	editor.RecordState = RecordStateReloadRequired
+	editor.Children.userAgeGroup = *userAgeGroupView.New(editor.document, events, editor.appCore)
 
-	// Create child editors here
-	//..........
-	editor.Children.userAgeGroup = *userAgeGroupView.New(editor.document, eventProcessor, editor.appCore)
-	//editor.Children.userAgeGroup.FetchItems()
+	editor.Children.userMemberStatus = *userMemberStatusView.New(editor.document, events, editor.appCore)
 
-	editor.Children.userMemberStatus = *userMemberStatusView.New(editor.document, eventProcessor, editor.appCore)
-	//editor.Children.userStatus.FetchItems()
-
-	editor.Children.userAccountStatus = *userAccountStatusView.New(editor.document, eventProcessor, editor.appCore)
-	//editor.Children.userAccountStatus.FetchItems()
+	editor.Children.userAccountStatus = *userAccountStatusView.New(editor.document, events, editor.appCore)
 
 	return editor
 }
@@ -187,11 +180,8 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.populateEditForm()
 	return nil
 }
-
-// ?????????????????????? document ref????????????
 func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
 	// Create a div for displaying Dropdown
-	//log.Printf(debugTag+"NewDropdown()1 editor = %+v", editor)
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
 
@@ -219,7 +209,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -248,16 +238,12 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
 	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup")
-	//editor.UiComponents.UserAgeGroupID.Call("setAttribute", "required", "true")
 
 	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus")
-	//editor.UiComponents.UserStatusID.Call("setAttribute", "required", "true")
 
 	localObjs.UserAccountStatusID, editor.UiComponents.UserAccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.UserAccountStatusID, "Account Status", "itemAccountStatus")
-	//editor.UiComponents.AccountStatusID.Call("setAttribute", "required", "true")
 
 	localObjs.UserAccountHidden, editor.UiComponents.UserAccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.UserAccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
-	//editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
@@ -309,17 +295,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	//form.Call("appendChild", localObjs.Name)
-	//form.Call("appendChild", localObjs.Username)
-	//form.Call("appendChild", localObjs.Email)
-	//form.Call("appendChild", localObjs.Address)
-	//form.Call("appendChild", localObjs.MemberCode)
-	//form.Call("appendChild", localObjs.BirthDate)
-	//form.Call("appendChild", localObjs.UserAgeGroupID)
-	//form.Call("appendChild", localObjs.UserStatusID)
-	//form.Call("appendChild", localObjs.UserAccountStatusID)
-	//form.Call("appendChild", localObjs.UserAccountHidden)
-
 	var err error
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
 	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
@@ -349,9 +324,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 	editor.CurrentRecord.UserAccountHidden = editor.UiComponents.UserAccountHidden.Get("checked").Bool()
 
-	// Need to investigate the technique for passing values into a go routine ?????????
-	// I think I need to pass a copy of the current item to the go routine or use some other technique
-	// to avoid the data being overwritten etc.
+	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
 	case ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
@@ -429,11 +402,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
-		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
-
-		// Create and add child views to Item
-		//editor.ItemList = append(editor.ItemList, Item{Record: record})
-		//
+		record := i // Capture loop value so callbacks use the correct record.
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
@@ -470,5 +439,3 @@ func (editor *ItemEditor) populateItemList() {
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types

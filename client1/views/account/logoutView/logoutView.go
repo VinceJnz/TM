@@ -59,7 +59,6 @@ type viewElements struct {
 }
 
 type children struct {
-	//Add child structures as necessary
 }
 
 type ItemEditor struct {
@@ -83,12 +82,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.document = document
-	editor.events = eventProcessor
-	editor.client = appCore.HttpClient //????????????????? to be removed ??????????????????
+	editor.events = events
+	editor.client = appCore.HttpClient
 
 	editor.ItemState = ItemStateNone
 
@@ -108,10 +107,6 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	// Store supplied parent value
 
 	editor.RecordState = RecordStateReloadRequired
-
-	// Create child editors here
-	//..........
-
 	return editor
 }
 
@@ -154,14 +149,13 @@ func (editor *ItemEditor) NewItemData() {
 	//return nil
 }
 
-// ?????????????????????? document ref????????????
 //func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
 //}
 
 /*
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 */
 
@@ -222,10 +216,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	//form.Call("appendChild", submitBtn)
 	//form.Call("appendChild", cancelBtn)
 
-	//Add something to do the logout ????????????????????
-
 	editor.resetEditForm()
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", DebugTag: debugTag, Data: nil})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLogoutComplete, DebugTag: debugTag, Data: nil})
 	return nil
 }
 
@@ -247,9 +239,9 @@ func (editor *ItemEditor) FetchItems() {
 	success := func(err error) {
 		if err != nil {
 			log.Printf("%v %v %v", debugTag+"FetchItems()1 success: ", "err =", err) //Log the error in the browser
-			editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: "Logout failed, error: " + err.Error()})
+			editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: "Logout failed, error: " + err.Error()})
 		}
-		editor.events.ProcessEvent(eventProcessor.Event{Type: "logoutComplete", DebugTag: debugTag, Data: nil})
+		editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLogoutComplete, DebugTag: debugTag, Data: nil})
 	}
 
 	go func() {
@@ -268,5 +260,3 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types

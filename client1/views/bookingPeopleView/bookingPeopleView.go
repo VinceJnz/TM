@@ -60,7 +60,6 @@ type UI struct {
 }
 
 type children struct {
-	//Add child structures as necessary
 	PeopleSelector *userView.ItemEditor
 }
 
@@ -69,7 +68,6 @@ type ItemEditor struct {
 	client         *httpProcessor.Client
 	document       js.Value
 	events         *eventProcessor.EventProcessor
-	baseURL        string
 	onItemsChanged func()
 	CurrentRecord  TableData
 	ItemState      ItemState
@@ -88,12 +86,12 @@ type ItemEditor struct {
 }
 
 // NewItemEditor creates a new ItemEditor instance
-func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
+func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
 	editor := new(ItemEditor)
 	editor.appCore = appCore
 	editor.client = appCore.HttpClient
 	editor.document = document
-	editor.events = eventProcessor
+	editor.events = events
 
 	editor.ItemState = ItemStateNone
 
@@ -101,7 +99,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 	editor.Div = document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
 
-	// Create a div for displayingthe editor
+	// Create a div for displaying the editor
 	editor.EditDiv = document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
 	editor.Div.Call("appendChild", editor.EditDiv)
@@ -123,10 +121,7 @@ func New(document js.Value, eventProcessor *eventProcessor.EventProcessor, appCo
 
 	editor.RecordState = RecordStateReloadRequired
 
-	// Create child editors here
-	//..........
-	editor.Children.PeopleSelector = userView.New(document, eventProcessor, editor.appCore)
-	//editor.Children.PeopleSelector.FetchItems()
+	editor.Children.PeopleSelector = userView.New(document, events, editor.appCore)
 
 	return editor
 }
@@ -184,7 +179,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{Type: "displayMessage", DebugTag: debugTag, Data: Msg})
+	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: Msg})
 }
 
 // populateEditForm populates the item edit form with the current item's data
@@ -250,9 +245,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
 
-	// Need to investigate the technique for passing values into a go routine ?????????
-	// I think I need to pass a copy of the current item to the go routine or use some other technique
-	// to avoid the data being overwritten etc.
+	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
 	case ItemStateEditing:
 		go editor.UpdateItem(editor.CurrentRecord)
@@ -300,9 +293,9 @@ func (editor *ItemEditor) FetchItems() {
 		// Fetch child data
 		editor.Children.PeopleSelector.FetchItems()
 
-		localApiURL := editor.baseURL + ApiURL
+		localApiURL := ApiURL
 		if editor.ParentID != 0 {
-			localApiURL = editor.baseURL + "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL
+			localApiURL = "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL
 		}
 		go func() {
 			var records []TableData
@@ -335,7 +328,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
-		record := i // This creates a new variable (different memory location) for each item for each people list button so that the button receives the correct value
+		record := i // Capture loop value so button handlers use the correct record.
 
 		// Create and add child views to Item
 		itemDiv := editor.document.Call("createElement", "div")
@@ -374,5 +367,3 @@ func (editor *ItemEditor) populateItemList() {
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }
-
-// Event handlers and event data types
