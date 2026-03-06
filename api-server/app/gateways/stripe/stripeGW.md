@@ -5,6 +5,8 @@ SDK Client: <https://github.com/stripe/stripe-go>
 Usage examples: <https://github.com/stripe/stripe-go#usage>
 Documentation: <https://godoc.org/github.com/stripe/stripe-go>
 
+Strtipe dashboard: <https://dashboard.stripe.com/>
+
 ## Local Webhook Setup (Test Mode)
 
 **Instruction from CoPilot**
