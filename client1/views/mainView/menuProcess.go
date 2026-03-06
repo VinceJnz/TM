@@ -35,6 +35,7 @@ func (editor *View) getMenuUser() {
 		}
 		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
 		editor.authResolved = true
+		editor.setTopAuthAction(menuUser.UserID > 0)
 		editor.elements.userDisplay.Set("innerHTML", editor.appCore.User.Name)
 		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		if menuUser.UserID > 0 {
@@ -50,6 +51,7 @@ func (editor *View) getMenuUser() {
 		log.Printf("%v %v %v %v %+v", debugTag+"getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		editor.authResolved = true
 		editor.appCore.SetUser(appCore.User{})
+		editor.setTopAuthAction(false)
 		editor.resetMenu()
 		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		editor.applyRouteFromLocation()

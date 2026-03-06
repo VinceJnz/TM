@@ -9,6 +9,24 @@ import (
 
 const homeMenuTitle = "Home"
 
+func (v *View) setTopAuthAction(isLoggedIn bool) {
+	if loginBtn, ok := v.menuTitles["Login"]; ok {
+		if isLoggedIn {
+			loginBtn.Get("style").Call("setProperty", "display", "none")
+		} else {
+			loginBtn.Get("style").Call("removeProperty", "display")
+		}
+	}
+
+	if logoutBtn, ok := v.menuTitles["Logout"]; ok {
+		if isLoggedIn {
+			logoutBtn.Get("style").Call("removeProperty", "display")
+		} else {
+			logoutBtn.Get("style").Call("setProperty", "display", "none")
+		}
+	}
+}
+
 // MenuItem contains data for a menu item
 type MenuItem struct {
 	UserID      int    `json:"user_id"`
@@ -70,6 +88,7 @@ func (v *View) displayMessage(event eventProcessor.Event) {
 // logoutComplete is an event handler the updates the logout status in the Navbar on the main page.
 func (v *View) logoutComplete(event eventProcessor.Event) {
 	v.elements.userDisplay.Set("innerHTML", "")
+	v.setTopAuthAction(false)
 	v.resetMenu()
 	v.ResetViewItems()
 	v.menuOnClick(homeMenuTitle, true, nil)()
@@ -83,6 +102,7 @@ func (v *View) loginComplete(event eventProcessor.Event) {
 		return
 	}
 	v.elements.userDisplay.Set("innerHTML", username)
+	v.setTopAuthAction(true)
 	v.MenuProcess()
 	v.menuOnClick(homeMenuTitle, true, nil)()
 }
@@ -93,7 +113,11 @@ func (v *View) resetMenuEvent(event eventProcessor.Event) {
 
 // resetMenu is an event handler that resets the menu to display only the default menu items.
 func (v *View) resetMenu() {
-	for _, o := range v.menuButtons {
+	for key, o := range v.menuButtons {
+		if key == "login" || key == "logout" {
+			o.button.Get("classList").Call("remove", "menu-item-active")
+			continue
+		}
 		if !o.defaultDisplay {
 			v.hideMenuButton(o)
 		}

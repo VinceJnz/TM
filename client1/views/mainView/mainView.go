@@ -74,6 +74,7 @@ type viewElements struct {
 	sidemenu     js.Value
 	topmenu      js.Value
 	navbar       js.Value
+	appBrand     js.Value
 	mainContent  js.Value
 	statusOutput js.Value
 	pageTitle    js.Value
@@ -215,6 +216,16 @@ func (v *View) Setup() {
 	}))
 	v.elements.navbar.Call("appendChild", menuIcon)
 
+	appTitle := "Trip Manager"
+	brandClick := func() {
+		element := v.childElements["Home"]
+		v.navigateTo("Home", true, element, true)
+	}
+	v.elements.appBrand = viewHelpers.HRef(brandClick, v.document, appTitle, "appBrand")
+	v.elements.appBrand.Set("className", "menu-item")
+	v.elements.appBrand.Set("title", "Go to Home")
+	v.elements.navbar.Call("appendChild", v.elements.appBrand)
+
 	// Add the pageTitle to the navbar
 	v.elements.pageTitle = v.document.Call("createElement", "div")
 	v.elements.pageTitle.Set("id", "pageTitle")
@@ -241,8 +252,11 @@ func (v *View) Setup() {
 		return nil
 	}))
 
-	// Add the logout button to the navbar
-	v.AddViewItem("Logout", "", true, logoutView.New(v.document, v.events, v.appCore), true, v.elements.topmenu, menuSectionRoot)
+	loginTopView := basicAuthLoginView.New(v.document, v.events, v.appCore)
+
+	// Add auth action buttons to the top navbar; visibility is controlled by auth state.
+	v.AddViewItem("Logout", "", true, logoutView.New(v.document, v.events, v.appCore), false, v.elements.topmenu, menuSectionRoot)
+	v.AddViewItem("Login", "", true, loginTopView, false, v.elements.topmenu, menuSectionRoot)
 
 	// Add all the menu options to the sidemenu
 	v.AddViewItem("&times;", "", false, nil, true, v.elements.sidemenu, menuSectionRoot)
@@ -274,6 +288,7 @@ func (v *View) Setup() {
 
 	// Replace the existing body with the new body
 	v.document.Get("documentElement").Call("replaceChild", newBody, v.document.Get("body"))
+	v.setTopAuthAction(false)
 
 	// Check if the menu items can be loaded, i.e. is the user authenticated?
 	v.MenuProcess() // Load the menu
@@ -431,6 +446,7 @@ func (v *View) setupRouting() {
 func (v *View) isPublicPage(pageTitle string) bool {
 	title := strings.TrimSpace(pageTitle)
 	return strings.EqualFold(title, "Login / Register") ||
+		strings.EqualFold(title, "Login") ||
 		strings.EqualFold(title, "Home") ||
 		strings.EqualFold(title, "About") ||
 		strings.EqualFold(title, "Contact")

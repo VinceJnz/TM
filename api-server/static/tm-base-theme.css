@@ -34,6 +34,7 @@ html, body {
 	position: sticky;
 	top: 0;
 	z-index: 20;
+	position: relative;
 }
 
 #menuIcon {
@@ -60,6 +61,39 @@ html, body {
 	font-size: 18px;
 	font-weight: 700;
 	color: var(--tm-text);
+}
+
+#appBrand {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	color: var(--tm-text) !important;
+	font-weight: 800;
+	font-size: 17px;
+	letter-spacing: 0.2px;
+	text-decoration: none;
+	padding: 6px 10px;
+	border-radius: 8px;
+	border: 1px solid transparent;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	white-space: nowrap;
+}
+
+#appBrand:hover {
+	background: var(--tm-surface-muted);
+	border-color: var(--tm-border);
+	color: var(--tm-primary) !important;
+}
+
+#appBrand:focus-visible {
+	outline: 2px solid var(--tm-primary);
+	outline-offset: 2px;
+	background: var(--tm-surface-muted);
 }
 
 .right-align {
