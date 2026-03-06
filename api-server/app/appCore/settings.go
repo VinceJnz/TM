@@ -12,31 +12,32 @@ import (
 )
 
 type settings struct {
-	AppTitle           string `json:"AppTitle"`
-	Host               string `json:"Host"`
-	PortHttp           string `json:"PortHttp"`
-	PortHttps          string `json:"PortHttps"`
-	CoreOrigins        string `json:"CoreOrigins"`
-	DataSource         string `json:"DataSource"`
-	APIprefix          string `json:"APIprefix"`
-	ServerCaCert       string `json:"ServerCaCert"`
-	ClientCaCert       string `json:"ClientCaCert"`
-	ServerKey          string `json:"ServerKey"`
-	ServerCert         string `json:"ServerCert"`
-	CertOpt            int    `json:"CertOpt"`
-	LogFile            string `json:"LogFile"`
-	EmailAddr          string `json:"EmailAddr"`
-	EmailToken         string `json:"EmailToken"`
-	EmailSecret        string `json:"EmailSecret"`
-	PaymentKey         string `json:"PaymentKey"`
-	GoogleClientID     string `json:"GoogleClientID"`
-	GoogleClientSecret string `json:"GoogleClientSecret"`
-	GoogleRedirectURL  string `json:"GoogleRedirectURL"`
-	SessionKey         string `json:"SessionKey"`
-	ClientRedirectURL  string `json:"ClientRedirectURL"`
-	GmailAuthCode      string `json:"GmailAuthCode"`
-	EmailDebugAddr     string `json:"EmailDebugAddr"`
-	DevMode            bool   `json:"DevMode"`
+	AppTitle            string `json:"AppTitle"`
+	Host                string `json:"Host"`
+	PortHttp            string `json:"PortHttp"`
+	PortHttps           string `json:"PortHttps"`
+	CoreOrigins         string `json:"CoreOrigins"`
+	DataSource          string `json:"DataSource"`
+	APIprefix           string `json:"APIprefix"`
+	ServerCaCert        string `json:"ServerCaCert"`
+	ClientCaCert        string `json:"ClientCaCert"`
+	ServerKey           string `json:"ServerKey"`
+	ServerCert          string `json:"ServerCert"`
+	CertOpt             int    `json:"CertOpt"`
+	LogFile             string `json:"LogFile"`
+	EmailAddr           string `json:"EmailAddr"`
+	EmailToken          string `json:"EmailToken"`
+	EmailSecret         string `json:"EmailSecret"`
+	PaymentKey          string `json:"PaymentKey"`
+	StripeWebhookSecret string `json:"StripeWebhookSecret"`
+	GoogleClientID      string `json:"GoogleClientID"`
+	GoogleClientSecret  string `json:"GoogleClientSecret"`
+	GoogleRedirectURL   string `json:"GoogleRedirectURL"`
+	SessionKey          string `json:"SessionKey"`
+	ClientRedirectURL   string `json:"ClientRedirectURL"`
+	GmailAuthCode       string `json:"GmailAuthCode"`
+	EmailDebugAddr      string `json:"EmailDebugAddr"`
+	DevMode             bool   `json:"DevMode"`
 }
 
 func (s *settings) SaveJson() error {
@@ -125,6 +126,7 @@ func (s *settings) LoadEnv() error {
 	s.EmailToken = os.Getenv("EMAIL_TOKEN")
 	s.EmailSecret = os.Getenv("EMAIL_SECRET")
 	s.PaymentKey = os.Getenv("PAYMENT_KEY")
+	s.StripeWebhookSecret = os.Getenv("STRIPE_WEBHOOK_SECRET")
 	s.GoogleClientID = os.Getenv("GOOGLE_CLIENT_ID")
 	s.GoogleClientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
 	s.GoogleRedirectURL = os.Getenv("GOOGLE_REDIRECT_URL")

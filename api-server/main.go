@@ -75,6 +75,7 @@ func main() {
 	// Auth handlers - Public routes (no authentication required)
 	auth := handlerAuth.New(app)
 	auth.RegisterRoutesPublic(public, "/auth") // Public auth endpoints (register, verify, login, etc.)
+	handlerBooking.New(app).RegisterRoutesStripeWebhook(public, "/bookings")
 
 	// *****************************************************
 	// Protected routes (require authentication) - These are registered on a subrouter so that the auth middleware is only applied to these routes and not the public routes above. This allows us to have a mix of protected and unprotected routes.

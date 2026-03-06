@@ -11,9 +11,10 @@ import (
 type BookingStatusID int
 
 const (
-	Not_paid BookingStatusID = iota
-	Full_amountPaid
-	Partial_amountPaid
+	Not_paid           BookingStatusID = 1
+	Cancelled          BookingStatusID = 2
+	Full_amountPaid    BookingStatusID = 3
+	Partial_amountPaid BookingStatusID = 4
 )
 
 type Booking struct {

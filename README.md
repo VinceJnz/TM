@@ -192,3 +192,36 @@ $env:DOCKER_BUILDKIT=$null
 
 e.g.
 `docker exec -it apiserver-debug /bin/bash`
+
+## Webhook Observability
+
+Stripe webhook logs in `api-server/localHandlers/handlerBooking/stripe.go` are structured JSON with fields such as:
+`component`, `stage`, `event_id`, `event_type`, `checkout_session_id`, `rows_affected`, `replay_detected`, and `replay_reason`.
+
+Suggested alert filters:
+
+```text
+component="stripe_webhook" AND stage="signature_verification_failed"
+```
+
+```text
+component="stripe_webhook" AND stage="finalized" AND replay_reason="no_booking_for_session"
+```
+
+```text
+component="stripe_webhook" AND stage="db_update_failed"
+```
+
+```text
+component="stripe_webhook" AND stage="finalized" AND replay_detected=true AND replay_reason!="already_paid"
+```
+
+Useful health filters:
+
+```text
+component="stripe_webhook" AND stage="received"
+```
+
+```text
+component="stripe_webhook" AND stage="finalized" AND rows_affected=1
+```

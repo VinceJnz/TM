@@ -69,6 +69,9 @@ func (c *Config) Run() {
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
 	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain, c.TestMode)
 	log.Printf(debugTag+"Run() Stripe gateway initialized with domain: %s", domain)
+	if c.Settings.DevMode && c.Settings.StripeWebhookSecret == "" {
+		log.Printf(debugTag + "Run() WARNING: DEV_MODE=true and STRIPE_WEBHOOK_SECRET is empty; webhook finalization is disabled unless webhook forwarding is configured. Dev fallback may apply.")
+	}
 	//go c.PaymentSvc.Start() // No longer needed as webhooks are not used.
 
 	c.OAuthSvc, err = oAuthGateway.New(oAuthGateway.GatewayConfig{

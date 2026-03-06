@@ -34,14 +34,25 @@ func (editor *View) getMenuUser() {
 			log.Printf("%v %v %v %v %+v", debugTag+"getMenuUser()2 success: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		}
 		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
+		editor.authResolved = true
 		editor.elements.userDisplay.Set("innerHTML", editor.appCore.User.Name)
 		editor.setMenuFetchState(viewHelpers.ItemStateNone)
-		editor.getMenuList()
+		if menuUser.UserID > 0 {
+			editor.getMenuList()
+		} else {
+			editor.resetMenu()
+		}
+		editor.applyRouteFromLocation()
 		log.Printf("%v %v", debugTag+"getMenuUser()", "Menu user fetch complete")
 	}
 
 	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v", debugTag+"getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
+		editor.authResolved = true
+		editor.appCore.SetUser(appCore.User{})
+		editor.resetMenu()
+		editor.setMenuFetchState(viewHelpers.ItemStateNone)
+		editor.applyRouteFromLocation()
 		//Don't display message to user
 	}
 

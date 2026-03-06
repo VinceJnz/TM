@@ -596,6 +596,14 @@ func (editor *ItemEditor) FetchItems() {
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}
 
+	fail := func(err error) {
+		log.Printf(debugTag+"FetchItems() failed: %v", err)
+		editor.Records = []TableData{}
+		editor.populateItemList()
+		editor.RecordState = RecordStateReloadRequired
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
+	}
+
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.RecordState = RecordStateCurrent
@@ -606,7 +614,7 @@ func (editor *ItemEditor) FetchItems() {
 
 		localApiURL := ApiURL
 		go func() {
-			editor.client.NewRequest(http.MethodGet, localApiURL, &records, nil, success)
+			editor.client.NewRequest(http.MethodGet, localApiURL, &records, nil, success, fail)
 		}()
 	}
 }

@@ -34,9 +34,10 @@ type CheckoutStatusResponse struct {
 
 // Store event listener cleanup functions
 type eventCleanup struct {
-	blurFunc  js.Func
-	focusFunc js.Func
-	cleanedUp bool
+	blurFunc    js.Func
+	focusFunc   js.Func
+	messageFunc js.Func
+	cleanedUp   bool
 }
 
 // MakePayment initiates the payment session
@@ -114,6 +115,43 @@ func (p *ItemEditor) windowFocus(this js.Value, args []js.Value) interface{} {
 	return nil
 }
 
+// windowMessage handles postMessage callbacks from the payment popup.
+func (p *ItemEditor) windowMessage(this js.Value, args []js.Value) interface{} {
+	if len(args) == 0 {
+		return nil
+	}
+
+	event := args[0]
+	data := event.Get("data")
+	if data.IsUndefined() || data.IsNull() {
+		return nil
+	}
+
+	msgType := data.Get("type")
+	if msgType.IsUndefined() || msgType.String() != "tm-payment-status" {
+		return nil
+	}
+
+	bookingID := data.Get("bookingId")
+	if !bookingID.IsUndefined() && !bookingID.IsNull() && bookingID.Int() != p.ParentData.ID {
+		return nil
+	}
+
+	status := data.Get("status").String()
+	log.Printf("%vwindowMessage() received payment status=%s", debugTag, status)
+
+	if !p.UiComponents.paymentWindow.IsNull() && !p.UiComponents.paymentWindow.IsUndefined() {
+		p.UiComponents.paymentWindow.Call("close")
+	}
+	p.paymentWindowDestroy()
+
+	if status == "complete" {
+		p.RecordState = RecordStateReloadRequired
+	}
+
+	return nil
+}
+
 // paymentWindowCreate creates the new payment window and sets up event listeners
 func (p *ItemEditor) paymentWindowCreate(url string) {
 	global := js.Global()
@@ -122,16 +160,20 @@ func (p *ItemEditor) paymentWindowCreate(url string) {
 	// Create cleanup functions that can be removed later
 	blurFunc := js.FuncOf(p.windowBlur)
 	focusFunc := js.FuncOf(p.windowFocus)
+	messageFunc := js.FuncOf(p.windowMessage)
 
 	// Store cleanup functions
 	if p.UiComponents.eventCleanup == nil {
 		p.UiComponents.eventCleanup = &eventCleanup{}
 	}
+	p.UiComponents.eventCleanup.cleanedUp = false
 	p.UiComponents.eventCleanup.blurFunc = blurFunc
 	p.UiComponents.eventCleanup.focusFunc = focusFunc
+	p.UiComponents.eventCleanup.messageFunc = messageFunc
 
 	window.Call("addEventListener", "blur", blurFunc)
 	window.Call("addEventListener", "focus", focusFunc)
+	window.Call("addEventListener", "message", messageFunc)
 
 	p.UiComponents.paymentWindow = window.Call("open", url, "_blank")
 
@@ -189,6 +231,18 @@ func (p *ItemEditor) cleanupEventListeners() {
 		window.Call("removeEventListener", "focus", p.UiComponents.eventCleanup.focusFunc)
 		p.UiComponents.eventCleanup.focusFunc.Release()
 		log.Printf("%vcleanupEventListeners() focusFunc cleaned up", debugTag)
+	}()
+
+	// Try to remove message listener
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("%vcleanupEventListeners() failed to cleanup messageFunc: %v", debugTag, r)
+			}
+		}()
+		window.Call("removeEventListener", "message", p.UiComponents.eventCleanup.messageFunc)
+		p.UiComponents.eventCleanup.messageFunc.Release()
+		log.Printf("%vcleanupEventListeners() messageFunc cleaned up", debugTag)
 	}()
 
 	// Mark as cleaned up
@@ -257,6 +311,7 @@ func (p *ItemEditor) checkPayment() {
 			p.paymentWindowDestroy()
 			// Refresh booking list
 			p.RecordState = RecordStateReloadRequired
+			log.Printf("%vcheckPayment() payment complete; state marked for reload", debugTag)
 
 		case "expired": // stripe.CheckoutSessionStatusExpired: //"expired":
 			// Payment expired or was canceled

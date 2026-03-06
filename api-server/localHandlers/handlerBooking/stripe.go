@@ -3,16 +3,21 @@ package handlerBooking
 import (
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/checkout/session"
+	"github.com/stripe/stripe-go/v84/webhook"
 )
 
 //const debugTag = "handlerBooking."
@@ -26,7 +31,7 @@ const (
 		SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
 		(SELECT COUNT(*) FROM at_booking_people atbp2 
 			JOIN at_bookings atb2 ON atbp2.booking_id = atb2.id 
-			WHERE atb2.trip_id = att.id AND atb2.booking_status_id = 2) as trip_person_count
+			WHERE atb2.trip_id = att.id AND atb2.booking_status_id = 3) as trip_person_count
 	FROM at_bookings atb
 	JOIN at_trips att ON att.id = atb.trip_id
 	LEFT JOIN at_booking_people atbp ON atbp.booking_id = atb.id
@@ -41,10 +46,48 @@ const (
 		SET stripe_session_id = $2, booking_price = $3
 		WHERE id = $1`
 
-	qryUpdatePaymentComplete = `UPDATE at_bookings 
+	qryUpdatePaymentByStripeSession = `UPDATE at_bookings
 		SET booking_status_id = $2, amount_paid = $3, payment_date = $4
-		WHERE id = $1`
+		WHERE stripe_session_id = $1 AND booking_status_id <> $2`
+
+	qryUpdatePaymentByBookingID = `UPDATE at_bookings
+		SET booking_status_id = $2, amount_paid = $3, payment_date = $4
+		WHERE id = $1 AND booking_status_id <> $2`
+
+	qryGetBookingByStripeSession = `SELECT id, booking_status_id
+		FROM at_bookings
+		WHERE stripe_session_id = $1
+		LIMIT 1`
 )
+
+func logWebhookEvent(stage string, fields map[string]interface{}) {
+	if fields == nil {
+		fields = map[string]interface{}{}
+	}
+	fields["component"] = "stripe_webhook"
+	fields["stage"] = stage
+	fields["ts"] = time.Now().UTC().Format(time.RFC3339Nano)
+	encoded, err := json.Marshal(fields)
+	if err != nil {
+		log.Printf("%vCheckoutWebhook() stage=%s marshal_err=%v fields=%+v", debugTag, stage, err, fields)
+		return
+	}
+	log.Printf("%vCheckoutWebhook() %s", debugTag, string(encoded))
+}
+
+func parseStripeSignatureTimestamp(signatureHeader string) int64 {
+	for _, part := range strings.Split(signatureHeader, ",") {
+		part = strings.TrimSpace(part)
+		if !strings.HasPrefix(part, "t=") {
+			continue
+		}
+		timestamp, err := strconv.ParseInt(strings.TrimPrefix(part, "t="), 10, 64)
+		if err == nil {
+			return timestamp
+		}
+	}
+	return 0
+}
 
 // Response structures for consistent API responses
 type CheckoutCreateResponse struct {
@@ -65,6 +108,11 @@ func (h *Handler) RegisterRoutesStripe(r *mux.Router, baseURL string) {
 	r.HandleFunc(baseURL+"/checkout/check/{id:[0-9]+}", h.CheckoutCheck).Methods("GET")
 	r.HandleFunc(baseURL+"/checkout/success/{id:[0-9]+}", h.CheckoutSuccess).Methods("GET")
 	r.HandleFunc(baseURL+"/checkout/cancel/{id:[0-9]+}", h.CheckoutCancel).Methods("GET")
+}
+
+// RegisterRoutesStripeWebhook registers the public Stripe webhook endpoint.
+func (h *Handler) RegisterRoutesStripeWebhook(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL+"/checkout/webhook", h.CheckoutWebhook).Methods("POST")
 }
 
 // CheckoutCreate This handler collects the data from the client and creates a payment intent.
@@ -232,18 +280,30 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 			log.Printf("%v failed to write checkout status response (open): %v", debugTag+"Handler.CheckoutCheck()", err)
 		}
 	case stripe.CheckoutSessionStatusComplete: //"complete":
-		//Update the booking record to show that the payment is complete
-		bookingItem.BookingStatusID.SetValid(int64(models.Full_amountPaid)) //Payment status = Full amount paid (value is 2) and sould only be set if the full payment has been made
-		bookingItem.AmountPaid.SetValid(CheckoutSession.AmountTotal)        //Store the amount paid
-		bookingItem.DatePaid.SetValid(time.Now())
-		err = Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdatePaymentComplete, bookingItem.ID, bookingItem.BookingStatusID, bookingItem.AmountPaid, bookingItem.DatePaid)
-		if err != nil {
-			log.Printf("%v update payment complete failed err=%v booking=%+v", debugTag+"Handler.CheckoutCheck()", err, bookingItem)
-			http.Error(w, "Error updating booking payment status", http.StatusInternalServerError)
-			return
+		if h.appConf.TestMode && h.appConf.Settings.StripeWebhookSecret == "" {
+			// Dev-only fallback for local testing when webhook forwarding is not configured.
+			// Production still relies on webhook-only finalization.
+			updateRes, updateErr := h.appConf.Db.Exec(qryUpdatePaymentByBookingID, bookingItem.ID, int(models.Full_amountPaid), CheckoutSession.AmountTotal, time.Now())
+			if updateErr != nil {
+				logWebhookEvent("dev_fallback_db_update_failed", map[string]interface{}{
+					"booking_id":          bookingItem.ID,
+					"checkout_session_id": bookingItem.StripeSessionID.String,
+					"error":               updateErr.Error(),
+				})
+			} else {
+				rows, _ := updateRes.RowsAffected()
+				logWebhookEvent("dev_fallback_applied", map[string]interface{}{
+					"booking_id":          bookingItem.ID,
+					"checkout_session_id": bookingItem.StripeSessionID.String,
+					"rows_affected":       rows,
+				})
+			}
 		}
+
+		// Webhook is authoritative for DB updates. This endpoint only reports Stripe status.
 		response.AmountTotal = float64(CheckoutSession.AmountTotal) / 100
-		response.PaymentDate = &bookingItem.DatePaid.Time
+		now := time.Now()
+		response.PaymentDate = &now
 		//send completed info to browser client
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -265,6 +325,42 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
 func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v handling checkout success", debugTag+"CheckoutSuccess()")
+	bookingID := dbStandardTemplate.GetID(w, r)
+
+	if h.appConf.TestMode && h.appConf.Settings.StripeWebhookSecret == "" && bookingID > 0 {
+		bookingItem := &models.BookingPaymentInfo{}
+		if err := Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID); err != nil {
+			logWebhookEvent("dev_fallback_success_lookup_failed", map[string]interface{}{
+				"booking_id": bookingID,
+				"error":      err.Error(),
+			})
+		} else if bookingItem.StripeSessionID.Valid && bookingItem.StripeSessionID.String != "" {
+			checkoutSession, err := session.Get(bookingItem.StripeSessionID.String, nil)
+			if err != nil {
+				logWebhookEvent("dev_fallback_success_session_get_failed", map[string]interface{}{
+					"booking_id":          bookingID,
+					"checkout_session_id": bookingItem.StripeSessionID.String,
+					"error":               err.Error(),
+				})
+			} else if checkoutSession != nil && checkoutSession.Status == stripe.CheckoutSessionStatusComplete {
+				updateRes, updateErr := h.appConf.Db.Exec(qryUpdatePaymentByBookingID, bookingID, int(models.Full_amountPaid), checkoutSession.AmountTotal, time.Now())
+				if updateErr != nil {
+					logWebhookEvent("dev_fallback_success_db_update_failed", map[string]interface{}{
+						"booking_id":          bookingID,
+						"checkout_session_id": bookingItem.StripeSessionID.String,
+						"error":               updateErr.Error(),
+					})
+				} else {
+					rows, _ := updateRes.RowsAffected()
+					logWebhookEvent("dev_fallback_success_applied", map[string]interface{}{
+						"booking_id":          bookingID,
+						"checkout_session_id": bookingItem.StripeSessionID.String,
+						"rows_affected":       rows,
+					})
+				}
+			}
+		}
+	}
 
 	if h.appConf.TestMode {
 		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
@@ -277,7 +373,7 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 
 	//Send a completed page to the payment window/tab
 	// Return HTML page with success message
-	html := `<!DOCTYPE html>
+	html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head>
 	<meta charset="UTF-8">
@@ -316,18 +412,167 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	</style>
 </head>
 <body>
+	<script>
+		(function () {
+			var payload = { type: "tm-payment-status", status: "complete", bookingId: %d };
+			try {
+				if (window.opener && !window.opener.closed) {
+					window.opener.postMessage(payload, window.location.origin);
+				}
+			} catch (e) {
+				try {
+					window.opener.postMessage(payload, "*");
+				} catch (_e) {}
+			}
+			setTimeout(function () { window.close(); }, 300);
+		})();
+	</script>
 	<div class="container">
-		<div class="success-icon">âœ“</div>
+		<div class="success-icon">&#10003;</div>
 		<h1>Payment Completed Successfully</h1>
 		<p>Your booking has been confirmed.</p>
 		<p>You can now close this window.</p>
 	</div>
 </body>
-</html>`
+</html>`, bookingID)
 	w.Header().Set("Content-Type", "text/html")
 	if _, err := w.Write([]byte(html)); err != nil {
 		log.Printf("%v failed to write success HTML response: %v", debugTag+"CheckoutSuccess()", err)
 	}
+}
+
+// CheckoutWebhook handles Stripe webhook events and is the authoritative payment finalization path.
+func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
+	signatureHeader := r.Header.Get("Stripe-Signature")
+	signatureTimestamp := parseStripeSignatureTimestamp(signatureHeader)
+
+	if h.appConf.Settings.StripeWebhookSecret == "" {
+		logWebhookEvent("config_error", map[string]interface{}{
+			"reason":              "webhook_secret_missing",
+			"signature_timestamp": signatureTimestamp,
+		})
+		http.Error(w, "webhook not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
+		logWebhookEvent("read_error", map[string]interface{}{
+			"error":               err.Error(),
+			"signature_timestamp": signatureTimestamp,
+		})
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	event, err := webhook.ConstructEvent(payload, signatureHeader, h.appConf.Settings.StripeWebhookSecret)
+	if err != nil {
+		logWebhookEvent("signature_verification_failed", map[string]interface{}{
+			"error":               err.Error(),
+			"signature_timestamp": signatureTimestamp,
+			"payload_size":        len(payload),
+		})
+		http.Error(w, "signature verification failed", http.StatusBadRequest)
+		return
+	}
+
+	eventAgeSec := int64(0)
+	if signatureTimestamp > 0 {
+		eventAgeSec = time.Now().Unix() - signatureTimestamp
+	}
+
+	logWebhookEvent("received", map[string]interface{}{
+		"event_id":            event.ID,
+		"event_type":          event.Type,
+		"event_created_unix":  event.Created,
+		"livemode":            event.Livemode,
+		"signature_timestamp": signatureTimestamp,
+		"event_age_seconds":   eventAgeSec,
+	})
+
+	if event.Type != "checkout.session.completed" {
+		logWebhookEvent("ignored_event", map[string]interface{}{
+			"event_id":   event.ID,
+			"event_type": event.Type,
+		})
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	var checkoutSession stripe.CheckoutSession
+	if err := json.Unmarshal(event.Data.Raw, &checkoutSession); err != nil {
+		logWebhookEvent("parse_error", map[string]interface{}{
+			"event_id":   event.ID,
+			"event_type": event.Type,
+			"error":      err.Error(),
+		})
+		http.Error(w, "invalid event payload", http.StatusBadRequest)
+		return
+	}
+
+	if checkoutSession.ID == "" {
+		logWebhookEvent("invalid_session", map[string]interface{}{
+			"event_id":   event.ID,
+			"event_type": event.Type,
+			"reason":     "missing_checkout_session_id",
+		})
+		http.Error(w, "missing checkout session id", http.StatusBadRequest)
+		return
+	}
+
+	res, err := h.appConf.Db.Exec(qryUpdatePaymentByStripeSession, checkoutSession.ID, int(models.Full_amountPaid), checkoutSession.AmountTotal, time.Now())
+	if err != nil {
+		logWebhookEvent("db_update_failed", map[string]interface{}{
+			"event_id":            event.ID,
+			"checkout_session_id": checkoutSession.ID,
+			"error":               err.Error(),
+		})
+		http.Error(w, "db update failed", http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := res.RowsAffected()
+
+	replay := false
+	replayReason := ""
+	bookingID := int64(0)
+	bookingStatus := int64(0)
+	if rows == 0 {
+		replay = true
+		var rowBookingID sql.NullInt64
+		var rowBookingStatus sql.NullInt64
+		rowErr := h.appConf.Db.QueryRow(qryGetBookingByStripeSession, checkoutSession.ID).Scan(&rowBookingID, &rowBookingStatus)
+		switch {
+		case rowErr == sql.ErrNoRows:
+			replayReason = "no_booking_for_session"
+		case rowErr != nil:
+			replayReason = "lookup_error"
+		default:
+			if rowBookingID.Valid {
+				bookingID = rowBookingID.Int64
+			}
+			if rowBookingStatus.Valid {
+				bookingStatus = rowBookingStatus.Int64
+			}
+			if bookingStatus == int64(models.Full_amountPaid) {
+				replayReason = "already_paid"
+			} else {
+				replayReason = "no_state_change"
+			}
+		}
+	}
+
+	logWebhookEvent("finalized", map[string]interface{}{
+		"event_id":            event.ID,
+		"event_type":          event.Type,
+		"checkout_session_id": checkoutSession.ID,
+		"booking_id":          bookingID,
+		"booking_status_id":   bookingStatus,
+		"rows_affected":       rows,
+		"replay_detected":     replay,
+		"replay_reason":       replayReason,
+	})
+	w.WriteHeader(http.StatusOK)
 }
 
 // CheckoutCancel handles cancelled payment redirect
@@ -337,9 +582,10 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
 func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v handling checkout cancel", debugTag+"CheckoutCancel()")
+	bookingID := dbStandardTemplate.GetID(w, r)
 
 	// Return HTML page with cancellation message
-	html := `<!DOCTYPE html>
+	html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head>
 	<meta charset="UTF-8">
@@ -378,14 +624,29 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 	</style>
 </head>
 <body>
+	<script>
+		(function () {
+			var payload = { type: "tm-payment-status", status: "cancelled", bookingId: %d };
+			try {
+				if (window.opener && !window.opener.closed) {
+					window.opener.postMessage(payload, window.location.origin);
+				}
+			} catch (e) {
+				try {
+					window.opener.postMessage(payload, "*");
+				} catch (_e) {}
+			}
+			setTimeout(function () { window.close(); }, 300);
+		})();
+	</script>
 	<div class="container">
-		<div class="cancel-icon">âœ•</div>
+		<div class="cancel-icon">&#10005;</div>
 		<h1>Payment Cancelled</h1>
 		<p>Your payment was not completed.</p>
 		<p>You can now close this window.</p>
 	</div>
 </body>
-</html>`
+</html>`, bookingID)
 	w.Header().Set("Content-Type", "text/html")
 	if _, err := w.Write([]byte(html)); err != nil {
 		log.Printf("%v failed to write cancel HTML response: %v", debugTag+"CheckoutCancel()", err)

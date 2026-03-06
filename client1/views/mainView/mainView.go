@@ -151,6 +151,7 @@ type View struct {
 	hashChangeSet       bool
 	unloadHandler       js.Func
 	unloadHandlerSet    bool
+	authResolved        bool
 	Children            children
 }
 
@@ -427,6 +428,14 @@ func (v *View) setupRouting() {
 	v.applyRouteFromLocation()
 }
 
+func (v *View) isPublicPage(pageTitle string) bool {
+	title := strings.TrimSpace(pageTitle)
+	return strings.EqualFold(title, "Login / Register") ||
+		strings.EqualFold(title, "Home") ||
+		strings.EqualFold(title, "About") ||
+		strings.EqualFold(title, "Contact")
+}
+
 func (v *View) applyRouteFromLocation() {
 	hash := js.Global().Get("location").Get("hash").String()
 	route := normalizeHashRoute(hash)
@@ -434,6 +443,26 @@ func (v *View) applyRouteFromLocation() {
 	if !ok {
 		title = "Home"
 	}
+
+	// During initial load, wait for menuUser/session restoration before
+	// enforcing auth redirects for protected routes.
+	if !v.authResolved && !v.isPublicPage(title) {
+		return
+	}
+
+	if !v.canFetchViewData(title) {
+		redirectTitle := "Login / Register"
+		if _, exists := v.childElements[redirectTitle]; !exists {
+			redirectTitle = "Home"
+		}
+
+		v.onCompletionMsg("Please login to access " + title + ". Redirecting to " + redirectTitle + ".")
+		element := v.childElements[redirectTitle]
+		v.navigateTo(redirectTitle, true, element, false)
+		v.updateRoute(redirectTitle)
+		return
+	}
+
 	element := v.childElements[title]
 	v.navigateTo(title, true, element, false)
 	if !ok || hash == "" {
@@ -490,6 +519,14 @@ func (v *View) updateRoute(title string) {
 	location.Set("hash", newHash)
 }
 
+func (v *View) canFetchViewData(pageTitle string) bool {
+	if v.isPublicPage(pageTitle) {
+		return true
+	}
+
+	return v.appCore.GetUser().UserID > 0
+}
+
 func (v *View) navigateTo(PageTitle string, menuAction bool, element editorElement, updateRoute bool) {
 	v.closeSideMenu() // onclick, close the side menu
 	if menuAction {   // Some menu items do nothing else
@@ -503,8 +540,12 @@ func (v *View) navigateTo(PageTitle string, menuAction bool, element editorEleme
 		v.elements.pageTitle.Set("innerHTML", PageTitle) // set the title for the element when it is displayed
 		v.setActiveMenuTitle(PageTitle)
 		if element != nil { // Some menu choices do not display an element
-			element.Display()    // Display new editor
-			element.FetchItems() // Fetch new editor data
+			element.Display() // Display new editor
+			if v.canFetchViewData(PageTitle) {
+				element.FetchItems() // Fetch new editor data
+			} else {
+				v.onCompletionMsg("Please login to load this view.")
+			}
 		}
 		if updateRoute {
 			v.updateRoute(PageTitle)
