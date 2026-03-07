@@ -53,11 +53,5 @@ func (h *Handler) removeSessionToken(tokenStr string, expectedUserID int) error 
 		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken failed to remove token", "err =", err, "tokenItem =", tokenItem)
 		return err
 	}
-	err = dbAuthTemplate.UserDelProvider(debugTag+"Handler.removeSessionToken ", h.appConf.Db, tokenItem.UserID)
-	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken failed to remove provider info from user record", "err =", err, "tokenItem =", tokenItem)
-		return err
-	}
-
 	return nil
 }

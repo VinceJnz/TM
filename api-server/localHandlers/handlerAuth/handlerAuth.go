@@ -541,7 +541,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	handlerHelpers.WriteJSON(w, http.StatusOK, user)
+	handlerHelpers.WriteJSON(w, http.StatusOK, handlerHelpers.RedactUserForPublicProfile(user))
 }
 
 // LoginWithPassword accepts username and password, validates them, and sends an OTP token via email.

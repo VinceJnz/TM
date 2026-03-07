@@ -277,7 +277,7 @@ func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
 		handlerHelpers.WriteInternalServerError(w, "failed to load user")
 		return
 	}
-	handlerHelpers.WriteJSON(w, http.StatusOK, user)
+	handlerHelpers.WriteJSON(w, http.StatusOK, handlerHelpers.RedactUserForPublicProfile(user))
 }
 
 // VerifyEmail validates the email verification token and creates a session cookie.
@@ -429,5 +429,5 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to update user", http.StatusInternalServerError)
 		return
 	}
-	handlerHelpers.WriteJSON(w, http.StatusOK, user)
+	handlerHelpers.WriteJSON(w, http.StatusOK, handlerHelpers.RedactUserForClient(user))
 }
