@@ -209,10 +209,8 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 		//log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
 	}
-	err = TokenCleanExpired(debugStr, Db)
-	if err != nil {
-		log.Printf("%v %v %v", debugTag+"Handler.FindSessionToken: Token CleanExpired fail", "err =", err)
-	}
+	// PERFORMANCE: Token cleanup moved to background job for performance
+	// See: startTokenCleanupJob in main.go
 	return result, nil
 }
 
@@ -227,10 +225,8 @@ func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Tok
 		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
 		return result, err
 	}
-	err = TokenCleanExpired(debugStr, Db)
-	if err != nil {
-		log.Printf("%v %v %v", debugTag+"Handler.FindToken: Token CleanExpired fail", "err =", err)
-	}
+	// PERFORMANCE: Token cleanup moved to background job for performance
+	// See: startTokenCleanupJob in main.go
 	return result, nil
 }
 
@@ -420,10 +416,12 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 			}
 			err = TokenCleanExpired(debugTag+"CreateNamedToken ", Db) // Clean expired tokens for the user
 			if err != nil {
-				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken: Token CleanExpired fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+				log.Printf("%v %v %v %v %v", debugTag+"CreateNamedToken: Token CleanExpired fail", "err =", err, "UserID =", userID)
+				// SECURITY: tokenItem not logged as it contains sensitive token data
 			}
 		}
 	}
-	log.Printf("%v %v %v %v %v %v %v %+v %+v", debugTag+"CreateNamedToken: Success, can advise client", "err =", err, "UserID =", userID, "sessionToken =", *sessionToken, "tokenItem =", tokenItem)
+	log.Printf("%v %v %v %v %v", debugTag+"CreateNamedToken: Success, can advise client", "err =", err, "UserID =", userID)
+	// SECURITY: sessionToken and tokenItem not logged as they contain sensitive data
 	return sessionToken, err
 }

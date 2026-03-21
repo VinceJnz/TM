@@ -251,6 +251,23 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	// Read username/email/name/password from token SessionData (persisted at registration)
 	if err := json.Unmarshal([]byte(tok.SessionData.String), &user); err != nil {
 		log.Printf("%vVerifyRegistration failed to extract user data from token SessionData: %v", debugTag, err)
+		http.Error(w, "invalid registration token data", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if user.Email.String == "" || user.Name == "" {
+		log.Printf("%vVerifyRegistration missing required user fields: email=%q name=%q",
+			debugTag, user.Email.String, user.Name)
+		http.Error(w, "incomplete registration data", http.StatusBadRequest)
+		return
+	}
+
+	// Validate email format
+	if !handlerHelpers.IsValidEmail(user.Email.String) {
+		log.Printf("%vVerifyRegistration invalid email format: %q", debugTag, user.Email.String)
+		http.Error(w, "invalid email format", http.StatusBadRequest)
+		return
 	}
 
 	user.AccountStatusID.SetValid(int64(models.AccountVerified)) // Email verified, pending admin approval
@@ -360,7 +377,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Create OTP token valid for 15 minutes and send email
 	subject := "Your one-time password (OTP)"
-	tokenValue, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
+	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
 		debugTag+"LoginSendOTP:",
 		h.appConf.Db,
 		h.appConf.EmailSvc,
@@ -381,7 +398,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !emailSent {
-		log.Printf("%vLoginSendOTP EmailSvc not configured; OTP for %v: %v", debugTag, user.Email.String, tokenValue)
+		log.Printf("%vLoginSendOTP EmailSvc not configured; OTP sent to %v (token not logged for security)", debugTag, user.Email.String)
 	} else {
 		log.Printf("%vLoginSendOTP OTP email sent successfully", debugTag)
 	}
@@ -592,7 +609,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Password is valid; now create and send OTP token
 	subject := "Your one-time password (OTP)"
-	tokenValue, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
+	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
 		debugTag+"LoginWithPassword:",
 		h.appConf.Db,
 		h.appConf.EmailSvc,
@@ -615,7 +632,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 				"status":  "otp_generated_dev",
 				"message": "OTP generated (email delivery failed in DEV mode)",
 				"email":   user.Email.String,
-				"otp":     tokenValue,
+				// SECURITY: OTP removed from response - should only be sent via email
 			})
 			return
 		}
@@ -624,7 +641,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !emailSent {
-		log.Printf("%vLoginWithPassword EmailSvc not configured; OTP for %v: %v", debugTag, user.Email.String, tokenValue)
+		log.Printf("%vLoginWithPassword EmailSvc not configured; OTP sent to %v (token not logged for security)", debugTag, user.Email.String)
 	} else {
 		log.Printf("%vLoginWithPassword OTP email sent successfully", debugTag)
 	}

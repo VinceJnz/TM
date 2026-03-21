@@ -184,7 +184,8 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 	// Send the message
 	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
 	if err != nil {
-		log.Println(debugTag+"Handler.SendMail ... Could not send mail>", err, "to:", to, "title:", title, "message:", message)
+		log.Println(debugTag+"Handler.SendMail ... Could not send mail>", err, "to:", to, "subject:", title)
+		// SECURITY: Message body not logged as it may contain sensitive data (OTPs, tokens, PII)
 		return false, err
 	}
 	return true, nil

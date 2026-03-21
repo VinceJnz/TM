@@ -29,13 +29,16 @@ import (
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/helpers"
+	"api-server/v2/modelMethods/dbAuthTemplate"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "main."
@@ -54,11 +57,40 @@ func parseOrigins(csv string) []string {
 	return origins
 }
 
+// startTokenCleanupJob runs token cleanup every 15 minutes in the background.
+// This removes expired tokens from the database to prevent storage bloat and maintain security.
+// Token cleanup was moved from the hot read path (FindSessionToken/FindToken) to this
+// background job to improve performance and reduce database write pressure on authenticated requests.
+func startTokenCleanupJob(db *sqlx.DB) {
+	ticker := time.NewTicker(15 * time.Minute)
+	go func() {
+		// Run cleanup immediately on startup
+		if err := dbAuthTemplate.TokenCleanExpired("background-cleanup-startup", db); err != nil {
+			log.Printf("%sToken cleanup job (startup) failed: %v", debugTag, err)
+		} else {
+			log.Printf("%sToken cleanup job (startup) completed successfully", debugTag)
+		}
+
+		// Then run on schedule
+		for range ticker.C {
+			if err := dbAuthTemplate.TokenCleanExpired("background-cleanup", db); err != nil {
+				log.Printf("%sToken cleanup job failed: %v", debugTag, err)
+			} else {
+				log.Printf("%sToken cleanup job completed successfully", debugTag)
+			}
+		}
+	}()
+	log.Printf("%sToken cleanup background job started (runs every 15 minutes)", debugTag)
+}
+
 func main() {
 	debugFlag := true
 	app := appCore.New(debugFlag)
 	app.Run()
 	defer app.Close()
+
+	// Start background jobs
+	startTokenCleanupJob(app.Db)
 
 	r := mux.NewRouter()
 	// *****************************************************

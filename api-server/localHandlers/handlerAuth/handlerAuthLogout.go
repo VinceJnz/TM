@@ -7,6 +7,10 @@ import (
 	"net/http"
 )
 
+// AuthLogout ends the user's session by removing the session token.
+// IMPORTANT: This does NOT disconnect OAuth providers - that requires a separate explicit action.
+// OAuth provider linkage (provider, provider_id) remains intact for future logins.
+// Users can log back in using the same OAuth provider without re-authorization.
 func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 	session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
 	log.Printf(debugTag+"Handler.AuthLogout session=%+v, ok=%v", session, ok)

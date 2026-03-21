@@ -123,6 +123,7 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 }
 
 // Delete: removes a record identified by id
+// WARNING: This function does NOT check for child records. Use DeleteWithChildCheck for safer deletion.
 func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	// Begin transaction
 	tx, err := Db.Beginx()
@@ -134,7 +135,16 @@ func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	result, err := tx.Exec(query, args...)
 	if err != nil {
 		tx.Rollback()
-		log.Printf(debugTag+debugStr+"Delete result=%+v", result)
+		log.Printf(debugTag+debugStr+"Delete result=%+v, error=%v", result, err)
+
+		// Check if it's a foreign key violation
+		if strings.Contains(err.Error(), "foreign key constraint") ||
+			strings.Contains(err.Error(), "violates foreign key") ||
+			strings.Contains(err.Error(), "FOREIGN KEY constraint") {
+			http.Error(w, "Cannot delete: record is referenced by other data", http.StatusConflict)
+			return
+		}
+
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -146,6 +156,88 @@ func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+}
+
+// ChildCheckQuery represents a query to check for child records
+type ChildCheckQuery struct {
+	TableName string // Human-readable table name for error messages
+	Query     string // SQL query that returns count of child records
+}
+
+// DeleteWithChildCheck: removes a record after checking for child records
+// This function provides better error messages and prevents orphaned data.
+// childChecks: map of table names to SQL queries that count child records
+// Each query should return a single integer count and accept the same args as the delete query
+func DeleteWithChildCheck(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB,
+	query string, childChecks []ChildCheckQuery, args ...any) {
+
+	// Check for child records first
+	for _, check := range childChecks {
+		var count int
+		err := Db.Get(&count, check.Query, args...)
+		if err != nil {
+			log.Printf("%sDeleteWithChildCheck: Error checking %s: %v", debugTag+debugStr, check.TableName, err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		if count > 0 {
+			log.Printf("%sDeleteWithChildCheck: Cannot delete - %d child record(s) in %s",
+				debugTag+debugStr, count, check.TableName)
+			http.Error(w,
+				"Cannot delete: "+strconv.Itoa(count)+" related record(s) exist in "+check.TableName,
+				http.StatusConflict)
+			return
+		}
+	}
+
+	// Proceed with delete if no children found
+	tx, err := Db.Beginx()
+	if err != nil {
+		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+		return
+	}
+
+	result, err := tx.Exec(query, args...)
+	if err != nil {
+		tx.Rollback()
+		log.Printf("%sDeleteWithChildCheck: Delete failed: %v", debugTag+debugStr, err)
+
+		// Check if it's a foreign key violation (shouldn't happen after our checks, but be safe)
+		if strings.Contains(err.Error(), "foreign key constraint") ||
+			strings.Contains(err.Error(), "violates foreign key") ||
+			strings.Contains(err.Error(), "FOREIGN KEY constraint") {
+			http.Error(w, "Cannot delete: record is referenced by other data", http.StatusConflict)
+			return
+		}
+
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if any rows were actually deleted
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		tx.Rollback()
+		log.Printf("%sDeleteWithChildCheck: Could not get rows affected: %v", debugTag+debugStr, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		tx.Rollback()
+		http.Error(w, "Record not found", http.StatusNotFound)
+		return
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("%sDeleteWithChildCheck: Successfully deleted record", debugTag+debugStr)
 	w.WriteHeader(http.StatusOK)
 }
 

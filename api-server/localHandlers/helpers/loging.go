@@ -66,10 +66,8 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 			info.ResponseBody = cleaned
 		}
 
-		cookie, err := r.Cookie("session")
-		if err == nil {
-			info.Cookie = cookie.Value
-		}
+		// SECURITY: Session cookie should not be logged for security reasons
+		// User identification is available via info.UserID from context
 		info.StatusCode = lrw.statusCode
 		info.Protocol = r.Proto
 		info.Size = r.ContentLength

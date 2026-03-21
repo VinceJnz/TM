@@ -56,7 +56,8 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 
 // loginHandler initiates the OAuth flow by creating a temporary DB-backed token to hold the state and pending registration data, then redirects the user to the provider's auth URL with the state parameter. The callbackHandler will validate the state and complete the login/registration process.
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%vloginHandler called: r.host=%s, settings.host=%v, r.remote=%s r.cookies=%q", debugTag, r.Host, h.appConf.Settings.Host, r.RemoteAddr, r.Header.Get("Cookie"))
+	log.Printf("%vloginHandler called: r.host=%s, settings.host=%v, r.remote=%s", debugTag, r.Host, h.appConf.Settings.Host, r.RemoteAddr)
+	// SECURITY: Cookie header removed from logs for security
 	// Create a DB-backed temporary token to hold the OAuth state and any pending registration data.
 	// UserID=0 indicates an unauthenticated/temporary token.
 	// The cookie value itself will be used as the `state` parameter for the OAuth flow.
