@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict UnnpDMMEc3GkgRMrv3jmuuW5MBSKLOqdmL8tOtN4yIgiQTTbknxYOsHHqtPGJUS
+\restrict iX2rjRjRyMwleGB59bTI3uloi1AL8fWCqOt9AgeymIeLkgLwTWWWfDYsuGgmOgo
 
 -- Dumped from database version 13.23 (Debian 13.23-1.pgdg13+1)
 -- Dumped by pg_dump version 18.1
 
--- Started on 2026-03-21 18:10:01
+-- Started on 2026-03-21 18:59:12
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -23,7 +23,7 @@ SET row_security = off;
 
 DROP DATABASE IF EXISTS mydatabase;
 --
--- TOC entry 3389 (class 1262 OID 16384)
+-- TOC entry 3390 (class 1262 OID 16384)
 -- Name: mydatabase; Type: DATABASE; Schema: -; Owner: myuser
 --
 
@@ -32,9 +32,9 @@ CREATE DATABASE mydatabase WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PR
 
 ALTER DATABASE mydatabase OWNER TO myuser;
 
-\unrestrict UnnpDMMEc3GkgRMrv3jmuuW5MBSKLOqdmL8tOtN4yIgiQTTbknxYOsHHqtPGJUS
+\unrestrict iX2rjRjRyMwleGB59bTI3uloi1AL8fWCqOt9AgeymIeLkgLwTWWWfDYsuGgmOgo
 \connect mydatabase
-\restrict UnnpDMMEc3GkgRMrv3jmuuW5MBSKLOqdmL8tOtN4yIgiQTTbknxYOsHHqtPGJUS
+\restrict iX2rjRjRyMwleGB59bTI3uloi1AL8fWCqOt9AgeymIeLkgLwTWWWfDYsuGgmOgo
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -59,7 +59,7 @@ CREATE SCHEMA public;
 ALTER SCHEMA public OWNER TO myuser;
 
 --
--- TOC entry 3390 (class 0 OID 0)
+-- TOC entry 3391 (class 0 OID 0)
 -- Dependencies: 4
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: myuser
 --
@@ -963,7 +963,7 @@ CREATE VIEW public.vt_trips AS
 ALTER VIEW public.vt_trips OWNER TO myuser;
 
 --
--- TOC entry 3336 (class 0 OID 16419)
+-- TOC entry 3337 (class 0 OID 16419)
 -- Dependencies: 201
 -- Data for Name: at_booking_people; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -980,12 +980,10 @@ INSERT INTO public.at_booking_people VALUES (26, 17, 36, 16, 'vvv', '2025-03-04 
 INSERT INTO public.at_booking_people VALUES (27, 17, 36, 17, 'vbbb', '2025-03-04 07:43:27.032349', '2025-03-04 07:43:27.032349');
 INSERT INTO public.at_booking_people VALUES (30, 16, 37, 2, 'qqq', '2026-03-05 09:11:07.035322', '2026-03-05 09:11:07.035322');
 INSERT INTO public.at_booking_people VALUES (31, 16, 37, 3, 'www', '2026-03-05 09:27:01.381943', '2026-03-05 09:27:31.995434');
-INSERT INTO public.at_booking_people VALUES (29, 16, 38, 2, 'rrr', '2026-03-05 09:10:15.762292', '2026-03-05 09:29:03.766593');
-INSERT INTO public.at_booking_people VALUES (28, 16, 38, 3, 'eee', '2026-03-05 09:09:58.910609', '2026-03-05 09:29:18.886015');
 
 
 --
--- TOC entry 3383 (class 0 OID 16894)
+-- TOC entry 3384 (class 0 OID 16894)
 -- Dependencies: 249
 -- Data for Name: at_booking_vouchers; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -996,7 +994,7 @@ INSERT INTO public.at_booking_vouchers VALUES (1, 'WELCOME10', 10.00, NULL, '202
 
 
 --
--- TOC entry 3338 (class 0 OID 16435)
+-- TOC entry 3339 (class 0 OID 16435)
 -- Dependencies: 203
 -- Data for Name: at_bookings; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1007,12 +1005,11 @@ INSERT INTO public.at_bookings VALUES (7, 16, 'A first booking', '2024-11-03 00:
 INSERT INTO public.at_bookings VALUES (34, 17, 'kkkeeeYZZZZZ', '2024-11-01 00:00:00', '2024-12-01 00:00:00', 1, '2024-12-20 09:10:07.684579', '2025-01-01 08:23:16.960475', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO public.at_bookings VALUES (37, 16, 'Vince2 Booking1', '2025-05-19 00:00:00', '2025-05-23 00:00:00', 1, '2025-03-04 08:35:44.46041', '2025-03-04 08:35:44.46041', 7, NULL, NULL, 0.00, NULL, NULL, NULL, NULL);
 INSERT INTO public.at_bookings VALUES (36, 17, 'hhhhhhhhhXXX', '2024-12-01 00:00:00', '2024-12-11 00:00:00', 1, '2025-03-04 07:00:43.604301', '2026-03-03 05:44:11.750259', 2, NULL, NULL, 0.00, NULL, NULL, NULL, NULL);
-INSERT INTO public.at_bookings VALUES (38, 16, 'TEst123', '2024-10-17 00:00:00', '2024-10-17 00:00:00', 1, '2026-03-05 09:09:40.336162', '2026-03-05 09:09:40.336162', 6, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO public.at_bookings VALUES (10, 16, 'Booking 2', '2024-10-06 00:00:00', '2024-10-20 00:00:00', 3, '2024-10-06 09:14:26.265978', '2026-03-06 08:58:11.716615', 2, NULL, NULL, 364.00, '2026-03-06', 36400, NULL, 'cs_test_a17Fhi4w3z9XuAQ685G6R9xI7Gg5tjvvU8dwNU0AgofDkSP4TNXtcBtUWK');
 
 
 --
--- TOC entry 3340 (class 0 OID 16451)
+-- TOC entry 3341 (class 0 OID 16451)
 -- Dependencies: 205
 -- Data for Name: at_group_bookings; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1021,7 +1018,7 @@ INSERT INTO public.at_group_bookings VALUES (1, 'Vince''s group', 0, '2024-10-29
 
 
 --
--- TOC entry 3342 (class 0 OID 16462)
+-- TOC entry 3343 (class 0 OID 16462)
 -- Dependencies: 207
 -- Data for Name: at_trip_cost_groups; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1030,7 +1027,7 @@ INSERT INTO public.at_trip_cost_groups VALUES (1, 'Lodge winter rate', '2024-10-
 
 
 --
--- TOC entry 3344 (class 0 OID 16472)
+-- TOC entry 3345 (class 0 OID 16472)
 -- Dependencies: 209
 -- Data for Name: at_trip_costs; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1046,19 +1043,18 @@ INSERT INTO public.at_trip_costs VALUES (9, 1, NULL, 2, 4, 2, 25.00, '2025-01-14
 
 
 --
--- TOC entry 3346 (class 0 OID 16482)
+-- TOC entry 3347 (class 0 OID 16482)
 -- Dependencies: 211
 -- Data for Name: at_trips; Type: TABLE DATA; Schema: public; Owner: myuser
 --
 
 INSERT INTO public.at_trips VALUES (1, 16, 'Trip1a', NULL, '2024-11-01', '2024-12-01', 3, '2024-10-10 10:37:23.829893', '2024-10-10 10:37:23.829893', 3, 4, 3, 1, NULL);
-INSERT INTO public.at_trips VALUES (6, 16, 'A fantastic trip a!', NULL, '2024-10-17', '2024-10-17', 11, '2024-10-17 23:57:28.0255', '2024-10-17 23:57:28.0255', 1, 1, 1, 1, NULL);
 INSERT INTO public.at_trips VALUES (7, 16, '3rd trip', NULL, '2025-05-19', '2025-05-23', 1, '2024-10-18 00:11:25.195676', '2024-10-18 00:11:25.195676', 1, 2, 1, 1, NULL);
 INSERT INTO public.at_trips VALUES (2, 16, 'A new trip', 'Lower hutt', '2024-12-01', '2024-12-11', 3, '2024-10-11 21:38:01.098156', '2026-03-03 01:13:22.492497', 1, 1, 2, 1, NULL);
 
 
 --
--- TOC entry 3348 (class 0 OID 16499)
+-- TOC entry 3349 (class 0 OID 16499)
 -- Dependencies: 213
 -- Data for Name: at_user_payments; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1066,7 +1062,7 @@ INSERT INTO public.at_trips VALUES (2, 16, 'A new trip', 'Lower hutt', '2024-12-
 
 
 --
--- TOC entry 3350 (class 0 OID 16509)
+-- TOC entry 3351 (class 0 OID 16509)
 -- Dependencies: 215
 -- Data for Name: et_access_level; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1079,7 +1075,7 @@ INSERT INTO public.et_access_level VALUES (5, 'delete', NULL, '2024-11-24 23:23:
 
 
 --
--- TOC entry 3352 (class 0 OID 16519)
+-- TOC entry 3353 (class 0 OID 16519)
 -- Dependencies: 217
 -- Data for Name: et_access_scope; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1089,7 +1085,7 @@ INSERT INTO public.et_access_scope VALUES (1, 'any', NULL, '2024-11-24 23:14:57.
 
 
 --
--- TOC entry 3354 (class 0 OID 16529)
+-- TOC entry 3355 (class 0 OID 16529)
 -- Dependencies: 219
 -- Data for Name: et_booking_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1101,7 +1097,7 @@ INSERT INTO public.et_booking_status VALUES (4, 'Partially paid', '2026-03-06 06
 
 
 --
--- TOC entry 3356 (class 0 OID 16539)
+-- TOC entry 3357 (class 0 OID 16539)
 -- Dependencies: 221
 -- Data for Name: et_member_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1111,7 +1107,7 @@ INSERT INTO public.et_member_status VALUES (2, 'No', '2025-01-12 08:36:12.929545
 
 
 --
--- TOC entry 3358 (class 0 OID 16549)
+-- TOC entry 3359 (class 0 OID 16549)
 -- Dependencies: 223
 -- Data for Name: et_resource; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1148,7 +1144,7 @@ INSERT INTO public.et_resource VALUES (1, 'users', 'users', '2024-11-24 23:20:21
 
 
 --
--- TOC entry 3360 (class 0 OID 16559)
+-- TOC entry 3361 (class 0 OID 16559)
 -- Dependencies: 225
 -- Data for Name: et_seasons; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1158,7 +1154,7 @@ INSERT INTO public.et_seasons VALUES (1, 'Summer', '2024-10-26 05:28:32.741256',
 
 
 --
--- TOC entry 3362 (class 0 OID 16569)
+-- TOC entry 3363 (class 0 OID 16569)
 -- Dependencies: 227
 -- Data for Name: et_trip_difficulty; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1169,7 +1165,7 @@ INSERT INTO public.et_trip_difficulty VALUES (3, 'Slow medium', '2024-10-28 06:3
 
 
 --
--- TOC entry 3364 (class 0 OID 16579)
+-- TOC entry 3365 (class 0 OID 16579)
 -- Dependencies: 229
 -- Data for Name: et_trip_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1180,7 +1176,7 @@ INSERT INTO public.et_trip_status VALUES (3, 'Completed', '2024-10-10 10:34:56.1
 
 
 --
--- TOC entry 3366 (class 0 OID 16589)
+-- TOC entry 3367 (class 0 OID 16589)
 -- Dependencies: 231
 -- Data for Name: et_trip_type; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1194,7 +1190,7 @@ INSERT INTO public.et_trip_type VALUES (6, 'Climbing', '2024-10-26 05:40:15.5662
 
 
 --
--- TOC entry 3368 (class 0 OID 16599)
+-- TOC entry 3369 (class 0 OID 16599)
 -- Dependencies: 233
 -- Data for Name: et_user_account_status; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1208,7 +1204,7 @@ INSERT INTO public.et_user_account_status VALUES (5, 'WebAuthnReset', '2025-08-1
 
 
 --
--- TOC entry 3370 (class 0 OID 16612)
+-- TOC entry 3371 (class 0 OID 16612)
 -- Dependencies: 235
 -- Data for Name: et_user_age_groups; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1220,7 +1216,7 @@ INSERT INTO public.et_user_age_groups VALUES (4, 'Youth', '2024-10-26 07:09:03.9
 
 
 --
--- TOC entry 3372 (class 0 OID 16622)
+-- TOC entry 3373 (class 0 OID 16622)
 -- Dependencies: 237
 -- Data for Name: st_group; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1232,7 +1228,7 @@ INSERT INTO public.st_group VALUES (5, 'Trusted User', 'Trusted User', '2026-03-
 
 
 --
--- TOC entry 3374 (class 0 OID 16633)
+-- TOC entry 3375 (class 0 OID 16633)
 -- Dependencies: 239
 -- Data for Name: st_group_resource; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1413,16 +1409,16 @@ INSERT INTO public.st_group_resource VALUES (180, 1, 34, 5, 1, '2026-03-06 00:44
 
 
 --
--- TOC entry 3376 (class 0 OID 16644)
+-- TOC entry 3377 (class 0 OID 16644)
 -- Dependencies: 241
 -- Data for Name: st_token; Type: TABLE DATA; Schema: public; Owner: myuser
 --
 
-INSERT INTO public.st_token VALUES (621, 16, 'session', 'localhost', 'FQ9Rk2GLNPywtwE1QelnyVejdGBsoyH5Vq6C5l2TQwk', '2026-03-21 04:11:59.079615+00', '2026-03-21 05:11:59.079616+00', '2026-03-21 04:11:59.081085', '2026-03-21 04:11:59.081085', true, NULL);
+INSERT INTO public.st_token VALUES (623, 16, 'session', 'localhost', 'CIlG52oKfICkM35frJF0-4kR8-DnKNBIpuJdu2vJFNU', '2026-03-21 05:15:46.469066+00', '2026-03-21 06:15:46.469066+00', '2026-03-21 05:15:46.469983', '2026-03-21 05:15:46.469983', true, NULL);
 
 
 --
--- TOC entry 3381 (class 0 OID 16821)
+-- TOC entry 3382 (class 0 OID 16821)
 -- Dependencies: 247
 -- Data for Name: st_user_credentials; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1430,7 +1426,7 @@ INSERT INTO public.st_token VALUES (621, 16, 'session', 'localhost', 'FQ9Rk2GLNP
 
 
 --
--- TOC entry 3378 (class 0 OID 16655)
+-- TOC entry 3379 (class 0 OID 16655)
 -- Dependencies: 243
 -- Data for Name: st_user_group; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1450,7 +1446,7 @@ INSERT INTO public.st_user_group VALUES (20, 76, 2, '2026-02-28 08:54:16.953424'
 
 
 --
--- TOC entry 3380 (class 0 OID 16665)
+-- TOC entry 3381 (class 0 OID 16665)
 -- Dependencies: 245
 -- Data for Name: st_users; Type: TABLE DATA; Schema: public; Owner: myuser
 --
@@ -1462,7 +1458,7 @@ INSERT INTO public.st_users VALUES (15, 'Vince Jennings', 'vince1', 'vince.jenni
 INSERT INTO public.st_users VALUES (35, 'test2', 'test2', 'vince.jennings102@gmail.com', 1, '2025-08-10 00:26:32.902823', '2025-09-28 08:12:27.706428', NULL, 2, NULL, '5t2tgw', NULL, 2, NULL, NULL, NULL);
 INSERT INTO public.st_users VALUES (62, 'Vince Jennings', 'VinceTTC', 'vince.jennings@ttc.org.nz', 1, '2026-02-16 03:13:52.208284', '2026-02-17 04:25:40.4864', '1990-03-23', NULL, '93c', NULL, NULL, 2, NULL, 'google', '108559076374625333492');
 INSERT INTO public.st_users VALUES (1, 'vince jennings3', 'vince', 'vince.jennings1003@gmail.com', 2, '2024-09-24 07:20:41.0626', '2025-09-28 08:12:47.917242', NULL, 2, '93 Farnham Street, Mornington', '7654', NULL, 2, NULL, NULL, NULL);
-INSERT INTO public.st_users VALUES (16, 'vince jennings', 'vinceAPPtst', 'vince.apptesting@gmail.com', 1, '2024-11-14 10:47:04.549148', '2026-03-21 04:11:59.057489', '0001-01-26', 1, '93 Farnham Street', '1234', NULL, 2, NULL, 'google', '107191100686708556936');
+INSERT INTO public.st_users VALUES (16, 'vince jennings', 'vinceAPPtst', 'vince.apptesting@gmail.com', 1, '2024-11-14 10:47:04.549148', '2026-03-21 05:15:46.434689', '0001-01-26', 1, '93 Farnham Street', '1234', NULL, 2, NULL, 'google', '107191100686708556936');
 INSERT INTO public.st_users VALUES (20, 'admin1', 'admin1', 'admin1@test.localhost', 1, '2025-06-19 10:07:04.161727', '2025-08-05 06:36:12.347883', NULL, 1, '93 Farnham St', '1111', NULL, 2, NULL, NULL, NULL);
 INSERT INTO public.st_users VALUES (38, 'Vince5', 'vince5', 'vince.jennings5@gmail.com', 0, '2025-09-29 01:07:41.120843', '2025-09-29 01:07:41.120843', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
 INSERT INTO public.st_users VALUES (17, 'Vince3', 'vince3', 'vince.jennings3@gmail.com', 1, '2024-11-25 03:26:18.444765', '2025-10-08 01:00:43.243508', NULL, 3, '93 Farnham Street', '1234A', NULL, 2, NULL, NULL, NULL);
@@ -1472,7 +1468,7 @@ INSERT INTO public.st_users VALUES (3, 'Dylan Jennings1', 'Dylan', 'dylan@dt.net
 
 
 --
--- TOC entry 3393 (class 0 OID 0)
+-- TOC entry 3394 (class 0 OID 0)
 -- Dependencies: 200
 -- Name: at_booking_users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1481,7 +1477,7 @@ SELECT pg_catalog.setval('public.at_booking_users_id_seq', 31, true);
 
 
 --
--- TOC entry 3394 (class 0 OID 0)
+-- TOC entry 3395 (class 0 OID 0)
 -- Dependencies: 248
 -- Name: at_booking_vouchers_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1490,7 +1486,7 @@ SELECT pg_catalog.setval('public.at_booking_vouchers_id_seq', 3, true);
 
 
 --
--- TOC entry 3395 (class 0 OID 0)
+-- TOC entry 3396 (class 0 OID 0)
 -- Dependencies: 202
 -- Name: at_bookings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1499,7 +1495,7 @@ SELECT pg_catalog.setval('public.at_bookings_id_seq', 38, true);
 
 
 --
--- TOC entry 3396 (class 0 OID 0)
+-- TOC entry 3397 (class 0 OID 0)
 -- Dependencies: 204
 -- Name: at_group_bookings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1508,7 +1504,7 @@ SELECT pg_catalog.setval('public.at_group_bookings_id_seq', 2, true);
 
 
 --
--- TOC entry 3397 (class 0 OID 0)
+-- TOC entry 3398 (class 0 OID 0)
 -- Dependencies: 206
 -- Name: at_trip_cost_groups_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1517,7 +1513,7 @@ SELECT pg_catalog.setval('public.at_trip_cost_groups_id_seq', 2, true);
 
 
 --
--- TOC entry 3398 (class 0 OID 0)
+-- TOC entry 3399 (class 0 OID 0)
 -- Dependencies: 208
 -- Name: at_trip_costs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1526,7 +1522,7 @@ SELECT pg_catalog.setval('public.at_trip_costs_id_seq', 10, true);
 
 
 --
--- TOC entry 3399 (class 0 OID 0)
+-- TOC entry 3400 (class 0 OID 0)
 -- Dependencies: 210
 -- Name: at_trips_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1535,7 +1531,7 @@ SELECT pg_catalog.setval('public.at_trips_id_seq', 8, true);
 
 
 --
--- TOC entry 3400 (class 0 OID 0)
+-- TOC entry 3401 (class 0 OID 0)
 -- Dependencies: 212
 -- Name: at_user_payments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1544,7 +1540,7 @@ SELECT pg_catalog.setval('public.at_user_payments_id_seq', 1, true);
 
 
 --
--- TOC entry 3401 (class 0 OID 0)
+-- TOC entry 3402 (class 0 OID 0)
 -- Dependencies: 214
 -- Name: et_access_level_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1553,7 +1549,7 @@ SELECT pg_catalog.setval('public.et_access_level_id_seq', 6, true);
 
 
 --
--- TOC entry 3402 (class 0 OID 0)
+-- TOC entry 3403 (class 0 OID 0)
 -- Dependencies: 216
 -- Name: et_access_scope_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1562,7 +1558,7 @@ SELECT pg_catalog.setval('public.et_access_scope_id_seq', 3, true);
 
 
 --
--- TOC entry 3403 (class 0 OID 0)
+-- TOC entry 3404 (class 0 OID 0)
 -- Dependencies: 218
 -- Name: et_booking_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1571,7 +1567,7 @@ SELECT pg_catalog.setval('public.et_booking_status_id_seq', 5, true);
 
 
 --
--- TOC entry 3404 (class 0 OID 0)
+-- TOC entry 3405 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: et_member_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1580,7 +1576,7 @@ SELECT pg_catalog.setval('public.et_member_status_id_seq', 3, true);
 
 
 --
--- TOC entry 3405 (class 0 OID 0)
+-- TOC entry 3406 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: et_resource_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1589,7 +1585,7 @@ SELECT pg_catalog.setval('public.et_resource_id_seq', 34, true);
 
 
 --
--- TOC entry 3406 (class 0 OID 0)
+-- TOC entry 3407 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: et_seasons_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1598,7 +1594,7 @@ SELECT pg_catalog.setval('public.et_seasons_id_seq', 3, true);
 
 
 --
--- TOC entry 3407 (class 0 OID 0)
+-- TOC entry 3408 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: et_trip_difficulty_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1607,7 +1603,7 @@ SELECT pg_catalog.setval('public.et_trip_difficulty_id_seq', 4, true);
 
 
 --
--- TOC entry 3408 (class 0 OID 0)
+-- TOC entry 3409 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: et_trip_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1616,7 +1612,7 @@ SELECT pg_catalog.setval('public.et_trip_status_id_seq', 4, true);
 
 
 --
--- TOC entry 3409 (class 0 OID 0)
+-- TOC entry 3410 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: et_trip_types_trip_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1625,7 +1621,7 @@ SELECT pg_catalog.setval('public.et_trip_types_trip_type_id_seq', 7, true);
 
 
 --
--- TOC entry 3410 (class 0 OID 0)
+-- TOC entry 3411 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: et_user_account_status_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1634,7 +1630,7 @@ SELECT pg_catalog.setval('public.et_user_account_status_id_seq', 6, true);
 
 
 --
--- TOC entry 3411 (class 0 OID 0)
+-- TOC entry 3412 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: et_user_age_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1643,7 +1639,7 @@ SELECT pg_catalog.setval('public.et_user_age_group_id_seq', 5, true);
 
 
 --
--- TOC entry 3412 (class 0 OID 0)
+-- TOC entry 3413 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: st_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1652,7 +1648,7 @@ SELECT pg_catalog.setval('public.st_group_id_seq', 5, true);
 
 
 --
--- TOC entry 3413 (class 0 OID 0)
+-- TOC entry 3414 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: st_group_resource_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1661,16 +1657,16 @@ SELECT pg_catalog.setval('public.st_group_resource_id_seq', 180, true);
 
 
 --
--- TOC entry 3414 (class 0 OID 0)
+-- TOC entry 3415 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: st_token_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
 
-SELECT pg_catalog.setval('public.st_token_id_seq', 621, true);
+SELECT pg_catalog.setval('public.st_token_id_seq', 623, true);
 
 
 --
--- TOC entry 3415 (class 0 OID 0)
+-- TOC entry 3416 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: st_user_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1679,7 +1675,7 @@ SELECT pg_catalog.setval('public.st_user_group_id_seq', 20, true);
 
 
 --
--- TOC entry 3416 (class 0 OID 0)
+-- TOC entry 3417 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: st_users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myuser
 --
@@ -1931,7 +1927,7 @@ ALTER TABLE ONLY public.st_users
 
 
 --
--- TOC entry 3180 (class 2620 OID 16772)
+-- TOC entry 3181 (class 2620 OID 16772)
 -- Name: at_booking_people set_modified_timestamp_at_booking_people; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1939,7 +1935,7 @@ CREATE TRIGGER set_modified_timestamp_at_booking_people BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3181 (class 2620 OID 16771)
+-- TOC entry 3182 (class 2620 OID 16771)
 -- Name: at_bookings set_modified_timestamp_at_bookings; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1947,7 +1943,7 @@ CREATE TRIGGER set_modified_timestamp_at_bookings BEFORE UPDATE ON public.at_boo
 
 
 --
--- TOC entry 3182 (class 2620 OID 16752)
+-- TOC entry 3183 (class 2620 OID 16752)
 -- Name: at_group_bookings set_modified_timestamp_at_group_bookings; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1955,7 +1951,7 @@ CREATE TRIGGER set_modified_timestamp_at_group_bookings BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3183 (class 2620 OID 16753)
+-- TOC entry 3184 (class 2620 OID 16753)
 -- Name: at_trip_cost_groups set_modified_timestamp_at_trip_cost_groups; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1963,7 +1959,7 @@ CREATE TRIGGER set_modified_timestamp_at_trip_cost_groups BEFORE UPDATE ON publi
 
 
 --
--- TOC entry 3184 (class 2620 OID 16754)
+-- TOC entry 3185 (class 2620 OID 16754)
 -- Name: at_trip_costs set_modified_timestamp_at_trip_costs; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1971,7 +1967,7 @@ CREATE TRIGGER set_modified_timestamp_at_trip_costs BEFORE UPDATE ON public.at_t
 
 
 --
--- TOC entry 3185 (class 2620 OID 16755)
+-- TOC entry 3186 (class 2620 OID 16755)
 -- Name: at_trips set_modified_timestamp_at_trips; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1979,7 +1975,7 @@ CREATE TRIGGER set_modified_timestamp_at_trips BEFORE UPDATE ON public.at_trips 
 
 
 --
--- TOC entry 3186 (class 2620 OID 16756)
+-- TOC entry 3187 (class 2620 OID 16756)
 -- Name: at_user_payments set_modified_timestamp_at_user_payments; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1987,7 +1983,7 @@ CREATE TRIGGER set_modified_timestamp_at_user_payments BEFORE UPDATE ON public.a
 
 
 --
--- TOC entry 3187 (class 2620 OID 16757)
+-- TOC entry 3188 (class 2620 OID 16757)
 -- Name: et_access_level set_modified_timestamp_et_access_level; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -1995,7 +1991,7 @@ CREATE TRIGGER set_modified_timestamp_et_access_level BEFORE UPDATE ON public.et
 
 
 --
--- TOC entry 3188 (class 2620 OID 16758)
+-- TOC entry 3189 (class 2620 OID 16758)
 -- Name: et_access_scope set_modified_timestamp_et_access_type; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2003,7 +1999,7 @@ CREATE TRIGGER set_modified_timestamp_et_access_type BEFORE UPDATE ON public.et_
 
 
 --
--- TOC entry 3189 (class 2620 OID 16774)
+-- TOC entry 3190 (class 2620 OID 16774)
 -- Name: et_booking_status set_modified_timestamp_et_booking_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2011,7 +2007,7 @@ CREATE TRIGGER set_modified_timestamp_et_booking_status BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3190 (class 2620 OID 16759)
+-- TOC entry 3191 (class 2620 OID 16759)
 -- Name: et_member_status set_modified_timestamp_et_member_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2019,7 +2015,7 @@ CREATE TRIGGER set_modified_timestamp_et_member_status BEFORE UPDATE ON public.e
 
 
 --
--- TOC entry 3191 (class 2620 OID 16760)
+-- TOC entry 3192 (class 2620 OID 16760)
 -- Name: et_resource set_modified_timestamp_et_resource; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2027,7 +2023,7 @@ CREATE TRIGGER set_modified_timestamp_et_resource BEFORE UPDATE ON public.et_res
 
 
 --
--- TOC entry 3192 (class 2620 OID 16761)
+-- TOC entry 3193 (class 2620 OID 16761)
 -- Name: et_seasons set_modified_timestamp_et_seasons; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2035,7 +2031,7 @@ CREATE TRIGGER set_modified_timestamp_et_seasons BEFORE UPDATE ON public.et_seas
 
 
 --
--- TOC entry 3193 (class 2620 OID 16762)
+-- TOC entry 3194 (class 2620 OID 16762)
 -- Name: et_trip_difficulty set_modified_timestamp_et_trip_difficulty; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2043,7 +2039,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_difficulty BEFORE UPDATE ON public
 
 
 --
--- TOC entry 3194 (class 2620 OID 16763)
+-- TOC entry 3195 (class 2620 OID 16763)
 -- Name: et_trip_status set_modified_timestamp_et_trip_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2051,7 +2047,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_status BEFORE UPDATE ON public.et_
 
 
 --
--- TOC entry 3195 (class 2620 OID 16764)
+-- TOC entry 3196 (class 2620 OID 16764)
 -- Name: et_trip_type set_modified_timestamp_et_trip_type; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2059,7 +2055,7 @@ CREATE TRIGGER set_modified_timestamp_et_trip_type BEFORE UPDATE ON public.et_tr
 
 
 --
--- TOC entry 3196 (class 2620 OID 16765)
+-- TOC entry 3197 (class 2620 OID 16765)
 -- Name: et_user_account_status set_modified_timestamp_et_user_account_status; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2067,7 +2063,7 @@ CREATE TRIGGER set_modified_timestamp_et_user_account_status BEFORE UPDATE ON pu
 
 
 --
--- TOC entry 3197 (class 2620 OID 16766)
+-- TOC entry 3198 (class 2620 OID 16766)
 -- Name: et_user_age_groups set_modified_timestamp_et_user_age_groups; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2075,7 +2071,7 @@ CREATE TRIGGER set_modified_timestamp_et_user_age_groups BEFORE UPDATE ON public
 
 
 --
--- TOC entry 3198 (class 2620 OID 16767)
+-- TOC entry 3199 (class 2620 OID 16767)
 -- Name: st_group set_modified_timestamp_st_group; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2083,7 +2079,7 @@ CREATE TRIGGER set_modified_timestamp_st_group BEFORE UPDATE ON public.st_group 
 
 
 --
--- TOC entry 3199 (class 2620 OID 16768)
+-- TOC entry 3200 (class 2620 OID 16768)
 -- Name: st_group_resource set_modified_timestamp_st_group_resource; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2091,7 +2087,7 @@ CREATE TRIGGER set_modified_timestamp_st_group_resource BEFORE UPDATE ON public.
 
 
 --
--- TOC entry 3200 (class 2620 OID 16769)
+-- TOC entry 3201 (class 2620 OID 16769)
 -- Name: st_token set_modified_timestamp_st_token; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2099,7 +2095,7 @@ CREATE TRIGGER set_modified_timestamp_st_token BEFORE UPDATE ON public.st_token 
 
 
 --
--- TOC entry 3201 (class 2620 OID 16770)
+-- TOC entry 3202 (class 2620 OID 16770)
 -- Name: st_user_group set_modified_timestamp_st_user_group; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2107,7 +2103,7 @@ CREATE TRIGGER set_modified_timestamp_st_user_group BEFORE UPDATE ON public.st_u
 
 
 --
--- TOC entry 3202 (class 2620 OID 16773)
+-- TOC entry 3203 (class 2620 OID 16773)
 -- Name: st_users set_modified_timestamp_st_users; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
@@ -2115,11 +2111,20 @@ CREATE TRIGGER set_modified_timestamp_st_users BEFORE UPDATE ON public.st_users 
 
 
 --
--- TOC entry 3203 (class 2620 OID 16910)
+-- TOC entry 3204 (class 2620 OID 16910)
 -- Name: at_booking_vouchers update_at_booking_vouchers_modified; Type: TRIGGER; Schema: public; Owner: myuser
 --
 
 CREATE TRIGGER update_at_booking_vouchers_modified BEFORE UPDATE ON public.at_booking_vouchers FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+
+
+--
+-- TOC entry 3179 (class 2606 OID 16998)
+-- Name: at_bookings at_bookings_trip_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
+--
+
+ALTER TABLE ONLY public.at_bookings
+    ADD CONSTRAINT at_bookings_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.at_trips(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2132,7 +2137,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3179 (class 2606 OID 16988)
+-- TOC entry 3180 (class 2606 OID 16988)
 -- Name: at_bookings bookings_status_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: myuser
 --
 
@@ -2150,7 +2155,7 @@ ALTER TABLE ONLY public.at_booking_people
 
 
 --
--- TOC entry 3391 (class 0 OID 0)
+-- TOC entry 3392 (class 0 OID 0)
 -- Dependencies: 4
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: myuser
 --
@@ -2160,7 +2165,7 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
 --
--- TOC entry 3392 (class 0 OID 0)
+-- TOC entry 3393 (class 0 OID 0)
 -- Dependencies: 249
 -- Name: TABLE at_booking_vouchers; Type: ACL; Schema: public; Owner: myuser
 --
@@ -2168,11 +2173,11 @@ GRANT ALL ON SCHEMA public TO PUBLIC;
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.at_booking_vouchers TO api_user;
 
 
--- Completed on 2026-03-21 18:10:01
+-- Completed on 2026-03-21 18:59:13
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict UnnpDMMEc3GkgRMrv3jmuuW5MBSKLOqdmL8tOtN4yIgiQTTbknxYOsHHqtPGJUS
+\unrestrict iX2rjRjRyMwleGB59bTI3uloi1AL8fWCqOt9AgeymIeLkgLwTWWWfDYsuGgmOgo
 
