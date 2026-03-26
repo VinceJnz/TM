@@ -4,7 +4,6 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
-	"client1/v2/views/account/oAuthRegistrationView"
 	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
 	"time"
@@ -59,22 +58,22 @@ type TableData struct {
 	Username      string    `json:"username"`
 	Password      string    `json:"user_password"`
 	Email         string    `json:"email"`
-	Name          string    `json:"name"`
-	Address       string    `json:"user_address"`
-	BirthDate     time.Time `json:"user_birth_date"`
-	AccountHidden bool      `json:"user_account_hidden"`
-	Token         string    `json:"token"`    // for registration verification or OTP
-	Remember      bool      `json:"remember"` // for login OTP
+	Name          string    `json:"name"`                //Del
+	Address       string    `json:"user_address"`        //Del
+	BirthDate     time.Time `json:"user_birth_date"`     //Del
+	AccountHidden bool      `json:"user_account_hidden"` //Del
+	Token         string    `json:"token"`               // for registration verification or OTP
+	Remember      bool      `json:"remember"`            // for login OTP
 }
 
 type UI struct {
 	Username      js.Value
 	Email         js.Value
 	Password      js.Value
-	Name          js.Value
-	Address       js.Value
-	BirthDate     js.Value
-	AccountHidden js.Value
+	Name          js.Value //Del
+	Address       js.Value //Del
+	BirthDate     js.Value //Del
+	AccountHidden js.Value //Del
 	Token         js.Value
 	Remember      js.Value
 }
@@ -186,75 +185,84 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 func (editor *ItemEditor) populateEditForm() {
 	editor.Elements.EditDiv.Set("innerHTML", "") // Clear existing content
 
-	// Create and add child views and buttons to Item
-	register := oAuthRegistrationView.New(editor.document, editor.events, editor.appCore, editor.ParentID)
+	// Create a centered container
+	container := editor.document.Call("createElement", "div")
+	container.Set("className", "auth-form-container")
+	editor.Elements.EditDiv.Call("appendChild", container)
 
-	// Create a Login with Google button
+	// Add title
+	title := editor.document.Call("createElement", "h1")
+	title.Set("innerHTML", "Sign in to TM")
+	container.Call("appendChild", title)
+
+	// Create form container
+	editor.Elements.AuthDiv = editor.document.Call("createElement", "div")
+	editor.Elements.AuthDiv.Set("className", "auth-form")
+	container.Call("appendChild", editor.Elements.AuthDiv)
+
+	// Render initial login form
+	editor.renderForm("login")
+
+	// Add OAuth section
+	oauthContainer := editor.document.Call("createElement", "div")
+	oauthContainer.Set("className", "oauth-options")
+
+	// "or" separator
+	orDiv := editor.document.Call("createElement", "div")
+	orDiv.Set("innerHTML", "or")
+	orDiv.Set("className", "or-separator")
+	oauthContainer.Call("appendChild", orDiv)
+
+	// OAuth buttons
 	loginButton := editor.document.Call("createElement", "button")
-	loginButton.Set("innerHTML", "Login with Google")
-	loginButton.Set("className", "btn btn-primary")
+	loginButton.Set("innerHTML", "Continue with Google")
+	loginButton.Set("className", "btn btn-primary oauth-btn")
 	loginButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		// Open OAuth popup; server will set cookies on completion
 		js.Global().Call("open", "/api/v1/auth/oauth/login", "oauth", "width=600,height=800")
 		return nil
 	}))
+	oauthContainer.Call("appendChild", loginButton)
 
-	// Create a toggle child button for registration
-	registerButton := editor.document.Call("createElement", "button")
-	registerButton.Set("innerHTML", "OAuth Register")
-	registerButton.Set("className", "btn btn-secondary")
-	registerButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		register.NewItemData()
-		register.Toggle()
-		return nil
-	}))
-
-	// Tabs bar
-	editor.Elements.TabBar = viewHelpers.InputGroup(
-		editor.document,
-		"authTabs",
-		viewHelpers.Button(editor.showBasicTab, editor.document, "Basic Auth", "tabBasic"),
-		viewHelpers.Button(editor.showOauthTab, editor.document, "OAuth", "tabOauth"),
-	)
-	editor.Elements.TabBar.Set("className", "input-group authTabs")
-	editor.Elements.EditDiv.Call("appendChild", editor.Elements.TabBar)
-
-	// Basic Auth container
-	editor.Elements.BasicDiv = editor.document.Call("createElement", "div")
-	editor.Elements.BasicDiv.Set("id", debugTag+"basicDiv")
-
-	modeBar := viewHelpers.InputGroup(
-		editor.document,
-		"authModeBar",
-		viewHelpers.Button(editor.showRegisterForm, editor.document, "Register", "showRegister"),
-		viewHelpers.Button(editor.showLoginForm, editor.document, "Login", "showLogin"),
-	)
-	modeBar.Set("className", "input-group authModeBar")
-	editor.Elements.BasicDiv.Call("appendChild", modeBar)
-
-	editor.Elements.AuthDiv = editor.document.Call("createElement", "div")
-	editor.Elements.AuthDiv.Set("id", debugTag+"authDiv")
-	editor.Elements.BasicDiv.Call("appendChild", editor.Elements.AuthDiv)
-
-	// OAuth container
-	editor.Elements.OauthDiv = editor.document.Call("createElement", "div")
-	editor.Elements.OauthDiv.Set("id", debugTag+"oauthDiv")
-	oauthActions := viewHelpers.ActionGroup(
-		editor.document,
-		"oauthActions",
-		loginButton,
-		registerButton,
-	)
-	editor.Elements.OauthDiv.Call("appendChild", oauthActions)
-	register.Elements.Div.Set("className", "input-group")
-	editor.Elements.OauthDiv.Call("appendChild", register.Elements.Div)
-
-	editor.Elements.EditDiv.Call("appendChild", editor.Elements.BasicDiv)
-	editor.Elements.EditDiv.Call("appendChild", editor.Elements.OauthDiv)
-
-	editor.renderAuthForm("register")
-	editor.showBasicTab(js.Value{}, nil)
+	container.Call("appendChild", oauthContainer)
 	editor.Elements.EditDiv.Get("style").Set("display", "block")
+}
+
+func (editor *ItemEditor) renderForm(mode string) {
+	editor.authMode = mode
+	editor.UiComponents = UI{}
+	editor.CurrentRecord = TableData{}
+	if editor.Elements.AuthDiv.Truthy() {
+		editor.Elements.AuthDiv.Set("innerHTML", "")
+	}
+	if mode == "register" {
+		editor.Elements.AuthDiv.Call("appendChild", editor.regForm())
+		// Add link to login
+		link := editor.document.Call("createElement", "a")
+		link.Set("href", "#")
+		link.Set("innerHTML", "Already have an account? Sign in")
+		link.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			if len(args) > 0 {
+				args[0].Call("preventDefault")
+			}
+			editor.renderForm("login")
+			return nil
+		}))
+		editor.Elements.AuthDiv.Call("appendChild", link)
+	} else {
+		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
+		// Add link to register
+		link := editor.document.Call("createElement", "a")
+		link.Set("href", "#")
+		link.Set("innerHTML", "New to TM? Create an account")
+		link.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			if len(args) > 0 {
+				args[0].Call("preventDefault")
+			}
+			editor.renderForm("register")
+			return nil
+		}))
+		editor.Elements.AuthDiv.Call("appendChild", link)
+	}
 }
 
 func (editor *ItemEditor) resetEditForm() {
@@ -264,12 +272,12 @@ func (editor *ItemEditor) resetEditForm() {
 }
 
 func (editor *ItemEditor) showRegisterForm(this js.Value, args []js.Value) interface{} {
-	editor.renderAuthForm("register")
+	editor.renderForm("register")
 	return nil
 }
 
 func (editor *ItemEditor) showLoginForm(this js.Value, args []js.Value) interface{} {
-	editor.renderAuthForm("login")
+	editor.renderForm("login")
 	return nil
 }
 

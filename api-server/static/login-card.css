@@ -1,121 +1,88 @@
-/*
-Login/Registration Card Styles (GitHub-inspired)
-Move or import this file as needed for your login UI.
-*/
-
-.login-card {
-  max-width: 380px;
-  margin: 40px auto;
+/* GitHub-like login form layout */
+.auth-form-container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
   background: #fff;
-  border: 1px solid #d0d7de;
+  border: 1px solid #d0d0d0;
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(27,31,35,.05);
-  padding: 32px 24px 24px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
-.login-logo-placeholder {
-  width: 72px;
-  height: 72px;
-  background: #f6f8fa;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  color: #8c959f;
-  margin-bottom: 16px;
-}
-.login-heading {
-  font-size: 1.5rem;
+
+.auth-form-container h1 {
+  font-size: 24px;
   font-weight: 600;
+  margin: 0 0 24px 0;
+  text-align: center;
+  color: #24292e;
+}
+
+.auth-form {
+  margin-bottom: 24px;
+}
+
+.auth-form form fieldset {
   margin-bottom: 16px;
+}
+
+.auth-form a {
+  display: block;
   text-align: center;
-}
-.login-divider {
-  width: 100%;
-  text-align: center;
-  border-bottom: 1px solid #d0d7de;
-  line-height: 0.1em;
-  margin: 24px 0 16px 0;
-  color: #8c959f;
-}
-.login-divider span {
-  background: #fff;
-  padding: 0 10px;
-}
-.login-link {
-  color: #0969da;
+  color: #0366d6;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 12px;
+  margin-top: 12px;
 }
-.login-link:hover {
+
+.auth-form a:hover {
   text-decoration: underline;
 }
-.login-form-group {
-  width: 100%;
-  margin-bottom: 16px;
-}
-.login-form-label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-.login-form-input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #d0d7de;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-.login-form-error {
-  color: #cf222e;
-  font-size: 0.9rem;
-  margin-top: 2px;
-  min-height: 18px;
-}
-.login-form-remember {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.login-form-remember input {
-  margin-right: 8px;
-}
-.login-form-submit {
-  width: 100%;
-  padding: 10px;
-  background: #2da44e;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 8px;
-}
-.login-form-submit:hover {
-  background: #218838;
-}
-.login-form-secondary {
-  width: 100%;
-  padding: 10px;
-  background: #f6f8fa;
-  color: #24292f;
-  border: 1px solid #d0d7de;
-  border-radius: 4px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 8px;
-}
-.login-form-secondary:hover {
-  background: #eaeef2;
-}
-.login-footer {
-  margin-top: 24px;
+
+.oauth-options {
+  margin-top: 20px;
   text-align: center;
-  font-size: 0.95rem;
-  color: #8c959f;
+}
+
+.or-separator {
+  color: #6a737d;
+  font-size: 12px;
+  margin: 16px 0;
+  position: relative;
+}
+
+.or-separator::before,
+.or-separator::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 48%;
+  height: 1px;
+  background: #e1e4e8;
+}
+
+.or-separator::before {
+  left: 0;
+}
+
+.or-separator::after {
+  right: 0;
+}
+
+.oauth-btn {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #fafbfc;
+  border: 1px solid #d0d0d0;
+  color: #24292e;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.oauth-btn:hover {
+  background: #f3f4f6;
+  border-color: #c0c0c0;
 }
