@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/views/bookingView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -257,16 +258,36 @@ func (editor *ItemEditor) populateItemList() {
 			})
 			headerDiv.Call("appendChild", title)
 
+			makeBookingButton := editor.document.Call("createElement", "button")
+			makeBookingButton.Set("innerHTML", "Make Booking")
+			makeBookingButton.Set("className", "btn btn-primary")
+			viewHelpers.SetStyles(makeBookingButton, map[string]string{
+				"padding":   "4px 8px",
+				"font-size": "0.82em",
+			})
+			headerDiv.Call("appendChild", makeBookingButton)
+
 			tripCard.Call("appendChild", headerDiv)
 
 			// Bookings container (initially hidden)
 			bookingsContainer = editor.document.Call("createElement", "div")
 			bookingsContainer.Get("style").Call("setProperty", "display", "none")
+			bookingsContainer.Get("style").Call("setProperty", "margin-top", "4px")
 			tripCard.Call("appendChild", bookingsContainer)
+
+			bookingEditor := bookingView.New(editor.document, editor.events, editor.appCore, bookingView.ParentData{
+				ID:       record.TripID,
+				FromDate: record.FromDate,
+				ToDate:   record.ToDate,
+			})
+			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
+			bookingsContainer.Call("appendChild", bookingEditor.Div)
 
 			// Create click handler with proper closure capture
 			tripID := record.TripID
-			tripCard.Call("addEventListener", "click", editor.createTripToggleHandler(tripID, bookingsContainer, toggleIndicator))
+			tripCard.Call("addEventListener", "click", editor.createTripToggleHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
+
+			makeBookingButton.Call("addEventListener", "click", editor.createMakeBookingHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
 
 			editor.ListDiv.Call("appendChild", tripCard)
 		}
@@ -324,7 +345,7 @@ func (editor *ItemEditor) populateItemList() {
 	}
 }
 
-func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value) js.Func {
+func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		isExpanded := editor.tripExpanded[tripID]
 		editor.tripExpanded[tripID] = !isExpanded
@@ -334,10 +355,29 @@ func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer 
 			bookingsContainer.Get("style").Call("setProperty", "display", "block")
 			toggleIndicator.Set("innerHTML", "▼")
 		} else {
-			// Hide bookings
+			// Hide bookings and close the booking form
 			bookingsContainer.Get("style").Call("setProperty", "display", "none")
 			toggleIndicator.Set("innerHTML", "▶")
+			// Close the booking form
+			bookingEditor.EditDiv.Set("innerHTML", "")
+			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
 		}
+		return nil
+	})
+}
+
+func (editor *ItemEditor) createMakeBookingHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 {
+			args[0].Call("stopPropagation")
+		}
+
+		editor.tripExpanded[tripID] = true
+		bookingsContainer.Get("style").Call("setProperty", "display", "block")
+		toggleIndicator.Set("innerHTML", "▼")
+
+		bookingEditor.NewItemData(js.Null(), nil)
+		bookingEditor.Div.Get("style").Call("setProperty", "display", "block")
 		return nil
 	})
 }
