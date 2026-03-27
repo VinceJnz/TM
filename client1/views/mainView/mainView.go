@@ -94,7 +94,6 @@ type menuItemSpec struct {
 func (v *View) buildRootMenuItems() []menuItemSpec {
 	return []menuItemSpec{
 		{title: "My Bookings", apiURL: myBookingsView.ApiURL, element: myBookingsView.New(v.document, v.events, v.appCore)},
-		{title: "Trips", apiURL: tripView.ApiURL, element: tripView.New(v.document, v.events, v.appCore)},
 		{title: "Trip Participant Status", apiURL: tripParticipantStatusReport.ApiURL, element: tripParticipantStatusReport.New(v.document, v.events, v.appCore)},
 	}
 }
@@ -108,6 +107,7 @@ func (v *View) buildAdminMenuItems() []menuItemSpec {
 		{title: "Trip Difficulty", apiURL: tripDifficultyView.ApiURL, element: tripDifficultyView.New(v.document, v.events, v.appCore)},
 		{title: "Trip Status", apiURL: tripStatusView.ApiURL, element: tripStatusView.New(v.document, v.events, v.appCore)},
 		{title: "Trip Type", apiURL: tripTypeView.ApiURL, element: tripTypeView.New(v.document, v.events, v.appCore)},
+		{title: "Trips", apiURL: tripView.ApiURL, element: tripView.New(v.document, v.events, v.appCore)},
 		{title: "Season", apiURL: seasonView.ApiURL, element: seasonView.New(v.document, v.events, v.appCore)},
 		{title: "User", apiURL: userView.ApiURL, element: userView.New(v.document, v.events, v.appCore)},
 		{title: "User Age Group", apiURL: userAgeGroupView.ApiURL, element: userAgeGroupView.New(v.document, v.events, v.appCore)},
