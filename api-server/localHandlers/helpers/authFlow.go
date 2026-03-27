@@ -25,12 +25,35 @@ var (
 )
 
 func FindUserByUsernameOrEmail(debugStr string, db *sqlx.DB, username, email string) (models.User, error) {
-	if username != "" {
-		return dbAuthTemplate.UserNameReadQry(debugStr+"FindUserByUsernameOrEmail:byName ", db, username)
+	username = strings.TrimSpace(username)
+	email = strings.TrimSpace(email)
+	preferEmail := email != "" && IsValidEmail(email) && (username == "" || username == email)
+
+	if preferEmail {
+		user, err := dbAuthTemplate.UserEmailReadQry(debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
+		if err == nil {
+			return user, nil
+		}
+		if username == "" || username == email {
+			return models.User{}, err
+		}
 	}
+
+	if username != "" {
+		user, err := dbAuthTemplate.UserNameReadQry(debugStr+"FindUserByUsernameOrEmail:byName ", db, username)
+		if err == nil {
+			return user, nil
+		}
+		// If an email was supplied as well, fall through and try by email.
+		if email == "" {
+			return models.User{}, err
+		}
+	}
+
 	if email != "" {
 		return dbAuthTemplate.UserEmailReadQry(debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
 	}
+
 	return models.User{}, errors.New("username or email required")
 }
 

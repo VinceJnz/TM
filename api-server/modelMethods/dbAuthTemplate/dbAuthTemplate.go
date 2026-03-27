@@ -243,7 +243,7 @@ const (
 		AND stu.email IS NOT NULL
 		AND stu.email <> ''
 	ORDER BY stu.email`
-	sqlUserInsert      = `INSERT INTO st_users (name, username, email, user_address, user_birth_date, user_age_group_id, user_password, user_account_status_id, user_account_hidden, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+	sqlUserInsert      = `INSERT INTO st_users (name, username, email, user_address, member_code, user_birth_date, user_age_group_id, user_password, user_account_status_id, user_account_hidden, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
 	sqlUserUpdate      = `UPDATE st_users SET name = $1, username = $2, email = $3, user_address = $4, user_birth_date = $5, user_age_group_id = $6, user_password = $7, user_account_status_id = $8, user_account_hidden = $9, provider = $10, provider_id = $11 WHERE id = $12`
 	sqlUserDelProvider = `UPDATE st_users SET provider = null , provider_id = null WHERE id = $1`
 )
@@ -309,7 +309,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
 	log.Printf("%v %v %+v", debugTag+debugStr+"UserInsertQryTx - ", "record =", record)
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.UserAgeGroupID, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
@@ -378,7 +378,7 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		Value:   GenerateSecureToken(),
 		Path:    "/",
 		Domain:  host,
-		Expires: expiration, // Session cookies â€” cookies without a Max-Age or Expires attribute â€“ are deleted when the current session ends.
+		Expires: expiration, // Session cookies – cookies without a Max-Age or Expires attribute – are deleted when the current session ends.
 		//RawExpires: "",
 		//MaxAge:     0,
 		Secure:   true,                 // A cookie with the Secure attribute is only sent to the server with an encrypted request over the HTTPS protocol

@@ -16,7 +16,6 @@ import (
 	"client1/v2/views/myBookingsView"
 	"client1/v2/views/resourceView"
 	"client1/v2/views/seasonView"
-	"client1/v2/views/securityGroupResourceView"
 	"client1/v2/views/securityGroupView"
 	"client1/v2/views/securityUserGroupView"
 	"client1/v2/views/tripCostGroupView"
@@ -94,7 +93,7 @@ type menuItemSpec struct {
 func (v *View) buildRootMenuItems() []menuItemSpec {
 	return []menuItemSpec{
 		{title: "My Bookings", apiURL: myBookingsView.ApiURL, element: myBookingsView.New(v.document, v.events, v.appCore)},
-		{title: "Trip Participant Status", apiURL: tripParticipantStatusReport.ApiURL, element: tripParticipantStatusReport.New(v.document, v.events, v.appCore)},
+		{title: "Trip List", apiURL: tripParticipantStatusReport.ApiURL, element: tripParticipantStatusReport.New(v.document, v.events, v.appCore)},
 	}
 }
 
@@ -122,7 +121,6 @@ func (v *View) buildSysadminMenuItems() []menuItemSpec {
 		{title: "Access Scope", apiURL: accessScopeView.ApiURL, element: accessScopeView.New(v.document, v.events, v.appCore)},
 		{title: "User Group", apiURL: securityUserGroupView.ApiURL, element: securityUserGroupView.New(v.document, v.events, v.appCore)},
 		{title: "Security Group", apiURL: securityGroupView.ApiURL, element: securityGroupView.New(v.document, v.events, v.appCore)},
-		{title: "Security Group Resource", apiURL: securityGroupResourceView.ApiURL, element: securityGroupResourceView.New(v.document, v.events, v.appCore)},
 		{title: "Gmail Certificate", apiURL: gmailCertView.ApiURL, element: gmailCertView.New(v.document, v.events, v.appCore)},
 	}
 }
@@ -545,15 +543,19 @@ func (v *View) canFetchViewData(pageTitle string) bool {
 	return v.appCore.GetUser().UserID > 0
 }
 
+func (v *View) hideAllChildViews() {
+	for _, child := range v.childElements {
+		if child != nil {
+			child.Hide()
+		}
+	}
+}
+
 func (v *View) navigateTo(PageTitle string, menuAction bool, element editorElement, updateRoute bool) {
 	v.closeSideMenu() // onclick, close the side menu
 	if menuAction {   // Some menu items do nothing else
-		val, ok := v.childElements[v.activeMenuTitle] // get current menu choice
-		if ok {
-			if val != nil { // Check the the element is not nil
-				val.Hide() // Hide current editor
-			}
-		}
+		// Defensive hide to avoid stale views being visible after auth/menu transitions.
+		v.hideAllChildViews()
 		v.activeMenuTitle = PageTitle                    // Set new menu choice
 		v.elements.pageTitle.Set("innerHTML", PageTitle) // set the title for the element when it is displayed
 		v.setActiveMenuTitle(PageTitle)

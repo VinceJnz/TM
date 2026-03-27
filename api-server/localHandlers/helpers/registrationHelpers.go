@@ -24,7 +24,7 @@ func GenerateMemberCode(db *sqlx.DB) (string, error) {
 
 		// Check if code already exists
 		var exists int
-		err := db.QueryRow("SELECT 1 FROM et_users WHERE member_code = $1", memberCode).Scan(&exists)
+		err := db.QueryRow("SELECT 1 FROM st_users WHERE member_code = $1", memberCode).Scan(&exists)
 		if err != nil {
 			// Code doesn't exist, we can use it
 			return memberCode, nil

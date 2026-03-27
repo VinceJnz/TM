@@ -5,6 +5,7 @@ import (
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"strconv"
+	"strings"
 	"syscall/js"
 	"time"
 )
@@ -18,6 +19,20 @@ type RegistrationPayload struct {
 	Address        string `json:"user_address"`
 	BirthDate      string `json:"user_birth_date"`
 	UserAgeGroupID int64  `json:"user_age_group_id"`
+}
+
+func (editor *ItemEditor) setLoginIdentifierFields(identifier string) string {
+	identifier = strings.TrimSpace(identifier)
+	editor.CurrentRecord.Username = ""
+	editor.CurrentRecord.Email = ""
+
+	if strings.Contains(identifier, "@") {
+		editor.CurrentRecord.Email = identifier
+	} else {
+		editor.CurrentRecord.Username = identifier
+	}
+
+	return identifier
 }
 
 // handleRegisterSubmit submits {username,email,password,name,address,birthdate,age_group_id} to /auth/register
@@ -118,7 +133,9 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 				js.Global().Call("alert", "verification failed: "+err.Error())
 				return
 			}
-			js.Global().Call("alert", "account verified and pending approval")
+			// Account verified and pending approval - display login page
+			editor.renderForm("login")
+			js.Global().Call("alert", "account verified and pending admin approval\nYou can now log in with your credentials")
 		},
 		func(err error) {
 			js.Global().Call("alert", "verification error: "+err.Error())
@@ -132,7 +149,7 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 		args[0].Call("preventDefault")
 	}
 
-	userID := editor.UiComponents.Username.Get("value").String()
+	userID := editor.setLoginIdentifierFields(editor.UiComponents.Username.Get("value").String())
 	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 
 	if userID == "" {
@@ -143,9 +160,6 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 		js.Global().Call("alert", "password required")
 		return nil
 	}
-	// Set both Username and Email to the same value so backend can try both
-	editor.CurrentRecord.Username = userID
-	editor.CurrentRecord.Email = userID
 
 	editor.client.NewRequest("POST", ApiURL+"/login-password", nil, editor.CurrentRecord,
 		func(err error) {
@@ -172,7 +186,7 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 		args[0].Call("preventDefault")
 	}
 
-	userID := editor.UiComponents.Username.Get("value").String()
+	_ = editor.setLoginIdentifierFields(editor.UiComponents.Username.Get("value").String())
 	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
 	editor.CurrentRecord.Remember = editor.UiComponents.Remember.Get("checked").Bool()
 
@@ -180,9 +194,6 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interf
 		js.Global().Call("alert", "OTP token required")
 		return nil
 	}
-	// Set both Username and Email to the same value
-	editor.CurrentRecord.Username = userID
-	editor.CurrentRecord.Email = userID
 
 	payload := map[string]any{"token": editor.CurrentRecord.Token, "remember_me": editor.CurrentRecord.Remember}
 	var resp map[string]any

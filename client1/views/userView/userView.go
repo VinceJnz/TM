@@ -7,6 +7,7 @@ import (
 	"client1/v2/views/userAccountStatusView"
 	"client1/v2/views/userAgeGroupView"
 	"client1/v2/views/userMemberStatusView"
+	"client1/v2/views/userSecurityGroupView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"math/big"
@@ -82,6 +83,7 @@ type children struct {
 	userAgeGroup      userAgeGroupView.ItemEditor
 	userMemberStatus  userMemberStatusView.ItemEditor
 	userAccountStatus userAccountStatusView.ItemEditor
+	userSecurityGroup *userSecurityGroupView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -101,6 +103,7 @@ type ItemEditor struct {
 	ViewState     ViewState
 	RecordState   RecordState
 	Children      children
+	userExpanded  map[int]bool
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -138,6 +141,9 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	editor.Children.userMemberStatus = *userMemberStatusView.New(editor.document, events, editor.appCore)
 
 	editor.Children.userAccountStatus = *userAccountStatusView.New(editor.document, events, editor.appCore)
+
+	editor.Children.userSecurityGroup = userSecurityGroupView.New(editor.document, events, editor.appCore)
+	editor.userExpanded = make(map[int]bool)
 
 	return editor
 }
@@ -255,6 +261,32 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.MemberStatusID)
 	form.Call("appendChild", localObjs.UserAccountStatusID)
 	form.Call("appendChild", localObjs.UserAccountHidden)
+
+	// Add Security Groups section if user is being edited (has an ID)
+	if editor.CurrentRecord.ID > 0 {
+		log.Printf("%spopulateEditForm() Adding security groups section for UserID=%d", debugTag, editor.CurrentRecord.ID)
+		// Add a separator
+		separator := editor.document.Call("createElement", "hr")
+		form.Call("appendChild", separator)
+
+		// Add section header
+		groupHeader := editor.document.Call("createElement", "h3")
+		groupHeader.Set("innerHTML", "Security Groups")
+		viewHelpers.SetStyles(groupHeader, map[string]string{
+			"margin-top":    "16px",
+			"margin-bottom": "8px",
+			"font-size":     "1.1em",
+			"color":         "#1d2f45",
+		})
+		form.Call("appendChild", groupHeader)
+
+		// Configure and display the security group view for this user
+		editor.Children.userSecurityGroup.ParentID = editor.CurrentRecord.ID
+		editor.Children.userSecurityGroup.RecordState = userSecurityGroupView.RecordStateReloadRequired
+		editor.Children.userSecurityGroup.ResetView()
+		editor.Children.userSecurityGroup.FetchItems()
+		form.Call("appendChild", editor.Children.userSecurityGroup.GetDiv())
+	}
 
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
@@ -404,36 +436,215 @@ func (editor *ItemEditor) populateItemList() {
 	for _, i := range editor.Records {
 		record := i // Capture loop value so callbacks use the correct record.
 
-		itemDiv := editor.document.Call("createElement", "div")
-		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("innerHTML", record.Name+" ("+record.Email+")")
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		userCard := editor.document.Call("createElement", "div")
+		userCard.Set("id", debugTag+"userCard")
+		viewHelpers.SetStyles(userCard, map[string]string{
+			"border":        "1px solid #cfd9e6",
+			"border-radius": "8px",
+			"padding":       "8px",
+			"margin-bottom": "8px",
+			"background":    "#ffffff",
+		})
 
-		// Create an edit button
+		headerDiv := editor.document.Call("createElement", "div")
+		headerDiv.Get("style").Call("setProperty", "display", "flex")
+		headerDiv.Get("style").Call("setProperty", "align-items", "center")
+		headerDiv.Get("style").Call("setProperty", "gap", "8px")
+
+		toggleIndicator := editor.document.Call("createElement", "span")
+		toggleIndicator.Set("innerHTML", "▶")
+		viewHelpers.SetStyles(toggleIndicator, map[string]string{
+			"font-size": "0.8em",
+			"color":     "#4f647a",
+			"width":     "12px",
+		})
+		headerDiv.Call("appendChild", toggleIndicator)
+
+		userName := editor.document.Call("createElement", "div")
+		userName.Set("innerHTML", "<strong>"+record.Name+"</strong> ("+record.Email+")")
+		viewHelpers.SetStyles(userName, map[string]string{
+			"font-size": "0.98em",
+			"color":     "#1d2f45",
+			"flex-grow": "1",
+		})
+		headerDiv.Call("appendChild", userName)
+
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentRecord = record
-			editor.updateStateDisplay(ItemStateEditing)
-			editor.populateEditForm()
-			return nil
-		}))
+		viewHelpers.SetStyles(editButton, map[string]string{
+			"padding":   "4px 8px",
+			"font-size": "0.82em",
+		})
+		headerDiv.Call("appendChild", editButton)
 
-		// Create a delete button
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
+		viewHelpers.SetStyles(deleteButton, map[string]string{
+			"padding":   "4px 8px",
+			"font-size": "0.82em",
+		})
+		headerDiv.Call("appendChild", deleteButton)
+
+		userCard.Call("appendChild", headerDiv)
+
+		// Child area under row: edit form + group list
+		childContainer := editor.document.Call("createElement", "div")
+		childContainer.Get("style").Call("setProperty", "display", "none")
+		childContainer.Get("style").Call("setProperty", "margin-top", "8px")
+		viewHelpers.SetStyles(childContainer, map[string]string{
+			"border-top":  "1px solid #e0e8f0",
+			"padding-top": "8px",
+		})
+		childContainer.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
+			return nil
+		}))
+		userCard.Call("appendChild", childContainer)
+
+		// Inline edit host, hidden until Edit is clicked
+		editContainer := editor.document.Call("createElement", "div")
+		editContainer.Get("style").Call("setProperty", "display", "none")
+		editContainer.Get("style").Call("setProperty", "margin-bottom", "8px")
+		childContainer.Call("appendChild", editContainer)
+
+		groupEditor := userSecurityGroupView.New(editor.document, editor.events, editor.appCore, record.ID)
+		groupEditor.Hide()
+		childContainer.Call("appendChild", groupEditor.GetDiv())
+
+		userID := record.ID
+		userCard.Call("addEventListener", "click", editor.createUserToggleHandler(userID, childContainer, toggleIndicator, groupEditor))
+
+		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
+
+			// Edit should never auto-show group list.
+			editor.userExpanded[userID] = false
+			groupEditor.Hide()
+			toggleIndicator.Set("innerHTML", "▶")
+			childContainer.Get("style").Call("setProperty", "display", "block")
+
+			isVisible := editContainer.Get("style").Get("display").String() == "block"
+			if isVisible {
+				editContainer.Get("style").Call("setProperty", "display", "none")
+				editContainer.Set("innerHTML", "")
+				return nil
+			}
+
+			editor.CurrentRecord = record
+			editor.updateStateDisplay(ItemStateEditing)
+			editor.renderInlineEditForm(editContainer, record)
+			editContainer.Get("style").Call("setProperty", "display", "block")
+			return nil
+		}))
+
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
 			editor.deleteItem(record.ID)
 			return nil
 		}))
 
-		itemDiv.Call("appendChild", editButton)
-		itemDiv.Call("appendChild", deleteButton)
-
-		editor.ListDiv.Call("appendChild", itemDiv)
+		editor.ListDiv.Call("appendChild", userCard)
 	}
+}
+
+func (editor *ItemEditor) createUserToggleHandler(userID int, childContainer js.Value, toggleIndicator js.Value, groupEditor *userSecurityGroupView.ItemEditor) js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		isExpanded := editor.userExpanded[userID]
+		editor.userExpanded[userID] = !isExpanded
+
+		if !isExpanded {
+			groupEditor.RecordState = userSecurityGroupView.RecordStateReloadRequired
+			groupEditor.FetchItems()
+			groupEditor.Display()
+			childContainer.Get("style").Call("setProperty", "display", "block")
+			toggleIndicator.Set("innerHTML", "▼")
+		} else {
+			groupEditor.Hide()
+			childContainer.Get("style").Call("setProperty", "display", "none")
+			toggleIndicator.Set("innerHTML", "▶")
+		}
+		return nil
+	})
+}
+
+func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableData) {
+	container.Set("innerHTML", "") // Clear container
+
+	// Create form wrapper
+	formWrapper := editor.document.Call("createElement", "div")
+	viewHelpers.SetStyles(formWrapper, map[string]string{
+		"background":    "#f8fafb",
+		"padding":       "12px",
+		"border-radius": "4px",
+		"border":        "1px solid #e0e8f0",
+	})
+
+	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "inlineEditForm_"+strconv.Itoa(record.ID))
+
+	var localObjs UI
+
+	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
+	editor.UiComponents.Name.Call("setAttribute", "required", "true")
+
+	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	editor.UiComponents.Username.Call("setAttribute", "required", "true")
+
+	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
+	editor.UiComponents.Email.Call("setAttribute", "required", "true")
+
+	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "itemAddress")
+	editor.UiComponents.Address.Call("setAttribute", "required", "true")
+
+	localObjs.MemberCode, editor.UiComponents.MemberCode = viewHelpers.StringEdit(editor.CurrentRecord.MemberCode, editor.document, "MemberCode", "text", "itemMemberCode")
+	editor.UiComponents.MemberCode.Call("setAttribute", "required", "true")
+
+	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate")
+	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
+
+	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup")
+
+	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus")
+
+	localObjs.UserAccountStatusID, editor.UiComponents.UserAccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.UserAccountStatusID, "Account Status", "itemAccountStatus")
+
+	localObjs.UserAccountHidden, editor.UiComponents.UserAccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.UserAccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
+
+	form.Call("appendChild", localObjs.Name)
+	form.Call("appendChild", localObjs.Username)
+	form.Call("appendChild", localObjs.Email)
+	form.Call("appendChild", localObjs.Address)
+	form.Call("appendChild", localObjs.MemberCode)
+	form.Call("appendChild", localObjs.BirthDate)
+	form.Call("appendChild", localObjs.UserAgeGroupID)
+	form.Call("appendChild", localObjs.MemberStatusID)
+	form.Call("appendChild", localObjs.UserAccountStatusID)
+	form.Call("appendChild", localObjs.UserAccountHidden)
+
+	// Create submit and cancel buttons
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
+	cancelBtn := viewHelpers.Button(func(this js.Value, p []js.Value) interface{} {
+		container.Get("style").Call("setProperty", "display", "none")
+		container.Set("innerHTML", "")
+		return nil
+	}, editor.document, "Cancel", "cancelEditBtn")
+
+	viewHelpers.StyleButtonPrimary(submitBtn)
+	viewHelpers.StyleButtonSecondary(cancelBtn)
+	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
+	form.Call("appendChild", buttonRow)
+
+	formWrapper.Call("appendChild", form)
+	container.Call("appendChild", formWrapper)
+
+	container.Get("style").Call("setProperty", "display", "block")
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
