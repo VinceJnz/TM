@@ -1,4 +1,4 @@
-package securityGroupResourceView
+﻿package securityGroupResourceView
 
 import (
 	"client1/v2/app/appCore"
@@ -7,7 +7,6 @@ import (
 	"client1/v2/views/accessLevelView"
 	"client1/v2/views/accessScopeView"
 	"client1/v2/views/resourceView"
-	"client1/v2/views/securityGroupView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -46,6 +45,13 @@ const (
 
 const ApiURL = "/securityGroupResource"
 
+const groupApiURL = "/securityGroup"
+
+type GroupRecord struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 type TableData struct {
 	ID            int       `json:"id"`
 	GroupID       int       `json:"group_id"`
@@ -68,7 +74,6 @@ type UI struct {
 }
 
 type children struct {
-	Group       *securityGroupView.ItemEditor
 	Resource    *resourceView.ItemEditor
 	AccessLevel *accessLevelView.ItemEditor
 	AccessScope *accessScopeView.ItemEditor
@@ -92,6 +97,7 @@ type ItemEditor struct {
 	ViewState     ViewState
 	RecordState   RecordState
 	Children      children
+	GroupRecords  []GroupRecord
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -129,8 +135,6 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	}
 
 	editor.RecordState = RecordStateReloadRequired
-	editor.Children.Group = securityGroupView.New(editor.document, events, editor.appCore)
-
 	editor.Children.Resource = resourceView.New(editor.document, events, editor.appCore)
 
 	editor.Children.AccessLevel = accessLevelView.New(editor.document, events, editor.appCore)
@@ -174,6 +178,10 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
+	// Pre-set the GroupID if ParentID is set
+	if editor.ParentID > 0 {
+		editor.CurrentRecord.GroupID = editor.ParentID
+	}
 
 	editor.populateEditForm()
 	return nil
@@ -207,8 +215,23 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	localObjs.GroupID, editor.UiComponents.GroupID = editor.Children.Group.NewDropdown(editor.CurrentRecord.GroupID, "Group", "itemGroup")
-	//editor.UiComponents.GroupID.Call("setAttribute", "required", "true")
+	groupFieldset := editor.document.Call("createElement", "fieldset")
+	groupFieldset.Set("className", "input-group")
+	groupFieldset.Call("appendChild", viewHelpers.Label(editor.document, "Group", "itemGroup"))
+	groupSelect := editor.document.Call("createElement", "select")
+	groupSelect.Set("id", "itemGroup")
+	for _, g := range editor.GroupRecords {
+		opt := editor.document.Call("createElement", "option")
+		opt.Set("value", g.ID)
+		opt.Set("text", g.Name)
+		if g.ID == editor.CurrentRecord.GroupID {
+			opt.Set("selected", true)
+		}
+		groupSelect.Call("appendChild", opt)
+	}
+	groupFieldset.Call("appendChild", groupSelect)
+	groupFieldset.Call("appendChild", viewHelpers.Span(editor.document, "itemGroup-error"))
+	editor.UiComponents.GroupID = groupSelect
 
 	localObjs.ResourceID, editor.UiComponents.ResourceID = editor.Children.Resource.NewDropdown(editor.CurrentRecord.ResourceID, "Resource", "itemResource")
 	//editor.UiComponents.ResourceID.Call("setAttribute", "required", "true")
@@ -219,7 +242,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.AccessScopeID, editor.UiComponents.AccessScopeID = editor.Children.AccessScope.NewDropdown(editor.CurrentRecord.AccessScopeID, "Access Scope", "itemAccessScope")
 	//editor.UiComponents.AccessScopeID.Call("setAttribute", "required", "true")
 
-	form.Call("appendChild", localObjs.GroupID)
+	form.Call("appendChild", groupFieldset)
 	form.Call("appendChild", localObjs.ResourceID)
 	form.Call("appendChild", localObjs.AccessLevelID)
 	form.Call("appendChild", localObjs.AccessScopeID)
@@ -331,10 +354,14 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
-		editor.Children.Group.FetchItems()
 		editor.Children.Resource.FetchItems()
 		editor.Children.AccessLevel.FetchItems()
 		editor.Children.AccessScope.FetchItems()
+		go func() {
+			var groupRecs []GroupRecord
+			editor.client.NewRequest(http.MethodGet, groupApiURL, &groupRecs, nil)
+			editor.GroupRecords = groupRecs
+		}()
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
@@ -360,42 +387,110 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
-	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
-	editor.ListDiv.Call("appendChild", addNewItemButton)
+	// Add New Item button (only if ParentID is set)
+	if editor.ParentID > 0 {
+		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Resource", "addNewItemButton")
+		editor.ListDiv.Call("appendChild", addNewItemButton)
+	}
+
+	grouped := map[string][]TableData{}
+	resourceOrder := []string{}
 
 	for _, i := range editor.Records {
-		record := i // Capture loop value so callbacks use the correct record.
+		if editor.ParentID > 0 && i.GroupID != editor.ParentID {
+			continue
+		}
 
-		itemDiv := editor.document.Call("createElement", "div")
-		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("innerHTML", record.Group+" ("+record.Resource+", "+record.AccessLevel+", "+record.AccessScope+")")
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		resourceName := i.Resource
+		if resourceName == "" {
+			resourceName = "(Unspecified Resource)"
+		}
+		if _, exists := grouped[resourceName]; !exists {
+			resourceOrder = append(resourceOrder, resourceName)
+		}
+		grouped[resourceName] = append(grouped[resourceName], i)
+	}
 
-		// Create an edit button
-		editButton := editor.document.Call("createElement", "button")
-		editButton.Set("innerHTML", "Edit")
-		editButton.Set("className", "btn btn-secondary")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.CurrentRecord = record
-			editor.updateStateDisplay(ItemStateEditing)
-			editor.populateEditForm()
-			return nil
-		}))
+	for _, resourceName := range resourceOrder {
+		resourceGroupDiv := editor.document.Call("createElement", "div")
+		resourceGroupDiv.Set("id", debugTag+"resourceGroupDiv")
+		viewHelpers.SetStyles(resourceGroupDiv, map[string]string{
+			"border":        "1px solid #dbe4ef",
+			"border-radius": "6px",
+			"padding":       "6px 8px",
+			"margin":        "4px 0",
+			"background":    "#fbfdff",
+			"font-size":     "0.9em",
+		})
 
-		// Create a delete button
-		deleteButton := editor.document.Call("createElement", "button")
-		deleteButton.Set("innerHTML", "Delete")
-		deleteButton.Set("className", "btn btn-danger")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			editor.deleteItem(record.ID)
-			return nil
-		}))
+		headerDiv := editor.document.Call("createElement", "div")
+		headerDiv.Set("innerHTML", "<strong>"+resourceName+"</strong>")
+		viewHelpers.SetStyles(headerDiv, map[string]string{
+			"margin-bottom": "4px",
+			"color":         "#1d2f45",
+		})
+		resourceGroupDiv.Call("appendChild", headerDiv)
 
-		itemDiv.Call("appendChild", editButton)
-		itemDiv.Call("appendChild", deleteButton)
+		for _, rec := range grouped[resourceName] {
+			record := rec
+			permissionRow := editor.document.Call("createElement", "div")
+			permissionRow.Set("id", debugTag+"permissionRow")
+			viewHelpers.SetStyles(permissionRow, map[string]string{
+				"display":         "flex",
+				"align-items":     "center",
+				"justify-content": "space-between",
+				"gap":             "8px",
+				"padding":         "4px 0",
+				"border-top":      "1px solid #e8eef5",
+			})
 
-		editor.ListDiv.Call("appendChild", itemDiv)
+			detailDiv := editor.document.Call("createElement", "div")
+			detailDiv.Set("innerHTML", "Level: "+record.AccessLevel+" | Scope: "+record.AccessScope)
+			permissionRow.Call("appendChild", detailDiv)
+
+			actionDiv := editor.document.Call("createElement", "div")
+			actionDiv.Get("style").Call("setProperty", "display", "flex")
+			actionDiv.Get("style").Call("setProperty", "gap", "6px")
+
+			editButton := editor.document.Call("createElement", "button")
+			editButton.Set("innerHTML", "Edit")
+			editButton.Set("className", "btn btn-secondary")
+			viewHelpers.SetStyles(editButton, map[string]string{
+				"padding":   "2px 6px",
+				"font-size": "0.8em",
+			})
+			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				if len(args) > 0 {
+					args[0].Call("stopPropagation")
+				}
+				editor.CurrentRecord = record
+				editor.updateStateDisplay(ItemStateEditing)
+				editor.populateEditForm()
+				return nil
+			}))
+
+			deleteButton := editor.document.Call("createElement", "button")
+			deleteButton.Set("innerHTML", "Delete")
+			deleteButton.Set("className", "btn btn-danger")
+			viewHelpers.SetStyles(deleteButton, map[string]string{
+				"padding":   "2px 6px",
+				"font-size": "0.8em",
+			})
+			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				if len(args) > 0 {
+					args[0].Call("stopPropagation")
+				}
+				editor.deleteItem(record.ID)
+				return nil
+			}))
+
+			actionDiv.Call("appendChild", editButton)
+			actionDiv.Call("appendChild", deleteButton)
+			permissionRow.Call("appendChild", actionDiv)
+			resourceGroupDiv.Call("appendChild", permissionRow)
+		}
+
+		editor.ListDiv.Call("appendChild", resourceGroupDiv)
 	}
 }
 

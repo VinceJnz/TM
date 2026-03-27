@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/views/securityGroupResourceView"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
@@ -76,6 +77,7 @@ type ItemEditor struct {
 	ViewState     ViewState
 	RecordState   RecordState
 	Children      children
+	groupExpanded map[int]bool
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -113,6 +115,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	}
 
 	editor.RecordState = RecordStateReloadRequired
+	editor.groupExpanded = make(map[int]bool)
 	return editor
 }
 
@@ -325,36 +328,129 @@ func (editor *ItemEditor) populateItemList() {
 	for _, i := range editor.Records {
 		record := i // Capture loop value so callbacks use the correct record.
 
-		itemDiv := editor.document.Call("createElement", "div")
-		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("innerHTML", record.Name)
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		// Create main group card
+		groupCard := editor.document.Call("createElement", "div")
+		groupCard.Set("id", debugTag+"groupCard")
+		viewHelpers.SetStyles(groupCard, map[string]string{
+			"border":        "1px solid #cfd9e6",
+			"border-radius": "8px",
+			"padding":       "8px",
+			"margin-bottom": "8px",
+			"background":    "#ffffff",
+		})
 
-		// Create an edit button
+		// Header with toggle and group name
+		headerDiv := editor.document.Call("createElement", "div")
+		headerDiv.Get("style").Call("setProperty", "display", "flex")
+		headerDiv.Get("style").Call("setProperty", "align-items", "center")
+		headerDiv.Get("style").Call("setProperty", "gap", "8px")
+
+		toggleIndicator := editor.document.Call("createElement", "span")
+		toggleIndicator.Set("innerHTML", "▶")
+		viewHelpers.SetStyles(toggleIndicator, map[string]string{
+			"font-size": "0.8em",
+			"color":     "#4f647a",
+			"width":     "12px",
+		})
+		headerDiv.Call("appendChild", toggleIndicator)
+
+		groupName := editor.document.Call("createElement", "div")
+		groupName.Set("innerHTML", "<strong>"+record.Name+"</strong>")
+		viewHelpers.SetStyles(groupName, map[string]string{
+			"font-size": "0.98em",
+			"color":     "#1d2f45",
+			"flex-grow": "1",
+		})
+		headerDiv.Call("appendChild", groupName)
+
+		// Edit button
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
+		viewHelpers.SetStyles(editButton, map[string]string{
+			"padding":   "4px 8px",
+			"font-size": "0.82em",
+		})
 		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
 			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()
 			return nil
 		}))
+		headerDiv.Call("appendChild", editButton)
 
-		// Create a delete button
+		// Delete button
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
+		viewHelpers.SetStyles(deleteButton, map[string]string{
+			"padding":   "4px 8px",
+			"font-size": "0.82em",
+		})
 		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
 			editor.deleteItem(record.ID)
 			return nil
 		}))
+		headerDiv.Call("appendChild", deleteButton)
 
-		itemDiv.Call("appendChild", editButton)
-		itemDiv.Call("appendChild", deleteButton)
+		groupCard.Call("appendChild", headerDiv)
 
-		editor.ListDiv.Call("appendChild", itemDiv)
+		// Resources container (initially hidden)
+		resourcesContainer := editor.document.Call("createElement", "div")
+		resourcesContainer.Get("style").Call("setProperty", "display", "none")
+		resourcesContainer.Get("style").Call("setProperty", "margin-top", "8px")
+		viewHelpers.SetStyles(resourcesContainer, map[string]string{
+			"border-top":  "1px solid #e0e8f0",
+			"padding-top": "8px",
+		})
+		resourcesContainer.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
+			return nil
+		}))
+		groupCard.Call("appendChild", resourcesContainer)
+
+		groupID := record.ID
+
+		// Create a resource editor for this group, append its UI into the resources container
+		resourceEditor := securityGroupResourceView.New(editor.document, editor.events, editor.appCore, record.ID)
+		resourceEditor.Hide()
+		resourcesContainer.Call("appendChild", resourceEditor.Div)
+
+		// Set up toggle handler
+		groupCard.Call("addEventListener", "click", editor.createGroupToggleHandler(groupID, resourcesContainer, toggleIndicator, resourceEditor))
+
+		editor.ListDiv.Call("appendChild", groupCard)
 	}
+}
+
+func (editor *ItemEditor) createGroupToggleHandler(groupID int, resourcesContainer js.Value, toggleIndicator js.Value, resourceEditor *securityGroupResourceView.ItemEditor) js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		isExpanded := editor.groupExpanded[groupID]
+		editor.groupExpanded[groupID] = !isExpanded
+
+		if !isExpanded {
+			// Expand: fetch and display resources for this group
+			resourceEditor.RecordState = securityGroupResourceView.RecordStateReloadRequired
+			resourceEditor.FetchItems()
+			resourceEditor.Display()
+			resourcesContainer.Get("style").Call("setProperty", "display", "block")
+			toggleIndicator.Set("innerHTML", "▼")
+		} else {
+			// Hide resources
+			resourceEditor.Hide()
+			resourcesContainer.Get("style").Call("setProperty", "display", "none")
+			toggleIndicator.Set("innerHTML", "▶")
+		}
+		return nil
+	})
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
