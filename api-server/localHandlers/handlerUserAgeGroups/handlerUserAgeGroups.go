@@ -56,6 +56,12 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h)
 }
 
+// RegisterRoutesPublic registers only the read-only routes (GET) for public access
+func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL, h.GetAll).Methods("GET")
+	r.HandleFunc(baseURL+"/{id:[0-9]+}", h.Get).Methods("GET")
+}
+
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	h.crud.GetAll(w, r)

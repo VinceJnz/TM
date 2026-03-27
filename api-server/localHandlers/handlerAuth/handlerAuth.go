@@ -142,8 +142,35 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate BirthDate and UserAgeGroupID
+	if !payload.BirthDate.Valid {
+		http.Error(w, "birth date is required", http.StatusBadRequest)
+		return
+	}
+
+	if !payload.UserAgeGroupID.Valid || payload.UserAgeGroupID.Int64 <= 0 {
+		http.Error(w, "age group is required", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the age group to validate it exists and get its name
+	ageGroupName, err := handlerHelpers.GetAgeGroupByID(h.appConf.Db, payload.UserAgeGroupID.Int64)
+	if err != nil {
+		log.Printf("%vRegister failed to fetch age group %d: %v", debugTag, payload.UserAgeGroupID.Int64, err)
+		http.Error(w, "invalid age group", http.StatusBadRequest)
+		return
+	}
+
+	// Validate that the birthdate matches the selected age group
+	isValid, errValidate := handlerHelpers.ValidateAgeGroupForBirthDate(payload.BirthDate.Time, payload.UserAgeGroupID.Int64, ageGroupName)
+	if errValidate != nil || !isValid {
+		log.Printf("%vRegister age validation failed: %v", debugTag, errValidate)
+		http.Error(w, "birthdate does not match the selected age group", http.StatusBadRequest)
+		return
+	}
+
 	// Check if username already exists
-	_, err := dbAuthTemplate.UserNameReadQry(debugTag+"Register:checkUsername ", h.appConf.Db, payload.Username)
+	_, err = dbAuthTemplate.UserNameReadQry(debugTag+"Register:checkUsername ", h.appConf.Db, payload.Username)
 	if err == nil {
 		// Username exists
 		http.Error(w, "this username is already taken", http.StatusConflict)
@@ -271,6 +298,32 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.AccountStatusID.SetValid(int64(models.AccountVerified)) // Email verified, pending admin approval
+
+	// Generate a unique member code
+	memberCode, err := handlerHelpers.GenerateMemberCode(h.appConf.Db)
+	if err != nil {
+		log.Printf("%vVerifyRegistration failed to generate member code: %v", debugTag, err)
+		http.Error(w, "failed to generate member code", http.StatusInternalServerError)
+		return
+	}
+	user.MemberCode.SetValid(memberCode)
+
+	// Validate age group matches birthdate
+	if user.UserAgeGroupID.Valid && user.UserAgeGroupID.Int64 > 0 && user.BirthDate.Valid {
+		ageGroupName, err := handlerHelpers.GetAgeGroupByID(h.appConf.Db, user.UserAgeGroupID.Int64)
+		if err != nil {
+			log.Printf("%vVerifyRegistration failed to fetch age group: %v", debugTag, err)
+			http.Error(w, "invalid age group in registration data", http.StatusBadRequest)
+			return
+		}
+
+		isValid, err := handlerHelpers.ValidateAgeGroupForBirthDate(user.BirthDate.Time, user.UserAgeGroupID.Int64, ageGroupName)
+		if err != nil || !isValid {
+			log.Printf("%vVerifyRegistration age validation failed: %v", debugTag, err)
+			http.Error(w, "age group validation failed", http.StatusBadRequest)
+			return
+		}
+	}
 
 	// Hash password if provided
 	if user.Password.String != "" {

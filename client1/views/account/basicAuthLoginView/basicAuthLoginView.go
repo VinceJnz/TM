@@ -6,7 +6,6 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"syscall/js"
-	"time"
 )
 
 /*
@@ -55,27 +54,29 @@ const (
 const ApiURL = "/auth"
 
 type TableData struct {
-	Username      string    `json:"username"`
-	Password      string    `json:"user_password"`
-	Email         string    `json:"email"`
-	Name          string    `json:"name"`                //Del
-	Address       string    `json:"user_address"`        //Del
-	BirthDate     time.Time `json:"user_birth_date"`     //Del
-	AccountHidden bool      `json:"user_account_hidden"` //Del
-	Token         string    `json:"token"`               // for registration verification or OTP
-	Remember      bool      `json:"remember"`            // for login OTP
+	Username       string `json:"username"`
+	Password       string `json:"user_password"`
+	Email          string `json:"email"`
+	Name           string `json:"name"`
+	Address        string `json:"user_address"`
+	BirthDate      string `json:"user_birth_date"` // ISO format date string
+	UserAgeGroupID int64  `json:"user_age_group_id"`
+	AccountHidden  bool   `json:"user_account_hidden"`
+	Token          string `json:"token"`    // for registration verification or OTP
+	Remember       bool   `json:"remember"` // for login OTP
 }
 
 type UI struct {
-	Username      js.Value
-	Email         js.Value
-	Password      js.Value
-	Name          js.Value //Del
-	Address       js.Value //Del
-	BirthDate     js.Value //Del
-	AccountHidden js.Value //Del
-	Token         js.Value
-	Remember      js.Value
+	Username       js.Value
+	Email          js.Value
+	Password       js.Value
+	Name           js.Value
+	Address        js.Value
+	BirthDate      js.Value
+	UserAgeGroupID js.Value
+	AccountHidden  js.Value
+	Token          js.Value
+	Remember       js.Value
 }
 
 type viewElements struct {

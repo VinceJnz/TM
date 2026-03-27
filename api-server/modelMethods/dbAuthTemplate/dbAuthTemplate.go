@@ -232,9 +232,9 @@ func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Tok
 
 const (
 	sqlUserFind         = `SELECT id FROM st_users WHERE id = $1`
-	sqlUserRead         = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE id = $1`
-	sqlUserNameRead     = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE username = $1`
-	sqlUserEmailRead    = `SELECT id, name, username, email, user_address, user_birth_date, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE email = $1`
+	sqlUserRead         = `SELECT id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE id = $1`
+	sqlUserNameRead     = `SELECT id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE username = $1`
+	sqlUserEmailRead    = `SELECT id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE email = $1`
 	sqlUserEmailsByRole = `SELECT DISTINCT stu.email
 	FROM st_users stu
 		JOIN st_user_group stug ON stug.user_id = stu.id
@@ -243,8 +243,8 @@ const (
 		AND stu.email IS NOT NULL
 		AND stu.email <> ''
 	ORDER BY stu.email`
-	sqlUserInsert      = `INSERT INTO st_users (name, username, email, user_address, user_birth_date, user_password, user_account_status_id, user_account_hidden, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
-	sqlUserUpdate      = `UPDATE st_users SET name = $1, username = $2, email = $3, user_address = $4, user_birth_date = $5, user_password = $6, user_account_status_id = $7, user_account_hidden = $8, provider = $9, provider_id = $10 WHERE id = $11`
+	sqlUserInsert      = `INSERT INTO st_users (name, username, email, user_address, user_birth_date, user_age_group_id, user_password, user_account_status_id, user_account_hidden, provider, provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+	sqlUserUpdate      = `UPDATE st_users SET name = $1, username = $2, email = $3, user_address = $4, user_birth_date = $5, user_age_group_id = $6, user_password = $7, user_account_status_id = $8, user_account_hidden = $9, provider = $10, provider_id = $11 WHERE id = $12`
 	sqlUserDelProvider = `UPDATE st_users SET provider = null , provider_id = null WHERE id = $1`
 )
 
@@ -309,7 +309,7 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
 	log.Printf("%v %v %+v", debugTag+debugStr+"UserInsertQryTx - ", "record =", record)
-	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
+	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.UserAgeGroupID, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx - ", "err =", err, "record =", record)
 		return 0, err // If we can't commit the transaction then we can't write the record
@@ -318,7 +318,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 }
 
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
-	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID, record.ID)
+	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.UserAgeGroupID, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID, record.ID)
 	if err != nil {
 		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx - ", "err =", err, "record =", record)
 	}

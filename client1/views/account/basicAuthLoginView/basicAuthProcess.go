@@ -4,10 +4,23 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
+	"strconv"
 	"syscall/js"
+	"time"
 )
 
-// handleRegisterSubmit submits {username,email} to /auth/register
+// RegistrationPayload is the data sent to the /auth/register endpoint
+type RegistrationPayload struct {
+	Username       string `json:"username"`
+	Password       string `json:"user_password"`
+	Email          string `json:"email"`
+	Name           string `json:"name"`
+	Address        string `json:"user_address"`
+	BirthDate      string `json:"user_birth_date"`
+	UserAgeGroupID int64  `json:"user_age_group_id"`
+}
+
+// handleRegisterSubmit submits {username,email,password,name,address,birthdate,age_group_id} to /auth/register
 func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) interface{} {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
@@ -17,13 +30,50 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
 	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
+	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
+	editor.CurrentRecord.BirthDate = editor.UiComponents.BirthDate.Get("value").String()
+	ageGroupIDStr := editor.UiComponents.UserAgeGroupID.Get("value").String()
+	if ageGroupIDStr != "" && ageGroupIDStr != "0" {
+		if ageGroupID, err := strconv.ParseInt(ageGroupIDStr, 10, 64); err == nil {
+			editor.CurrentRecord.UserAgeGroupID = ageGroupID
+		}
+	}
 
 	if editor.CurrentRecord.Username == "" || editor.CurrentRecord.Password == "" || editor.CurrentRecord.Email == "" || editor.CurrentRecord.Name == "" {
 		js.Global().Call("alert", "username, email, password, and full name required")
 		return nil
 	}
-	log.Printf("%vhandleRegisterSubmit()1 Submitting registration for user: %+v", debugTag, editor.CurrentRecord)
-	editor.client.NewRequest("POST", ApiURL+"/register", nil, editor.CurrentRecord,
+	if editor.CurrentRecord.BirthDate == "" {
+		js.Global().Call("alert", "birth date required")
+		return nil
+	}
+	if editor.CurrentRecord.UserAgeGroupID <= 0 {
+		js.Global().Call("alert", "age group required")
+		return nil
+	}
+
+	// Build registration payload with only the fields the API expects.
+	// Parse the date using shared layout and send RFC3339 for zero.Time decoding on API side.
+	birthDateStr := editor.CurrentRecord.BirthDate
+	parsedBirthDate, err := time.Parse(viewHelpers.Layout, birthDateStr)
+	if err != nil {
+		js.Global().Call("alert", "invalid birth date format; expected "+viewHelpers.Layout)
+		return nil
+	}
+	birthDateRFC3339 := parsedBirthDate.Format(time.RFC3339)
+
+	regPayload := RegistrationPayload{
+		Username:       editor.CurrentRecord.Username,
+		Password:       editor.CurrentRecord.Password,
+		Email:          editor.CurrentRecord.Email,
+		Name:           editor.CurrentRecord.Name,
+		Address:        editor.CurrentRecord.Address,
+		BirthDate:      birthDateRFC3339,
+		UserAgeGroupID: editor.CurrentRecord.UserAgeGroupID,
+	}
+
+	log.Printf("%vhandleRegisterSubmit()1 Submitting registration for user: %+v", debugTag, regPayload)
+	editor.client.NewRequest("POST", ApiURL+"/register", nil, regPayload,
 		func(err error) {
 			if err != nil {
 				js.Global().Call("alert", "registration failed: "+err.Error())
@@ -166,18 +216,47 @@ func (editor *ItemEditor) regForm() js.Value {
 	regEmailObj, regEmailInp := viewHelpers.StringEdit("", editor.document, "Email", "email", "regEmail")
 	regNameObj, regNameInp := viewHelpers.StringEdit("", editor.document, "Full Name", "text", "regName")
 	regPassObj, regPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "regPassword")
+	regAddressObj, regAddressInp := viewHelpers.StringEdit("", editor.document, "Address", "text", "regAddress")
+	regBirthObj, regBirthInp := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "regBirthDate")
+
+	// Create age group dropdown
+	regAgeGroupObj := editor.document.Call("createElement", "div")
+	regAgeGroupObj.Set("className", "form-group")
+	ageGroupLabel := editor.document.Call("createElement", "label")
+	ageGroupLabel.Set("htmlFor", "regAgeGroup")
+	ageGroupLabel.Set("innerHTML", "Age Group")
+	regAgeGroupObj.Call("appendChild", ageGroupLabel)
+	ageGroupSelect := editor.document.Call("createElement", "select")
+	ageGroupSelect.Set("id", "regAgeGroup")
+	ageGroupSelect.Set("className", "form-control")
+	// Add placeholder option
+	placeholderOpt := editor.document.Call("createElement", "option")
+	placeholderOpt.Set("value", "0")
+	placeholderOpt.Set("innerHTML", "-- Select Age Group --")
+	ageGroupSelect.Call("appendChild", placeholderOpt)
+	regAgeGroupObj.Call("appendChild", ageGroupSelect)
+
 	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "OTP Token", "text", "regToken")
 	regTokenInp.Set("disabled", true)
+
 	editor.UiComponents.Username = regUserInp
 	editor.UiComponents.Email = regEmailInp
 	editor.UiComponents.Name = regNameInp
 	editor.UiComponents.Password = regPassInp
+	editor.UiComponents.Address = regAddressInp
+	editor.UiComponents.BirthDate = regBirthInp
+	editor.UiComponents.UserAgeGroupID = ageGroupSelect
 	editor.UiComponents.Token = regTokenInp
+
 	regForm.Call("appendChild", regUserObj)
 	regForm.Call("appendChild", regEmailObj)
 	regForm.Call("appendChild", regNameObj)
 	regForm.Call("appendChild", regPassObj)
+	regForm.Call("appendChild", regAddressObj)
+	regForm.Call("appendChild", regBirthObj)
+	regForm.Call("appendChild", regAgeGroupObj)
 	regForm.Call("appendChild", regTokenObj)
+
 	regActions := viewHelpers.ActionGroup(
 		editor.document,
 		"regActions",
@@ -185,6 +264,10 @@ func (editor *ItemEditor) regForm() js.Value {
 		viewHelpers.Button(editor.handleVerifyRegistration, editor.document, "Verify Registration", "verSubmit"),
 	)
 	regForm.Call("appendChild", regActions)
+
+	// Fetch and populate age groups dropdown
+	editor.populateAgeGroupsDropdown(ageGroupSelect)
+
 	return regForm
 }
 
@@ -256,4 +339,48 @@ func (editor *ItemEditor) loginForm() js.Value {
 	}, editor.document, "Forgot password?", "forgotPassword")
 	loginForm.Call("appendChild", forgotLink)
 	return loginForm
+}
+
+// populateAgeGroupsDropdown fetches age groups from the API and populates the dropdown
+func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value) {
+	if editor.client == nil {
+		log.Printf("%vpopulateAgeGroupsDropdown: client is nil", debugTag)
+		return
+	}
+
+	// Use a direct fetch for age groups
+	pfetch := js.Global().Call("fetch", "/api/v1/userAgeGroups", map[string]any{
+		"method":      "GET",
+		"credentials": "include",
+	})
+
+	pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		resp := args[0]
+		if !resp.Get("ok").Bool() {
+			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
+			return nil
+		}
+
+		jsonP := resp.Call("json")
+		jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+			data := args[0]
+
+			// Data should be an array of age groups
+			length := data.Get("length").Int()
+			for i := 0; i < length; i++ {
+				item := data.Index(i)
+				id := item.Get("id").Int()
+				name := item.Get("age_group").String()
+
+				// Create option element
+				opt := editor.document.Call("createElement", "option")
+				opt.Set("value", id)
+				opt.Set("innerHTML", name)
+				selectElement.Call("appendChild", opt)
+			}
+			return nil
+		}))
+
+		return nil
+	}))
 }

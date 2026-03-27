@@ -30,7 +30,7 @@ type User struct {
 	UserAgeGroupID  zero.Int    `json:"user_age_group_id" db:"user_age_group_id"`
 	MemberStatusID  zero.Int    `json:"member_status_id" db:"member_status_id"`
 	MemberStatus    zero.String `json:"member_status" db:"member_status"`
-	Password        zero.String `json:"-" db:"user_password"` // SECURITY: Never serialize password hash to JSON
+	Password        zero.String `json:"user_password" db:"user_password"` // SECURITY: Never expose password hash in API responses via models, use explicit DTOs instead
 	AccountStatusID zero.Int    `json:"user_account_status_id" db:"user_account_status_id"`
 	AccountHidden   zero.Bool   `json:"user_account_hidden" db:"user_account_hidden"`
 	Provider        zero.String `json:"provider" db:"provider"`       // OAuth provider name (e.g., "google", "facebook")
