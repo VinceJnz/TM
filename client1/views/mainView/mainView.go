@@ -11,6 +11,7 @@ import (
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingVoucherView"
 	"client1/v2/views/contentView"
+	"client1/v2/views/gmailCertView"
 	"client1/v2/views/groupBookingView"
 	"client1/v2/views/myBookingsView"
 	"client1/v2/views/resourceView"
@@ -122,6 +123,7 @@ func (v *View) buildSysadminMenuItems() []menuItemSpec {
 		{title: "User Group", apiURL: securityUserGroupView.ApiURL, element: securityUserGroupView.New(v.document, v.events, v.appCore)},
 		{title: "Security Group", apiURL: securityGroupView.ApiURL, element: securityGroupView.New(v.document, v.events, v.appCore)},
 		{title: "Security Group Resource", apiURL: securityGroupResourceView.ApiURL, element: securityGroupResourceView.New(v.document, v.events, v.appCore)},
+		{title: "Gmail Certificate", apiURL: gmailCertView.ApiURL, element: gmailCertView.New(v.document, v.events, v.appCore)},
 	}
 }
 

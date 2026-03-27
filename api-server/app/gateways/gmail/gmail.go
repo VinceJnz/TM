@@ -22,6 +22,7 @@ type Gateway struct {
 	srv               *gmail.Service
 	from              string
 	debugEmailAddress string
+	oauthConfig       *oauth2.Config
 }
 
 //https://developers.google.com/gmail/api/quickstart/go
@@ -164,7 +165,18 @@ func New(credentialsFile, tokenFile, from, debugEmail, authCode string) (*Gatewa
 		srv:               gmailService,
 		from:              from,
 		debugEmailAddress: debugEmail,
+		oauthConfig:       config,
 	}, nil
+}
+
+// RenewURL returns the Google OAuth2 authorisation URL the admin must visit to
+// obtain a fresh auth code when the token needs to be bootstrapped or renewed.
+// The returned URL is intended to be displayed in the admin UI only.
+func (s *Gateway) RenewURL() string {
+	if s.oauthConfig == nil {
+		return ""
+	}
+	return s.oauthConfig.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 }
 
 // SendMail sends an email using the Gmail API. It constructs the email message, encodes it, and sends it through the Gmail service.

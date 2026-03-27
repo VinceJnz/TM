@@ -9,6 +9,7 @@ import (
 	"api-server/v2/localHandlers/handlerBookingPeople"
 	"api-server/v2/localHandlers/handlerBookingStatus"
 	"api-server/v2/localHandlers/handlerBookingVoucher"
+	"api-server/v2/localHandlers/handlerGmailCert"
 	"api-server/v2/localHandlers/handlerGroupBooking"
 	"api-server/v2/localHandlers/handlerMemberStatus"
 	"api-server/v2/localHandlers/handlerMyBookings"
@@ -156,6 +157,7 @@ func main() {
 	handlerAccessLevel.New(app).RegisterRoutes(protected, "/securityAccessLevel")             // AccessLevel routes
 	handlerAccessScope.New(app).RegisterRoutes(protected, "/securityAccessScope")             // AccessScope routes
 	handlerAccessScope.New(app).RegisterRoutes(protected, "/securityAccessType")              // Legacy alias for AccessScope routes
+	handlerGmailCert.New(app).RegisterRoutes(protected, "/gmailcert")                         // Gmail cert management (Sys Admin only)
 
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"

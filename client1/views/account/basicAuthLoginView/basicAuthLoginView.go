@@ -5,6 +5,8 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
+	"log"
+	"net/http"
 	"syscall/js"
 )
 
@@ -114,10 +116,13 @@ type ItemEditor struct {
 	authMode  string
 
 	// keep handlers so they aren't GC'd
-	regHandler   js.Func
-	verHandler   js.Func
-	loginHandler js.Func
-	otpHandler   js.Func
+	regHandler           js.Func
+	verHandler           js.Func
+	loginHandler         js.Func
+	otpHandler           js.Func
+	msgHandler           js.Func
+	msgHandlerSet        bool
+	oauthMessageReceived bool
 }
 
 func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
@@ -146,7 +151,71 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	editor.Elements.StateDiv.Set("id", debugTag+"ItemStateDiv")
 	editor.Elements.Div.Call("appendChild", editor.Elements.StateDiv)
 
+	editor.setupOAuthPopupMessageListener()
+
 	return editor
+}
+
+// setupOAuthPopupMessageListener listens for popup completion messages from the
+// OAuth callback flow and triggers the same login event used by password login.
+func (editor *ItemEditor) setupOAuthPopupMessageListener() {
+	if editor.msgHandlerSet {
+		return
+	}
+	editor.msgHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) == 0 {
+			return nil
+		}
+
+		evt := args[0]
+		origin := evt.Get("origin")
+		if origin.Truthy() {
+			expected := js.Global().Get("location").Get("origin").String()
+			if origin.String() != expected {
+				return nil
+			}
+		}
+
+		data := evt.Get("data")
+		if data.IsUndefined() || data.IsNull() {
+			return nil
+		}
+
+		typeVal := data.Get("type")
+		if typeVal.IsUndefined() || typeVal.IsNull() {
+			return nil
+		}
+
+		msgType := typeVal.String()
+		if msgType != "loginComplete" && msgType != "registrationComplete" {
+			return nil
+		}
+
+		statusVal := data.Get("status")
+		if statusVal.Truthy() && statusVal.String() != "success" {
+			return nil
+		}
+
+		name := "authenticated"
+		if nameVal := data.Get("name"); nameVal.Truthy() && nameVal.Type() == js.TypeString {
+			if s := nameVal.String(); s != "" {
+				name = s
+			}
+		}
+		if usernameVal := data.Get("username"); usernameVal.Truthy() && usernameVal.Type() == js.TypeString && name == "authenticated" {
+			if s := usernameVal.String(); s != "" {
+				name = s
+			}
+		}
+
+		log.Printf("%s received OAuth popup completion message (%s), triggering loginComplete", debugTag, msgType)
+		editor.oauthMessageReceived = true
+		editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLoginComplete, DebugTag: debugTag, Data: name})
+		return nil
+	})
+
+	js.Global().Call("addEventListener", "message", editor.msgHandler)
+	editor.msgHandlerSet = true
 }
 
 func (editor *ItemEditor) ResetView() {
@@ -219,13 +288,84 @@ func (editor *ItemEditor) populateEditForm() {
 	loginButton.Set("innerHTML", "Continue with Google")
 	loginButton.Set("className", "btn btn-primary oauth-btn")
 	loginButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		js.Global().Call("open", "/api/v1/auth/oauth/login", "oauth", "width=600,height=800")
+		editor.oauthMessageReceived = false
+		popup := js.Global().Call("open", "/api/v1/auth/oauth/login", "oauth", "width=600,height=800")
+		editor.startOAuthPopupCloseWatcher(popup)
 		return nil
 	}))
 	oauthContainer.Call("appendChild", loginButton)
 
 	container.Call("appendChild", oauthContainer)
 	editor.Elements.EditDiv.Get("style").Set("display", "block")
+}
+
+// startOAuthPopupCloseWatcher polls popup.closed and runs a fallback auth check
+// when the popup closes without a postMessage completion signal.
+func (editor *ItemEditor) startOAuthPopupCloseWatcher(popup js.Value) {
+	if popup.IsUndefined() || popup.IsNull() {
+		return
+	}
+
+	var poll js.Func
+	poll = js.FuncOf(func(this js.Value, args []js.Value) any {
+		closed := popup.Get("closed")
+		if !closed.Truthy() || !closed.Bool() {
+			js.Global().Call("setTimeout", poll, 500)
+			return nil
+		}
+
+		poll.Release()
+		if editor.oauthMessageReceived {
+			return nil
+		}
+
+		log.Printf("%s OAuth popup closed without completion message; running fallback session check", debugTag)
+		editor.fallbackCheckOAuthSession()
+		return nil
+	})
+
+	js.Global().Call("setTimeout", poll, 500)
+}
+
+// fallbackCheckOAuthSession verifies whether OAuth already created a session cookie
+// and triggers loginComplete to refresh the UI if authentication succeeded.
+func (editor *ItemEditor) fallbackCheckOAuthSession() {
+	if editor.client == nil {
+		return
+	}
+
+	var menuUser struct {
+		UserID int    `json:"user_id"`
+		Name   string `json:"name"`
+		Email  string `json:"email"`
+	}
+
+	editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil,
+		func(err error) {
+			if err != nil {
+				return
+			}
+			if menuUser.UserID <= 0 {
+				return
+			}
+
+			name := menuUser.Name
+			if name == "" {
+				name = menuUser.Email
+			}
+			if name == "" {
+				name = "authenticated"
+			}
+
+			log.Printf("%s fallback session check succeeded; triggering loginComplete", debugTag)
+			editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLoginComplete, DebugTag: debugTag, Data: name})
+		},
+		func(err error) {
+			if err != nil {
+				log.Printf("%s fallback session check failed: %v", debugTag, err)
+			}
+		},
+	)
 }
 
 func (editor *ItemEditor) renderForm(mode string) {

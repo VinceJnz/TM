@@ -77,10 +77,11 @@ type ItemEditor struct {
 	UiComponents  UI
 	Div           js.Value
 	//EditDiv       js.Value
-	ListDiv     js.Value
-	ParentID    int
-	ViewState   ViewState
-	RecordState RecordState
+	ListDiv      js.Value
+	ParentID     int
+	ViewState    ViewState
+	RecordState  RecordState
+	tripExpanded map[int]bool
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -101,6 +102,8 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	editor.ListDiv = editor.document.Call("createElement", "div")
 	editor.ListDiv.Set("id", debugTag+"itemList")
 	editor.Div.Call("appendChild", editor.ListDiv)
+
+	editor.tripExpanded = make(map[int]bool)
 
 	// Store supplied parent value
 	if len(idList) == 1 {
@@ -164,60 +167,209 @@ func (editor *ItemEditor) FetchItems() {
 }
 
 func (editor *ItemEditor) populateItemList() {
-	var tripID int
-	var bookingID int
-	var tripDiv js.Value
-	var bookingDiv js.Value
-	editor.ListDiv.Set("innerHTML", "") // Clear existing content
+	editor.ListDiv.Set("innerHTML", "")
+
+	if len(editor.Records) == 0 {
+		empty := editor.document.Call("createElement", "div")
+		empty.Set("innerHTML", "No participant records found for current trips.")
+		viewHelpers.SetStyles(empty, map[string]string{
+			"padding":       "16px",
+			"border":        "1px solid #dbe4ef",
+			"border-radius": "8px",
+			"background":    "#f7fafc",
+			"color":         "#44576d",
+		})
+		editor.ListDiv.Call("appendChild", empty)
+		return
+	}
+
+	tripSeen := map[int]bool{}
+	bookingSeen := map[int]bool{}
+	totalParticipants := 0
+	for _, record := range editor.Records {
+		tripSeen[record.TripID] = true
+		if record.BookingID > 0 {
+			bookingSeen[record.BookingID] = true
+		}
+		if record.Name != "" {
+			totalParticipants++
+		}
+	}
+
+	summary := editor.document.Call("createElement", "div")
+	viewHelpers.SetStyles(summary, map[string]string{
+		"border":        "1px solid #d7e3f3",
+		"border-radius": "10px",
+		"background":    "#f5f9ff",
+		"padding":       "8px 10px",
+		"margin-bottom": "8px",
+	})
+	summary.Set("innerHTML", "<strong>Trip Participant Status Report</strong><br>Trips: "+strconv.Itoa(len(tripSeen))+" | Bookings: "+strconv.Itoa(len(bookingSeen))+" | Participants: "+strconv.Itoa(totalParticipants))
+	editor.ListDiv.Call("appendChild", summary)
+
+	currentTripID := -1
+	currentBookingID := -1
+	bookingCount := 0
+	var tripCard js.Value
+	var bookingsContainer js.Value
+	var bookingCard js.Value
 
 	for _, i := range editor.Records {
-		record := i // Capture loop value so callbacks use the correct record.
-		//Add trip headding (Assumes records are sorted by trip)
-		if tripID != record.TripID {
-			tripID = record.TripID
-			tripDiv = editor.document.Call("createElement", "div")
-			tripDiv.Set("id", debugTag+"tripDiv")
+		record := i
 
-			tripDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
-			tripDiv.Set("innerHTML", "Trip: "+strconv.Itoa(record.TripID)+" Name:"+record.TripName+" (From:"+record.FromDate.Format(viewHelpers.Layout)+", To:"+record.ToDate.Format(viewHelpers.Layout)+")")
+		if currentTripID != record.TripID {
+			currentTripID = record.TripID
+			currentBookingID = -1
+			bookingCount = 0
 
-			editor.ListDiv.Call("appendChild", tripDiv)
+			tripCard = editor.document.Call("createElement", "div")
+			tripCard.Set("id", debugTag+"tripCard")
+			tripCard.Get("style").Call("setProperty", "cursor", "pointer")
+			viewHelpers.SetStyles(tripCard, map[string]string{
+				"border":        "1px solid #cfd9e6",
+				"border-radius": "10px",
+				"padding":       "8px",
+				"margin-bottom": "6px",
+				"background":    "#ffffff",
+			})
+
+			// Trip header with toggle indicator
+			headerDiv := editor.document.Call("createElement", "div")
+			headerDiv.Get("style").Call("setProperty", "display", "flex")
+			headerDiv.Get("style").Call("setProperty", "align-items", "center")
+			headerDiv.Get("style").Call("setProperty", "gap", "8px")
+
+			toggleIndicator := editor.document.Call("createElement", "span")
+			toggleIndicator.Set("innerHTML", "▶")
+			viewHelpers.SetStyles(toggleIndicator, map[string]string{
+				"font-size": "0.8em",
+				"color":     "#4f647a",
+				"width":     "12px",
+			})
+			headerDiv.Call("appendChild", toggleIndicator)
+
+			title := editor.document.Call("createElement", "div")
+			title.Set("innerHTML", "<strong>"+record.TripName+"</strong> - "+record.FromDate.Format(viewHelpers.Layout)+" to "+record.ToDate.Format(viewHelpers.Layout)+" | Capacity: "+strconv.Itoa(record.MaxParticipants))
+			viewHelpers.SetStyles(title, map[string]string{
+				"font-size": "0.98em",
+				"color":     "#1d2f45",
+				"flex-grow": "1",
+			})
+			headerDiv.Call("appendChild", title)
+
+			tripCard.Call("appendChild", headerDiv)
+
+			// Bookings container (initially hidden)
+			bookingsContainer = editor.document.Call("createElement", "div")
+			bookingsContainer.Get("style").Call("setProperty", "display", "none")
+			tripCard.Call("appendChild", bookingsContainer)
+
+			// Create click handler with proper closure capture
+			tripID := record.TripID
+			tripCard.Call("addEventListener", "click", editor.createTripToggleHandler(tripID, bookingsContainer, toggleIndicator))
+
+			editor.ListDiv.Call("appendChild", tripCard)
 		}
 
-		//Add booking headding (Assumes records are sorted by trip and booking)
-		if bookingID != record.BookingID || record.Name == "" {
-			bookingID = record.BookingID
-			bookingDiv = editor.document.Call("createElement", "div")
-			bookingDiv.Set("id", debugTag+"bookingDiv")
-
-			bookingDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		if currentBookingID != record.BookingID || record.Name == "" {
+			currentBookingID = record.BookingID
 			if record.Name != "" {
-				bookingDiv.Set("innerHTML", " Booking:"+strconv.Itoa(record.BookingID))
+				bookingCount++
+			}
+
+			bookingCard = editor.document.Call("createElement", "div")
+			bookingCard.Set("id", debugTag+"bookingCard")
+			viewHelpers.SetStyles(bookingCard, map[string]string{
+				"border":        "1px solid #dbe4ef",
+				"border-radius": "8px",
+				"padding":       "6px 8px",
+				"margin":        "3px 0 0 0",
+				"background":    "#fbfdff",
+			})
+
+			heading := editor.document.Call("createElement", "div")
+			if record.Name != "" {
+				heading.Set("innerHTML", "<strong>Booking "+strconv.Itoa(bookingCount)+"</strong>")
 			} else {
-				bookingDiv.Set("innerHTML", "No Bookings")
+				heading.Set("innerHTML", "<strong>No Bookings</strong>")
 			}
+			viewHelpers.SetStyles(heading, map[string]string{
+				"font-size":     "0.92em",
+				"margin-bottom": "3px",
+				"color":         "#2d4059",
+			})
+			bookingCard.Call("appendChild", heading)
 
-			tripDiv.Call("appendChild", bookingDiv)
+			bookingsContainer.Call("appendChild", bookingCard)
 		}
 
-		//Add people rows (Assumes records are sorted by trip and booking)
-		if record.Name != "" {
-			itemDiv := editor.document.Call("createElement", "div")
-			itemDiv.Set("id", debugTag+"itemDiv")
-			itemDiv.Set("innerHTML", " Participant:"+record.Name+", Status:"+record.BookingStatus)
-			itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
-			switch record.BookingStatus {
-			case "before_threshold_paid":
-				itemDiv.Set("style", "background-color: #ccffcc;")
-			case "before_threshold":
-				itemDiv.Set("style", "background-color: #ffd280;")
-			case "after_threshold":
-				itemDiv.Set("style", "background-color: #ffbbbb;")
-			default:
-			}
-
-			bookingDiv.Call("appendChild", itemDiv)
+		if record.Name == "" {
+			continue
 		}
+
+		participantRow := editor.document.Call("createElement", "div")
+		statusColors := participantStatusColors(record.BookingStatus)
+		viewHelpers.SetStyles(participantRow, map[string]string{
+			"margin":        "2px 0",
+			"padding":       "5px 8px",
+			"border-radius": "6px",
+			"border":        "1px solid " + statusColors.border,
+			"background":    statusColors.background,
+			"color":         "#23364a",
+			"font-size":     "0.88em",
+		})
+		participantRow.Set("innerHTML", "<strong>"+record.Name+"</strong> | Status: "+participantStatusLabel(record.BookingStatus)+" | Position: "+strconv.Itoa(record.BookingPosition))
+
+		bookingCard.Call("appendChild", participantRow)
+	}
+}
+
+func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value) js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		isExpanded := editor.tripExpanded[tripID]
+		editor.tripExpanded[tripID] = !isExpanded
+
+		if !isExpanded {
+			// Show bookings
+			bookingsContainer.Get("style").Call("setProperty", "display", "block")
+			toggleIndicator.Set("innerHTML", "▼")
+		} else {
+			// Hide bookings
+			bookingsContainer.Get("style").Call("setProperty", "display", "none")
+			toggleIndicator.Set("innerHTML", "▶")
+		}
+		return nil
+	})
+}
+
+type statusStyle struct {
+	background string
+	border     string
+}
+
+func participantStatusColors(status string) statusStyle {
+	switch status {
+	case "before_threshold_paid":
+		return statusStyle{background: "#eaf8ef", border: "#9ed7b3"}
+	case "before_threshold":
+		return statusStyle{background: "#fff4de", border: "#e8c57a"}
+	case "after_threshold":
+		return statusStyle{background: "#fdeaea", border: "#e3a0a0"}
+	default:
+		return statusStyle{background: "#eef3f8", border: "#c8d4e3"}
+	}
+}
+
+func participantStatusLabel(status string) string {
+	switch status {
+	case "before_threshold_paid":
+		return "Confirmed/Paid"
+	case "before_threshold":
+		return "Unconfirmed/Not-paid"
+	case "after_threshold":
+		return "On-wait-list/Not-paid"
+	default:
+		return status
 	}
 }
 
