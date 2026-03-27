@@ -19,6 +19,7 @@ type RegistrationPayload struct {
 	Address        string `json:"user_address"`
 	BirthDate      string `json:"user_birth_date"`
 	UserAgeGroupID int64  `json:"user_age_group_id"`
+	AccountHidden  bool   `json:"user_account_hidden"`
 }
 
 func (editor *ItemEditor) setLoginIdentifierFields(identifier string) string {
@@ -85,6 +86,7 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 		Address:        editor.CurrentRecord.Address,
 		BirthDate:      birthDateRFC3339,
 		UserAgeGroupID: editor.CurrentRecord.UserAgeGroupID,
+		AccountHidden:  editor.UiComponents.AccountHidden.Get("checked").Bool(),
 	}
 
 	log.Printf("%vhandleRegisterSubmit()1 Submitting registration for user: %+v", debugTag, regPayload)
@@ -247,6 +249,8 @@ func (editor *ItemEditor) regForm() js.Value {
 	ageGroupSelect.Call("appendChild", placeholderOpt)
 	regAgeGroupObj.Call("appendChild", ageGroupSelect)
 
+	regHiddenObj, regHiddenInp := viewHelpers.BooleanEdit(false, editor.document, "Hide My Details", "checkbox", "regAccountHidden")
+
 	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "OTP Token", "text", "regToken")
 	regTokenInp.Set("disabled", true)
 
@@ -257,6 +261,7 @@ func (editor *ItemEditor) regForm() js.Value {
 	editor.UiComponents.Address = regAddressInp
 	editor.UiComponents.BirthDate = regBirthInp
 	editor.UiComponents.UserAgeGroupID = ageGroupSelect
+	editor.UiComponents.AccountHidden = regHiddenInp
 	editor.UiComponents.Token = regTokenInp
 
 	regForm.Call("appendChild", regUserObj)
@@ -266,6 +271,7 @@ func (editor *ItemEditor) regForm() js.Value {
 	regForm.Call("appendChild", regAddressObj)
 	regForm.Call("appendChild", regBirthObj)
 	regForm.Call("appendChild", regAgeGroupObj)
+	regForm.Call("appendChild", regHiddenObj)
 	regForm.Call("appendChild", regTokenObj)
 
 	regActions := viewHelpers.ActionGroup(
