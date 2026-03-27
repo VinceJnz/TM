@@ -354,37 +354,17 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%vVerifyRegistration user registered and verified: userID=%d, user %+v (pending admin activation)", debugTag, userID, user)
 
-	if h.appConf.EmailSvc != nil {
-		adminEmails, err := dbAuthTemplate.UserEmailsByRole(debugTag+"VerifyRegistration:adminEmails", h.appConf.Db, "admin")
-		if err != nil {
-			log.Printf("%vVerifyRegistration failed to load admin email list: %v", debugTag, err)
-		} else if len(adminEmails) == 0 {
-			log.Printf("%vVerifyRegistration no admin users found for notification", debugTag)
-		} else {
-			subject := "New account pending admin approval"
-			body := fmt.Sprintf(
-				"A new user account is pending admin approval.\n\nUser ID: %d\nUsername: %s\nEmail: %s\nName: %s\n\nPlease review and activate the account if appropriate.",
-				userID,
-				user.Username,
-				user.Email.String,
-				user.Name,
-			)
-
-			for _, adminEmail := range adminEmails {
-				adminEmail = strings.TrimSpace(adminEmail)
-				if adminEmail == "" {
-					continue
-				}
-
-				if _, err := h.appConf.EmailSvc.SendMail(adminEmail, subject, body); err != nil {
-					log.Printf("%vVerifyRegistration failed to notify admin %s for user %d: %v", debugTag, adminEmail, userID, err)
-				} else {
-					log.Printf("%vVerifyRegistration admin %s notified for new user %d", debugTag, adminEmail, userID)
-				}
-			}
-		}
-	} else {
-		log.Printf("%vVerifyRegistration admin notification skipped (email service not configured)", debugTag)
+	if err := handlerHelpers.NotifyAdminsUserReviewRequired(
+		debugTag+"VerifyRegistration:",
+		h.appConf.Db,
+		h.appConf.EmailSvc,
+		h.appConf.Settings.AdminNotifyGroup,
+		userID,
+		user.Username,
+		user.Email.String,
+		user.Name,
+	); err != nil {
+		log.Printf("%vVerifyRegistration failed to send admin notification: %v", debugTag, err)
 	}
 
 	handlerHelpers.WriteJSON(w, http.StatusCreated, map[string]any{

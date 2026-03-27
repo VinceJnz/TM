@@ -59,6 +59,20 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.MemberStatusID, record.AccountStatusID, record.AccountHidden)
+	if record.ID > 0 {
+		if err := helpers.NotifyAdminsUserReviewRequired(
+			debugTag+"Create:",
+			h.appConf.Db,
+			h.appConf.EmailSvc,
+			h.appConf.Settings.AdminNotifyGroup,
+			record.ID,
+			record.Username,
+			record.Email.String,
+			record.Name,
+		); err != nil {
+			log.Printf("%vCreate failed to send admin notification: %v", debugTag, err)
+		}
+	}
 }
 
 // Update: modifies the existing record identified by id and returns the updated record

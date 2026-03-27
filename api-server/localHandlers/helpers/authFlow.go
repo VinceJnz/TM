@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -172,4 +173,68 @@ func VerifyOTPTokenAndLoadUser(debugStr string, db *sqlx.DB, tokenName, tokenVal
 	_ = dbAuthTemplate.TokenDeleteQry(debugStr+"VerifyOTPTokenAndLoadUser:del", db, tok.ID)
 
 	return userID, user, nil
+}
+
+// NotifyAdminsUserReviewRequired sends review/activation notice to all admin users.
+// It is best-effort and returns an error only when admin recipients cannot be loaded.
+func NotifyAdminsUserReviewRequired(debugStr string, db *sqlx.DB, emailSvc MailSender, groupName string, userID int, username, email, name string) error {
+	if emailSvc == nil {
+		log.Printf("%vNotifyAdminsUserReviewRequired email service not configured", debugStr)
+		return nil
+	}
+
+	groupName = strings.TrimSpace(groupName)
+	candidateGroups := []string{}
+	if groupName != "" {
+		for _, g := range strings.Split(groupName, ",") {
+			g = strings.TrimSpace(g)
+			if g != "" {
+				candidateGroups = append(candidateGroups, g)
+			}
+		}
+	} else {
+		candidateGroups = []string{"admin", "administrator", "admins"}
+	}
+
+	var adminEmails []string
+	resolvedGroup := ""
+	for _, g := range candidateGroups {
+		emails, err := dbAuthTemplate.UserEmailsByRole(debugStr+"NotifyAdminsUserReviewRequired:adminEmails", db, g)
+		if err != nil {
+			continue
+		}
+		if len(emails) > 0 {
+			adminEmails = emails
+			resolvedGroup = g
+			break
+		}
+	}
+	if len(adminEmails) == 0 {
+		log.Printf("%vNotifyAdminsUserReviewRequired no users found in any notification group candidates: %v", debugStr, candidateGroups)
+		return nil
+	}
+
+	subject := "New account pending admin approval"
+	body := fmt.Sprintf(
+		"A new user account is pending admin approval.\n\nUser ID: %d\nUsername: %s\nEmail: %s\nName: %s\n\nPlease review and activate the account if appropriate.",
+		userID,
+		username,
+		email,
+		name,
+	)
+
+	for _, adminEmail := range adminEmails {
+		adminEmail = strings.TrimSpace(adminEmail)
+		if adminEmail == "" {
+			continue
+		}
+
+		if _, sendErr := emailSvc.SendMail(adminEmail, subject, body); sendErr != nil {
+			log.Printf("%vNotifyAdminsUserReviewRequired failed to notify admin %s for user %d: %v", debugStr, adminEmail, userID, sendErr)
+		} else {
+			log.Printf("%vNotifyAdminsUserReviewRequired recipient %s notified for user %d via group %q", debugStr, adminEmail, userID, resolvedGroup)
+		}
+	}
+
+	return nil
 }

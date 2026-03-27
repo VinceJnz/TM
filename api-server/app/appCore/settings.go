@@ -37,6 +37,7 @@ type settings struct {
 	ClientRedirectURL   string `json:"ClientRedirectURL"`
 	GmailAuthCode       string `json:"GmailAuthCode"`
 	EmailDebugAddr      string `json:"EmailDebugAddr"`
+	AdminNotifyGroup    string `json:"AdminNotifyGroup"`
 	DevMode             bool   `json:"DevMode"`
 }
 
@@ -134,6 +135,7 @@ func (s *settings) LoadEnv() error {
 	s.ClientRedirectURL = os.Getenv("CLIENT_REDIRECT_URL")
 	s.GmailAuthCode = os.Getenv("GMAIL_AUTH_CODE")
 	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
+	s.AdminNotifyGroup = os.Getenv("ADMIN_NOTIFY_GROUP")
 	s.DevMode = os.Getenv("DEV_MODE") == "true"
 	s.AppTitle = os.Getenv("APP_TITLE")
 	if err := s.ValidateEnv(); err != nil {

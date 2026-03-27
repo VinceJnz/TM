@@ -149,11 +149,25 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%vcallbackHandler creating/upserting user: %+v", debugTag, user)
 
-	userID, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
+	userID, created, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v failed to upsert user: %v", debugTag, err)
 		handlerHelpers.WriteInternalServerError(w, "failed to create user")
 		return
+	}
+	if created {
+		if err := handlerHelpers.NotifyAdminsUserReviewRequired(
+			debugTag+"callbackHandler:",
+			h.appConf.Db,
+			h.appConf.EmailSvc,
+			h.appConf.Settings.AdminNotifyGroup,
+			userID,
+			user.Username,
+			user.Email.String,
+			user.Name,
+		); err != nil {
+			log.Printf("%v failed to send admin notification for oauth user %d: %v", debugTag, userID, err)
+		}
 	}
 
 	// OAuth email is already verified by the provider. User is created as AccountNew and requires admin approval.

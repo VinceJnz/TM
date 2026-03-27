@@ -17,13 +17,13 @@ const (
 )
 
 // func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, provider, providerID, email, name string) (int, error) {
-func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) (int, error) {
+func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) (int, bool, error) {
 	var userID int
 	//var userStatus userState
 	err := Db.Get(&userID, `SELECT id FROM users WHERE provider=$1 AND provider_id=$2`, user.Provider, user.ProviderID)
 	if err == nil {
 		// found existing user
-		return userID, nil
+		return userID, false, nil
 	}
 
 	userFromDB, err := UserEmailReadQry(debugStr+"FindOrCreateUserByProvider ", Db, user.Email.String)
@@ -63,16 +63,16 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider ", Db, user)
 		if err != nil {
-			return 0, err
+			return 0, false, err
 		}
+		return userID, false, nil
 	} else {
 		// No existing user found by provider or email: insert a new user so provider info is persisted
 		log.Printf("%vFindOrCreateUserByProvider - no existing user found; inserting new user: %+v", debugStr, user)
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider:insert ", Db, user)
 		if err != nil {
-			return 0, err
+			return 0, false, err
 		}
+		return userID, true, nil
 	}
-
-	return userID, nil
 }
