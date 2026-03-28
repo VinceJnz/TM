@@ -14,6 +14,7 @@ import (
 	"client1/v2/views/gmailCertView"
 	"client1/v2/views/groupBookingView"
 	"client1/v2/views/myBookingsView"
+	"client1/v2/views/myProfileView"
 	"client1/v2/views/resourceView"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/securityGroupView"
@@ -79,6 +80,7 @@ type viewElements struct {
 	statusOutput js.Value
 	pageTitle    js.Value
 	userDisplay  js.Value
+	myProfileBtn js.Value
 }
 
 type children struct {
@@ -93,6 +95,7 @@ type menuItemSpec struct {
 func (v *View) buildRootMenuItems() []menuItemSpec {
 	return []menuItemSpec{
 		{title: "My Bookings", apiURL: myBookingsView.ApiURL, element: myBookingsView.New(v.document, v.events, v.appCore)},
+		{title: "My Profile", apiURL: myProfileView.ApiURL, element: myProfileView.New(v.document, v.events, v.appCore)},
 		{title: "Trip List", apiURL: tripParticipantStatusReport.ApiURL, element: tripParticipantStatusReport.New(v.document, v.events, v.appCore)},
 	}
 }
@@ -141,6 +144,7 @@ type View struct {
 	CurrentRecord       TableData
 	ItemState           viewHelpers.ItemStateView //viewHelpers.ItemState
 	activeMenuTitle     string
+	profileReturnTitle  string
 	childElements       map[string]editorElement
 	menuButtons         map[string]buttonElement
 	menuTitles          map[string]js.Value
@@ -274,6 +278,38 @@ func (v *View) Setup() {
 	sysadminMenu := v.AddMenuSection(menuSectionSysadminCaption, menuSectionSysadmin, false, v.elements.sidemenu)
 
 	v.addMenuItems(v.buildAdminMenuItems(), adminMenu, menuSectionAdmin)
+
+	// Top-menu profile shortcut targets dedicated myProfile route/view.
+	if profileElement, ok := v.childElements["My Profile"]; ok && profileElement != nil {
+		profileOnClick := func() {
+			if strings.EqualFold(v.activeMenuTitle, "My Profile") {
+				returnTitle := strings.TrimSpace(v.profileReturnTitle)
+				if returnTitle == "" {
+					returnTitle = "Home"
+				}
+				returnElement, ok := v.childElements[returnTitle]
+				if !ok {
+					returnTitle = "Home"
+					returnElement = v.childElements[returnTitle]
+				}
+				v.navigateTo(returnTitle, true, returnElement, true)
+				return
+			}
+
+			current := strings.TrimSpace(v.activeMenuTitle)
+			if current != "" && !strings.EqualFold(current, "My Profile") {
+				v.profileReturnTitle = current
+			}
+			v.navigateTo("My Profile", true, profileElement, true)
+		}
+		v.elements.myProfileBtn = viewHelpers.HRef(profileOnClick, v.document, "My Profile", "topMenuMyProfile")
+		v.elements.myProfileBtn.Set("className", "menu-item")
+		if route, routeOK := v.routeByTitle["My Profile"]; routeOK {
+			v.elements.myProfileBtn.Set("href", "#"+route)
+		}
+		v.elements.myProfileBtn.Get("style").Call("setProperty", "display", "none")
+		v.elements.topmenu.Call("appendChild", v.elements.myProfileBtn)
+	}
 
 	v.addMenuItems(v.buildSysadminMenuItems(), sysadminMenu, menuSectionSysadmin)
 

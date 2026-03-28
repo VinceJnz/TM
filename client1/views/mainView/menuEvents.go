@@ -25,6 +25,14 @@ func (v *View) setTopAuthAction(isLoggedIn bool) {
 			logoutBtn.Get("style").Call("setProperty", "display", "none")
 		}
 	}
+
+	if !v.elements.myProfileBtn.IsUndefined() && !v.elements.myProfileBtn.IsNull() {
+		if isLoggedIn {
+			v.elements.myProfileBtn.Get("style").Call("removeProperty", "display")
+		} else {
+			v.elements.myProfileBtn.Get("style").Call("setProperty", "display", "none")
+		}
+	}
 }
 
 // MenuItem contains data for a menu item
@@ -89,6 +97,7 @@ func (v *View) displayMessage(event eventProcessor.Event) {
 func (v *View) logoutComplete(event eventProcessor.Event) {
 	v.elements.userDisplay.Set("innerHTML", "")
 	v.setTopAuthAction(false)
+	v.profileReturnTitle = ""
 	v.resetMenu()
 	v.ResetViewItems()
 	v.menuOnClick(homeMenuTitle, true, nil)()

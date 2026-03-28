@@ -553,6 +553,12 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
 		return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
 	}
+
+	// Reuse existing own-scope profile capability model via myBookings resource.
+	if strings.EqualFold(control.ResourceName, "myProfile") {
+		control.ResourceName = "myBookings"
+	}
+
 	return control, err
 }
 

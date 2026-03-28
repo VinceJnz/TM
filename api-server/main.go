@@ -13,6 +13,7 @@ import (
 	"api-server/v2/localHandlers/handlerGroupBooking"
 	"api-server/v2/localHandlers/handlerMemberStatus"
 	"api-server/v2/localHandlers/handlerMyBookings"
+	"api-server/v2/localHandlers/handlerMyProfile"
 	"api-server/v2/localHandlers/handlerOAuth"
 	"api-server/v2/localHandlers/handlerResource"
 	"api-server/v2/localHandlers/handlerSeasons"
@@ -129,6 +130,7 @@ func main() {
 
 	// Add route groups (protected - user and above)
 	handlerMyBookings.New(app).RegisterRoutes(protected, "/myBookings")       // MyBookings routes
+	handlerMyProfile.New(app).RegisterRoutes(protected, "/myProfile")         // MyProfile routes
 	handlerBooking.New(app).RegisterRoutes(protected, "/bookings", "/trips")  // Booking routes
 	handlerBookingPeople.New(app).RegisterRoutes(protected, "/bookingPeople") // BookingPeople routes
 	handlerBookingVoucher.New(app).RegisterRoutesProtected(protected, "/bookingVouchers")
