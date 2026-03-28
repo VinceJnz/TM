@@ -169,6 +169,11 @@ pg_dump -U myuser -h localhost -d mydatabase > backup_$(date +%Y%m%d_%H%M%S).sql
 psql -U myuser -h localhost -d mydatabase -f db-server/sql/postgreSQL/MIGRATION-REFERENTIAL-INTEGRITY.sql
 ```
 
+### Note (2026-03-28): User Delete RESTRICT Finalization
+- Ran `db-server/sql/postgreSQL/MIGRATION-USER-DELETE-RESTRICT.sql` to add user-facing foreign keys with `NOT VALID`.
+- Ran `db-server/sql/postgreSQL/MIGRATION-USER-DELETE-CLEANUP-VALIDATE.sql` to repair legacy invalid user references (for example `owner_id = 0`) and then execute `VALIDATE CONSTRAINT`.
+- Result: all 7 target user foreign keys are now fully validated (`convalidated = true`).
+
 ### Step 3: Review Output
 - Check for any errors in the output
 - Verify constraint count matches expectations

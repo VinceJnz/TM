@@ -387,11 +387,11 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%vCompleteRegistration: r = %+v\n", debugTag, r)
 
 	var req struct {
-		Username      string `json:"username"`
-		Address       string `json:"address"`
-		BirthDate     string `json:"birth_date"`
-		UserAgeGroupID int64 `json:"user_age_group_id"`
-		AccountHidden *bool  `json:"account_hidden"`
+		Username       string `json:"username"`
+		Address        string `json:"address"`
+		BirthDate      string `json:"birth_date"`
+		UserAgeGroupID int64  `json:"user_age_group_id"`
+		AccountHidden  *bool  `json:"account_hidden"`
 	}
 	if err := handlerHelpers.DecodeJSONBody(r, &req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)

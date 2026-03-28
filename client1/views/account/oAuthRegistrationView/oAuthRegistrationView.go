@@ -45,23 +45,23 @@ const ApiURL = "/auth/oauth"
 const ApiURLWithPrefix = "/api/v1" + ApiURL
 
 type TableData struct {
-	Name          string    `json:"name"`
-	Username      string    `json:"username"`
-	Address       string    `json:"address,omitempty"`
-	BirthDate     time.Time `json:"birth_date,omitempty"`
-	UserAgeGroupID int64    `json:"user_age_group_id,omitempty"`
-	AccountHidden bool      `json:"account_hidden,omitempty"`
+	Name           string    `json:"name"`
+	Username       string    `json:"username"`
+	Address        string    `json:"address,omitempty"`
+	BirthDate      time.Time `json:"birth_date,omitempty"`
+	UserAgeGroupID int64     `json:"user_age_group_id,omitempty"`
+	AccountHidden  bool      `json:"account_hidden,omitempty"`
 	//Created         time.Time `json:"created"`
 	//Modified        time.Time `json:"modified"`
 }
 
 type UI struct {
-	Name          js.Value
-	Username      js.Value
-	Address       js.Value
-	BirthDate     js.Value
+	Name           js.Value
+	Username       js.Value
+	Address        js.Value
+	BirthDate      js.Value
 	UserAgeGroupID js.Value
-	AccountHidden js.Value
+	AccountHidden  js.Value
 }
 
 type ParentData struct {

@@ -17,11 +17,11 @@ const ApiURL = "/auth/oauth"
 
 // RegistrationData represents the OAuth registration form data
 type RegistrationData struct {
-	Username      string    `json:"username"`
-	Address       string    `json:"address,omitempty"`
-	BirthDate     time.Time `json:"birth_date,omitempty"`
-	UserAgeGroupID int64    `json:"user_age_group_id,omitempty"`
-	AccountHidden bool      `json:"account_hidden,omitempty"`
+	Username       string    `json:"username"`
+	Address        string    `json:"address,omitempty"`
+	BirthDate      time.Time `json:"birth_date,omitempty"`
+	UserAgeGroupID int64     `json:"user_age_group_id,omitempty"`
+	AccountHidden  bool      `json:"account_hidden,omitempty"`
 }
 
 type viewElements struct {

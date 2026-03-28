@@ -5,7 +5,7 @@ Provide a way for users to edit their profile - Done
 
 For users that connect for the first time via google (oAuth) they need to be asked to complete their profile. - Done
 
-Prevent del user if there are any associated records
+Prevent del user if there are any associated records - Done
 
 Add functionality to record. This will involve adding some DB tables, code to add the records, code to view/edit the records.
 Payments - Should be related to bookings

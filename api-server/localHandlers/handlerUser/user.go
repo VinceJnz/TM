@@ -104,7 +104,34 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	childChecks := []dbStandardTemplate.ChildCheckQuery{
+		{
+			TableName: "bookings (owner)",
+			Query:     "SELECT COUNT(*) FROM at_bookings WHERE owner_id = $1",
+		},
+		{
+			TableName: "booking participants",
+			Query:     "SELECT COUNT(*) FROM at_booking_people WHERE person_id = $1",
+		},
+		{
+			TableName: "payments",
+			Query:     "SELECT COUNT(*) FROM at_user_payments WHERE user_id = $1",
+		},
+		{
+			TableName: "security group memberships",
+			Query:     "SELECT COUNT(*) FROM st_user_group WHERE user_id = $1",
+		},
+		{
+			TableName: "trips (owner)",
+			Query:     "SELECT COUNT(*) FROM at_trips WHERE owner_id = $1",
+		},
+		{
+			TableName: "group bookings (owner)",
+			Query:     "SELECT COUNT(*) FROM at_group_bookings WHERE owner_id = $1",
+		},
+	}
+
+	dbStandardTemplate.DeleteWithChildCheck(w, r, debugTag, h.appConf.Db, qryDelete, childChecks, id)
 }
 
 // SetUsername allows the authenticated user to set their username (unique).
