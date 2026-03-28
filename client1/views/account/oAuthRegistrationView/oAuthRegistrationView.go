@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"syscall/js"
 	"time"
 )
@@ -48,6 +49,7 @@ type TableData struct {
 	Username      string    `json:"username"`
 	Address       string    `json:"address,omitempty"`
 	BirthDate     time.Time `json:"birth_date,omitempty"`
+	UserAgeGroupID int64    `json:"user_age_group_id,omitempty"`
 	AccountHidden bool      `json:"account_hidden,omitempty"`
 	//Created         time.Time `json:"created"`
 	//Modified        time.Time `json:"modified"`
@@ -58,6 +60,7 @@ type UI struct {
 	Username      js.Value
 	Address       js.Value
 	BirthDate     js.Value
+	UserAgeGroupID js.Value
 	AccountHidden js.Value
 }
 
@@ -217,6 +220,28 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate")
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
+	ageGroupObj := editor.document.Call("createElement", "div")
+	ageGroupObj.Set("className", "form-group")
+	ageGroupLabel := editor.document.Call("createElement", "label")
+	ageGroupLabel.Set("htmlFor", "itemUserAgeGroupID")
+	ageGroupLabel.Set("innerHTML", "Age Group")
+	ageGroupObj.Call("appendChild", ageGroupLabel)
+	ageGroupSelect := editor.document.Call("createElement", "select")
+	ageGroupSelect.Set("id", "itemUserAgeGroupID")
+	viewHelpers.SetStyles(ageGroupSelect, map[string]string{
+		"width":        "100%",
+		"padding":      "8px",
+		"marginBottom": "15px",
+		"boxSizing":    "border-box",
+	})
+	placeholderOpt := editor.document.Call("createElement", "option")
+	placeholderOpt.Set("value", "0")
+	placeholderOpt.Set("innerHTML", "-- Select Age Group --")
+	ageGroupSelect.Call("appendChild", placeholderOpt)
+	ageGroupObj.Call("appendChild", ageGroupSelect)
+	editor.UiComponents.UserAgeGroupID = ageGroupSelect
+	editor.populateAgeGroupsDropdown(ageGroupSelect, editor.CurrentRecord.UserAgeGroupID)
+
 	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Account Hidden", "checkbox", "itemAccountHidden")
 	editor.UiComponents.AccountHidden.Set("defaultChecked", true)
 	editor.UiComponents.AccountHidden.Set("Checked", editor.CurrentRecord.AccountHidden)
@@ -224,14 +249,26 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.Username)
 	form.Call("appendChild", localObjs.Address)
 	form.Call("appendChild", localObjs.BirthDate)
+	form.Call("appendChild", ageGroupObj)
 	form.Call("appendChild", localObjs.AccountHidden)
 
 	// Create form buttons
-	submitBtn := viewHelpers.SubmitValidateButton2(editor.SubmitItemEdit, editor.document, "Submit", "submitEditBtn")
+	submitBtn := editor.document.Call("createElement", "button")
+	submitBtn.Set("id", "submitEditBtn")
+	submitBtn.Set("type", "submit")
+	submitBtn.Set("className", "btn btn-primary")
+	submitBtn.Set("textContent", "Submit")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
-	viewHelpers.StyleButtonPrimary(submitBtn)
+	viewHelpers.StyleSubmitButton(submitBtn)
+	viewHelpers.SetStyles(submitBtn, map[string]string{
+		"backgroundColor": "#1d4ed8",
+		"color":           "#ffffff",
+		"border":          "1px solid #1e40af",
+		"fontWeight":      "700",
+		"boxShadow":       "0 10px 24px rgba(29, 78, 216, 0.22)",
+	})
 	viewHelpers.StyleButtonSecondary(cancelBtn)
 	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
 	form.Call("appendChild", buttonRow)
@@ -278,6 +315,16 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if err != nil {
 		log.Printf(debugTag+"SubmitItemEdit() error parsing date %v", err)
 		js.Global().Call("alert", "Invalid birth date format. Use YYYY-MM-DD")
+		return nil
+	}
+	ageGroupIDStr := editor.UiComponents.UserAgeGroupID.Get("value").String()
+	if ageGroupIDStr == "" || ageGroupIDStr == "0" {
+		js.Global().Call("alert", "Age group is required")
+		return nil
+	}
+	editor.CurrentRecord.UserAgeGroupID, err = strconv.ParseInt(ageGroupIDStr, 10, 64)
+	if err != nil || editor.CurrentRecord.UserAgeGroupID <= 0 {
+		js.Global().Call("alert", "Invalid age group selection")
 		return nil
 	}
 	editor.CurrentRecord.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
@@ -481,66 +528,9 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 			log.Printf("%voAuth ensure request failed: %v", debugTag, err)
 			return
 		}
-		// If username or other profile fields are missing, prompt the user to provide them and send a single completion request
+		// If username or other profile fields are missing, show the completion form in the page.
 		if user.Username == "" {
-			// Prompt for username
-			unameRes := js.Global().Call("prompt", "Choose a username (3-20 chars):", "")
-			if unameRes.IsUndefined() || unameRes.IsNull() {
-				return // user cancelled
-			}
-			uname := unameRes.String()
-			if len(uname) < 3 || len(uname) > 20 {
-				js.Global().Call("alert", "Username must be 3-20 characters")
-				return
-			}
-			// Prompt for address (optional)
-			addrRes := js.Global().Call("prompt", "Enter your address (optional):", "")
-			var addr string
-			if !addrRes.IsUndefined() && !addrRes.IsNull() {
-				addr = addrRes.String()
-			}
-			// Prompt for birthdate (optional) - suggest YYYY-MM-DD
-			bdayRes := js.Global().Call("prompt", "Enter your birth date (YYYY-MM-DD) (optional):", "")
-			var bday string
-			if !bdayRes.IsUndefined() && !bdayRes.IsNull() {
-				bday = bdayRes.String()
-			}
-			// Prompt for account hidden (confirm)
-			hidden := js.Global().Call("confirm", "Keep account hidden from public listings?")
-			var ah bool
-			ah = hidden.Bool()
-
-			var reg TableData
-			reg.Username = uname
-			reg.Address = addr
-			reg.Name = name
-			if bday != "" {
-				if t, err := time.Parse(viewHelpers.Layout, bday); err == nil {
-					reg.BirthDate = t
-				} else {
-					js.Global().Call("alert", "Invalid birth date format. Use "+viewHelpers.Layout)
-					return
-				}
-			}
-			reg.AccountHidden = ah
-
-			// Send the completion request to OAuth complete-registration endpoint
-			editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
-				func(err error) { // success callback
-					if err != nil {
-						log.Printf("%v complete-registration failed: %v", debugTag, err)
-						js.Global().Call("alert", "Failed to complete registration: "+err.Error())
-						return
-					}
-					// Update UI to include username
-					if editor.Elements.Status.Truthy() {
-						editor.Elements.Status.Set("innerText", "Registered as: "+name+" ("+uname+")")
-					}
-				},
-				func(err error) { // failure callback
-					log.Printf("%v complete-registration error: %v", debugTag, err)
-					js.Global().Call("alert", "Failed to complete registration: "+err.Error())
-				})
+			editor.renderOAuthCompletionDialog(name)
 		} else {
 			// username already set
 			if editor.Elements.Status.Truthy() {
@@ -560,4 +550,213 @@ func (editor *ItemEditor) loginComplete(event eventProcessor.Event) {
 	// After OAuth popup, call server to get the full user object (username may be empty)
 	editor.client.NewRequest(http.MethodGet, ApiURL+"/ensure", &user, nil, success, failure)
 	editor.LoggedIn = true
+}
+
+func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value, selectedValue int64) {
+	if editor.client == nil {
+		log.Printf("%vpopulateAgeGroupsDropdown: client is nil", debugTag)
+		return
+	}
+
+	pfetch := js.Global().Call("fetch", "/api/v1/userAgeGroups", map[string]any{
+		"method":      "GET",
+		"credentials": "include",
+	})
+
+	pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		resp := args[0]
+		if !resp.Get("ok").Bool() {
+			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
+			return nil
+		}
+
+		jsonP := resp.Call("json")
+		jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+			data := args[0]
+			length := data.Get("length").Int()
+			for i := 0; i < length; i++ {
+				item := data.Index(i)
+				id := item.Get("id").Int()
+				name := item.Get("age_group").String()
+
+				opt := editor.document.Call("createElement", "option")
+				opt.Set("value", id)
+				opt.Set("innerHTML", name)
+				if selectedValue > 0 && int64(id) == selectedValue {
+					opt.Set("selected", true)
+				}
+				selectElement.Call("appendChild", opt)
+			}
+			return nil
+		}))
+
+		return nil
+	}))
+}
+
+func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
+	editor.Elements.EditDiv.Set("innerHTML", "")
+	editor.CurrentRecord = TableData{Name: name}
+
+	container := editor.document.Call("createElement", "div")
+	container.Set("className", "oauth-complete-registration-dialog")
+	viewHelpers.SetStyles(container, map[string]string{
+		"maxWidth":        "420px",
+		"padding":         "20px",
+		"marginTop":       "16px",
+		"border":          "1px solid #d0d7de",
+		"borderRadius":    "8px",
+		"backgroundColor": "#f8fafc",
+	})
+
+	title := editor.document.Call("createElement", "h3")
+	title.Set("innerText", "Complete your profile")
+	container.Call("appendChild", title)
+
+	desc := editor.document.Call("createElement", "p")
+	desc.Set("innerText", "Finish your Google registration by providing the remaining profile details below.")
+	container.Call("appendChild", desc)
+
+	status := editor.document.Call("createElement", "div")
+	status.Set("id", debugTag+"oauthCompletionStatus")
+	viewHelpers.SetStyleProperty(status, "marginBottom", "12px")
+	container.Call("appendChild", status)
+
+	form := viewHelpers.Form(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 {
+			args[0].Call("preventDefault")
+		}
+
+		username := usernameInput.Get("value").String()
+		if len(username) < 3 || len(username) > 20 {
+			status.Set("innerText", "Username must be 3-20 characters")
+			return nil
+		}
+
+		var reg TableData
+		reg.Name = name
+		reg.Username = username
+		reg.Address = addressInput.Get("value").String()
+		reg.AccountHidden = hiddenInput.Get("checked").Bool()
+
+		ageGroupIDStr := ageGroupSelect.Get("value").String()
+		if ageGroupIDStr == "" || ageGroupIDStr == "0" {
+			status.Set("innerText", "Age group is required")
+			return nil
+		}
+		ageGroupID, err := strconv.ParseInt(ageGroupIDStr, 10, 64)
+		if err != nil || ageGroupID <= 0 {
+			status.Set("innerText", "Invalid age group selection")
+			return nil
+		}
+		reg.UserAgeGroupID = ageGroupID
+
+		birthDate := birthDateInput.Get("value").String()
+		if birthDate == "" {
+			status.Set("innerText", "Birth date is required")
+			return nil
+		}
+		parsed, err := time.Parse(viewHelpers.Layout, birthDate)
+		if err != nil {
+			status.Set("innerText", "Invalid birth date format. Use "+viewHelpers.Layout)
+			return nil
+		}
+		reg.BirthDate = parsed
+
+		submitBtn.Set("disabled", true)
+		status.Set("innerText", "Saving profile...")
+
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/complete-registration", nil, &reg,
+			func(err error) {
+				if err != nil {
+					log.Printf("%v complete-registration failed: %v", debugTag, err)
+					status.Set("innerText", "Failed to complete registration: "+err.Error())
+					submitBtn.Set("disabled", false)
+					return
+				}
+
+				editor.Elements.EditDiv.Set("innerHTML", "")
+				if editor.Elements.Status.Truthy() {
+					editor.Elements.Status.Set("innerText", "Registered as: "+name+" ("+username+")")
+				}
+			},
+			func(err error) {
+				log.Printf("%v complete-registration error: %v", debugTag, err)
+				status.Set("innerText", "Failed to complete registration: "+err.Error())
+				submitBtn.Set("disabled", false)
+			})
+
+		return nil
+	}, editor.document, "oauthCompletionForm")
+
+	usernameFieldset, usernameInput := viewHelpers.StringEdit("", editor.document, "Username", "text", "oauthCompletionUsername")
+	usernameLabel := usernameFieldset.Get("firstChild")
+	viewHelpers.StyleStringEdit(usernameFieldset, usernameLabel, usernameInput, true)
+	usernameInput.Set("required", true)
+	usernameInput.Set("minLength", 3)
+	usernameInput.Set("maxLength", 20)
+	usernameInput.Set("placeholder", "Choose a username")
+	form.Call("appendChild", usernameFieldset)
+
+	addressFieldset, addressInput := viewHelpers.StringEdit("", editor.document, "Address", "text", "oauthCompletionAddress")
+	addressLabel := addressFieldset.Get("firstChild")
+	viewHelpers.StyleStringEdit(addressFieldset, addressLabel, addressInput, false)
+	addressInput.Set("placeholder", "Optional")
+	form.Call("appendChild", addressFieldset)
+
+	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "oauthCompletionBirthDate")
+	birthDateLabel := birthDateFieldset.Get("firstChild")
+	viewHelpers.StyleStringEdit(birthDateFieldset, birthDateLabel, birthDateInput, false)
+	form.Call("appendChild", birthDateFieldset)
+
+	ageGroupFieldset := editor.document.Call("createElement", "fieldset")
+	ageGroupFieldset.Set("className", "input-group")
+	ageGroupLabel := editor.document.Call("createElement", "label")
+	ageGroupLabel.Set("htmlFor", "oauthCompletionUserAgeGroupID")
+	ageGroupLabel.Set("textContent", "Age Group")
+	ageGroupFieldset.Call("appendChild", ageGroupLabel)
+	ageGroupSelect := editor.document.Call("createElement", "select")
+	ageGroupSelect.Set("id", "oauthCompletionUserAgeGroupID")
+	viewHelpers.SetStyles(ageGroupSelect, map[string]string{
+		"width":        "100%",
+		"padding":      "8px",
+		"marginBottom": "15px",
+		"boxSizing":    "border-box",
+	})
+	placeholderOpt := editor.document.Call("createElement", "option")
+	placeholderOpt.Set("value", "0")
+	placeholderOpt.Set("textContent", "-- Select Age Group --")
+	ageGroupSelect.Call("appendChild", placeholderOpt)
+	ageGroupFieldset.Call("appendChild", ageGroupSelect)
+	form.Call("appendChild", ageGroupFieldset)
+	editor.populateAgeGroupsDropdown(ageGroupSelect, 0)
+
+	hiddenFieldset, hiddenInput := viewHelpers.BooleanEdit(false, editor.document, "Hide my account from public listings", "checkbox", "oauthCompletionHidden")
+	hiddenLabel := hiddenFieldset.Get("firstChild")
+	viewHelpers.StyleBooleanEdit(hiddenFieldset, hiddenLabel, hiddenInput, "20px")
+	form.Call("appendChild", hiddenFieldset)
+
+	submitBtn := editor.document.Call("createElement", "button")
+	submitBtn.Set("id", "oauthCompletionSubmit")
+	submitBtn.Set("type", "submit")
+	submitBtn.Set("className", "btn btn-primary")
+	submitBtn.Set("textContent", "Submit")
+	viewHelpers.StyleSubmitButton(submitBtn)
+	viewHelpers.SetStyles(submitBtn, map[string]string{
+		"display":         "block",
+		"marginTop":       "12px",
+		"fontWeight":      "700",
+		"backgroundColor": "#1d4ed8",
+		"color":           "#ffffff",
+		"border":          "1px solid #1e40af",
+		"boxShadow":       "0 10px 24px rgba(29, 78, 216, 0.22)",
+	})
+	form.Call("appendChild", submitBtn)
+
+	container.Call("appendChild", form)
+	editor.Elements.EditDiv.Call("appendChild", container)
+	if editor.Elements.Status.Truthy() {
+		editor.Elements.Status.Set("innerText", "Complete your profile to finish Google registration")
+	}
+	usernameInput.Call("focus")
 }

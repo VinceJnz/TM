@@ -7,6 +7,7 @@ import (
 	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
+	"strconv"
 	"syscall/js"
 	"time"
 )
@@ -19,6 +20,7 @@ type RegistrationData struct {
 	Username      string    `json:"username"`
 	Address       string    `json:"address,omitempty"`
 	BirthDate     time.Time `json:"birth_date,omitempty"`
+	UserAgeGroupID int64    `json:"user_age_group_id,omitempty"`
 	AccountHidden bool      `json:"account_hidden,omitempty"`
 }
 
@@ -274,10 +276,14 @@ func (p *Process) showRegistrationFormInPopup() {
 	container := doc.Call("createElement", "div")
 	container.Set("className", "oauth-registration-container")
 	viewHelpers.SetStyles(container, map[string]string{
-		"maxWidth":   "400px",
-		"margin":     "40px auto",
-		"padding":    "30px",
-		"fontFamily": "sans-serif",
+		"maxWidth":        "400px",
+		"margin":          "40px auto",
+		"padding":         "30px",
+		"fontFamily":      "sans-serif",
+		"backgroundColor": "#ffffff",
+		"border":          "1px solid #d0d7de",
+		"borderRadius":    "10px",
+		"boxShadow":       "0 12px 30px rgba(15, 23, 42, 0.12)",
 	})
 
 	// Title
@@ -318,11 +324,34 @@ func (p *Process) showRegistrationFormInPopup() {
 	addressInput.Set("placeholder", "Your address")
 	form.Call("appendChild", addressFieldset)
 
-	// Birth date field (optional)
-	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", doc, "Birth Date (optional)", "date", "birth_date")
+	// Birth date field
+	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", doc, "Birth Date", "date", "birth_date")
 	birthDateLabel := birthDateFieldset.Get("firstChild")
 	viewHelpers.StyleStringEdit(birthDateFieldset, birthDateLabel, birthDateInput, false)
 	form.Call("appendChild", birthDateFieldset)
+
+	// Age group dropdown
+	ageGroupFieldset := doc.Call("createElement", "fieldset")
+	ageGroupFieldset.Set("className", "input-group")
+	ageGroupLabel := doc.Call("createElement", "label")
+	ageGroupLabel.Set("htmlFor", "user_age_group_id")
+	ageGroupLabel.Set("textContent", "Age Group")
+	ageGroupFieldset.Call("appendChild", ageGroupLabel)
+	ageGroupSelect := doc.Call("createElement", "select")
+	ageGroupSelect.Set("id", "user_age_group_id")
+	viewHelpers.SetStyles(ageGroupSelect, map[string]string{
+		"width":        "100%",
+		"padding":      "8px",
+		"marginBottom": "15px",
+		"boxSizing":    "border-box",
+	})
+	placeholderOpt := doc.Call("createElement", "option")
+	placeholderOpt.Set("value", "0")
+	placeholderOpt.Set("textContent", "-- Select Age Group --")
+	ageGroupSelect.Call("appendChild", placeholderOpt)
+	ageGroupFieldset.Call("appendChild", ageGroupSelect)
+	form.Call("appendChild", ageGroupFieldset)
+	p.populateAgeGroupsDropdown(ageGroupSelect)
 
 	// Account hidden checkbox
 	checkboxFieldset, accountHiddenInput := viewHelpers.BooleanEdit(false, doc, "Hide my account from public listings", "checkbox", "account_hidden")
@@ -331,8 +360,21 @@ func (p *Process) showRegistrationFormInPopup() {
 	form.Call("appendChild", checkboxFieldset)
 
 	// Submit button
-	submitBtn := viewHelpers.SubmitButton(doc, "Complete Registration", "submitBtn")
+	submitBtn := doc.Call("createElement", "button")
+	submitBtn.Set("id", "submitBtn")
+	submitBtn.Set("type", "submit")
+	submitBtn.Set("className", "btn btn-primary")
+	submitBtn.Set("textContent", "Submit")
 	viewHelpers.StyleSubmitButton(submitBtn)
+	viewHelpers.SetStyles(submitBtn, map[string]string{
+		"display":         "block",
+		"marginTop":       "12px",
+		"fontWeight":      "700",
+		"backgroundColor": "#1d4ed8",
+		"color":           "#ffffff",
+		"border":          "1px solid #1e40af",
+		"boxShadow":       "0 10px 24px rgba(29, 78, 216, 0.22)",
+	})
 
 	form.Call("appendChild", submitBtn)
 
@@ -341,7 +383,7 @@ func (p *Process) showRegistrationFormInPopup() {
 		if len(args) > 0 {
 			args[0].Call("preventDefault")
 		}
-		p.handleFormSubmit(usernameInput, addressInput, birthDateInput, accountHiddenInput, statusDiv, submitBtn)
+		p.handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn)
 		return nil
 	}))
 
@@ -352,7 +394,7 @@ func (p *Process) showRegistrationFormInPopup() {
 }
 
 // handleFormSubmit processes the registration form submission
-func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, accountHiddenInput, statusDiv, submitBtn js.Value) {
+func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn js.Value) {
 	// Disable submit button
 	submitBtn.Set("disabled", true)
 	submitBtn.Set("textContent", "Saving...")
@@ -362,7 +404,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 	if len(username) < 3 || len(username) > 20 {
 		p.showStatus(statusDiv, "Username must be 3-20 characters", "error")
 		submitBtn.Set("disabled", false)
-		submitBtn.Set("textContent", "Complete Registration")
+		submitBtn.Set("textContent", "Submit")
 		return
 	}
 
@@ -371,18 +413,37 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 		Address:       addressInput.Get("value").String(),
 		AccountHidden: accountHiddenInput.Get("checked").Bool(),
 	}
+	ageGroupIDStr := ageGroupSelect.Get("value").String()
+	if ageGroupIDStr == "" || ageGroupIDStr == "0" {
+		p.showStatus(statusDiv, "Age group is required", "error")
+		submitBtn.Set("disabled", false)
+		submitBtn.Set("textContent", "Submit")
+		return
+	}
+	ageGroupID, err := strconv.ParseInt(ageGroupIDStr, 10, 64)
+	if err != nil || ageGroupID <= 0 {
+		p.showStatus(statusDiv, "Invalid age group selection", "error")
+		submitBtn.Set("disabled", false)
+		submitBtn.Set("textContent", "Submit")
+		return
+	}
+	regData.UserAgeGroupID = ageGroupID
 
 	// Parse birth date if provided
 	birthDateStr := birthDateInput.Get("value").String()
-	if birthDateStr != "" {
-		if t, err := time.Parse(viewHelpers.Layout, birthDateStr); err == nil {
-			regData.BirthDate = t
-		} else {
-			p.showStatus(statusDiv, "Invalid birth date format", "error")
-			submitBtn.Set("disabled", false)
-			submitBtn.Set("textContent", "Complete Registration")
-			return
-		}
+	if birthDateStr == "" {
+		p.showStatus(statusDiv, "Birth date is required", "error")
+		submitBtn.Set("disabled", false)
+		submitBtn.Set("textContent", "Submit")
+		return
+	}
+	if t, err := time.Parse(viewHelpers.Layout, birthDateStr); err == nil {
+		regData.BirthDate = t
+	} else {
+		p.showStatus(statusDiv, "Invalid birth date format", "error")
+		submitBtn.Set("disabled", false)
+		submitBtn.Set("textContent", "Submit")
+		return
 	}
 
 	log.Printf("%v Submitting registration data: username=%s", debugTag, username)
@@ -399,7 +460,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 				log.Printf("%v Registration failed: %v", debugTag, err)
 				p.showStatus(statusDiv, "Registration failed: "+err.Error(), "error")
 				submitBtn.Set("disabled", false)
-				submitBtn.Set("textContent", "Complete Registration")
+				submitBtn.Set("textContent", "Submit")
 				return
 			}
 
@@ -428,9 +489,48 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 			log.Printf("%v Registration error: %v", debugTag, err)
 			p.showStatus(statusDiv, "Registration error: "+err.Error(), "error")
 			submitBtn.Set("disabled", false)
-			submitBtn.Set("textContent", "Complete Registration")
+			submitBtn.Set("textContent", "Submit")
 		},
 	)
+}
+
+func (p *Process) populateAgeGroupsDropdown(selectElement js.Value) {
+	if p.client == nil {
+		log.Printf("%vpopulateAgeGroupsDropdown: client is nil", debugTag)
+		return
+	}
+
+	pfetch := js.Global().Call("fetch", "/api/v1/userAgeGroups", map[string]any{
+		"method":      "GET",
+		"credentials": "include",
+	})
+
+	pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		resp := args[0]
+		if !resp.Get("ok").Bool() {
+			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
+			return nil
+		}
+
+		jsonP := resp.Call("json")
+		jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+			data := args[0]
+			length := data.Get("length").Int()
+			for i := 0; i < length; i++ {
+				item := data.Index(i)
+				id := item.Get("id").Int()
+				name := item.Get("age_group").String()
+
+				opt := p.document.Call("createElement", "option")
+				opt.Set("value", id)
+				opt.Set("textContent", name)
+				selectElement.Call("appendChild", opt)
+			}
+			return nil
+		}))
+
+		return nil
+	}))
 }
 
 // showStatus displays a status message

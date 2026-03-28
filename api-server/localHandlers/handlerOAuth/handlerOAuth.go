@@ -28,6 +28,13 @@ type Handler struct {
 	appConf *appCore.Config
 }
 
+type oauthPendingRegistration struct {
+	Email      string `json:"email"`
+	Name       string `json:"name"`
+	Provider   string `json:"provider"`
+	ProviderID string `json:"provider_id"`
+}
+
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf}
 }
@@ -137,6 +144,10 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Build user from provider info. Email is already verified by the provider.
 	emailStr, _ := userInfo["email"].(string)
 	nameStr, _ := userInfo["name"].(string)
+	if strings.TrimSpace(emailStr) == "" {
+		handlerHelpers.WriteInternalServerError(w, "userinfo missing email")
+		return
+	}
 	user := models.User{}
 	user.Name = nameStr
 	//user.Username =
@@ -147,73 +158,77 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// For EXISTING users, FindOrCreateUserByProvider will preserve their current status.
 	user.AccountStatusID.SetValid(int64(models.AccountNew))
 
-	log.Printf("%vcallbackHandler creating/upserting user: %+v", debugTag, user)
+	log.Printf("%vcallbackHandler checking for existing oauth user: email=%s provider_id=%s", debugTag, emailStr, sub)
 
-	userID, created, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
+	_, found, err := dbAuthTemplate.FindUserByProviderOrEmail(debugTag+"callbackHandler:", h.appConf.Db, user)
 	if err != nil {
-		log.Printf("%v failed to upsert user: %v", debugTag, err)
-		handlerHelpers.WriteInternalServerError(w, "failed to create user")
-		return
-	}
-	if created {
-		if err := handlerHelpers.NotifyAdminsUserReviewRequired(
-			debugTag+"callbackHandler:",
-			h.appConf.Db,
-			h.appConf.EmailSvc,
-			h.appConf.Settings.AdminNotifyGroup,
-			userID,
-			user.Username,
-			user.Email.String,
-			user.Name,
-		); err != nil {
-			log.Printf("%v failed to send admin notification for oauth user %d: %v", debugTag, userID, err)
-		}
-	}
-
-	// OAuth email is already verified by the provider. User is created as AccountNew and requires admin approval.
-	// No email verification step needed.
-	log.Printf("%vcallbackHandler oauth user account created/updated: userID=%d, email=%s, name=%s (pending admin approval)", debugTag, userID, emailStr, nameStr)
-
-	// Update the oauth-state token with the UserID so CompleteRegistration can look it up.
-	// This allows CompleteRegistration to work when the session cookie doesn't transfer from the popup.
-	tok.UserID = userID
-	if err := dbAuthTemplate.TokenUpdateQry(debugTag+"callbackHandler:update_state", h.appConf.Db, tok); err != nil {
-		log.Printf("%v failed to update oauth-state token with UserID: %v", debugTag, err)
-		// Continue anyway - not critical if this fails
-	} else {
-		log.Printf("%vcallbackHandler oauth-state token updated with UserID=%d", debugTag, userID)
-	}
-
-	// Create and set session cookie so subsequent API calls (e.g., /ensure) will be authenticated.
-	if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"callbackHandler:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
-		log.Printf("%v failed to create session token: %v", debugTag, err)
-		handlerHelpers.WriteInternalServerError(w, "failed to create session")
-		return
-	}
-	log.Printf("%vcallbackHandler session cookie created for user %d", debugTag, userID)
-
-	// Load the user to check if they have a username (indicates returning user vs new user)
-	user, err = dbAuthTemplate.UserReadQry(debugTag+"callbackHandler:check_username", h.appConf.Db, userID)
-	if err != nil {
-		log.Printf("%v failed to load user for username check: %v", debugTag, err)
-		handlerHelpers.WriteInternalServerError(w, "failed to load user")
+		log.Printf("%v failed to look up oauth user: %v", debugTag, err)
+		handlerHelpers.WriteInternalServerError(w, "failed to process user")
 		return
 	}
 
-	// Redirect to the frontend with appropriate query parameter
-	// oauth-login=true for returning users (has username)
-	// oauth-register=true for new users (no username)
 	clientRedirect := h.appConf.OAuthSvc.ClientRedirect
 	var redirectURL string
-	if user.Username != "" {
-		// Returning user - just login, no registration needed
-		redirectURL = clientRedirect + "?oauth-login=true"
-		log.Printf("%vcallbackHandler redirecting returning user (has username) with oauth-login flag: %s", debugTag, redirectURL)
-	} else {
-		// New user - show registration form to collect username
-		redirectURL = clientRedirect + "?oauth-register=true"
-		log.Printf("%vcallbackHandler redirecting new user (no username) with oauth-register flag: %s", debugTag, redirectURL)
+	if found {
+		userID, _, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callbackHandler:", h.appConf.Db, user)
+		if err != nil {
+			log.Printf("%v failed to upsert existing oauth user: %v", debugTag, err)
+			handlerHelpers.WriteInternalServerError(w, "failed to log in user")
+			return
+		}
+
+		tok.UserID = userID
+		tok.SessionData = zero.String{}
+		if err := dbAuthTemplate.TokenUpdateQry(debugTag+"callbackHandler:update_state", h.appConf.Db, tok); err != nil {
+			log.Printf("%v failed to update oauth-state token with existing UserID: %v", debugTag, err)
+		}
+
+		if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"callbackHandler:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
+			log.Printf("%v failed to create session token: %v", debugTag, err)
+			handlerHelpers.WriteInternalServerError(w, "failed to create session")
+			return
+		}
+
+		user, err = dbAuthTemplate.UserReadQry(debugTag+"callbackHandler:check_username", h.appConf.Db, userID)
+		if err != nil {
+			log.Printf("%v failed to load existing oauth user: %v", debugTag, err)
+			handlerHelpers.WriteInternalServerError(w, "failed to load user")
+			return
+		}
+
+		if user.Username != "" {
+			redirectURL = clientRedirect + "?oauth-login=true"
+			log.Printf("%vcallbackHandler redirecting existing user with oauth-login flag: %s", debugTag, redirectURL)
+		} else {
+			redirectURL = clientRedirect + "?oauth-register=true"
+			log.Printf("%vcallbackHandler redirecting existing incomplete user with oauth-register flag: %s", debugTag, redirectURL)
+		}
+		http.Redirect(w, r, redirectURL, http.StatusFound)
+		return
 	}
+
+	pendingData, err := json.Marshal(oauthPendingRegistration{
+		Email:      emailStr,
+		Name:       nameStr,
+		Provider:   "google",
+		ProviderID: sub,
+	})
+	if err != nil {
+		log.Printf("%v failed to encode pending oauth registration: %v", debugTag, err)
+		handlerHelpers.WriteInternalServerError(w, "failed to prepare registration")
+		return
+	}
+
+	tok.UserID = 0
+	tok.SessionData.SetValid(string(pendingData))
+	if err := dbAuthTemplate.TokenUpdateQry(debugTag+"callbackHandler:store_pending_registration", h.appConf.Db, tok); err != nil {
+		log.Printf("%v failed to store pending oauth registration: %v", debugTag, err)
+		handlerHelpers.WriteInternalServerError(w, "failed to prepare registration")
+		return
+	}
+
+	redirectURL = clientRedirect + "?oauth-register=true"
+	log.Printf("%vcallbackHandler redirecting first-time oauth user to complete registration: %s", debugTag, redirectURL)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
@@ -371,21 +386,11 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%vCompleteRegistration: r = %+v\n", debugTag, r)
 
-	userID := handlerHelpers.ResolveUserIDFromSessionOrOAuthState(debugTag+"CompleteRegistration:", r, h.appConf.Db)
-
-	if userID == 0 {
-		log.Printf("%vCompleteRegistration() no valid authentication found, redirecting to OAuth login", debugTag)
-		// Redirect to OAuth login so the client/popup can authenticate
-		// The loginHandler will create an oauth-state token and redirect to Google
-		loginURL := h.appConf.Settings.APIprefix + "/auth/oauth/login"
-		http.Redirect(w, r, loginURL, http.StatusFound)
-		return
-	}
-
 	var req struct {
 		Username      string `json:"username"`
 		Address       string `json:"address"`
 		BirthDate     string `json:"birth_date"`
+		UserAgeGroupID int64 `json:"user_age_group_id"`
 		AccountHidden *bool  `json:"account_hidden"`
 	}
 	if err := handlerHelpers.DecodeJSONBody(r, &req); err != nil {
@@ -393,56 +398,173 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("%vCompleteRegistration req = %+v\n", debugTag, req)
+	userID := handlerHelpers.ResolveUserIDFromSessionOrOAuthState(debugTag+"CompleteRegistration:", r, h.appConf.Db)
+	requestedUsername := strings.TrimSpace(req.Username)
 	// Validate username if provided
-	if req.Username != "" {
-		uname := strings.TrimSpace(req.Username)
-		if len(uname) < 3 || len(uname) > 20 {
+	if requestedUsername != "" {
+		if len(requestedUsername) < 3 || len(requestedUsername) > 20 {
 			http.Error(w, "invalid username", http.StatusBadRequest)
 			return
 		}
-		existing, err := dbAuthTemplate.UserNameReadQry(debugTag+"CompleteRegistration:check ", h.appConf.Db, uname)
+		existing, err := dbAuthTemplate.UserNameReadQry(debugTag+"CompleteRegistration:check ", h.appConf.Db, requestedUsername)
 		if err == nil && existing.ID != userID {
 			http.Error(w, "username taken", http.StatusConflict)
 			return
 		}
 	}
-	// Load user
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration ", h.appConf.Db, userID)
-	if err != nil {
-		http.Error(w, "failed to load user", http.StatusInternalServerError)
+	var user models.User
+	var oauthStateToken models.Token
+	var err error
+	if userID != 0 {
+		user, err = dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration ", h.appConf.Db, userID)
+		if err != nil {
+			http.Error(w, "failed to load user", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		oauthStateToken, err = h.findOAuthStateToken(r)
+		if err != nil {
+			log.Printf("%vCompleteRegistration() no valid authentication found, redirecting to OAuth login: %v", debugTag, err)
+			loginURL := h.appConf.Settings.APIprefix + "/auth/oauth/login"
+			http.Redirect(w, r, loginURL, http.StatusFound)
+			return
+		}
+
+		pending, err := decodeOAuthPendingRegistration(oauthStateToken.SessionData.String)
+		if err != nil {
+			log.Printf("%vCompleteRegistration() invalid pending oauth registration: %v", debugTag, err)
+			http.Error(w, "invalid oauth registration state", http.StatusBadRequest)
+			return
+		}
+
+		user.Name = pending.Name
+		user.Email.SetValid(pending.Email)
+		user.Provider.SetValid(pending.Provider)
+		user.ProviderID.SetValid(pending.ProviderID)
+		user.AccountStatusID.SetValid(int64(models.AccountNew))
+	}
+
+	if user.Username == "" && requestedUsername == "" {
+		http.Error(w, "username required", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.BirthDate) == "" {
+		http.Error(w, "birth_date required", http.StatusBadRequest)
+		return
+	}
+	if req.UserAgeGroupID <= 0 {
+		http.Error(w, "age group required", http.StatusBadRequest)
 		return
 	}
 	// Apply updates
-	if req.Username != "" {
-		user.Username = strings.TrimSpace(req.Username)
+	if requestedUsername != "" {
+		user.Username = requestedUsername
 	}
 	if req.Address != "" {
 		user.Address.SetValid(req.Address)
 	}
-	if req.BirthDate != "" {
-		// Try RFC3339 first, then YYYY-MM-DD
-		var parsed time.Time
-		parsed, err = time.Parse(time.RFC3339, req.BirthDate)
+	// Try RFC3339 first, then YYYY-MM-DD
+	var parsed time.Time
+	parsed, err = time.Parse(time.RFC3339, req.BirthDate)
+	if err != nil {
+		parsed, err = time.Parse("2006-01-02", req.BirthDate)
 		if err != nil {
-			parsed, err = time.Parse("2006-01-02", req.BirthDate)
-			if err != nil {
-				log.Printf("%v CompleteRegistration - invalid birth_date format: %v", debugTag, err)
-				http.Error(w, "invalid birth_date", http.StatusBadRequest)
-				return
-			}
+			log.Printf("%v CompleteRegistration - invalid birth_date format: %v", debugTag, err)
+			http.Error(w, "invalid birth_date", http.StatusBadRequest)
+			return
 		}
-		user.BirthDate = zero.NewTime(parsed, true)
+	}
+	user.BirthDate = zero.NewTime(parsed, true)
+	user.UserAgeGroupID.SetValid(req.UserAgeGroupID)
+
+	ageGroupName, err := handlerHelpers.GetAgeGroupByID(h.appConf.Db, req.UserAgeGroupID)
+	if err != nil {
+		log.Printf("%v CompleteRegistration - invalid age group %d: %v", debugTag, req.UserAgeGroupID, err)
+		http.Error(w, "invalid age group", http.StatusBadRequest)
+		return
+	}
+	isValidAge, err := handlerHelpers.ValidateAgeGroupForBirthDate(parsed, req.UserAgeGroupID, ageGroupName)
+	if err != nil || !isValidAge {
+		log.Printf("%v CompleteRegistration - age validation failed: %v", debugTag, err)
+		http.Error(w, "birthdate does not match the selected age group", http.StatusBadRequest)
+		return
 	}
 	if req.AccountHidden != nil {
 		user.AccountHidden.SetValid(*req.AccountHidden)
 	}
 	log.Printf("%vCompleteRegistration updated user = %+v\n", debugTag, user)
-	// Save user
-	_, err = dbAuthTemplate.UserWriteQry(debugTag+"CompleteRegistration:write ", h.appConf.Db, user)
+	created := false
+	if userID == 0 {
+		userID, created, err = dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"CompleteRegistration:create ", h.appConf.Db, user)
+	} else {
+		_, err = dbAuthTemplate.UserWriteQry(debugTag+"CompleteRegistration:write ", h.appConf.Db, user)
+	}
 	if err != nil {
 		log.Printf("%v CompleteRegistration failed: %v", debugTag, err)
 		http.Error(w, "failed to update user", http.StatusInternalServerError)
 		return
 	}
+
+	if created {
+		if err := handlerHelpers.NotifyAdminsUserReviewRequired(
+			debugTag+"CompleteRegistration:",
+			h.appConf.Db,
+			h.appConf.EmailSvc,
+			h.appConf.Settings.AdminNotifyGroup,
+			userID,
+			user.Username,
+			user.Email.String,
+			user.Name,
+		); err != nil {
+			log.Printf("%v failed to send admin notification for oauth user %d: %v", debugTag, userID, err)
+		}
+	}
+
+	if userID != 0 && oauthStateToken.ID != 0 {
+		oauthStateToken.UserID = userID
+		oauthStateToken.SessionData = zero.String{}
+		if err := dbAuthTemplate.TokenUpdateQry(debugTag+"CompleteRegistration:update_state", h.appConf.Db, oauthStateToken); err != nil {
+			log.Printf("%v CompleteRegistration failed to update oauth-state token: %v", debugTag, err)
+		}
+
+		if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"CompleteRegistration:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
+			log.Printf("%v CompleteRegistration failed to create session: %v", debugTag, err)
+			http.Error(w, "failed to create session", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	user, err = dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration:read_back ", h.appConf.Db, userID)
+	if err != nil {
+		log.Printf("%v CompleteRegistration failed to reload user: %v", debugTag, err)
+		http.Error(w, "failed to load user", http.StatusInternalServerError)
+		return
+	}
 	handlerHelpers.WriteJSON(w, http.StatusOK, handlerHelpers.RedactUserForClient(user))
+}
+
+func (h *Handler) findOAuthStateToken(r *http.Request) (models.Token, error) {
+	c, err := r.Cookie("oauth-state")
+	if err != nil {
+		return models.Token{}, err
+	}
+
+	return dbAuthTemplate.FindToken(debugTag+"findOAuthStateToken", h.appConf.Db, "oauth-state", c.Value)
+}
+
+func decodeOAuthPendingRegistration(raw string) (oauthPendingRegistration, error) {
+	if strings.TrimSpace(raw) == "" {
+		return oauthPendingRegistration{}, http.ErrNoCookie
+	}
+
+	var pending oauthPendingRegistration
+	if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+		return oauthPendingRegistration{}, err
+	}
+
+	if strings.TrimSpace(pending.Email) == "" || strings.TrimSpace(pending.ProviderID) == "" {
+		return oauthPendingRegistration{}, http.ErrNoCookie
+	}
+
+	return pending, nil
 }

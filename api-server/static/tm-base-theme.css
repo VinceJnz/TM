@@ -196,6 +196,24 @@ html, body {
 	border-color: var(--tm-primary-hover);
 }
 
+#submitEditBtn,
+#oauthCompletionSubmit,
+#submitBtn {
+	background: var(--tm-primary) !important;
+	color: #ffffff !important;
+	border-color: var(--tm-primary) !important;
+	text-align: center !important;
+	font-weight: 700 !important;
+	box-shadow: 0 10px 24px rgba(29, 78, 216, 0.22) !important;
+}
+
+#submitEditBtn:hover,
+#oauthCompletionSubmit:hover,
+#submitBtn:hover {
+	background: var(--tm-primary-hover) !important;
+	border-color: var(--tm-primary-hover) !important;
+}
+
 .btn-secondary {
 	background: var(--tm-surface);
 	border-color: var(--tm-border);

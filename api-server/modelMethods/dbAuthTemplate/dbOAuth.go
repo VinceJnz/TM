@@ -7,6 +7,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const sqlUserIDByProvider = `SELECT id FROM users WHERE provider=$1 AND provider_id=$2`
+
 type userState int
 
 const (
@@ -20,7 +22,7 @@ const (
 func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) (int, bool, error) {
 	var userID int
 	//var userStatus userState
-	err := Db.Get(&userID, `SELECT id FROM users WHERE provider=$1 AND provider_id=$2`, user.Provider, user.ProviderID)
+	err := Db.Get(&userID, sqlUserIDByProvider, user.Provider, user.ProviderID)
 	if err == nil {
 		// found existing user
 		return userID, false, nil
@@ -75,4 +77,27 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		}
 		return userID, true, nil
 	}
+}
+
+func FindUserByProviderOrEmail(debugStr string, Db *sqlx.DB, user models.User) (models.User, bool, error) {
+	var userID int
+	err := Db.Get(&userID, sqlUserIDByProvider, user.Provider, user.ProviderID)
+	if err == nil {
+		record, readErr := UserReadQry(debugStr+"FindUserByProviderOrEmail:byProvider ", Db, userID)
+		if readErr != nil {
+			return models.User{}, false, readErr
+		}
+		return record, true, nil
+	}
+
+	if user.Email.String == "" {
+		return models.User{}, false, nil
+	}
+
+	record, err := UserEmailReadQry(debugStr+"FindUserByProviderOrEmail:byEmail ", Db, user.Email.String)
+	if err == nil {
+		return record, true, nil
+	}
+
+	return models.User{}, false, nil
 }
