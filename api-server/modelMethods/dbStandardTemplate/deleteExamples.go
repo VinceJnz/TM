@@ -23,7 +23,7 @@ func DeleteUserWithChecks(w http.ResponseWriter, r *http.Request, debugStr strin
 		},
 		{
 			TableName: "payments",
-			Query:     "SELECT COUNT(*) FROM at_user_payments WHERE user_id = $1",
+			Query:     "SELECT COUNT(*) FROM at_payments p JOIN at_bookings b ON b.id = p.booking_id WHERE b.owner_id = $1",
 		},
 		{
 			TableName: "trips (as owner)",
@@ -64,7 +64,7 @@ func DeleteBookingWithChecks(w http.ResponseWriter, r *http.Request, debugStr st
 		},
 		{
 			TableName: "payments",
-			Query:     "SELECT COUNT(*) FROM at_user_payments WHERE booking_id = $1",
+			Query:     "SELECT COUNT(*) FROM at_payments WHERE booking_id = $1",
 		},
 	}
 
@@ -151,6 +151,6 @@ func DeleteTripTypeWithChecks(w http.ResponseWriter, r *http.Request, debugStr s
 // - st_token (cascades from user)
 // - st_webauthn_credentials (cascades from user)
 // - at_booking_people (cascades from booking, if CASCADE is set)
-// - at_user_payments (cascades from booking, if CASCADE is set)
+// - at_payments (cascades from booking, if CASCADE is set)
 
 // Made with Bob

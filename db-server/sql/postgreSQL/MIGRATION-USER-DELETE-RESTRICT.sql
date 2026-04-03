@@ -92,27 +92,6 @@ BEGIN
     END IF;
 END $$;
 
--- at_user_payments.user_id -> st_users.id (RESTRICT)
-ALTER TABLE public.at_user_payments
-    DROP CONSTRAINT IF EXISTS at_user_payments_user_id_fkey;
-
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = 'at_user_payments'
-          AND column_name = 'user_id'
-    ) THEN
-        ALTER TABLE public.at_user_payments
-            ADD CONSTRAINT at_user_payments_user_id_fkey
-            FOREIGN KEY (user_id) REFERENCES public.st_users(id)
-            ON DELETE RESTRICT ON UPDATE CASCADE
-            NOT VALID;
-    END IF;
-END $$;
-
 -- st_user_group.user_id -> st_users.id (RESTRICT)
 ALTER TABLE public.st_user_group
     DROP CONSTRAINT IF EXISTS st_user_group_user_id_fkey;
@@ -201,7 +180,7 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
   AND tc.table_name IN (
       'at_bookings',
       'at_booking_people',
-      'at_user_payments',
+    'at_payments',
       'st_user_group',
       'at_trips',
       'at_group_bookings'

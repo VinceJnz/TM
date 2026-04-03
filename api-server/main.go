@@ -15,6 +15,7 @@ import (
 	"api-server/v2/localHandlers/handlerMyBookings"
 	"api-server/v2/localHandlers/handlerMyProfile"
 	"api-server/v2/localHandlers/handlerOAuth"
+	"api-server/v2/localHandlers/handlerPaymentRefunds"
 	"api-server/v2/localHandlers/handlerResource"
 	"api-server/v2/localHandlers/handlerSeasons"
 	"api-server/v2/localHandlers/handlerSecurityGroup"
@@ -140,7 +141,8 @@ func main() {
 	handlerSeasons.New(app).RegisterRoutes(protected, "/seasons")                     // Seasons routes
 	handlerUser.New(app).RegisterRoutes(protected, "/users")                          // User routes
 	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups")         // UserAgeGroup routes
-	handlerUserPayments.New(app).RegisterRoutes(protected, "/userPayments")           // UserPayments routes
+	handlerUserPayments.New(app).RegisterRoutes(protected, "/payments")               // Payments routes
+	handlerPaymentRefunds.New(app).RegisterRoutes(protected, "/refunds")              // Refunds routes
 	handlerMemberStatus.New(app).RegisterRoutes(protected, "/userMemberStatus")       // UserMemberStatus routes
 	handlerUserAccountStatus.New(app).RegisterRoutes(protected, "/userAccountStatus") // UserAccountStatus routes
 	handlerGroupBooking.New(app).RegisterRoutes(protected, "/groupBooking")           // GroupBookings routes

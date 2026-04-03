@@ -62,13 +62,23 @@ type UserAccountStatus struct {
 
 type UserPayments struct {
 	ID            int         `json:"id" db:"id"`
-	UserID        int         `json:"user_id" db:"user_id"`
 	BookingID     int         `json:"booking_id" db:"booking_id"`
 	PaymentDate   zero.Time   `json:"payment_date" db:"payment_date"`
 	Amount        zero.Float  `json:"amount" db:"amount"`
 	PaymentMethod zero.String `json:"payment_method" db:"payment_method"`
 	Created       time.Time   `json:"created" db:"created"`
 	Modified      time.Time   `json:"modified" db:"modified"`
+}
+
+type PaymentRefund struct {
+	ID          int         `json:"id" db:"id"`
+	PaymentID   int         `json:"payment_id" db:"payment_id"`
+	RefundDate  zero.Time   `json:"refund_date" db:"refund_date"`
+	Amount      zero.Float  `json:"amount" db:"amount"`
+	Reason      zero.String `json:"reason" db:"reason"`
+	ExternalRef zero.String `json:"external_ref" db:"external_ref"`
+	Created     time.Time   `json:"created" db:"created"`
+	Modified    time.Time   `json:"modified" db:"modified"`
 }
 
 var ErrWebAuthnCredentialExists = errors.New("WebAuthn credential already exists for this user")

@@ -54,11 +54,30 @@ const (
 		SET booking_status_id = $2, amount_paid = $3, payment_date = $4
 		WHERE id = $1 AND booking_status_id <> $2`
 
-	qryGetBookingByStripeSession = `SELECT id, booking_status_id
+	qryUpsertPaymentByStripeSession = `INSERT INTO at_payments (booking_id, payment_date, amount, payment_method, stripe_session_id)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (stripe_session_id)
+		DO UPDATE
+		SET booking_id = EXCLUDED.booking_id,
+			payment_date = EXCLUDED.payment_date,
+			amount = EXCLUDED.amount,
+			payment_method = EXCLUDED.payment_method,
+			modified = CURRENT_TIMESTAMP`
+
+	qryGetBookingByStripeSession = `SELECT id, owner_id, booking_status_id
 		FROM at_bookings
 		WHERE stripe_session_id = $1
 		LIMIT 1`
 )
+
+func (h *Handler) upsertPaymentRecord(bookingID int64, amountCents int64, paidAt time.Time, stripeSessionID string) error {
+	if bookingID <= 0 || stripeSessionID == "" {
+		return errors.New("invalid payment upsert payload")
+	}
+	amount := float64(amountCents) / 100.0
+	_, err := h.appConf.Db.Exec(qryUpsertPaymentByStripeSession, bookingID, paidAt, amount, "stripe_checkout", stripeSessionID)
+	return err
+}
 
 func logWebhookEvent(stage string, fields map[string]interface{}) {
 	if fields == nil {
@@ -291,6 +310,13 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 					"error":               updateErr.Error(),
 				})
 			} else {
+				if upsertErr := h.upsertPaymentRecord(int64(bookingItem.ID), CheckoutSession.AmountTotal, time.Now(), bookingItem.StripeSessionID.String); upsertErr != nil {
+					logWebhookEvent("dev_fallback_payment_upsert_failed", map[string]interface{}{
+						"booking_id":          bookingItem.ID,
+						"checkout_session_id": bookingItem.StripeSessionID.String,
+						"error":               upsertErr.Error(),
+					})
+				}
 				rows, _ := updateRes.RowsAffected()
 				logWebhookEvent("dev_fallback_applied", map[string]interface{}{
 					"booking_id":          bookingItem.ID,
@@ -351,6 +377,13 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 						"error":               updateErr.Error(),
 					})
 				} else {
+					if upsertErr := h.upsertPaymentRecord(int64(bookingID), checkoutSession.AmountTotal, time.Now(), bookingItem.StripeSessionID.String); upsertErr != nil {
+						logWebhookEvent("dev_fallback_success_payment_upsert_failed", map[string]interface{}{
+							"booking_id":          bookingID,
+							"checkout_session_id": bookingItem.StripeSessionID.String,
+							"error":               upsertErr.Error(),
+						})
+					}
 					rows, _ := updateRes.RowsAffected()
 					logWebhookEvent("dev_fallback_success_applied", map[string]interface{}{
 						"booking_id":          bookingID,
@@ -536,12 +569,14 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 	replay := false
 	replayReason := ""
 	bookingID := int64(0)
+	ownerID := int64(0)
 	bookingStatus := int64(0)
 	if rows == 0 {
 		replay = true
 		var rowBookingID sql.NullInt64
+		var rowOwnerID sql.NullInt64
 		var rowBookingStatus sql.NullInt64
-		rowErr := h.appConf.Db.QueryRow(qryGetBookingByStripeSession, checkoutSession.ID).Scan(&rowBookingID, &rowBookingStatus)
+		rowErr := h.appConf.Db.QueryRow(qryGetBookingByStripeSession, checkoutSession.ID).Scan(&rowBookingID, &rowOwnerID, &rowBookingStatus)
 		switch {
 		case rowErr == sql.ErrNoRows:
 			replayReason = "no_booking_for_session"
@@ -550,6 +585,9 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		default:
 			if rowBookingID.Valid {
 				bookingID = rowBookingID.Int64
+			}
+			if rowOwnerID.Valid {
+				ownerID = rowOwnerID.Int64
 			}
 			if rowBookingStatus.Valid {
 				bookingStatus = rowBookingStatus.Int64
@@ -562,11 +600,41 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if bookingID == 0 || ownerID == 0 {
+		var rowBookingID sql.NullInt64
+		var rowOwnerID sql.NullInt64
+		var rowBookingStatus sql.NullInt64
+		rowErr := h.appConf.Db.QueryRow(qryGetBookingByStripeSession, checkoutSession.ID).Scan(&rowBookingID, &rowOwnerID, &rowBookingStatus)
+		if rowErr == nil {
+			if rowBookingID.Valid {
+				bookingID = rowBookingID.Int64
+			}
+			if rowOwnerID.Valid {
+				ownerID = rowOwnerID.Int64
+			}
+			if rowBookingStatus.Valid {
+				bookingStatus = rowBookingStatus.Int64
+			}
+		}
+	}
+
+	if bookingID > 0 {
+		if upsertErr := h.upsertPaymentRecord(bookingID, checkoutSession.AmountTotal, time.Now(), checkoutSession.ID); upsertErr != nil {
+			logWebhookEvent("payment_upsert_failed", map[string]interface{}{
+				"event_id":            event.ID,
+				"checkout_session_id": checkoutSession.ID,
+				"booking_id":          bookingID,
+				"error":               upsertErr.Error(),
+			})
+		}
+	}
+
 	logWebhookEvent("finalized", map[string]interface{}{
 		"event_id":            event.ID,
 		"event_type":          event.Type,
 		"checkout_session_id": checkoutSession.ID,
 		"booking_id":          bookingID,
+		"owner_id":            ownerID,
 		"booking_status_id":   bookingStatus,
 		"rows_affected":       rows,
 		"replay_detected":     replay,

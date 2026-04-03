@@ -13,18 +13,18 @@ import (
 const debugTag = "handlerUserPayments."
 
 const (
-	qryGetAll  = `SELECT * FROM at_user_payments`
-	qryGet     = `SELECT * FROM at_user_payments WHERE id = $1`
+	qryGetAll  = `SELECT * FROM at_payments`
+	qryGet     = `SELECT * FROM at_payments WHERE id = $1`
 	qryGetList = `SELECT atup.*
-					FROM public.at_user_payments atup
+					FROM public.at_payments atup
 					WHERE atup.booking_id = $1`
-	qryCreate = `INSERT INTO at_user_payments (user_id, booking_id, payment_date, amount, payment_method) 
-        			VALUES ($1, $2, $3, $4, $5)
+	qryCreate = `INSERT INTO at_payments (booking_id, payment_date, amount, payment_method) 
+					VALUES ($1, $2, $3, $4)
 					RETURNING id`
-	qryUpdate = `UPDATE at_user_payments
-					SET user_id = $1, booking_id = $2, payment_date = $3, amount = $4, payment_method = $5
-					WHERE id = $6`
-	qryDelete = `DELETE FROM at_user_payments WHERE id = $1`
+	qryUpdate = `UPDATE at_payments
+					SET booking_id = $1, payment_date = $2, amount = $3, payment_method = $4
+					WHERE id = $5`
+	qryDelete = `DELETE FROM at_payments WHERE id = $1`
 )
 
 type Handler struct {
@@ -49,10 +49,10 @@ func New(appConf *appCore.Config) *Handler {
 		IDDest:      func(record *models.UserPayments) any { return &record.ID },
 		SetID:       func(record *models.UserPayments, id int) { record.ID = id },
 		CreateArgs: func(record *models.UserPayments) []any {
-			return []any{record.UserID, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod}
+			return []any{record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod}
 		},
 		UpdateArgs: func(id int, record *models.UserPayments) []any {
-			return []any{record.UserID, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod, id}
+			return []any{record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod, id}
 		},
 	})
 	return h
@@ -61,6 +61,7 @@ func New(appConf *appCore.Config) *Handler {
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h)
+	r.HandleFunc(baseURL+"/booking/{id:[0-9]+}", h.GetList).Methods("GET")
 }
 
 // GetAll: retrieves and returns all records

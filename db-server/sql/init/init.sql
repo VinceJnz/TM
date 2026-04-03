@@ -134,17 +134,29 @@ CREATE TABLE IF NOT EXISTS at_trips (
 );
 
 -- Table for user payments
-CREATE TABLE at_user_payments (
+CREATE TABLE at_payments (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
     booking_id INTEGER NOT NULL,
     payment_date DATE NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
     payment_method VARCHAR(255), -- Example: 'credit_card', 'paypal', etc.
+    stripe_session_id VARCHAR(255),
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    --FOREIGN KEY (user_id) REFERENCES at_users(id),
     --FOREIGN KEY (booking_id) REFERENCES at_bookings(id)
+);
+
+-- Table for refunds linked to payments
+CREATE TABLE at_refunds (
+    id SERIAL PRIMARY KEY,
+    payment_id INTEGER NOT NULL,
+    refund_date DATE NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL,
+    reason TEXT,
+    external_ref VARCHAR(255),
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    --FOREIGN KEY (payment_id) REFERENCES at_payments(id)
 );
 
 ----------------------------------------------

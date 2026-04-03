@@ -15,6 +15,8 @@ import (
 	"client1/v2/views/groupBookingView"
 	"client1/v2/views/myBookingsView"
 	"client1/v2/views/myProfileView"
+	"client1/v2/views/paymentsView"
+	"client1/v2/views/refundsView"
 	"client1/v2/views/resourceView"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/securityGroupView"
@@ -104,17 +106,11 @@ func (v *View) buildAdminMenuItems() []menuItemSpec {
 	return []menuItemSpec{
 		{title: "Booking Status", apiURL: bookingStatusView.ApiURL, element: bookingStatusView.New(v.document, v.events, v.appCore)},
 		{title: "Booking Vouchers", apiURL: bookingVoucherView.ApiURL, element: bookingVoucherView.New(v.document, v.events, v.appCore)},
+		{title: "Payments", apiURL: paymentsView.ApiURL, element: paymentsView.New(v.document, v.events, v.appCore)},
+		{title: "Refunds", apiURL: refundsView.ApiURL, element: refundsView.New(v.document, v.events, v.appCore)},
 		{title: "Group Booking", apiURL: groupBookingView.ApiURL, element: groupBookingView.New(v.document, v.events, v.appCore)},
-		{title: "Trip Cost Group", apiURL: tripCostGroupView.ApiURL, element: tripCostGroupView.New(v.document, v.events, v.appCore)},
-		{title: "Trip Difficulty", apiURL: tripDifficultyView.ApiURL, element: tripDifficultyView.New(v.document, v.events, v.appCore)},
-		{title: "Trip Status", apiURL: tripStatusView.ApiURL, element: tripStatusView.New(v.document, v.events, v.appCore)},
-		{title: "Trip Type", apiURL: tripTypeView.ApiURL, element: tripTypeView.New(v.document, v.events, v.appCore)},
 		{title: "Trips", apiURL: tripView.ApiURL, element: tripView.New(v.document, v.events, v.appCore)},
-		{title: "Season", apiURL: seasonView.ApiURL, element: seasonView.New(v.document, v.events, v.appCore)},
 		{title: "User", apiURL: userView.ApiURL, element: userView.New(v.document, v.events, v.appCore)},
-		{title: "User Age Group", apiURL: userAgeGroupView.ApiURL, element: userAgeGroupView.New(v.document, v.events, v.appCore)},
-		{title: "User Member Status", apiURL: userMemberStatusView.ApiURL, element: userMemberStatusView.New(v.document, v.events, v.appCore)},
-		{title: "Resource", apiURL: resourceView.ApiURL, element: resourceView.New(v.document, v.events, v.appCore)},
 	}
 }
 
@@ -122,9 +118,17 @@ func (v *View) buildSysadminMenuItems() []menuItemSpec {
 	return []menuItemSpec{
 		{title: "Access Level", apiURL: accessLevelView.ApiURL, element: accessLevelView.New(v.document, v.events, v.appCore)},
 		{title: "Access Scope", apiURL: accessScopeView.ApiURL, element: accessScopeView.New(v.document, v.events, v.appCore)},
-		{title: "User Group", apiURL: securityUserGroupView.ApiURL, element: securityUserGroupView.New(v.document, v.events, v.appCore)},
-		{title: "Security Group", apiURL: securityGroupView.ApiURL, element: securityGroupView.New(v.document, v.events, v.appCore)},
 		{title: "Gmail Certificate", apiURL: gmailCertView.ApiURL, element: gmailCertView.New(v.document, v.events, v.appCore)},
+		{title: "Resource", apiURL: resourceView.ApiURL, element: resourceView.New(v.document, v.events, v.appCore)},
+		{title: "Season", apiURL: seasonView.ApiURL, element: seasonView.New(v.document, v.events, v.appCore)},
+		{title: "Security Group", apiURL: securityGroupView.ApiURL, element: securityGroupView.New(v.document, v.events, v.appCore)},
+		{title: "Trip Cost Group", apiURL: tripCostGroupView.ApiURL, element: tripCostGroupView.New(v.document, v.events, v.appCore)},
+		{title: "Trip Difficulty", apiURL: tripDifficultyView.ApiURL, element: tripDifficultyView.New(v.document, v.events, v.appCore)},
+		{title: "Trip Status", apiURL: tripStatusView.ApiURL, element: tripStatusView.New(v.document, v.events, v.appCore)},
+		{title: "Trip Type", apiURL: tripTypeView.ApiURL, element: tripTypeView.New(v.document, v.events, v.appCore)},
+		{title: "User Age Group", apiURL: userAgeGroupView.ApiURL, element: userAgeGroupView.New(v.document, v.events, v.appCore)},
+		{title: "User Group", apiURL: securityUserGroupView.ApiURL, element: securityUserGroupView.New(v.document, v.events, v.appCore)},
+		{title: "User Member Status", apiURL: userMemberStatusView.ApiURL, element: userMemberStatusView.New(v.document, v.events, v.appCore)},
 	}
 }
 
@@ -551,6 +555,9 @@ func normalizeHashRoute(hash string) string {
 	route := strings.TrimSpace(strings.TrimPrefix(hash, "#"))
 	if route == "" || route == "/" {
 		return "/"
+	}
+	if queryIdx := strings.Index(route, "?"); queryIdx >= 0 {
+		route = route[:queryIdx]
 	}
 	if !strings.HasPrefix(route, "/") {
 		route = "/" + route

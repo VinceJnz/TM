@@ -115,7 +115,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		},
 		{
 			TableName: "payments",
-			Query:     "SELECT COUNT(*) FROM at_user_payments WHERE user_id = $1",
+			Query:     "SELECT COUNT(*) FROM at_payments p JOIN at_bookings b ON b.id = p.booking_id WHERE b.owner_id = $1",
 		},
 		{
 			TableName: "security group memberships",

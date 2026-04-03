@@ -102,15 +102,15 @@ BEGIN
             );
     END IF;
 
-    -- at_user_payments.user_id
+        -- at_payments.user_id
     IF EXISTS (
         SELECT 1
         FROM information_schema.columns
         WHERE table_schema = 'public'
-          AND table_name = 'at_user_payments'
+                    AND table_name = 'at_payments'
           AND column_name = 'user_id'
     ) THEN
-        UPDATE public.at_user_payments p
+                UPDATE public.at_payments p
            SET user_id = v_fallback_user_id
          WHERE p.user_id = 0
             OR NOT EXISTS (
@@ -217,15 +217,6 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM pg_constraint
-        WHERE conname = 'at_user_payments_user_id_fkey'
-    ) THEN
-        ALTER TABLE public.at_user_payments
-            VALIDATE CONSTRAINT at_user_payments_user_id_fkey;
-    END IF;
-
-    IF EXISTS (
-        SELECT 1
-        FROM pg_constraint
         WHERE conname = 'st_user_group_user_id_fkey'
     ) THEN
         ALTER TABLE public.st_user_group
@@ -280,7 +271,6 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
       'at_booking_people_owner_id_fkey',
       'at_booking_people_person_id_fkey',
       'at_booking_people_user_id_fkey',
-      'at_user_payments_user_id_fkey',
       'st_user_group_user_id_fkey',
       'at_trips_owner_id_fkey',
       'at_group_bookings_owner_id_fkey'
