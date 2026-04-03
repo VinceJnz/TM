@@ -19,5 +19,7 @@ remote:      https://github.com/VinceJnz/TM/security/dependabot
 
 Ensure all styles are stored in a css file
 
-Ensure all the SysAdmin and Admin menu items are under the correct sub-menu.
+Ensure all the SysAdmin and Admin menu items are under the correct sub-menu. - Done
 
+
+Fix the error in oAuthRegistrationView.go

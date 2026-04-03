@@ -66,6 +66,7 @@ type UserPayments struct {
 	PaymentDate   zero.Time   `json:"payment_date" db:"payment_date"`
 	Amount        zero.Float  `json:"amount" db:"amount"`
 	PaymentMethod zero.String `json:"payment_method" db:"payment_method"`
+	StripeSession zero.String `json:"stripe_session_id" db:"stripe_session_id"`
 	Created       time.Time   `json:"created" db:"created"`
 	Modified      time.Time   `json:"modified" db:"modified"`
 }

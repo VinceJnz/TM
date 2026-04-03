@@ -265,6 +265,13 @@ fieldset {
 	background: var(--tm-surface);
 }
 
+.tm-row-active {
+	background: #eef4ff;
+	border-color: #b9cdf6 !important;
+	box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+	transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
 #statusOutput {
 	position: fixed;
 	right: 12px;

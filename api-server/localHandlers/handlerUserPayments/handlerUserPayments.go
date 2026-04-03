@@ -5,6 +5,8 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+	"database/sql"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -81,15 +83,139 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	h.crud.Create(w, r)
+	var record models.UserPayments
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Create err=%+v", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.appConf.Db.Beginx()
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.QueryRow(qryCreate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod).Scan(&record.ID); err != nil {
+		tx.Rollback()
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := helpers.SyncBookingPaymentStatusTx(tx, record.BookingID); err != nil {
+		tx.Rollback()
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	helpers.WriteJSON(w, http.StatusCreated, record.ID)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	h.crud.Update(w, r)
+	var record models.UserPayments
+	id := dbStandardTemplate.GetID(w, r)
+	if id == 0 {
+		return
+	}
+	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+		log.Printf(debugTag+"Update err=%+v", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	record.ID = id
+
+	tx, err := h.appConf.Db.Beginx()
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	oldBookingID := 0
+	if err := tx.Get(&oldBookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			http.Error(w, "Record not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := tx.Exec(qryUpdate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod, id); err != nil {
+		tx.Rollback()
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := helpers.SyncBookingPaymentStatusTx(tx, record.BookingID); err != nil {
+		tx.Rollback()
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	if oldBookingID != record.BookingID {
+		if err := helpers.SyncBookingPaymentStatusTx(tx, oldBookingID); err != nil {
+			tx.Rollback()
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	helpers.WriteJSON(w, http.StatusOK, record)
 }
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	h.crud.Delete(w, r)
+	id := dbStandardTemplate.GetID(w, r)
+	if id == 0 {
+		return
+	}
+
+	tx, err := h.appConf.Db.Beginx()
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	bookingID := 0
+	if err := tx.Get(&bookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			http.Error(w, "Record not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if _, err := tx.Exec(qryDelete, id); err != nil {
+		tx.Rollback()
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := helpers.SyncBookingPaymentStatusTx(tx, bookingID); err != nil {
+		tx.Rollback()
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
