@@ -74,7 +74,7 @@ COPY --from=builder $GOROOT/misc/wasm/wasm_exec.js .
 An event function in go uses the following construct:
 
 ```go
-func SubmitItemEdit(this js.Value, args []js.Value) interface{} {
+func SubmitItemEdit(this js.Value, args []js.Value) any {
     event := args[0] // This provides access to the event object
     info := event.Get("type").String() // This provide the event type
 }

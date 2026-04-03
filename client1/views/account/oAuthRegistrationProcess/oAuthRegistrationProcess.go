@@ -157,7 +157,7 @@ func (p *Process) handleLoginComplete() {
 
 	// Notify parent window that login succeeded
 	if !js.Global().Get("window").Get("opener").IsNull() {
-		payload := map[string]interface{}{
+		payload := map[string]any{
 			"type":   "loginComplete",
 			"status": "success",
 		}
@@ -469,7 +469,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 
 			// Notify parent window
 			if !js.Global().Get("window").Get("opener").IsNull() {
-				payload := map[string]interface{}{
+				payload := map[string]any{
 					"type":     "registrationComplete",
 					"status":   "success",
 					"username": username,

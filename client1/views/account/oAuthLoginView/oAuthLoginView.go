@@ -252,7 +252,7 @@ func (editor *ItemEditor) resetEditForm() {
 }
 
 // SubmitItemEdit handles the submission of the item edit form
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		event := p[0] // Extracts the js event object
 		event.Call("preventDefault")
@@ -309,7 +309,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	editor.resetEditForm()
 	return nil
 }

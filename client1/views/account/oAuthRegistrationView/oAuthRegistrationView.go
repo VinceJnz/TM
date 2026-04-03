@@ -470,7 +470,7 @@ func (editor *ItemEditor) setupMessageListener() {
 	editor.msgHandlerSet = true
 }
 
-//func (editor *ItemEditor) OnAction(action interface{}) {
+//func (editor *ItemEditor) OnAction(action any) {
 //	switch a := action.(type) {
 //	case *LoginComplete:
 //		//log.Printf("%v %v %+v %v %+v", debugTag+"Store.OnAction()a.ReadList", "a =", a, "s.Items =", s.Items)
@@ -622,7 +622,14 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 	viewHelpers.SetStyleProperty(status, "marginBottom", "12px")
 	container.Call("appendChild", status)
 
-	form := viewHelpers.Form(func(this js.Value, args []js.Value) interface{} {
+	usernameFieldset, usernameInput := viewHelpers.StringEdit("", editor.document, "Username", "text", "oauthCompletionUsername")
+	addressFieldset, addressInput := viewHelpers.StringEdit("", editor.document, "Address", "text", "oauthCompletionAddress")
+	hiddenFieldset, hiddenInput := viewHelpers.BooleanEdit(false, editor.document, "Hide my account from public listings", "checkbox", "oauthCompletionHidden")
+	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "oauthCompletionBirthDate")
+	submitBtn := editor.document.Call("createElement", "button")
+	ageGroupSelect := editor.document.Call("createElement", "select")
+
+	form := viewHelpers.Form(func(this js.Value, args []js.Value) any {
 		if len(args) > 0 {
 			args[0].Call("preventDefault")
 		}
@@ -689,7 +696,6 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 		return nil
 	}, editor.document, "oauthCompletionForm")
 
-	usernameFieldset, usernameInput := viewHelpers.StringEdit("", editor.document, "Username", "text", "oauthCompletionUsername")
 	usernameLabel := usernameFieldset.Get("firstChild")
 	viewHelpers.StyleStringEdit(usernameFieldset, usernameLabel, usernameInput, true)
 	usernameInput.Set("required", true)
@@ -698,13 +704,11 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 	usernameInput.Set("placeholder", "Choose a username")
 	form.Call("appendChild", usernameFieldset)
 
-	addressFieldset, addressInput := viewHelpers.StringEdit("", editor.document, "Address", "text", "oauthCompletionAddress")
 	addressLabel := addressFieldset.Get("firstChild")
 	viewHelpers.StyleStringEdit(addressFieldset, addressLabel, addressInput, false)
 	addressInput.Set("placeholder", "Optional")
 	form.Call("appendChild", addressFieldset)
 
-	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "oauthCompletionBirthDate")
 	birthDateLabel := birthDateFieldset.Get("firstChild")
 	viewHelpers.StyleStringEdit(birthDateFieldset, birthDateLabel, birthDateInput, false)
 	form.Call("appendChild", birthDateFieldset)
@@ -715,7 +719,7 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 	ageGroupLabel.Set("htmlFor", "oauthCompletionUserAgeGroupID")
 	ageGroupLabel.Set("textContent", "Age Group")
 	ageGroupFieldset.Call("appendChild", ageGroupLabel)
-	ageGroupSelect := editor.document.Call("createElement", "select")
+
 	ageGroupSelect.Set("id", "oauthCompletionUserAgeGroupID")
 	viewHelpers.SetStyles(ageGroupSelect, map[string]string{
 		"width":        "100%",
@@ -731,12 +735,10 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 	form.Call("appendChild", ageGroupFieldset)
 	editor.populateAgeGroupsDropdown(ageGroupSelect, 0)
 
-	hiddenFieldset, hiddenInput := viewHelpers.BooleanEdit(false, editor.document, "Hide my account from public listings", "checkbox", "oauthCompletionHidden")
 	hiddenLabel := hiddenFieldset.Get("firstChild")
 	viewHelpers.StyleBooleanEdit(hiddenFieldset, hiddenLabel, hiddenInput, "20px")
 	form.Call("appendChild", hiddenFieldset)
 
-	submitBtn := editor.document.Call("createElement", "button")
 	submitBtn.Set("id", "oauthCompletionSubmit")
 	submitBtn.Set("type", "submit")
 	submitBtn.Set("className", "btn btn-primary")

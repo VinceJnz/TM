@@ -170,7 +170,7 @@ func (editor *ItemEditor) Display() {
 }
 
 // NewItemData initializes a new item for adding
-func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -212,7 +212,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	fieldset.Call("appendChild", span)
 
 	// Add event listener to update CurrentRecord based on selected option
-	StateDropDown.Call("addEventListener", "change", js.FuncOf(func(this js.Value, p []js.Value) interface{} {
+	StateDropDown.Call("addEventListener", "change", js.FuncOf(func(this js.Value, p []js.Value) any {
 		selectedIndex, _ := strconv.Atoi(StateDropDown.Get("value").String())
 		if selectedIndex >= 0 && selectedIndex < len(editor.Records) {
 			editor.CurrentRecord = editor.Records[selectedIndex] // Update the current record with the selected item. This allows the app to use the current record to update UI values.
@@ -314,18 +314,18 @@ func (editor *ItemEditor) ValidateDates() {
 	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
 }
 
-func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) any {
 	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be equal to or before To-date")
 	return nil
 }
 
-func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) any {
 	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
 	return nil
 }
 
 // SubmitItemEdit handles the submission of the item edit form
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
@@ -387,7 +387,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 }
 
 // cancelItemEdit handles the cancelling of the item edit form
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	editor.resetEditForm()
 	return nil
 }
@@ -496,7 +496,7 @@ func (editor *ItemEditor) populateItemList() {
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
 			editButton.Set("className", "btn btn-secondary")
-			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 				editor.populateEditForm()
@@ -508,7 +508,7 @@ func (editor *ItemEditor) populateItemList() {
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
 			deleteButton.Set("className", "btn btn-danger")
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 				editor.deleteItem(record.ID)
 				return nil
 			}))
@@ -522,7 +522,7 @@ func (editor *ItemEditor) populateItemList() {
 		bookingButton := editor.document.Call("createElement", "button")
 		bookingButton.Set("innerHTML", "Bookings")
 		bookingButton.Set("className", "btn btn-secondary")
-		bookingButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		bookingButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			booking.FetchItems()
 			booking.Toggle()
 			return nil

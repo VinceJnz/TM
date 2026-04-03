@@ -37,7 +37,7 @@ func (editor *ItemEditor) setLoginIdentifierFields(identifier string) string {
 }
 
 // handleRegisterSubmit submits {username,email,password,name,address,birthdate,age_group_id} to /auth/register
-func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) any {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
 	}
@@ -109,7 +109,7 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) i
 }
 
 // handleVerifyRegistration posts token (and username/email if needed) to /auth/verify-registration
-func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Value) any {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
 	}
@@ -146,7 +146,7 @@ func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Valu
 }
 
 // handleLoginWithPassword submits {username/email,password} to /auth/login-password
-func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value) any {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
 	}
@@ -183,7 +183,7 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 }
 
 // handleVerifyOTP posts token and remember_me to /auth/verify-otp and triggers loginComplete on success
-func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) any {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
 	}

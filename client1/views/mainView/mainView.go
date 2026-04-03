@@ -218,7 +218,7 @@ func (v *View) Setup() {
 	menuIcon.Set("id", "menuIcon")
 	menuIcon.Set("title", "Open menu")
 	menuIcon.Set("innerHTML", "&#9776;")
-	menuIcon.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	menuIcon.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 		v.toggleSideMenu()
 		return nil
 	}))
@@ -250,7 +250,7 @@ func (v *View) Setup() {
 	v.elements.userDisplay.Set("id", "userDisplay")
 	v.elements.topmenu.Set("className", "right-align")
 	v.elements.navbar.Call("appendChild", v.elements.userDisplay)
-	v.document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	v.document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) == 0 {
 			return nil
 		}
@@ -467,14 +467,14 @@ func (v *View) setActiveMenuTitle(title string) {
 }
 
 func (v *View) setupRouting() {
-	v.hashChangeHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	v.hashChangeHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
 		v.applyRouteFromLocation()
 		return nil
 	})
 	v.hashChangeSet = true
 	window := js.Global().Get("window")
 	window.Call("addEventListener", "hashchange", v.hashChangeHandler)
-	v.unloadHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	v.unloadHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
 		v.Destroy()
 		return nil
 	})

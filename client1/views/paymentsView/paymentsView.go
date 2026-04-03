@@ -137,7 +137,7 @@ func (editor *ItemEditor) Display() {
 	editor.ViewState = ViewStateBlock
 }
 
-func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.clearActiveRowHighlight()
 	editor.FormHost = editor.EditDiv
 	editor.updateStateDisplay(ItemStateAdding)
@@ -276,7 +276,7 @@ func (editor *ItemEditor) populateEditForm() {
 	}
 	host.Set("innerHTML", "")
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
-	form.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	form.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) > 0 {
 			args[0].Call("stopPropagation")
 		}
@@ -321,11 +321,11 @@ func (editor *ItemEditor) populateEditForm() {
 		editor.setFieldReadOnly(editor.UiComponents.PaymentMethod)
 		editor.UiComponents.AmountHint.Get("style").Call("setProperty", "display", "none")
 	} else {
-		editor.UiComponents.BookingID.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		editor.UiComponents.BookingID.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) any {
 			editor.autoFillAmountFromBookingSelection()
 			return nil
 		}))
-		editor.UiComponents.Amount.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		editor.UiComponents.Amount.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) any {
 			editor.UiComponents.AmountHint.Get("style").Call("setProperty", "display", "none")
 			return nil
 		}))
@@ -370,7 +370,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.updateStateDisplay(ItemStateNone)
 }
 
-func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if editor.ReadOnlyMode {
 		editor.resetEditForm()
 		return nil
@@ -424,7 +424,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	return nil
 }
 
-func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{} {
+func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 	if len(p) > 0 {
 		p[0].Call("preventDefault")
 		p[0].Call("stopPropagation")
@@ -546,7 +546,7 @@ func (editor *ItemEditor) populateItemList() {
 		inlineFormHost := editor.document.Call("createElement", "div")
 		inlineFormHost.Set("className", "inline-record-form")
 		inlineFormHost.Get("style").Call("setProperty", "margin-top", "8px")
-		itemDiv.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		itemDiv.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			editor.openRecord(record, true, inlineFormHost)
 			return nil
 		}))
@@ -554,7 +554,7 @@ func (editor *ItemEditor) populateItemList() {
 		viewButton := editor.document.Call("createElement", "button")
 		viewButton.Set("innerHTML", "View")
 		viewButton.Set("className", "btn btn-secondary")
-		viewButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		viewButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.toggleReadOnlyRecord(record, inlineFormHost, itemDiv)
 			return nil
@@ -563,7 +563,7 @@ func (editor *ItemEditor) populateItemList() {
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.openRecord(record, false, inlineFormHost)
 			return nil
@@ -572,7 +572,7 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.deleteItem(record.ID)
 			return nil
@@ -581,7 +581,7 @@ func (editor *ItemEditor) populateItemList() {
 		openRefundsBtn := editor.document.Call("createElement", "button")
 		openRefundsBtn.Set("innerHTML", "Open Refunds")
 		openRefundsBtn.Set("className", "btn btn-secondary")
-		openRefundsBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		openRefundsBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			js.Global().Get("location").Set("hash", fmt.Sprintf("#/refunds?paymentId=%d&bookingId=%d", record.ID, record.BookingID))
 			return nil
@@ -590,7 +590,7 @@ func (editor *ItemEditor) populateItemList() {
 		addRefundBtn := editor.document.Call("createElement", "button")
 		addRefundBtn.Set("innerHTML", "Add Refund")
 		addRefundBtn.Set("className", "btn btn-secondary")
-		addRefundBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		addRefundBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			js.Global().Get("location").Set("hash", fmt.Sprintf("#/refunds?paymentId=%d&bookingId=%d&action=new", record.ID, record.BookingID))
 			return nil
