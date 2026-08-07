@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1.7
+
+ARG CLIENT_BUILDER=go-builder
+
+FROM golang:1.23.4-alpine AS go-builder
+WORKDIR /app
+
+COPY client1/go.mod client1/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+COPY client1/ ./
+
+RUN mkdir -p /tmp/client1-out
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    GOOS=js GOARCH=wasm go build -o /tmp/client1-out/main.wasm .
+RUN cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" /tmp/client1-out/wasm_exec.js
+#RUN --mount=type=cache,target=/go/pkg/mod \
+#    GOOS=js GOARCH=wasm go build -o /out/main.wasm .
+#RUN cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" /out/wasm_exec.js
+
+
+#FROM tinygo/tinygo:latest AS wasmbuilder
+#FROM tinygo/tinygo:0.41.1 AS tinygo-builder #(TinyGo 0.41.1: currently incompatible with this client’s net/http dependency.)
+FROM tinygo/tinygo:0.40.0 AS tinygo-builder
+
+WORKDIR /app
+
+COPY client1/go.mod client1/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+COPY client1/ ./
+
+RUN mkdir -p /tmp/client1-out
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/tinygo \
+    tinygo build -o /tmp/client1-out/main.wasm -target wasm .
+RUN cp /usr/local/tinygo/targets/wasm_exec.js /tmp/client1-out/wasm_exec.js
+#RUN --mount=type=cache,target=/go/pkg/mod \
+#    --mount=type=cache,target=/root/.cache/tinygo \
+#    tinygo build -o /out/main.wasm -target wasm .
+#RUN cp /usr/local/tinygo/targets/wasm_exec.js /out/wasm_exec.js
+
+
+FROM ${CLIENT_BUILDER} AS selected
+
+FROM scratch AS artifact
+COPY --from=selected /tmp/client1-out/ /out/
+#FROM scratch AS artifact
+#COPY --from=selected /out/ /out/

@@ -1,0 +1,33 @@
+name: Release verification
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: TinyGo client and Linux API tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build TinyGo client
+        run: |
+          docker build \
+            -f Dockerfile.client1 \
+            --build-arg CLIENT_BUILDER=tinygo-builder \
+            -t tm-client1-wasm:tinygo \
+            .
+
+      - name: Run API tests in Linux Go 1.24
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/api-server:/app:ro" \
+            -w /app \
+            golang:1.24.0-alpine \
+            sh -c 'go test ./...'
