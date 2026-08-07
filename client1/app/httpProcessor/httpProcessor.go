@@ -31,6 +31,11 @@ type ReturnData struct {
 	FieldNames FieldNames // This needs to be removed it is not needed ??? // Iy sould br delt with by having different api calls for different data views
 }
 
+type Callbacks struct {
+	OnSuccess func()
+	OnError   func(error)
+}
+
 func New(baseURL string) *Client {
 	// Create a cookie jar
 	//jar, err := cookiejar.New(nil)
@@ -54,6 +59,19 @@ func New(baseURL string) *Client {
 		BaseURL: baseURL,
 		//CookieJar:  jar,
 		HTTPClient: httpClient,
+	}
+}
+
+func (c *Client) NewRequest2(method, url string, rxDataStru, txDataStru any, callBacks Callbacks) {
+	OnSuccess := func(error) { // Temporary wrapper to convert Callbacks struct to variadic function parameter
+		if callBacks.OnSuccess != nil {
+			callBacks.OnSuccess()
+		}
+	}
+
+	err := c.newRequest(method, url, rxDataStru, txDataStru, OnSuccess, callBacks.OnError)
+	if err != nil {
+		log.Printf(debugTag+"NewRequest()1 err = %v", err)
 	}
 }
 
@@ -201,7 +219,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 }
 
 // decodeJSON decodes the JSON data in the body and puts it in the supplied structure, and returns the field names.
-func decodeJSON(res *http.Response, rxDataStru interface{}) error {
+func decodeJSON(res *http.Response, rxDataStru any) error {
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
@@ -219,15 +237,15 @@ func decodeJSON(res *http.Response, rxDataStru interface{}) error {
 // Replace the problematic Do() call with this function
 func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	// Create fetch options
-	fetchOptions := map[string]interface{}{
+	fetchOptions := map[string]any{
 		"method":      req.Method,
-		"headers":     make(map[string]interface{}),
+		"headers":     make(map[string]any),
 		"mode":        "cors",    // allow CORS
 		"credentials": "include", // ensure cookies are sent
 	}
 
 	// Copy headers (but do not attempt to set Origin or other forbidden headers)
-	headers := fetchOptions["headers"].(map[string]interface{})
+	headers := fetchOptions["headers"].(map[string]any)
 	for key, values := range req.Header {
 		if len(values) > 0 {
 			headers[key] = values[0] // Take first value
@@ -270,7 +288,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	var catchHandlerSet bool
 
 	// Handle promise resolution
-	thenHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	thenHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
 		// Release catch handler if set
 		if catchHandlerSet {
 			catchHandler.Release()
@@ -289,7 +307,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		// Copy response headers
 		headersJS := response.Get("headers")
 		if !headersJS.IsUndefined() && !headersJS.IsNull() {
-			headersHandler := js.FuncOf(func(this js.Value, a []js.Value) interface{} {
+			headersHandler := js.FuncOf(func(this js.Value, a []js.Value) any {
 				// headers.forEach callback signature: (value, key)
 				value := a[0].String()
 				key := a[1].String()
@@ -304,7 +322,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		// Get response text
 		textPromise := response.Call("text")
 		var textHandler js.Func
-		textHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		textHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
 			// Stop abort timer if running
 			if timer != nil {
 				timer.Stop()
@@ -328,7 +346,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	})
 
 	// Handle promise rejection
-	catchHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	catchHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
 		// Stop abort timer if running
 		if timer != nil {
 			timer.Stop()

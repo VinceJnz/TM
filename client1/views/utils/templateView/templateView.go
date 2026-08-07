@@ -32,6 +32,13 @@ const (
 	ViewStateBlock
 )
 
+type View interface {
+	Init()    // once ever
+	Mount()   // every time visible
+	Unmount() // every time hidden
+	Destroy() // optional final cleanup
+}
+
 type ItemViewer interface {
 	NewItemData() ItemRecord
 	ParentData()

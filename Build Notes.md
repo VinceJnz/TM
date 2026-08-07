@@ -18,9 +18,33 @@ To open a vscode new-window as maximised, change the setting window.newWindowDim
 
 
 
+### Client build with Go (Standard Go build for fast development)
 
+```bash
+docker build -f Dockerfile.client1 `
+  --build-arg CLIENT_BUILDER=go-builder `
+  -t tm-client1-wasm:go-dev .
 
+docker compose --profile prod build `
+  --build-arg CLIENT_IMAGE=tm-client1-wasm:go-dev `
+  apiserver
 
+docker compose --profile prod up -d
+```
+
+### Client build with TinyGo (TinyGo 0.40.0 build required before merging/releasing client changes.)
+
+```bash
+docker build -f Dockerfile.client1 `
+  --build-arg CLIENT_BUILDER=tinygo-builder `
+  -t tm-client1-wasm:tinygo .
+
+docker compose --profile prod build `
+  --build-arg CLIENT_IMAGE=tm-client1-wasm:tinygo `
+  apiserver
+
+docker compose --profile prod up -d
+```
 
 
 
@@ -209,3 +233,13 @@ go build -gcflags="all=-N -l" -o apiserver
 
 To connect to the running apiserver via an interactive terminal
 `docker exec -it apiserver /bin/sh`
+
+### Release verification
+
+Before merging or releasing a client change, run the TinyGo client build and the API test suite in Linux:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-release.ps1
+```
+
+The one-off `Bypass` setting avoids the Windows script-signing policy without changing your system policy. The verification uses the pinned TinyGo `0.40.0` builder and runs `go test ./...` in the `golang:1.24.0-alpine` image. The same checks run automatically on pull requests and pushes to `main` through `.github/workflows/release-verification.yml`.

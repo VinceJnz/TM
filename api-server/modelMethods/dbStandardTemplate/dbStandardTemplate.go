@@ -2,6 +2,7 @@ package dbStandardTemplate
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
@@ -20,51 +21,42 @@ const debugTag = "dbStandardTemplate."
 func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string) {
 	err := Db.Select(dest, query)
 	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
+		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
 	} else if err != nil {
 		log.Printf(debugTag+debugStr+"GetAll %v\n", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		helpers.WriteError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dest)
+	helpers.WriteJSON(w, http.StatusOK, dest)
 }
 
 // Get: retrieves and returns a single record identified by id
 func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	err := Db.Get(dest, query, args...)
 	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
+		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
 	} else if err != nil {
 		log.Printf(debugTag+debugStr+"Get err=%v\n", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		helpers.WriteError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dest)
+	helpers.WriteJSON(w, http.StatusOK, dest)
 }
 
 // Get: retrieves and returns a list of records identified by parent id
 func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	err := Db.Select(dest, query, args...)
 	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
+		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
 	} else if err != nil {
 		log.Printf(debugTag+debugStr+"GetList err=%v\n", err)
-		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
+		helpers.WriteError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
-	//log.Printf(debugTag+debugStr+"GetList dest=%+v\n", dest)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dest)
+	helpers.WriteJSON(w, http.StatusOK, dest)
 }
 
 // Create: adds a new record and returns the new record

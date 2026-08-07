@@ -42,6 +42,8 @@ services:
       context: .                        # Updated context for API server
       dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
       target: final                     # <-- normal build (production image)
+      args:
+        CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
     container_name: apiserver
     ports:
       - "8085:8085"
