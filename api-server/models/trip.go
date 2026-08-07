@@ -35,7 +35,7 @@ type TripStatus struct {
 	Modified time.Time `json:"modified" db:"modified"`
 }
 
-type TripDificulty struct {
+type TripDifficulty struct {
 	ID          int       `json:"id" db:"id"`
 	Level       string    `json:"level" db:"level"`
 	LevelShort  string    `json:"level_short" db:"level_short"`

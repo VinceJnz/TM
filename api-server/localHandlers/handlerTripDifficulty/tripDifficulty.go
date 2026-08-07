@@ -3,80 +3,163 @@ package handlerTripDifficulty
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	"api-server/v2/modelMethods/tripdifficulty"
 	"api-server/v2/models"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerTripDifficulty."
 
-const (
-	qryGetAll = `SELECT * FROM et_trip_difficulty`
-	qryGet    = `SELECT * FROM et_trip_difficulty WHERE id = $1`
-	qryCreate = `INSERT INTO et_trip_difficulty (level, level_short, description)
-					VALUES ($1, $2, $3) 
-					RETURNING id`
-	qryUpdate = `UPDATE et_trip_difficulty 
-					SET level = $1, level_short = $2, description = $3
-					WHERE id = $4`
-	qryDelete = `DELETE FROM et_trip_difficulty WHERE id = $1`
-)
+type store interface {
+	List(context.Context) ([]models.TripDifficulty, error)
+	Get(context.Context, int) (models.TripDifficulty, error)
+	Create(context.Context, models.TripDifficulty) (models.TripDifficulty, error)
+	Update(context.Context, int, models.TripDifficulty) (models.TripDifficulty, error)
+	Delete(context.Context, int) error
+}
 
 type Handler struct {
-	appConf *appCore.Config
+	store store
 }
 
 func New(appConf *appCore.Config) *Handler {
-	return &Handler{appConf: appConf}
+	return &Handler{store: tripdifficulty.New(appConf.Db)}
 }
 
-// RegisterRoutes registers handler routes on the provided router.
+// RegisterRoutes registers the legacy trip-difficulty API routes.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h)
 }
 
-// GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.TripDificulty{}, qryGetAll)
+	items, err := h.store.List(r.Context())
+	if err != nil {
+		h.internalError(w, "list trip difficulties", err)
+		return
+	}
+	helpers.WriteJSON(w, http.StatusOK, items)
 }
 
-// Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.TripDificulty{}, qryGet, id)
+	id, ok := h.idFromRequest(w, r)
+	if !ok {
+		return
+	}
+	item, err := h.store.Get(r.Context(), id)
+	if h.writeStoreError(w, "get trip difficulty", err) {
+		return
+	}
+	helpers.WriteJSON(w, http.StatusOK, item)
 }
 
-// Create: adds a new record and returns the new record
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.TripDificulty
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Create err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	input, ok := h.decodeAndValidate(w, r)
+	if !ok {
 		return
 	}
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Level, record.LevelShort, record.Description)
+	item, err := h.store.Create(r.Context(), input)
+	if h.writeStoreError(w, "create trip difficulty", err) {
+		return
+	}
+	helpers.WriteJSON(w, http.StatusCreated, item)
 }
 
-// Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var record models.TripDificulty
-	id := dbStandardTemplate.GetID(w, r)
-
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Update err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	id, ok := h.idFromRequest(w, r)
+	if !ok {
 		return
 	}
-	record.ID = id
-
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Level, record.LevelShort, record.Description, id)
+	input, ok := h.decodeAndValidate(w, r)
+	if !ok {
+		return
+	}
+	item, err := h.store.Update(r.Context(), id, input)
+	if h.writeStoreError(w, "update trip difficulty", err) {
+		return
+	}
+	helpers.WriteJSON(w, http.StatusOK, item)
 }
 
-// Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	id, ok := h.idFromRequest(w, r)
+	if !ok {
+		return
+	}
+	if h.writeStoreError(w, "delete trip difficulty", h.store.Delete(r.Context(), id)) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) idFromRequest(w http.ResponseWriter, r *http.Request) (int, bool) {
+	id, err := helpers.GetIDFromRequest(r)
+	if err != nil || id < 1 {
+		helpers.WriteError(w, http.StatusBadRequest, "invalid_request", "Invalid record ID")
+		return 0, false
+	}
+	return id, true
+}
+
+func (h *Handler) decodeAndValidate(w http.ResponseWriter, r *http.Request) (models.TripDifficulty, bool) {
+	var input models.TripDifficulty
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		helpers.WriteError(w, http.StatusBadRequest, "invalid_request", "Invalid request payload")
+		return models.TripDifficulty{}, false
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		helpers.WriteError(w, http.StatusBadRequest, "invalid_request", "Invalid request payload")
+		return models.TripDifficulty{}, false
+	}
+	if err := validate(input); err != nil {
+		helpers.WriteError(w, http.StatusUnprocessableEntity, "validation_failed", err.Error())
+		return models.TripDifficulty{}, false
+	}
+	input.Level = strings.TrimSpace(input.Level)
+	input.LevelShort = strings.TrimSpace(input.LevelShort)
+	input.Description = strings.TrimSpace(input.Description)
+	return input, true
+}
+
+func validate(input models.TripDifficulty) error {
+	level := strings.TrimSpace(input.Level)
+	short := strings.TrimSpace(input.LevelShort)
+	description := strings.TrimSpace(input.Description)
+	switch {
+	case level == "" || len(level) > 50:
+		return fmt.Errorf("level must be between 1 and 50 characters")
+	case short == "" || len(short) > 3:
+		return fmt.Errorf("level_short must be between 1 and 3 characters")
+	case description == "" || len(description) > 255:
+		return fmt.Errorf("description must be between 1 and 255 characters")
+	default:
+		return nil
+	}
+}
+
+func (h *Handler) writeStoreError(w http.ResponseWriter, operation string, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, tripdifficulty.ErrNotFound) {
+		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
+		return true
+	}
+	h.internalError(w, operation, err)
+	return true
+}
+
+func (h *Handler) internalError(w http.ResponseWriter, operation string, err error) {
+	log.Printf("%s%s: %v", debugTag, operation, err)
+	helpers.WriteError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 }
