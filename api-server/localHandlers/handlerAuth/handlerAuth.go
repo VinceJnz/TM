@@ -5,7 +5,6 @@ import (
 	handlerHelpers "api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -112,15 +111,15 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // Register handles new user registration with email/username.
-// Expects: {"username": "...", "email": "...", "name": "..." (optional), "password": "..."}
+// Expects profile fields and optional "user_password", hashed before persistence.
 // Returns: registration pending, check email for verification token
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var payload models.User
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	var payload registrationRequest
 	if err := handlerHelpers.DecodeJSONBody(r, &payload); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-	log.Printf("%vRegister payload received: %+v", debugTag, payload)
 
 	// Validate input
 	payload.Email.SetValid(strings.TrimSpace(payload.Email.String))
@@ -137,8 +136,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.Password.String != "" && len(payload.Password.String) < 8 {
-		http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
+	if payload.Password.String != "" && (len(payload.Password.String) < 8 || len(payload.Password.String) > 72) {
+		http.Error(w, "password must be between 8 and 72 bytes", http.StatusBadRequest)
 		return
 	}
 
@@ -185,7 +184,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	regDataJSON, _ := json.Marshal(payload)
+	regDataJSON, err := encodePendingRegistration(payload)
+	payload.Password = registrationRequest{}.Password
+	if err != nil {
+		log.Printf("%vRegister failed to prepare pending registration", debugTag)
+		http.Error(w, "failed to process registration", http.StatusInternalServerError)
+		return
+	}
 
 	tokenCookie, err := dbAuthTemplate.CreateNamedToken(
 		debugTag+"Register:CreateNamedToken",
@@ -207,10 +212,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		tok.SessionData.SetValid(string(regDataJSON))
 		if _, err := dbAuthTemplate.TokenWriteQry(debugTag+"Register:updateSessionData", h.appConf.Db, tok); err != nil {
-			log.Printf("%vRegister failed to update token SessionData: %v", debugTag, err)
+			log.Printf("%vRegister failed to update pending registration", debugTag)
+			_ = dbAuthTemplate.TokenDeleteQry(debugTag+"Register:discard", h.appConf.Db, tok.ID)
+			http.Error(w, "failed to process registration", http.StatusInternalServerError)
+			return
 		}
 	} else {
-		log.Printf("%vRegister registration token created but failed to locate DB token to store session data: %v", debugTag, err)
+		log.Printf("%vRegister failed to locate pending registration token", debugTag)
+		http.Error(w, "failed to process registration", http.StatusInternalServerError)
+		return
 	}
 
 	// Send verification email
@@ -231,7 +241,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			log.Printf("%vRegister registration verification email sent: %v", debugTag, success)
 		}
 	} else {
-		log.Printf("%vRegister EmailSvc not configured; registration token for %s: %s", debugTag, payload.Email.String, tokenCookie.Value)
+		log.Printf("%vRegister EmailSvc not configured; verification email not sent", debugTag)
 	}
 
 	handlerHelpers.WriteAcceptedJSON(w, map[string]string{
@@ -244,6 +254,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // Expects: {"token": "...", "username": "...", "email": "..."}
 // Returns: user account created and verified, pending admin approval for activation
 func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	var payload struct {
 		Token string `json:"token"`
 	}
@@ -252,7 +263,6 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%vVerifyRegistration payload received: %+v", debugTag, payload)
 	if payload.Token == "" {
 		http.Error(w, "verification token is required", http.StatusBadRequest)
 		return
@@ -272,13 +282,11 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid verification token", http.StatusForbidden)
 		return
 	}
-	log.Printf("%vVerifyRegistration registration token found: %+v", debugTag, tok)
-
-	var user models.User
-	// Read username/email/name/password from token SessionData (persisted at registration)
-	if err := json.Unmarshal([]byte(tok.SessionData.String), &user); err != nil {
-		log.Printf("%vVerifyRegistration failed to extract user data from token SessionData: %v", debugTag, err)
-		http.Error(w, "invalid registration token data", http.StatusBadRequest)
+	// Reject legacy plaintext tokens. Pending users must register again.
+	user, err := decodePendingRegistration(tok.SessionData.String)
+	if err != nil {
+		log.Printf("%vVerifyRegistration invalid or legacy pending registration", debugTag)
+		http.Error(w, "registration expired or invalid; please register again", http.StatusBadRequest)
 		return
 	}
 
@@ -325,26 +333,10 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Hash password if provided
-	if user.Password.String != "" {
-		if len(user.Password.String) < 8 {
-			http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
-			return
-		}
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password.String), bcrypt.DefaultCost)
-		if err != nil {
-			log.Printf("%vVerifyRegistration failed to hash password: %v", debugTag, err)
-			http.Error(w, "failed to process password", http.StatusInternalServerError)
-			return
-		}
-		user.Password.SetValid(string(hashedPassword))
-	}
-
-	// Create user in database
-	log.Printf("%vVerifyRegistration creating user account for user=%+v", debugTag, user)
+	// Persist the prepared password hash without hashing it a second time.
 	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"VerifyRegistration:create", h.appConf.Db, user)
 	if err != nil {
-		log.Printf("%vVerifyRegistration failed to create user: %v", debugTag, err)
+		log.Printf("%vVerifyRegistration failed to create user (sensitive details omitted)", debugTag)
 		http.Error(w, "failed to create user account", http.StatusInternalServerError)
 		return
 	}
@@ -352,7 +344,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	// Delete the registration verification token (one-time use)
 	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyRegistration:del", h.appConf.Db, tok.ID)
 
-	log.Printf("%vVerifyRegistration user registered and verified: userID=%d, user %+v (pending admin activation)", debugTag, userID, user)
+	log.Printf("%vVerifyRegistration user registered and verified: userID=%d (pending admin activation)", debugTag, userID)
 
 	if err := handlerHelpers.NotifyAdminsUserReviewRequired(
 		debugTag+"VerifyRegistration:",
@@ -565,7 +557,6 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 // SessionCheck is used by the client to see if the token it is using is still valid, if it is valid the the client is still logged in.
 func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var token models.Token
 	var user models.User
 	restResource, err := h.setRestResource(r) //stores prev-URL for redirect
 	if err != nil {
@@ -573,24 +564,24 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionToken, err := r.Cookie("session")
 	if err == http.ErrNoCookie { // If there is no session cookie
-		log.Println(debugTag+"Handler.SessionCheckRestHandler - Authentication required ", "sessionToken=", sessionToken, "err =", err)
+		log.Print(debugTag + "SessionCheck authentication required")
 		w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 		w.Write([]byte("Logon required - You don't have access to the requested resource."))
 		return
 	} else { // If there is a session cookie try to find it in the repository
 		//token, err = h.FindSessionToken(sessionToken.Value) //This succeeds if the cookie is in the DB and the user is current
-		token, err = dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionToken.Value)
+		token, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionToken.Value)
 		//user.User.ID = user.Session.UserID
 		if err != nil { // could not find user sessionToken so user is not authorised
-			log.Println(debugTag+"Handler.SessionCheckRestHandler - Not authorised ", "token =", token, "err =", err)
+			log.Print(debugTag + "SessionCheck invalid session")
 			w.WriteHeader(http.StatusNetworkAuthenticationRequired)
 			w.Write([]byte("Token not authorised - You don't have access to the requested resource."))
 			return
 		} else { //Session cookie found, get user details and return to client
 			//user, err = h.UserReadQry(token.UserID)
-			user, err := dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate ", h.appConf.Db, token.UserID)
+			user, err = dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate ", h.appConf.Db, token.UserID)
 			if err != nil {
-				log.Printf("%v %v %v %v %+v %v %+v", debugTag+"Handler.SessionCheckRestHandler - User not found", "err =", err, "user =", user, "sessionToken =", sessionToken)
+				log.Print(debugTag + "SessionCheck user lookup failed")
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte("User not found."))
 				return

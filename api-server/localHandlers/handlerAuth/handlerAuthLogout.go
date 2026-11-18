@@ -13,7 +13,6 @@ import (
 // Users can log back in using the same OAuth provider without re-authorization.
 func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 	session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
-	log.Printf(debugTag+"Handler.AuthLogout session=%+v, ok=%v", session, ok)
 
 	if ok {
 		sessionToken, err := r.Cookie("session")
@@ -22,7 +21,7 @@ func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "session not open", http.StatusUnauthorized)
 			return
 		}
-		log.Printf(debugTag+"Handler.AuthLogout session open. userID=%v, sessionToken=%+v\n", session.UserID, sessionToken)
+		log.Printf(debugTag+"Handler.AuthLogout session open. userID=%v", session.UserID)
 		err = h.removeSessionToken(sessionToken.Value, session.UserID)
 		if err != nil {
 			log.Printf(debugTag+"Handler.AuthLogout failed to remove session token. userID=%v err=%v", session.UserID, err)
@@ -30,7 +29,7 @@ func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		log.Printf(debugTag+"AuthLogout UserID not available in request context. session=%+v\n", session)
+		log.Print(debugTag + "AuthLogout UserID not available in request context")
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -44,17 +43,16 @@ func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) removeSessionToken(tokenStr string, expectedUserID int) error {
 	tokenItem, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, tokenStr)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken token not found", "err =", err, "tokenItem =", tokenItem)
+		log.Print(debugTag + "removeSessionToken token not found")
 		return err
 	}
 	if tokenItem.UserID != expectedUserID {
 		log.Printf("%v token user mismatch: expected=%d got=%d", debugTag+"Handler.removeSessionToken", expectedUserID, tokenItem.UserID)
 		return http.ErrNoCookie
 	}
-	log.Printf(debugTag+"Handler.removeSessionToken token found. tokenItem=%+v", tokenItem)
 	err = dbAuthTemplate.TokenDeleteQry(debugTag+"Handler.removeSessionToken ", h.appConf.Db, tokenItem.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"Handler.removeSessionToken failed to remove token", "err =", err, "tokenItem =", tokenItem)
+		log.Print(debugTag + "removeSessionToken failed to remove token")
 		return err
 	}
 	return nil

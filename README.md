@@ -37,7 +37,15 @@ This app is JS free (more or less).
 * Membership code
 * Account status
 
-Note: Passwords are not stored in the database. It uses "Secure Remote Password" <https://pkg.go.dev/github.com/1Password/srp@v0.2.0#section-readme>
+Authentication supports email OTP, bcrypt password verification followed by email OTP, and Google OAuth. Password hashes are stored in the database; plaintext passwords must not be persisted or logged.
+
+### Registration credential handling
+
+Registration hashes an optional `user_password` before storing pending verification data. Verification copies that hash into the new account without hashing it again. Passwords must be 8–72 bytes when supplied; passwordless registration remains supported.
+
+Pending registration data uses a versioned internal format. After deploying this change, verification codes issued by the older implementation are rejected and affected users must register again. Existing accounts and login sessions are unaffected. No database schema migration is required.
+
+This code change does not remove historical exposure: older pending registration records may contain plaintext passwords until they expire and token cleanup removes them. Existing logs and backups may also contain credentials or tokens from the older implementation. Review those records and access controls as part of rollout; do not copy sensitive values into issue reports or diagnostic output.
 
 
 ## To Do

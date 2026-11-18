@@ -120,7 +120,7 @@ func TokenWriteQry(debugStr string, Db *sqlx.DB, record models.Token) (int, erro
 		err = TokenUpdateQry(debugStr, Db, record) //Existing record found so we are okay to update the record
 	}
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"TokenWriteQry - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+		log.Printf("%sTokenWriteQry failed (sensitive details omitted)", debugTag)
 		return 0, err
 	}
 	return record.ID, err
@@ -206,7 +206,6 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
 	err = Db.QueryRow(sqlFindSessionToken, result.TokenStr, models.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
-		//log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindSessionToken", "err =", err, "sqlFindSessionToken =", sqlFindSessionToken, "result =", result)
 		return result, err
 	}
 	// PERFORMANCE: Token cleanup moved to background job for performance
@@ -222,7 +221,7 @@ func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Tok
 	//result.Name.SetValid(name)
 	err = Db.QueryRow(sqlFindToken, cookieStr, name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
-		log.Printf("%v %v %v %v %v %v %+v", debugTag+"FindToken", "err =", err, "sqlFindToken =", sqlFindToken, "result =", result)
+		log.Printf("%sFindToken failed (sensitive details omitted)", debugTag)
 		return result, err
 	}
 	// PERFORMANCE: Token cleanup moved to background job for performance
@@ -289,29 +288,28 @@ func UserWriteQry(debugStr string, Db *sqlx.DB, record models.User) (int, error)
 	var err error
 	Tx, err := Db.Beginx() // Start a transaction
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry - ", "err =", err, "record =", record)
+		log.Printf("%sUserWriteQry failed (sensitive details omitted)", debugTag)
 		return 0, err // If we can't start a transaction then we can't write the record
 	}
 	defer Tx.Rollback() // Ensure the transaction is rolled back if we don't commit it
 
 	record.ID, err = UserWriteQryTx(debugStr, Tx, record) // Write the user record to the database
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry - ", "err =", err, "record =", record)
+		log.Printf("%sUserWriteQry failed (sensitive details omitted)", debugTag)
 		return 0, err // If we can't write the record then we can't commit the transaction
 	}
 	err = Tx.Commit() // Commit the transaction
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserWriteQry - ", "err =", err, "record =", record)
+		log.Printf("%sUserWriteQry failed (sensitive details omitted)", debugTag)
 		return 0, err // If we can't commit the transaction then we can't write the record
 	}
 	return record.ID, err
 }
 
 func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, error) {
-	log.Printf("%v %v %+v", debugTag+debugStr+"UserInsertQryTx - ", "record =", record)
 	err := Db.QueryRow(sqlUserInsert, record.Name, record.Username, record.Email, record.Address, record.MemberCode, record.BirthDate, record.UserAgeGroupID, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID).Scan(&record.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserInsertQryTx - ", "err =", err, "record =", record)
+		log.Printf("%sUserInsertQryTx failed (sensitive details omitted)", debugTag)
 		return 0, err // If we can't commit the transaction then we can't write the record
 	}
 	return record.ID, err
@@ -320,7 +318,7 @@ func UserInsertQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, err
 func UserUpdateQryTx(debugStr string, Db *sqlx.Tx, record models.User) error {
 	_, err := Db.Exec(sqlUserUpdate, record.Name, record.Username, record.Email, record.Address, record.BirthDate, record.UserAgeGroupID, record.Password, record.AccountStatusID, record.AccountHidden, record.Provider, record.ProviderID, record.ID)
 	if err != nil {
-		log.Printf("%v %v %v %v %+v", debugTag+"UserUpdateQryTx - ", "err =", err, "record =", record)
+		log.Printf("%sUserUpdateQryTx failed (sensitive details omitted)", debugTag)
 	}
 	return err
 }
@@ -332,17 +330,17 @@ func UserWriteQryTx(debugStr string, Db *sqlx.Tx, record models.User) (int, erro
 	case sql.ErrNoRows:
 		record.ID, err = UserInsertQryTx(debugStr, Db, record) //No Existing record found so we are okay to insert the new record
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+			log.Printf("%sUserWriteQryTx failed (sensitive details omitted)", debugTag)
 			return 0, err
 		}
 	case nil:
 		err = UserUpdateQryTx(debugStr, Db, record) //Existing record found so we are okay to update the record
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+			log.Printf("%sUserWriteQryTx failed (sensitive details omitted)", debugTag)
 			return 0, err
 		}
 	default:
-		log.Printf("%v %v %v %v %v %v %T %+v", debugTag+"UserWriteQryTx - ", "err =", err, "record.ID =", record.ID, "record =", record, record)
+		log.Printf("%sUserWriteQryTx failed (sensitive details omitted)", debugTag)
 		return 0, err
 	}
 	return record.ID, err
@@ -378,7 +376,7 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		Value:   GenerateSecureToken(),
 		Path:    "/",
 		Domain:  host,
-		Expires: expiration, // Session cookies – cookies without a Max-Age or Expires attribute – are deleted when the current session ends.
+		Expires: expiration, // Without Max-Age or Expires, cookies end with the browser session.
 		//RawExpires: "",
 		//MaxAge:     0,
 		Secure:   true,                 // A cookie with the Secure attribute is only sent to the server with an encrypted request over the HTTPS protocol
@@ -408,11 +406,11 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 
 		tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
 		if err != nil {
-			log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken Fatal: createSessionToken fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+			log.Printf("%sCreateNamedToken failed (sensitive details omitted)", debugTag)
 		} else {
 			err = TokenCleanOld(debugStr, Db, tokenItem.ID)
 			if err != nil {
-				log.Printf("%v %v %v %v %v %v %+v", debugTag+"CreateNamedToken: Token CleanOld fail", "err =", err, "UserID =", userID, "tokenItem =", tokenItem)
+				log.Printf("%sCreateNamedToken failed (sensitive details omitted)", debugTag)
 			}
 			err = TokenCleanExpired(debugTag+"CreateNamedToken ", Db) // Clean expired tokens for the user
 			if err != nil {
