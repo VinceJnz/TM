@@ -12,7 +12,7 @@ import (
 
 func TestTokensAreHashedImmutableAndConsumedOnce(t *testing.T) {
 	db := testdb.Open(t, testdb.Auth)
-	cookie, err := CreateNamedToken("test", db, true, 0, "localhost", "login-otp", time.Now().Add(time.Hour), "initial")
+	cookie, err := CreateNamedToken("test", db, true, 0, "localhost", "login-otp", time.Now().Add(time.Hour), `{"state":"initial"}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestTokensAreHashedImmutableAndConsumedOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	token.SessionData.SetValid("updated")
+	token.SessionData.SetValid(`{"state":"updated"}`)
 	if err := TokenUpdateQry("test", db, token); err != nil {
 		t.Fatal(err)
 	}

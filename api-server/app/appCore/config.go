@@ -4,6 +4,7 @@ import (
 	"api-server/v2/app/gateways/gmail"
 	"api-server/v2/app/gateways/oAuthGateway/oAuthGateway"
 	"api-server/v2/app/gateways/stripe"
+	"api-server/v2/migrations"
 	"context"
 	"errors"
 	"log"
@@ -62,6 +63,9 @@ func (c *Config) Run(ctx context.Context) error {
 	}
 
 	// Start background token cleanup job
+	if err := migrations.Check(ctx, c.Db); err != nil {
+		return err
+	}
 	c.startTokenCleanupJob(ctx)
 	// Start the email service
 	debugEmail := ""

@@ -65,7 +65,8 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 // loginHandler initiates the OAuth flow by creating a temporary DB-backed token to hold the state and pending registration data, then redirects the user to the provider's auth URL with the state parameter. The callbackHandler will validate the state and complete the login/registration process.
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	verifier := oauth2.GenerateVerifier()
-	cookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"login", h.appConf.Db, true, 0, h.appConf.Settings.Host, "oauth-state", time.Now().Add(10*time.Minute), verifier)
+	stateData, _ := json.Marshal(map[string]string{"verifier": verifier})
+	cookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"login", h.appConf.Db, true, 0, h.appConf.Settings.Host, "oauth-state", time.Now().Add(10*time.Minute), string(stateData))
 	if err != nil {
 		handlerHelpers.WriteInternalServerError(w, "failed to start login")
 		return
@@ -93,7 +94,14 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "oauth-state", Path: "/", Domain: h.appConf.Settings.Host, MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
-	token, err := h.appConf.OAuthSvc.OAuthConfig.Exchange(r.Context(), code, oauth2.VerifierOption(tok.SessionData.String))
+	var flow struct {
+		Verifier string `json:"verifier"`
+	}
+	if json.Unmarshal([]byte(tok.SessionData.String), &flow) != nil || flow.Verifier == "" {
+		handlerHelpers.WriteForbidden(w, "invalid OAuth flow")
+		return
+	}
+	token, err := h.appConf.OAuthSvc.OAuthConfig.Exchange(r.Context(), code, oauth2.VerifierOption(flow.Verifier))
 	if err != nil {
 		log.Print(debugTag + "OAuth exchange failed")
 		handlerHelpers.WriteInternalServerError(w, "failed to exchange authorization code")

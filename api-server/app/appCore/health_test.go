@@ -2,6 +2,7 @@ package appCore
 
 import (
 	"api-server/v2/internal/testdb"
+	"api-server/v2/migrations"
 	"context"
 	"net/http/httptest"
 	"testing"
@@ -9,7 +10,10 @@ import (
 )
 
 func TestReadinessAndCleanupCancellation(t *testing.T) {
-	db := testdb.Open(t, testdb.Auth)
+	db := testdb.Open(t, "")
+	if err := migrations.Apply(context.Background(), db, false); err != nil {
+		t.Fatal(err)
+	}
 	c := &Config{Db: db}
 	ctx, cancel := context.WithCancel(context.Background())
 	c.startTokenCleanupJob(ctx)

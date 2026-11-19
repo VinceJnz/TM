@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -60,4 +63,23 @@ func InitDBContext(ctx context.Context, dataSource string) (*sqlx.DB, error) {
 		}
 	}
 	return nil, fmt.Errorf("unable to connect to database after retries")
+}
+
+func DatabaseSourceFromEnv() string {
+	if source := os.Getenv("DATA_SOURCE"); source != "" {
+		return source
+	}
+	host, port, user, password, name := os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME")
+	if host == "" || port == "" || user == "" || password == "" || name == "" {
+		return ""
+	}
+	u := url.URL{Scheme: "postgres", Host: net.JoinHostPort(host, port), User: url.UserPassword(user, password), Path: "/" + name}
+	q := u.Query()
+	ssl := os.Getenv("DB_SSLMODE")
+	if ssl == "" {
+		ssl = "disable"
+	}
+	q.Set("sslmode", ssl)
+	u.RawQuery = q.Encode()
+	return u.String()
 }

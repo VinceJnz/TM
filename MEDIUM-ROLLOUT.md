@@ -31,3 +31,48 @@ no longer terminate startup; their affected endpoints return 503. Existing
 sessions and unrelated API features remain usable. Gmail startup never waits for
 stdin: provision its token file or GMAIL_AUTH_CODE, and keep its runtime mounts
 as described in SECURITY-ROLLOUT.md. Provider calls use bounded timeouts.
+
+## Ordered migrations and clean installations
+
+The canonical, embedded migration sequence now lives in `api-server/migrations`.
+Historical SQL/dumps under `db-server/sql` remain reference material, not an
+automatic upgrade sequence. Migration 0001 creates the current schema, constraints
+and lookup/capability seeds without copying any users, credentials or booking data.
+0002/0003 incorporate the additive checkout/token changes from the High-priority
+work. No default administrator account/password is created.
+
+Use an administrative migration connection supplied through DATA_SOURCE or the
+same DB_* settings as the API. From `api-server`, run:
+
+```powershell
+go run ./cmd/migrate
+```
+
+The production image also includes `/app/tm-migrate` for explicit operator use.
+The API never applies migrations automatically. Startup and readiness require
+current migration history. Files are applied in order under a PostgreSQL advisory
+lock, each in its own transaction with a normalized SHA-256 checksum. Applied
+files must not be edited. Repeat runs skip unchanged migrations.
+
+For an existing database, first audit its schema and test an isolated copy.
+Ensure the existing payment/refund and access-scope migrations have already been
+reconciled. Then explicitly adopt the compatible baseline:
+
+```powershell
+go run ./cmd/migrate -adopt-existing
+```
+
+Adoption validates required tables/columns, records the baseline without replacing
+tables, and applies only the additive follow-up migrations. It does not infer that
+every legacy constraint/grant matches the new-installation schema; review those
+separately. Incompatible databases are refused instead of silently recreated.
+
+Provision the restricted API database role separately, then optionally grant its
+runtime permissions with `-grant-role api_user` on the migration command. This
+rejects superuser/role-creation/database-creation privileges and grants read-only
+migration-history access. Select the actual role name used by your deployment.
+Activate and assign your first administrator explicitly after registering; there
+are no seeded real users. Pricing must also be configured explicitly.
+
+Clean-schema testing reconciled OAuth flow metadata with the legacy JSON column:
+PKCE verifiers are now encoded as structured JSON rather than bare strings.

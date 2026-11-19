@@ -3,7 +3,6 @@ package appCore
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -102,17 +101,7 @@ func (s *settings) LoadEnv() error {
 	s.PortHttps = os.Getenv("HTTPS_PORT")
 	s.CoreOrigins = os.Getenv("CORE_ORIGINS")
 	s.APIprefix = os.Getenv("API_PATH_PREFIX")
-	s.DataSource = os.Getenv("DATA_SOURCE")
-	if s.DataSource == "" {
-		dbHost := os.Getenv("DB_HOST")
-		dbPort := os.Getenv("DB_PORT")
-		dbUser := os.Getenv("DB_USER")
-		dbPassword := os.Getenv("DB_PASSWORD")
-		dbName := os.Getenv("DB_NAME")
-		if dbHost != "" && dbPort != "" && dbUser != "" && dbPassword != "" && dbName != "" {
-			s.DataSource = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
-		}
-	}
+	s.DataSource = DatabaseSourceFromEnv()
 	s.ServerCaCert = os.Getenv("SERVER_CA_CERT")
 	s.ClientCaCert = os.Getenv("CLIENT_CA_CERT")
 	s.ServerKey = os.Getenv("SERVER_KEY")
