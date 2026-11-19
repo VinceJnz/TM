@@ -55,16 +55,10 @@ const (
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id`
 
-	qryCreate = `INSERT INTO at_bookings (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_price) 
-	        		VALUES ($1, $2, $3, $4, $5, $6, $7) 
-					RETURNING id`
-	qryUpdateAdmin = `UPDATE at_bookings 
-					SET (owner_id, trip_id, notes, from_date, to_date, booking_status_id, booking_date, payment_date, booking_price) = ($2, $3, $4, $5, $6, $7, $8, $9, $10)
-					WHERE id = $1`
-	qryUpdate = `UPDATE at_bookings 
-					SET (notes, from_date, to_date, booking_status_id, booking_price) = ($4, $5, $6, $7, $8)
-					WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
-	qryDelete = `DELETE FROM at_bookings WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
+	qryCreate      = `INSERT INTO at_bookings (owner_id,trip_id,notes,from_date,to_date,booking_status_id) VALUES ($1,$2,$3,$4,$5,1) RETURNING id`
+	qryUpdateAdmin = `UPDATE at_bookings SET (owner_id,trip_id,notes,from_date,to_date,booking_price)=($2,$3,$4,$5,$6,$7) WHERE id=$1 AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)`
+	qryUpdate      = `UPDATE at_bookings SET (notes,from_date,to_date)=($4,$5,$6) WHERE id=$1 AND (owner_id=$2 OR LOWER($3)='any') AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)`
+	qryDelete      = `DELETE FROM at_bookings WHERE id=$1 AND (owner_id=$2 OR LOWER($3)='any') AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)`
 )
 
 type Handler struct {
@@ -122,7 +116,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+	var err error
+	record, err = helpers.DecodeBookingWrite(w, r, dbStandardTemplate.CanAccessAny(session), r.Method == http.MethodPost)
+	if err != nil {
 		log.Printf(debugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -133,7 +129,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
@@ -147,7 +143,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
+	var err error
+	record, err = helpers.DecodeBookingWrite(w, r, dbStandardTemplate.CanAccessAny(session), r.Method == http.MethodPost)
+	if err != nil {
 		log.Printf(debugTag+"Update err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -160,9 +158,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if dbStandardTemplate.CanAccessAny(session) {
-		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingDate, record.PaymentDate, record.BookingPrice)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdateAdmin, id, record.OwnerID, record.TripID, record.Notes, record.FromDate, record.ToDate, record.BookingPrice)
 	} else {
-		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AccessScope, record.Notes, record.FromDate, record.ToDate, record.BookingStatusID, record.BookingPrice)
+		dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AccessScope, record.Notes, record.FromDate, record.ToDate)
 	}
 }
 

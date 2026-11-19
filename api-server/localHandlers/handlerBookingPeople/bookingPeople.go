@@ -33,8 +33,8 @@ const (
 	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) VALUES ($1, $2, $3, $4) RETURNING id`
 	qryUpdate = `UPDATE at_booking_people
 					SET (person_id, notes) = ($4, $5)
-					WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any'))`
-	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any'))`
+					WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL)`
+	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL)`
 )
 
 type Handler struct {
@@ -193,7 +193,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 const (
-	qryParentRecordValidation = `SELECT * FROM at_bookings WHERE id = $1`
+	qryParentRecordValidation = `SELECT id,owner_id,booking_status_id,stripe_session_id FROM at_bookings WHERE id = $1`
 )
 
 func (h *Handler) RecordValidation(session *models.Session, record models.BookingPeople) error {
@@ -208,6 +208,8 @@ func (h *Handler) RecordValidation(session *models.Session, record models.Bookin
 	case err != nil:
 		log.Printf("%sParentRecordValidation() database error for booking_id=%v: %v", debugTag, parentID, err)
 		return fmt.Errorf("unable to validate booking record")
+	case validationRecord.BookingStatusID != int(models.Not_paid) || validationRecord.StripeSessionID.Valid:
+		return fmt.Errorf("booking is locked for payment")
 	case validationRecord.OwnerID != session.UserID && !dbStandardTemplate.CanAccessAny(session):
 		return fmt.Errorf("access denied")
 	default:

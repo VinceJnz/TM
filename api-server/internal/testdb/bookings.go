@@ -7,6 +7,7 @@ CREATE TABLE et_booking_status (id integer PRIMARY KEY, status text);
 CREATE TABLE at_trips (id integer PRIMARY KEY, trip_name text, trip_cost_group_id integer);
 CREATE TABLE at_bookings (id integer PRIMARY KEY, owner_id integer, trip_id integer, notes text, booking_status_id integer, from_date timestamptz, to_date timestamptz, booking_price numeric, stripe_session_id text);
 CREATE TABLE at_booking_people (id integer PRIMARY KEY, owner_id integer, booking_id integer, person_id integer, notes text, created timestamptz, modified timestamptz);
+CREATE TABLE at_payments (id integer PRIMARY KEY,booking_id integer);
 CREATE TABLE at_trip_cost_groups (id integer PRIMARY KEY);
 CREATE TABLE at_trip_costs (id integer PRIMARY KEY, trip_cost_group_id integer, member_status_id integer, user_age_group_id integer, amount numeric);
 INSERT INTO st_users VALUES (1,'Owner One','one',1,1),(2,'Owner Two','two',1,1);

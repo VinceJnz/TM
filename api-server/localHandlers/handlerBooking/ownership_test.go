@@ -40,3 +40,44 @@ func TestOwnershipReads(t *testing.T) {
 		}
 	}
 }
+
+func TestBookingWritesCannotChangePaymentState(t *testing.T) {
+	db := testdb.Open(t, testdb.Bookings)
+	// Member edits affect dates/notes, never a server price or paid state.
+	if _, err := db.Exec(qryUpdate, 11, 1, "own", "updated", "2026-01-01", "2026-01-02"); err != nil {
+		t.Fatal(err)
+	}
+	var status int
+	var price string
+	if err := db.QueryRow("SELECT booking_status_id,booking_price FROM at_bookings WHERE id=11").Scan(&status, &price); err != nil {
+		t.Fatal(err)
+	}
+	if status != 1 || price != "10" {
+		t.Fatal("member edit changed financial state")
+	}
+	for _, lock := range []string{
+		"UPDATE at_bookings SET booking_status_id=3 WHERE id=11",
+		"UPDATE at_bookings SET booking_status_id=1,stripe_session_id='checkout' WHERE id=11",
+		"UPDATE at_bookings SET stripe_session_id=NULL WHERE id=11; INSERT INTO at_payments VALUES (1,11)",
+	} {
+		if _, err := db.Exec(lock); err != nil {
+			t.Fatal(err)
+		}
+		result, err := db.Exec(qryUpdate, 11, 1, "own", "forged", "2026-01-01", "2026-01-02")
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows, _ := result.RowsAffected()
+		if rows != 0 {
+			t.Fatal("financially locked booking was editable")
+		}
+		result, err = db.Exec(qryDelete, 11, 1, "any")
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows, _ = result.RowsAffected()
+		if rows != 0 {
+			t.Fatal("financially locked booking was deletable")
+		}
+	}
+}
