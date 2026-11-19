@@ -161,15 +161,6 @@ func ResolveUserIDFromSessionOrOAuthState(debugStr string, r *http.Request, db *
 		}
 	}
 
-	// Try 2: oauth-state token (popup fallback)
-	if c, err := r.Cookie("oauth-state"); err == nil {
-		log.Printf("%vResolveUserIDFromSessionOrOAuthState() found oauth-state cookie", debugStr)
-		if dbToken, tokenErr := dbAuthTemplate.FindToken(debugStr+"ResolveUserIDFromSessionOrOAuthState:oauth-state", db, "oauth-state", c.Value); tokenErr == nil {
-			log.Printf("%vResolveUserIDFromSessionOrOAuthState() using oauth-state for user %d", debugStr, dbToken.UserID)
-			return dbToken.UserID
-		}
-	}
-
 	return 0
 }
 

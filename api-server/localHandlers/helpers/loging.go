@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -37,12 +38,12 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 		info := &HTTPInfo{
 			LogTag:        logTag,
 			Duration:      0,
-			URL:           r.URL.String(),
+			URL:           r.URL.EscapedPath(),
 			Host:          r.Host,
 			Cookie:        "",
 			Method:        r.Method,
-			RequestURI:    r.RequestURI, // "",
-			Referer:       r.Referer(),  // r.Header.Get("Referer"),
+			RequestURI:    r.URL.EscapedPath(),
+			Referer:       logSafeURL(r.Referer()),
 			Protocol:      "",
 			RemoteAddress: r.RemoteAddr,
 			Size:          0,
@@ -92,6 +93,18 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 
 		log.Printf(debugTag+`LogRequest LogTag: %s, {"HTTPinfo":%v}`, logTag, string(infoJSON))
 	})
+}
+
+// OAuth codes, callback state and email tokens may appear in query strings.
+func logSafeURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	u.RawQuery = ""
+	u.Fragment = ""
+	u.User = nil
+	return u.String()
 }
 
 type loggingResponseWriter struct {

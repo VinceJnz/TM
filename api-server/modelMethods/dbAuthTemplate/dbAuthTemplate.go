@@ -363,7 +363,7 @@ func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string, e
 
 // CreateNamedToken and return *http.Token, and store it in the DB if storeToken is true
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies
-func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int, host, name string, expiration time.Time) (*http.Cookie, error) {
+func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int, host, name string, expiration time.Time, sessionData ...string) (*http.Cookie, error) {
 	var err error
 	if name == "" {
 		name = "temp_session_token"
@@ -395,6 +395,9 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		tokenItem.Name.SetValid(sessionToken.Name)
 		tokenItem.Host.SetValid(host)
 		tokenItem.TokenStr.SetValid(sessionToken.Value)
+		if len(sessionData) > 0 {
+			tokenItem.SessionData.SetValid(sessionData[0])
+		}
 		//tokenItem.SessionData.SetValid("") // Not yet implemented. This can be used to store session data in JSON format.
 		tokenItem.Valid.SetValid(true)
 		tokenItem.ValidFrom.SetValid(time.Now())
@@ -408,7 +411,11 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		if err != nil {
 			log.Printf("%sCreateNamedToken failed (sensitive details omitted)", debugTag)
 		} else {
-			err = TokenCleanOld(debugStr, Db, tokenItem.ID)
+			// Unauthenticated registration/OAuth tokens belong to different browsers;
+			// user_id=0 must never invalidate another browser's pending flow.
+			if userID > 0 {
+				err = TokenCleanOld(debugStr, Db, tokenItem.ID)
+			}
 			if err != nil {
 				log.Printf("%sCreateNamedToken failed (sensitive details omitted)", debugTag)
 			}

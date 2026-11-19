@@ -31,3 +31,17 @@ be edited/deleted through ordinary booking CRUD. Participant changes are also
 blocked after checkout starts. Existing client-only voucher price adjustments
 are not accepted as member price overrides; a server-validated discount workflow
 is required before offering such adjustments. Existing records are not changed.
+
+## OAuth browser binding and PKCE
+
+Login now stores a per-flow PKCE verifier and requires the callback state to
+match the initiating browser cookie. Callback state is consumed atomically.
+Pending registration uses a distinct `oauth-registration` cookie/token, also
+consumed once after form validation. Old in-progress OAuth flows must restart.
+
+Google must report a verified email. Inactive users cannot obtain an active
+session through OAuth; administrator approval remains required. Provider lookup
+uses `st_users`, and linking an existing account preserves its password hash.
+Request logs omit URL query strings and fragments, which may contain OAuth codes
+or email verification tokens. Synthetic-provider integration tests cover PKCE,
+browser mismatch, replay, and the separate continuation token.

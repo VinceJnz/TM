@@ -2,12 +2,12 @@ package dbAuthTemplate
 
 import (
 	"api-server/v2/models"
-	"log"
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 )
 
-const sqlUserIDByProvider = `SELECT id FROM users WHERE provider=$1 AND provider_id=$2`
+const sqlUserIDByProvider = `SELECT id FROM st_users WHERE provider=$1 AND provider_id=$2`
 
 type userState int
 
@@ -31,7 +31,6 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 	userFromDB, err := UserEmailReadQry(debugStr+"FindOrCreateUserByProvider ", Db, user.Email.String)
 	if err == nil {
 		// found existing user by email, merge provider info into the existing user
-		log.Printf("%vFindOrCreateUserByProvider - user found by email, merging provider info: incoming user = %+v, userFromDB = %+v", debugStr, user, userFromDB)
 		user.ID = userFromDB.ID
 		// Preserve existing fields when incoming values are empty.
 		if user.Name == "" {
@@ -54,6 +53,7 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		}
 		// CRITICAL: Preserve existing account status - admins set this manually
 		user.AccountStatusID = userFromDB.AccountStatusID
+		user.Password = userFromDB.Password
 		// For provider fields, prefer incoming (new) values; fall back to existing DB values if incoming is empty
 		if !user.Provider.Valid || user.Provider.String == "" {
 			user.Provider = userFromDB.Provider
@@ -61,7 +61,6 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		if !user.ProviderID.Valid || user.ProviderID.String == "" {
 			user.ProviderID = userFromDB.ProviderID
 		}
-		log.Printf("%vFindOrCreateUserByProvider - merged user data: %+v", debugStr, user)
 
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider ", Db, user)
 		if err != nil {
@@ -70,7 +69,6 @@ func FindOrCreateUserByProvider(debugStr string, Db *sqlx.DB, user models.User) 
 		return userID, false, nil
 	} else {
 		// No existing user found by provider or email: insert a new user so provider info is persisted
-		log.Printf("%vFindOrCreateUserByProvider - no existing user found; inserting new user: %+v", debugStr, user)
 		userID, err = UserWriteQry(debugStr+"FindOrCreateUserByProvider:insert ", Db, user)
 		if err != nil {
 			return 0, false, err
@@ -89,6 +87,9 @@ func FindUserByProviderOrEmail(debugStr string, Db *sqlx.DB, user models.User) (
 		}
 		return record, true, nil
 	}
+	if err != sql.ErrNoRows {
+		return models.User{}, false, err
+	}
 
 	if user.Email.String == "" {
 		return models.User{}, false, nil
@@ -97,6 +98,9 @@ func FindUserByProviderOrEmail(debugStr string, Db *sqlx.DB, user models.User) (
 	record, err := UserEmailReadQry(debugStr+"FindUserByProviderOrEmail:byEmail ", Db, user.Email.String)
 	if err == nil {
 		return record, true, nil
+	}
+	if err != sql.ErrNoRows {
+		return models.User{}, false, err
 	}
 
 	return models.User{}, false, nil
