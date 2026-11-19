@@ -3,12 +3,10 @@ package helpers
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/models"
-	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -55,23 +53,15 @@ func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag strin
 		start := time.Now()
 
 		// Create a response writer that captures the status code and body
-		lrw := &loggingResponseWriter{ResponseWriter: w, body: bytes.NewBuffer(nil)}
+		lrw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(lrw, r)
 
-		// Log the response status code and body
-		//log.Printf(debugTag+`LogRequest Response status: %d`, lrw.statusCode)
-		if lrw.statusCode != 0 && lrw.statusCode != 200 {
-			text := lrw.body.String()
-			cleaned := strings.ReplaceAll(text, "\r\n", "<p>")
-			cleaned = strings.ReplaceAll(cleaned, "\n", "<p>")
-			info.ResponseBody = cleaned
-		}
-
+		// Log metadata only; never retain or log response bodies.
 		// SECURITY: Session cookie should not be logged for security reasons
 		// User identification is available via info.UserID from context
 		info.StatusCode = lrw.statusCode
 		info.Protocol = r.Proto
-		info.Size = r.ContentLength
+		info.Size = lrw.bytesWritten
 		if r.TLS != nil {
 			info.TLSProtocol = r.TLS.NegotiatedProtocol
 		}
@@ -109,19 +99,32 @@ func logSafeURL(raw string) string {
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
-	statusCode int
-	body       *bytes.Buffer
+	statusCode   int
+	bytesWritten int64
+	wroteHeader  bool
 }
 
-func (lrw *loggingResponseWriter) WriteHeader(code int) {
-	lrw.statusCode = code
-	lrw.ResponseWriter.WriteHeader(code)
+func (w *loggingResponseWriter) WriteHeader(code int) {
+	if code >= 100 && code < 200 && code != http.StatusSwitchingProtocols {
+		w.ResponseWriter.WriteHeader(code)
+		return
+	}
+	if w.wroteHeader {
+		return
+	}
+	w.wroteHeader = true
+	w.statusCode = code
+	w.ResponseWriter.WriteHeader(code)
 }
-
-func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
-	lrw.body.Write(b)
-	return lrw.ResponseWriter.Write(b)
+func (w *loggingResponseWriter) Write(data []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	n, err := w.ResponseWriter.Write(data)
+	w.bytesWritten += int64(n)
+	return n, err
 }
+func (w *loggingResponseWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 type Stats struct {
 	Time     time.Time `json:"Time"`

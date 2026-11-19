@@ -76,3 +76,11 @@ are no seeded real users. Pricing must also be configured explicitly.
 
 Clean-schema testing reconciled OAuth flow metadata with the legacy JSON column:
 PKCE verifiers are now encoded as structured JSON rather than bare strings.
+
+## Request logging
+
+Request logging no longer retains response bodies or logs their contents, including
+error bodies. Log records report the actual first final HTTP status (including
+implicit 200) and response bytes rather than request Content-Length. Existing
+query/cookie redaction remains in place. Update any diagnostics that depended on
+the optional ResponseBody field; structured application events remain available.
