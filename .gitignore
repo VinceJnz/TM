@@ -8,7 +8,7 @@ logs
 *.csr
 *.p12
 *.pem
-Server*
+/Server*
 log*.txt
 .env
 *.zip
