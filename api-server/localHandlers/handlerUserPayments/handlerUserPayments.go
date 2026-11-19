@@ -68,21 +68,33 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
+	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
+		return
+	}
 	h.crud.GetAll(w, r)
 }
 
 // Get: retrieves and returns a list of records identified by parent id
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
+		return
+	}
 	id := dbStandardTemplate.GetID(w, r)
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.UserPayments{}, qryGetList, id)
 }
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
+		return
+	}
 	h.crud.Get(w, r)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
+		return
+	}
 	var record models.UserPayments
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Create err=%+v", err)
@@ -118,6 +130,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Update: modifies the existing record identified by id and returns the updated record
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
+		return
+	}
 	var record models.UserPayments
 	id := dbStandardTemplate.GetID(w, r)
 	if id == 0 {
@@ -176,6 +191,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
+		return
+	}
 	id := dbStandardTemplate.GetID(w, r)
 	if id == 0 {
 		return

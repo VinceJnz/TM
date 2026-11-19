@@ -21,20 +21,20 @@ const debugTag = "handlerBookingPeople."
 const (
 	qryGetAll = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
 					FROM at_booking_people bp
-						JOIN st_users p ON p.id=bp.person_id`
+						JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id WHERE (b.owner_id=$1 OR LOWER($2)='any')`
 	qryGet = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
 				FROM at_booking_people bp
-					JOIN st_users p ON p.id=bp.person_id
-				WHERE bp.id = $1`
+					JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id
+				WHERE bp.id = $1 AND (b.owner_id=$2 OR LOWER($3)='any')`
 	qryGetList = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
 				FROM at_booking_people bp
-					JOIN st_users p ON p.id=bp.person_id
-				WHERE bp.booking_id = $1`
+					JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id
+				WHERE bp.booking_id = $1 AND (b.owner_id=$2 OR LOWER($3)='any')`
 	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) VALUES ($1, $2, $3, $4) RETURNING id`
 	qryUpdate = `UPDATE at_booking_people
 					SET (person_id, notes) = ($4, $5)
-					WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
-	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND (owner_id = $2 OR LOWER($3)='any')`
+					WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any'))`
+	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any'))`
 )
 
 type Handler struct {
@@ -53,8 +53,12 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 
 // GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID <= 0 {
+		return
+	}
 	records := []models.BookingPeople{}
-	err := h.appConf.Db.Select(&records, qryGetAll)
+	err := h.appConf.Db.Select(&records, qryGetAll, session.UserID, session.AccessScope)
 	if err == sql.ErrNoRows {
 		log.Printf("%v.GetAll %v\n", debugTag, err)
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -73,6 +77,10 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a list of records identified by parent id
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID <= 0 {
+		return
+	}
 	params := mux.Vars(r)
 	parentID, err := strconv.Atoi(params["id"])
 	if err != nil {
@@ -82,7 +90,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	records := []models.BookingPeople{}
-	err = h.appConf.Db.Select(&records, qryGetList, parentID)
+	err = h.appConf.Db.Select(&records, qryGetList, parentID, session.UserID, session.AccessScope)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -100,8 +108,12 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID <= 0 {
+		return
+	}
 	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGet, id)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGet, id, session.UserID, session.AccessScope)
 }
 
 // Create: adds a new record and returns the new record
@@ -166,7 +178,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// Validation stuff
 	record.ID = id
-	err = h.appConf.Db.Get(&record, qryGet, record.ID)
+	err = h.appConf.Db.Get(&record, qryGet, record.ID, session.UserID, session.AccessScope)
 	if err != nil {
 		http.Error(w, debugTag+"Delete - Record not found: ", http.StatusUnprocessableEntity)
 		return
@@ -196,7 +208,7 @@ func (h *Handler) RecordValidation(session *models.Session, record models.Bookin
 	case err != nil:
 		log.Printf("%sParentRecordValidation() database error for booking_id=%v: %v", debugTag, parentID, err)
 		return fmt.Errorf("unable to validate booking record")
-	case validationRecord.OwnerID != session.UserID:
+	case validationRecord.OwnerID != session.UserID && !dbStandardTemplate.CanAccessAny(session):
 		return fmt.Errorf("access denied")
 	default:
 		return nil

@@ -5,6 +5,18 @@ import (
 	"testing"
 )
 
+func TestNestedCollectionsUseChildCapability(t *testing.T) {
+	for path, want := range map[string]string{
+		"/api/v1/trips/12/bookings":         "bookings",
+		"/api/v1/bookings/12/bookingPeople": "bookingPeople",
+	} {
+		resource, err := (&Handler{}).setRestResource(httptest.NewRequest("GET", path, nil))
+		if err != nil || resource.ResourceName != want {
+			t.Fatalf("%s: %+v %v", path, resource, err)
+		}
+	}
+}
+
 func TestSetRestResource_CheckoutRouteUsesBookingsResource(t *testing.T) {
 	h := &Handler{}
 	req := httptest.NewRequest("POST", "/api/v1/bookings/checkout/create/37", nil)

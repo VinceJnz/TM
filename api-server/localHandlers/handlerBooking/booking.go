@@ -23,7 +23,7 @@ const (
 		FROM at_trips att
 			LEFT JOIN at_bookings atb ON atb.trip_id=att.id
 			LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
-				JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
+				JOIN et_booking_status ebs on ebs.id=atb.booking_status_id
 			LEFT JOIN st_users stu ON stu.id=atbp.person_id
 			LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
 			LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
@@ -34,8 +34,7 @@ const (
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id;`
 
-	qryGet = `SELECT id, owner_id, trip_id, notes, from_date, to_date, booking_status_id, ebs.status, ab.booking_date, ab.payment_date, ab.booking_price, created, modified 
-					FROM at_bookings WHERE id = $1`
+	qryGet = `SELECT b.*, ebs.status FROM at_bookings b JOIN et_booking_status ebs ON ebs.id=b.booking_status_id WHERE b.id=$1 AND (b.owner_id=$2 OR LOWER($3)='any')`
 
 	qryGetList = `SELECT stu2.username AS owner_username, atb.*,
 			ebs.status, COUNT(stu.name) as participants,
@@ -45,14 +44,14 @@ const (
 		FROM at_trips att
 			LEFT JOIN at_bookings atb ON atb.trip_id=att.id
 			LEFT JOIN at_booking_people atbp ON atbp.booking_id=atb.id
-				JOIN public.et_booking_status ebs on ebs.id=atb.booking_status_id
+				JOIN et_booking_status ebs on ebs.id=atb.booking_status_id
 			LEFT JOIN st_users stu ON stu.id=atbp.person_id
 			LEFT JOIN at_trip_cost_groups attcg ON attcg.id=att.trip_cost_group_id
 			LEFT JOIN at_trip_costs attc ON attc.trip_cost_group_id=att.trip_cost_group_id
 									AND attc.member_status_id=stu.member_status_id
 									AND attc.user_age_group_id=stu.user_age_group_id
 			JOIN st_users stu2 ON stu2.id=atb.owner_id
-		WHERE atb.trip_id = $1
+		WHERE atb.trip_id = $1 AND (atb.owner_id=$2 OR LOWER($3)='any')
 		GROUP BY stu2.username, att.id, att.trip_name, atb.id, ebs.status
 		ORDER BY stu2.username, att.trip_name, atb.id`
 
@@ -97,14 +96,22 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID <= 0 {
+		return
+	}
 	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id, session.UserID, session.AccessScope)
 }
 
 // Get: retrieves and returns a list of records identified by parent id
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID <= 0 {
+		return
+	}
 	id := dbStandardTemplate.GetID(w, r)
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetList, id)
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetList, id, session.UserID, session.AccessScope)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {

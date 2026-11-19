@@ -526,6 +526,9 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 				control.ResourceName = urlSplit[3]
 			case 6:
 				control.ResourceName = urlSplit[3]
+				if urlSplit[5] == "bookings" || urlSplit[5] == "bookingPeople" {
+					control.ResourceName = urlSplit[5]
+				}
 			case 7:
 				if urlSplit[4] == "checkout" {
 					// Keep checkout actions (create/check/success/cancel) bound to the bookings resource.
