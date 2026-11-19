@@ -97,6 +97,12 @@ func SyncBookingPaymentStatusTx(tx *sqlx.Tx, bookingID int) error {
 	if bookingID <= 0 {
 		return fmt.Errorf("invalid booking id")
 	}
+	// Serialize derived-state updates with webhook finalization and other ledger
+	// writers. The following summary sees the committed ledger after this lock.
+	var locked int
+	if err := tx.Get(&locked, `SELECT id FROM at_bookings WHERE id=$1 FOR UPDATE`, bookingID); err != nil {
+		return err
+	}
 
 	var summary bookingPaymentSummary
 	if err := tx.Get(&summary, qryBookingPaymentSummary, bookingID); err != nil {

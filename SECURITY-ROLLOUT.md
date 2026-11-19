@@ -45,3 +45,24 @@ uses `st_users`, and linking an existing account preserves its password hash.
 Request logs omit URL query strings and fragments, which may contain OAuth codes
 or email verification tokens. Synthetic-provider integration tests cover PKCE,
 browser mismatch, replay, and the separate continuation token.
+
+## Stripe finalization and checkout quotes
+
+Apply `db-server/sql/postgreSQL/20261119_01_stripe_checkout_integrity.sql`
+after the existing payment/refund migrations and before deploying this API. It
+adds immutable checkout quotes, processed event IDs, and a unique payment-session
+index. It does not delete or rewrite payment history. Resolve existing duplicate
+session IDs before applying the unique index; a failed migration rolls back.
+
+New checkout prices are calculated using decimal arithmetic and stored in minor
+units with currency. Signed webhooks must describe a completed, paid payment-mode
+checkout with the exact stored amount and currency. Event recording, the payment
+ledger and derived booking state commit together; failures return HTTP 500 for
+retry. Concurrent duplicate events cannot create duplicate payments. Refunds
+remain part of the derived balance.
+
+Browser redirects and checkout polling no longer finalize payments, including in
+development: configure Stripe webhook forwarding for local payment tests. Old
+in-flight checkouts without stored quotes deliberately fail closed and require
+reconciliation before rollout. Tests use synthetic events/data, never live Stripe
+charges.

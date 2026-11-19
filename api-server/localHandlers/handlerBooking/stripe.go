@@ -2,11 +2,12 @@ package handlerBooking
 
 import (
 	"api-server/v2/modelMethods/dbStandardTemplate"
+	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/models"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"io"
 	"log"
 	"net/http"
@@ -45,39 +46,7 @@ const (
 	qryUpdateStripeSession = `UPDATE at_bookings 
 		SET stripe_session_id = $2, booking_price = $3
 		WHERE id = $1`
-
-	qryUpdatePaymentByStripeSession = `UPDATE at_bookings
-		SET booking_status_id = $2, amount_paid = $3, payment_date = $4
-		WHERE stripe_session_id = $1 AND booking_status_id <> $2`
-
-	qryUpdatePaymentByBookingID = `UPDATE at_bookings
-		SET booking_status_id = $2, amount_paid = $3, payment_date = $4
-		WHERE id = $1 AND booking_status_id <> $2`
-
-	qryUpsertPaymentByStripeSession = `INSERT INTO at_payments (booking_id, payment_date, amount, payment_method, stripe_session_id)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (stripe_session_id)
-		DO UPDATE
-		SET booking_id = EXCLUDED.booking_id,
-			payment_date = EXCLUDED.payment_date,
-			amount = EXCLUDED.amount,
-			payment_method = EXCLUDED.payment_method,
-			modified = CURRENT_TIMESTAMP`
-
-	qryGetBookingByStripeSession = `SELECT id, owner_id, booking_status_id
-		FROM at_bookings
-		WHERE stripe_session_id = $1
-		LIMIT 1`
 )
-
-func (h *Handler) upsertPaymentRecord(bookingID int64, amountCents int64, paidAt time.Time, stripeSessionID string) error {
-	if bookingID <= 0 || stripeSessionID == "" {
-		return errors.New("invalid payment upsert payload")
-	}
-	amount := float64(amountCents) / 100.0
-	_, err := h.appConf.Db.Exec(qryUpsertPaymentByStripeSession, bookingID, paidAt, amount, "stripe_checkout", stripeSessionID)
-	return err
-}
 
 func logWebhookEvent(stage string, fields map[string]interface{}) {
 	if fields == nil {
@@ -166,9 +135,20 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx, err := h.appConf.Db.BeginTxx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, "database unavailable", 500)
+		return
+	}
+	defer tx.Rollback()
+	var locked int
+	if err := tx.GetContext(r.Context(), &locked, `SELECT id FROM at_bookings WHERE id=$1 AND owner_id=$2 AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS(SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id) FOR UPDATE`, bookingID, appSession.UserID); err != nil {
+		http.Error(w, "booking unavailable for checkout", 409)
+		return
+	}
 	// Fetch booking details
 	bookingItem := &models.BookingPaymentInfo{}
-	err = Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
+	err = tx.GetContext(r.Context(), bookingItem, qryGetBookingForPayment, bookingID)
 	if err != nil {
 		log.Printf("%v get booking failed err=%v booking=%+v", debugTag+"Handler.CheckoutCreate()", err, bookingItem)
 		return
@@ -182,11 +162,11 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create Stripe checkout session
-	chargeAmount := bookingItem.BookingCost.ValueOrZero()
-	if bookingItem.BookingPrice.ValueOrZero() > 0 {
-		chargeAmount = bookingItem.BookingPrice.ValueOrZero()
+	chargeMinor, err := paymentLedger.Quote(r.Context(), tx, bookingID)
+	if err != nil {
+		http.Error(w, "cannot calculate checkout price", 409)
+		return
 	}
-
 	params := &stripe.CheckoutSessionParams{
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
@@ -196,7 +176,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 						Description: stripe.String("Trip description: " + bookingItem.Description.String),
 						Name:        stripe.String("Trip name = " + bookingItem.TripName.String),
 					},
-					UnitAmount: stripe.Int64(int64(chargeAmount * 100)), //Amount in cents
+					UnitAmount: stripe.Int64(chargeMinor), //Amount in cents
 				},
 				Quantity: stripe.Int64(1),
 			},
@@ -223,15 +203,18 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("%v created session id=%v bookingID=%v", debugTag+"Handler.CheckoutCreate()", CheckoutSession.ID, bookingID)
 
-	//Update the Booking record with the stripe checkout session id
-	bookingItem.StripeSessionID.SetValid(CheckoutSession.ID)
-	err = Update(w, r, debugTag, h.appConf.Db, bookingItem, qryUpdateStripeSession, bookingItem.ID, bookingItem.StripeSessionID, bookingItem.BookingCost)
-	if err != nil {
-		log.Printf("%v update booking stripe session failed err=%v booking=%+v", debugTag+"Handler.CheckoutCreate()", err, bookingItem)
+	if _, err := tx.ExecContext(r.Context(), `INSERT INTO at_checkout_quotes(session_id,booking_id,amount_minor,currency) VALUES($1,$2,$3,'nzd')`, CheckoutSession.ID, bookingID, chargeMinor); err != nil {
+		http.Error(w, "failed to save checkout quote", 500)
 		return
 	}
-	log.Printf("%v checkout_url=%v", debugTag+"Handler.CheckoutCreate()", CheckoutSession.URL)
-
+	if _, err := tx.ExecContext(r.Context(), `UPDATE at_bookings SET stripe_session_id=$2,booking_price=$3 WHERE id=$1`, bookingID, CheckoutSession.ID, decimal.NewFromInt(chargeMinor).Shift(-2)); err != nil {
+		http.Error(w, "failed to save checkout", 500)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "failed to save checkout", 500)
+		return
+	}
 	// Return structured JSON response
 	response := CheckoutCreateResponse{
 		CheckoutURL: CheckoutSession.URL,
@@ -269,6 +252,11 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v get booking failed err=%v", debugTag+"Handler.CheckoutCheck()", err)
 		return
 	}
+	appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if appSession == nil || bookingItem.OwnerID != int64(appSession.UserID) {
+		http.Error(w, "booking not found", 404)
+		return
+	}
 	if !bookingItem.StripeSessionID.Valid || bookingItem.StripeSessionID.String == "" {
 		log.Printf("%v no stripe session found for booking=%d", debugTag+"Handler.CheckoutCheck()", bookingID)
 		http.Error(w, "No Stripe session found for booking", http.StatusNotFound)
@@ -299,33 +287,6 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 			log.Printf("%v failed to write checkout status response (open): %v", debugTag+"Handler.CheckoutCheck()", err)
 		}
 	case stripe.CheckoutSessionStatusComplete: //"complete":
-		if h.appConf.TestMode && h.appConf.Settings.StripeWebhookSecret == "" {
-			// Dev-only fallback for local testing when webhook forwarding is not configured.
-			// Production still relies on webhook-only finalization.
-			updateRes, updateErr := h.appConf.Db.Exec(qryUpdatePaymentByBookingID, bookingItem.ID, int(models.Full_amountPaid), CheckoutSession.AmountTotal, time.Now())
-			if updateErr != nil {
-				logWebhookEvent("dev_fallback_db_update_failed", map[string]interface{}{
-					"booking_id":          bookingItem.ID,
-					"checkout_session_id": bookingItem.StripeSessionID.String,
-					"error":               updateErr.Error(),
-				})
-			} else {
-				if upsertErr := h.upsertPaymentRecord(int64(bookingItem.ID), CheckoutSession.AmountTotal, time.Now(), bookingItem.StripeSessionID.String); upsertErr != nil {
-					logWebhookEvent("dev_fallback_payment_upsert_failed", map[string]interface{}{
-						"booking_id":          bookingItem.ID,
-						"checkout_session_id": bookingItem.StripeSessionID.String,
-						"error":               upsertErr.Error(),
-					})
-				}
-				rows, _ := updateRes.RowsAffected()
-				logWebhookEvent("dev_fallback_applied", map[string]interface{}{
-					"booking_id":          bookingItem.ID,
-					"checkout_session_id": bookingItem.StripeSessionID.String,
-					"rows_affected":       rows,
-				})
-			}
-		}
-
 		// Webhook is authoritative for DB updates. This endpoint only reports Stripe status.
 		response.AmountTotal = float64(CheckoutSession.AmountTotal) / 100
 		now := time.Now()
@@ -352,48 +313,6 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v handling checkout success", debugTag+"CheckoutSuccess()")
 	bookingID := dbStandardTemplate.GetID(w, r)
-
-	if h.appConf.TestMode && h.appConf.Settings.StripeWebhookSecret == "" && bookingID > 0 {
-		bookingItem := &models.BookingPaymentInfo{}
-		if err := Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID); err != nil {
-			logWebhookEvent("dev_fallback_success_lookup_failed", map[string]interface{}{
-				"booking_id": bookingID,
-				"error":      err.Error(),
-			})
-		} else if bookingItem.StripeSessionID.Valid && bookingItem.StripeSessionID.String != "" {
-			checkoutSession, err := session.Get(bookingItem.StripeSessionID.String, nil)
-			if err != nil {
-				logWebhookEvent("dev_fallback_success_session_get_failed", map[string]interface{}{
-					"booking_id":          bookingID,
-					"checkout_session_id": bookingItem.StripeSessionID.String,
-					"error":               err.Error(),
-				})
-			} else if checkoutSession != nil && checkoutSession.Status == stripe.CheckoutSessionStatusComplete {
-				updateRes, updateErr := h.appConf.Db.Exec(qryUpdatePaymentByBookingID, bookingID, int(models.Full_amountPaid), checkoutSession.AmountTotal, time.Now())
-				if updateErr != nil {
-					logWebhookEvent("dev_fallback_success_db_update_failed", map[string]interface{}{
-						"booking_id":          bookingID,
-						"checkout_session_id": bookingItem.StripeSessionID.String,
-						"error":               updateErr.Error(),
-					})
-				} else {
-					if upsertErr := h.upsertPaymentRecord(int64(bookingID), checkoutSession.AmountTotal, time.Now(), bookingItem.StripeSessionID.String); upsertErr != nil {
-						logWebhookEvent("dev_fallback_success_payment_upsert_failed", map[string]interface{}{
-							"booking_id":          bookingID,
-							"checkout_session_id": bookingItem.StripeSessionID.String,
-							"error":               upsertErr.Error(),
-						})
-					}
-					rows, _ := updateRes.RowsAffected()
-					logWebhookEvent("dev_fallback_success_applied", map[string]interface{}{
-						"booking_id":          bookingID,
-						"checkout_session_id": bookingItem.StripeSessionID.String,
-						"rows_affected":       rows,
-					})
-				}
-			}
-		}
-	}
 
 	if h.appConf.TestMode {
 		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
@@ -488,7 +407,7 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload, err := io.ReadAll(r.Body)
+	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
 	if err != nil {
 		logWebhookEvent("read_error", map[string]interface{}{
 			"error":               err.Error(),
@@ -553,93 +472,17 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.appConf.Db.Exec(qryUpdatePaymentByStripeSession, checkoutSession.ID, int(models.Full_amountPaid), checkoutSession.AmountTotal, time.Now())
-	if err != nil {
-		logWebhookEvent("db_update_failed", map[string]interface{}{
-			"event_id":            event.ID,
-			"checkout_session_id": checkoutSession.ID,
-			"error":               err.Error(),
-		})
-		http.Error(w, "db update failed", http.StatusInternalServerError)
+	if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid || checkoutSession.Status != stripe.CheckoutSessionStatusComplete || checkoutSession.Mode != stripe.CheckoutSessionModePayment {
+		http.Error(w, "checkout is not paid", http.StatusBadRequest)
 		return
 	}
-
-	rows, _ := res.RowsAffected()
-
-	replay := false
-	replayReason := ""
-	bookingID := int64(0)
-	ownerID := int64(0)
-	bookingStatus := int64(0)
-	if rows == 0 {
-		replay = true
-		var rowBookingID sql.NullInt64
-		var rowOwnerID sql.NullInt64
-		var rowBookingStatus sql.NullInt64
-		rowErr := h.appConf.Db.QueryRow(qryGetBookingByStripeSession, checkoutSession.ID).Scan(&rowBookingID, &rowOwnerID, &rowBookingStatus)
-		switch {
-		case rowErr == sql.ErrNoRows:
-			replayReason = "no_booking_for_session"
-		case rowErr != nil:
-			replayReason = "lookup_error"
-		default:
-			if rowBookingID.Valid {
-				bookingID = rowBookingID.Int64
-			}
-			if rowOwnerID.Valid {
-				ownerID = rowOwnerID.Int64
-			}
-			if rowBookingStatus.Valid {
-				bookingStatus = rowBookingStatus.Int64
-			}
-			if bookingStatus == int64(models.Full_amountPaid) {
-				replayReason = "already_paid"
-			} else {
-				replayReason = "no_state_change"
-			}
-		}
+	replay, err := paymentLedger.Finalize(r.Context(), h.appConf.Db, event.ID, checkoutSession.ID, checkoutSession.AmountTotal, string(checkoutSession.Currency))
+	if err != nil {
+		logWebhookEvent("finalization_failed", map[string]interface{}{"event_id": event.ID, "checkout_session_id": checkoutSession.ID})
+		http.Error(w, "payment finalization failed; retry required", http.StatusInternalServerError)
+		return
 	}
-
-	if bookingID == 0 || ownerID == 0 {
-		var rowBookingID sql.NullInt64
-		var rowOwnerID sql.NullInt64
-		var rowBookingStatus sql.NullInt64
-		rowErr := h.appConf.Db.QueryRow(qryGetBookingByStripeSession, checkoutSession.ID).Scan(&rowBookingID, &rowOwnerID, &rowBookingStatus)
-		if rowErr == nil {
-			if rowBookingID.Valid {
-				bookingID = rowBookingID.Int64
-			}
-			if rowOwnerID.Valid {
-				ownerID = rowOwnerID.Int64
-			}
-			if rowBookingStatus.Valid {
-				bookingStatus = rowBookingStatus.Int64
-			}
-		}
-	}
-
-	if bookingID > 0 {
-		if upsertErr := h.upsertPaymentRecord(bookingID, checkoutSession.AmountTotal, time.Now(), checkoutSession.ID); upsertErr != nil {
-			logWebhookEvent("payment_upsert_failed", map[string]interface{}{
-				"event_id":            event.ID,
-				"checkout_session_id": checkoutSession.ID,
-				"booking_id":          bookingID,
-				"error":               upsertErr.Error(),
-			})
-		}
-	}
-
-	logWebhookEvent("finalized", map[string]interface{}{
-		"event_id":            event.ID,
-		"event_type":          event.Type,
-		"checkout_session_id": checkoutSession.ID,
-		"booking_id":          bookingID,
-		"owner_id":            ownerID,
-		"booking_status_id":   bookingStatus,
-		"rows_affected":       rows,
-		"replay_detected":     replay,
-		"replay_reason":       replayReason,
-	})
+	logWebhookEvent("finalized", map[string]interface{}{"event_id": event.ID, "checkout_session_id": checkoutSession.ID, "replay_detected": replay})
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -724,7 +567,7 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 // validateBookingForPayment checks if booking can proceed to payment
 func (h *Handler) validateBookingForPayment(bookingItem *models.BookingPaymentInfo, appSessionUserID int64) error {
 	// Check if booking will exceed trip capacity
-	if bookingItem.BookingPosition.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxParticipants.Int64 {
+	if bookingItem.TripPersonCount.Int64+bookingItem.BookingParticipants.Int64 > bookingItem.MaxParticipants.Int64 {
 		return errors.New("payment disallowed: the booking will exceed the trip capacity")
 	}
 
