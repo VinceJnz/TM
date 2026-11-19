@@ -33,4 +33,17 @@ Invoke-Docker @(
 	"sh", "-c", "go test ./..."
 )
 
+Write-Host "Building the production API image without credentials..."
+Invoke-Docker @(
+	"build", "-f", (Join-Path $repositoryRoot "Dockerfile.apibuild"),
+	"--target", "final", "--build-arg", "CLIENT_IMAGE=tm-client1-wasm:tinygo",
+	"-t", "tm-apiserver:verify", $repositoryRoot
+)
+
+Write-Host "Checking image identity, credentials, and WASM artifacts..."
+Invoke-Docker @(
+	"run", "--rm", "--entrypoint", "sh", "tm-apiserver:verify", "-ec",
+	'id -u | grep -qx 10001; test ! -e /app/.env; test -s /app/static/main.wasm; test -s /app/static/wasm_exec.js; if find /etc/certs -type f | grep -q .; then exit 1; fi'
+)
+
 Write-Host "Release verification passed."

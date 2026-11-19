@@ -1,123 +1,94 @@
-##version: '3.8'
+x-api: &api
+  build:
+    context: .
+    dockerfile: Dockerfile.apibuild
+    target: final
+    args:
+      CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
+  env_file:
+    - ${TM_API_ENV_FILE:-./api-server/.env}
+  environment:
+    DEV_MODE: "false"
+    EMAIL_DEBUG_ADDR: ""
+    DB_HOST: dbserver
+    DB_PORT: "5432"
+    DB_USER: ${TM_API_DB_USER:-api_user}
+    DB_PASSWORD: ${TM_API_DB_PASSWORD:?Set TM_API_DB_PASSWORD outside source control}
+    DB_NAME: ${TM_DB_NAME:-mydatabase}
+  ports:
+    - "127.0.0.1:8085:8085"
+    - "8086:8086"
+  depends_on:
+    dbserver:
+      condition: service_healthy
+  networks: [mynetwork]
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  volumes:
+    - ./certs/api-server:/etc/certs/ssl:ro
+    - ./data/gmail-tokens:/etc/certs/gmail-tokens
+    - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro
 
 services:
   dbserver:
     image: postgres:13
-    container_name: dbserver
     environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${TM_DB_NAME:-mydatabase}
+      POSTGRES_USER: ${TM_DB_USER:-myuser}
+      POSTGRES_PASSWORD: ${TM_DB_PASSWORD:?Set TM_DB_PASSWORD outside source control}
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./db-server/init:/docker-entrypoint-initdb.d  # Mounting init scripts
-    networks:
-      - mynetwork
+    networks: [mynetwork]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   adminer:
+    profiles: ["tools"]
     image: adminer
-    container_name: dbadminer
     environment:
-      ADMINER_DEFAULT_SERVER: db
-    ports:
-      - "8082:8080"
-    networks:
-      - mynetwork
-
-  #webserver:
-  #  build:
-  #    context: .
-  #    dockerfile: Dockerfile.webbuild
-  #  container_name: webserver
-  #  ports:
-  #    - "8081:8081"
-  #  networks:
-  #    - mynetwork
+      ADMINER_DEFAULT_SERVER: dbserver
+    ports: ["127.0.0.1:8082:8080"]
+    networks: [mynetwork]
 
   apiserver:
+    <<: *api
     profiles: ["prod"]
-    build:
-      context: .                        # Updated context for API server
-      dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
-      target: final                     # <-- normal build (production image)
-      args:
-        CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
-    container_name: apiserver
-    ports:
-      - "8085:8085"
-      - "8086:8086"
-    networks:
-      - mynetwork
-    environment:
-      - GO_ENV=production
-##    - DATABASE_URL=postgres://user:password@postgres:5432/mydb
-      - DATABASE_URL=dbserver://api_user:api_password@postgres:5432/mydatabase
-    depends_on:
-##      - postgres
-      - dbserver
-    volumes:
-      - ./data/gmail-tokens:/etc/certs/gmail-tokens
-      - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
-      #- gmail-tokens:/etc/certs/gmail-tokens
-      #- gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
 
   apiserver-interactive:
+    <<: *api
     profiles: ["interactive"]
     build:
-      context: .                        # Updated context for API server
-      dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
-      target: interactive               # <-- interactive build (for development with mounted code)
-    container_name: apiserver
-    ports:
-      - "8085:8085"
-      - "8086:8086"
-    networks:
-      - mynetwork
-    environment:
-      - GO_ENV=production
-##    - DATABASE_URL=postgres://user:password@postgres:5432/mydb
-      - DATABASE_URL=dbserver://api_user:api_password@postgres:5432/mydatabase
-    depends_on:
-##      - postgres
-      - dbserver
-    volumes:
-      - ./data/gmail-tokens:/etc/certs/gmail-tokens
-      - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
-      #- gmail-tokens:/etc/certs/gmail-tokens
-      #- gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
+      context: .
+      dockerfile: Dockerfile.apibuild
+      target: interactive
+      args:
+        CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
 
   apiserver-debug:
+    <<: *api
     profiles: ["debug"]
+    read_only: false
     build:
-      context: .                        # Updated context for API server
-      dockerfile: Dockerfile.apibuild   # Dockerfile for the API server
-      target: debug                     # <-- debug stage from modified Dockerfile
-    container_name: apiserver-debug
+      context: .
+      dockerfile: Dockerfile.apibuild
+      target: debug
+      args:
+        CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
     ports:
-      - "8085:8085"
-      - "8086:8086"
-      - "40000:40000"        # expose Delve debugger port
-    networks:
-      - mynetwork
-    environment:
-      - GO_ENV=debug
-##    - DATABASE_URL=postgres://user:password@postgres:5432/mydb
-      - DATABASE_URL=dbserver://api_user:api_password@postgres:5432/mydatabase
-    security_opt:            # needed if Delve complains about ptrace
-      - "seccomp:unconfined"
-    cap_add:
-      - SYS_PTRACE
-    depends_on:
-##      - postgres
-      - dbserver
+      - "127.0.0.1:8085:8085"
+      - "127.0.0.1:8086:8086"
+      - "127.0.0.1:40000:40000"
+    cap_add: [SYS_PTRACE]
+    security_opt: ["seccomp:unconfined"]
     volumes:
+      - ./certs/api-server:/etc/certs/ssl:ro
       - ./data/gmail-tokens:/etc/certs/gmail-tokens
-      - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
-      # - gmail-credentials:/etc/certs/gmail-credentials:ro  # Optional: for credentials file
-      ##- ./api-server/app    # <-- mount local code to /app in container
-      - D:/Users/Vince/Documents/GitHub/TM:/src
+      - ./data/gmail-credentials:/etc/certs/gmail-credentials:ro
 
 networks:
   mynetwork:
@@ -125,4 +96,3 @@ networks:
 
 volumes:
   db_data:
-  #gmail-tokens:

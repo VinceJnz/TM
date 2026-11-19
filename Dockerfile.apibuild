@@ -1,149 +1,41 @@
+# syntax=docker/dockerfile:1.7
 ARG CLIENT_IMAGE=tm-client1-wasm:go-dev
 FROM ${CLIENT_IMAGE} AS client1-artifact
 
-
-############################################################
-# STAGE2: Use a lightweight Go image to build the binary
 FROM golang:1.24.0-alpine AS apibuilder
-
-# Set working directory in the container
 WORKDIR /app
+COPY api-server/go.mod api-server/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY api-server/ ./
+RUN --mount=type=cache,target=/go/pkg/mod go build -o /app/apiserver .
 
-# Copy dependency files first
-COPY ./api-server/go.mod ./api-server/go.sum ./
-RUN go mod download
-
-# Copy the Go API server source code to the container
-COPY ./api-server/ .
-COPY ./certs/api-server/ ./certs/ssl/
-COPY ./certs/gmail/ ./certs/gmail/
-COPY ./certs/stripe/ ./certs/stripe/
-
-# Build the Go API server
-#RUN go mod download
-# Normal build
-RUN go build -o apiserver .
-
-############################################################
-# STAGE 3: Create a clean image for the final output
-FROM alpine:latest AS final
-
-# Copy the static files from the builder stage to the static folder
+FROM alpine:latest AS runtime
+RUN apk add --no-cache ca-certificates && \
+    addgroup -g 10001 tm && adduser -D -u 10001 -G tm tm && \
+    mkdir -p /etc/certs/ssl /etc/certs/gmail-tokens /etc/certs/gmail-credentials && \
+    chown -R 10001:10001 /etc/certs/gmail-tokens
+WORKDIR /app
 COPY --from=apibuilder /app/static/ ./static/
-
-# Copy the compiled wasm binary from the builder stage to the static folder
-COPY --from=client1-artifact /out/main.wasm ./static/
-COPY --from=client1-artifact /out/wasm_exec.js ./static/
-
-# Copy the compiled webserver binary from the builder stage
-COPY --from=apibuilder /app/apiserver .
-COPY --from=apibuilder /app/.env .
-COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
-# comment out if credentials are loaded manually at runtime from mounted volume
-#COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
-COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
-
-# Create directory for runtime OAuth tokens
-#RUN mkdir -p /etc/certs/gmail-tokens && chmod 755 /etc/certs/gmail-tokens
-#RUN mkdir -p /etc/certs/gmail-credentials && chmod 755 /etc/certs/gmail-credentials
-# Windows hosts may have issues with chmod, so just create the directories
-RUN mkdir -p /etc/certs/gmail-tokens /etc/certs/gmail-credentials
-
-# Expose the port the API server listens on
+COPY --from=client1-artifact /out/main.wasm /out/wasm_exec.js ./static/
+COPY --from=apibuilder /app/apiserver ./apiserver
+USER 10001:10001
 EXPOSE 8085 8086
 
-# Command to run the API server
+FROM runtime AS final
 CMD ["./apiserver"]
-# Command to use to launch an interactive shell
-#CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
 
-
-############################################################
-# STAGE 4: Create a clean image for the final output
-FROM alpine:latest AS interactive
-
-# Copy the static files from the builder stage to the static folder
-COPY --from=apibuilder /app/static/ ./static/
-
-# Copy the compiled wasm binary from the builder stage to the static folder
-COPY --from=client1-artifact /out/main.wasm ./static/
-COPY --from=client1-artifact /out/wasm_exec.js ./static/
-
-# Copy the compiled webserver binary from the builder stage
-COPY --from=apibuilder /app/apiserver .
-COPY --from=apibuilder /app/.env .
-COPY --from=apibuilder /app/certs/ssl/* /etc/certs/ssl/
-# comment out if credentials are loaded manually at runtime from mounted volume
-#COPY --from=apibuilder /app/certs/gmail/*.json /etc/certs/gmail/
-COPY --from=apibuilder /app/certs/stripe/* /etc/certs/stripe/
-
-# Create directory for runtime OAuth tokens
-#RUN mkdir -p /etc/certs/gmail-tokens && chmod 755 /etc/certs/gmail-tokens
-#RUN mkdir -p /etc/certs/gmail-credentials && chmod 755 /etc/certs/gmail-credentials
-# Windows hosts may have issues with chmod, so just create the directories
-RUN mkdir -p /etc/certs/gmail-tokens /etc/certs/gmail-credentials
-
-# Expose the port the API server listens on
-EXPOSE 8085 8086
-
-# Command to run the API server
-#CMD ["./apiserver"]
-# Command to use to launch an interactive shell
+FROM runtime AS interactive
 CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
 
-############################################################
-# STAGE 5: Debug image (delve enabled)
-FROM golang:1.23.4-alpine AS debug
-WORKDIR /app
-
-# Install Delve - for debugging
-RUN apk add --no-cache git bash && \
-    go install github.com/go-delve/delve/cmd/dlv@latest
-
-# Copy the certs to the server
-COPY ./certs/api-server/ /etc/certs/ssl/
-COPY ./certs/gmail/*.json /etc/certs/gmail/
-COPY ./certs/stripe/ /etc/certs/stripe/
-
-# Create empty directories for volume mounts - CRITICAL for Docker volume mounting
-RUN mkdir -p /etc/certs/gmail-tokens /etc/certs/gmail-credentials
-
-# Copy the static files from the source to the static folder
-COPY ./api-server/static/*.html /static/
-COPY ./api-server/static/*.css /static/
-COPY ./api-server/static/*.txt /static/
-COPY ./api-server/static/favicon.ico /static/
-COPY ./api-server/static/favicon.png /static/
-COPY ./api-server/.env /
-
-# Copy the compiled wasm binary from the builder stage to the static folder
-COPY --from=wasmbuilder /app/main.wasm /static/
-COPY --from=wasmbuilder /app/wasm_exec.js /static/
-RUN chown root:root /static/wasm_exec.js /static/main.wasm
-
-# Copy the startup script from the build context
-COPY ./api-server/debug-startup.sh /startup.sh
-RUN chmod +x /startup.sh
-
-# Expose the port the API server listens on
-# App ports
+FROM apibuilder AS debug
+ARG DELVE_VERSION=v1.24.2
+RUN apk add --no-cache ca-certificates git && \
+    GOBIN=/usr/local/bin go install github.com/go-delve/delve/cmd/dlv@${DELVE_VERSION} && \
+    go build -gcflags='all=-N -l' -o /app/apiserver . && \
+    addgroup -g 10001 tm && adduser -D -u 10001 -G tm tm && \
+    mkdir -p /etc/certs/ssl /etc/certs/gmail-tokens /etc/certs/gmail-credentials && \
+    chown -R 10001:10001 /etc/certs/gmail-tokens
+COPY --from=client1-artifact /out/main.wasm /out/wasm_exec.js ./static/
+USER 10001:10001
 EXPOSE 8085 8086 40000
-
-# Command to Run the server under Delve in headless mode for debugging
-#CMD ["dlv", "exec", "/apiserver", \
-#     "--headless", "--listen=:40000", "--api-version=2", "--accept-multiclient"]
-#CMD ["sh", "-c", "cd /src/api-server && go mod download && go build -gcflags='all=-N -l' -o /apiserver . && cd / && dlv exec /apiserver --headless --listen=:40000 --api-version=2 --accept-multiclient"]
-# Command to use to launch an interactive shell
-CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
-#CMD ["/startup.sh"]
-#CMD ["sh", "-c", "cd /src/api-server && go mod download && go build -o /apiserver . && cd / && /apiserver"]
-#CMD ["sh", "-c", "cd /src/api-server && go build -o /apiserver . && cd / && /apiserver"]
-#CMD ["sh", "-c", "cd /src/api-server && go mod download && go build -gcflags='all=-N -l' -o /apiserver . && cd / && dlv exec /apiserver --headless --listen=:40000 --api-version=2 --accept-multiclient"]
-#CMD ["sh", "-c", "cd /src/api-server && go build -gcflags='all=-N -l' -o /apiserver . && cd / && dlv exec /apiserver --headless --listen=:40000 --api-version=2 --accept-multiclient"]
-
-# NOTE: Because the apiserver binary looks for the static files in a relative directory (./static/)
-# you must launch the server from the folder that contains the static directory.
-# for example:
-#   from root dir "/"
-#   ls /static
-#   cd / && ./apiserver
+CMD ["dlv", "exec", "/app/apiserver", "--headless", "--listen=:40000", "--api-version=2", "--accept-multiclient"]

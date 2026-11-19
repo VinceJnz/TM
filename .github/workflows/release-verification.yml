@@ -11,6 +11,17 @@ jobs:
   verify:
     name: TinyGo client and Linux API tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: tm_test
+          POSTGRES_PASSWORD: synthetic-ci-only
+          POSTGRES_DB: tm_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tm_test -d tm_test"
+          --health-interval 5s --health-timeout 3s --health-retries 12
 
     steps:
       - name: Check out source
@@ -26,8 +37,16 @@ jobs:
 
       - name: Run API tests in Linux Go 1.24
         run: |
-          docker run --rm \
+          docker run --rm --network host \
+            -e TM_TEST_DATABASE_URL=postgres://tm_test:synthetic-ci-only@127.0.0.1:5432/tm_test?sslmode=disable \
             -v "$GITHUB_WORKSPACE/api-server:/app:ro" \
             -w /app \
             golang:1.24.0-alpine \
-            sh -c 'go test ./...'
+            sh -c 'go test -count=1 ./... && go vet ./...'
+
+      - name: Build and inspect production image
+        run: |
+          docker build -f Dockerfile.apibuild --target final \
+            --build-arg CLIENT_IMAGE=tm-client1-wasm:tinygo -t tm-apiserver:verify .
+          docker run --rm --entrypoint sh tm-apiserver:verify -ec \
+            'id -u | grep -qx 10001; test ! -e /app/.env; test -s /app/static/main.wasm; test -s /app/static/wasm_exec.js; if find /etc/certs -type f | grep -q .; then exit 1; fi'

@@ -66,3 +66,38 @@ development: configure Stripe webhook forwarding for local payment tests. Old
 in-flight checkouts without stored quotes deliberately fail closed and require
 reconciliation before rollout. Tests use synthetic events/data, never live Stripe
 charges.
+
+## Container runtime configuration
+
+API images no longer contain `.env`, TLS keys, Gmail credentials/tokens or Stripe
+credential files. The build context excludes credentials and database dumps.
+Production/interactive images run as UID/GID 10001 with a read-only root filesystem,
+no Linux capabilities, and a writable Gmail-token mount. CA certificates remain
+available for outbound TLS. The debugger is an explicit development profile.
+
+Set `TM_DB_PASSWORD` outside source control before using Compose; there is no
+default password. Set `TM_API_DB_PASSWORD` separately for the existing restricted
+API database role (`TM_API_DB_USER`, default `api_user`); the API must not use the
+PostgreSQL bootstrap superuser. `TM_DB_USER`/`TM_DB_NAME` default to the previous names. Keep the
+private API environment file at `api-server/.env`, or set `TM_API_ENV_FILE` to its
+location. Compose injects it at runtime; the application no longer requires an
+on-disk `.env`. Ensure any DATA_SOURCE in that file points to the intended database
+or remove it to use the injected DB_* settings. Do not put secrets in build args.
+
+TLS files mount from `certs/api-server` read-only; configure SERVER_KEY/SERVER_CERT
+for `/etc/certs/ssl`. Gmail credentials mount read-only from
+`data/gmail-credentials`; tokens mount writable from `data/gmail-tokens`. On Linux,
+grant UID 10001 read access to mounted credentials and write access only to the
+token directory. Review permissions rather than making credentials world-readable.
+
+Database ports are no longer published. Adminer is available only with the `tools`
+profile and binds to loopback; the debugger also binds to loopback. Production HTTP
+binds to loopback and HTTPS remains exposed. Existing database volumes and their
+passwords are not changed: use their current credentials or rotate them separately.
+The empty automatic-init mount was removed; apply schema/migrations explicitly.
+
+Previously built images may still contain old credentials. Retire those images
+and rotate exposed credentials through the appropriate deployment process; this
+change does not rewrite image history or rotate credentials in live services.
+Release verification now builds and inspects the production image. CI also runs
+the PostgreSQL integration tests against an isolated synthetic database service.

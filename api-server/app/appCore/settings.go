@@ -94,8 +94,8 @@ func (s *settings) Validate() error {
 func (s *settings) LoadEnv() error {
 	var err error
 	err = godotenv.Load() //default is to load .env file in the current directory
-	if err != nil {
-		return fmt.Errorf("error loading .env file (required): %w", err)
+	if err != nil && !os.IsNotExist(err) {
+		return errors.New("unable to load optional .env file")
 	}
 	s.Host = os.Getenv("HOST")
 	s.PortHttp = os.Getenv("HTTP_PORT")
