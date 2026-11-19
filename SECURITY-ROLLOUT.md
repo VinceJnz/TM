@@ -18,6 +18,15 @@ PostgreSQL integration tests use `TM_TEST_DATABASE_URL` pointing to a disposable
 database. Each test creates and removes a uniquely named schema. Never point this
 setting at production. Without this setting the integration tests are skipped.
 
+The authentication boundary also rejects `own` grants for handlers that do not
+implement ownership filtering. Global dictionaries, user directories, group
+booking administration and security administration require explicit `any`
+grants for the permitted HTTP methods. Trip writes support `own`; global trip
+reads require `any`. Unknown scope names fail closed. Review existing custom
+grants before rollout; no live permission records are modified automatically.
+Participant writes lock and recheck the parent booking to serialize with checkout
+and ownership changes.
+
 ## Booking financial fields
 
 Member booking requests ignore client-supplied prices and payment fields. New

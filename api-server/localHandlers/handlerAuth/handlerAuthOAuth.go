@@ -42,6 +42,10 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 					http.Error(w, "Not authorised - You don't have access to the requested resource.", http.StatusUnauthorized)
 					return
 				}
+				if !supportsScope(resource.ResourceName, resource.AccessMethod, accessCheck.AccessScope) {
+					writeJSONResponse(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "scope is not supported for this operation"}, "RequireSessionAuth")
+					return
+				}
 				// Check the user record is still valid/active
 				if user, err = dbAuthTemplate.UserReadQry(debugTag+"", h.appConf.Db, dbToken.UserID); err != nil {
 					log.Printf("%v failed reading user record: %v", debugTag, err)

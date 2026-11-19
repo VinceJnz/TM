@@ -30,11 +30,11 @@ const (
 				FROM at_booking_people bp
 					JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id
 				WHERE bp.booking_id = $1 AND (b.owner_id=$2 OR LOWER($3)='any')`
-	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) VALUES ($1, $2, $3, $4) RETURNING id`
+	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) SELECT $1,b.id,$3,$4 FROM at_bookings b WHERE b.id=$2 AND (b.owner_id=$1 OR LOWER($5)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL FOR UPDATE OF b RETURNING id`
 	qryUpdate = `UPDATE at_booking_people
 					SET (person_id, notes) = ($4, $5)
-					WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL)`
-	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL)`
+					WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL FOR UPDATE OF b)`
+	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL FOR UPDATE OF b)`
 )
 
 type Handler struct {
@@ -136,7 +136,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.BookingID, record.PersonID, record.Notes)
+	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.BookingID, record.PersonID, record.Notes, session.AccessScope)
 }
 
 // Update: modifies the existing record identified by id and returns the updated record
