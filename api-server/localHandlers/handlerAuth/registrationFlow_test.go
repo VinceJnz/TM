@@ -113,7 +113,7 @@ func registrationHandler(t *testing.T, db *registrationDB) (*Handler, *bytes.Buf
 	previousOutput := log.Writer()
 	log.SetOutput(&logs)
 	t.Cleanup(func() { log.SetOutput(previousOutput) })
-	return New(&appCore.Config{Db: sqlx.NewDb(connection, "postgres")}), &logs
+	return New(&appCore.Config{Db: sqlx.NewDb(connection, "postgres"), EmailSvc: testMailer{}}), &logs
 }
 
 func TestRegistrationFlowPersistsOnlyHashAndDoesNotLogSecrets(t *testing.T) {
@@ -177,3 +177,8 @@ func TestVerifyRegistrationRejectsLegacyPlaintextBeforeUserCreation(t *testing.T
 		}
 	}
 }
+
+type testMailer struct{}
+
+func (testMailer) SendMail(string, string, string) (bool, error) { return true, nil }
+func (testMailer) RenewURL() string                              { return "" }

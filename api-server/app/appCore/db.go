@@ -1,6 +1,7 @@
 package appCore
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -17,6 +18,10 @@ set DB_NAME mydatabase
 */
 
 func InitDB(dataSource string) (*sqlx.DB, error) {
+	return InitDBContext(context.Background(), dataSource)
+}
+
+func InitDBContext(ctx context.Context, dataSource string) (*sqlx.DB, error) {
 	var err error
 	var db *sqlx.DB
 	connStr := strings.TrimSpace(dataSource)
@@ -27,15 +32,32 @@ func InitDB(dataSource string) (*sqlx.DB, error) {
 
 	// Retry up to 3 times
 	for i := 0; i < 3; i++ {
-		db, err = sqlx.Connect("postgres", connStr)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		db, err = sqlx.Open("postgres", connStr)
 		if err != nil {
-			log.Printf("%sInitDB() connect attempt %d/3 failed: %v", debugTag, i+1, err)
+			return nil, fmt.Errorf("database configuration invalid")
+		}
+		db.SetMaxOpenConns(20)
+		db.SetMaxIdleConns(5)
+		db.SetConnMaxLifetime(30 * time.Minute)
+		db.SetConnMaxIdleTime(5 * time.Minute)
+		ping, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err = db.PingContext(ping)
+		cancel()
+		if err != nil {
+			db.Close()
+			log.Printf("%sInitDB() connect attempt %d/3 failed", debugTag, i+1)
 		} else {
 			log.Printf("%sInitDB() connected", debugTag)
 			return db, nil
 		}
-		time.Sleep(1 * time.Second)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Second):
+		}
 	}
-	log.Printf("%sInitDB() unable to connect after retries: %v", debugTag, err)
-	return nil, fmt.Errorf("unable to connect to database after retries: %w", err)
+	return nil, fmt.Errorf("unable to connect to database after retries")
 }

@@ -57,6 +57,10 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 
 // RequestLoginToken accepts {"username":"..."} or {"email":"..."} and sends a one-time token
 func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
+	if h.appConf == nil || h.appConf.EmailSvc == nil {
+		http.Error(w, "email service unavailable", 503)
+		return
+	}
 	var payload struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -152,6 +156,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.appConf == nil || h.appConf.EmailSvc == nil {
+		http.Error(w, "email service unavailable", 503)
+		return
+	}
 	// Fetch the age group to validate it exists and get its name
 	ageGroupName, err := handlerHelpers.GetAgeGroupByID(h.appConf.Db, payload.UserAgeGroupID.Int64)
 	if err != nil {
@@ -370,6 +378,10 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 // Expects: {"username": "..."} or {"email": "..."}
 // Returns: OTP sent to email
 func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
+	if h.appConf == nil || h.appConf.EmailSvc == nil {
+		http.Error(w, "email service unavailable", 503)
+		return
+	}
 	var payload struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -555,6 +567,10 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 // Expects: {"username": "...", "password": "..."}
 // Returns: OTP sent to registered email
 func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
+	if h.appConf == nil || h.appConf.EmailSvc == nil {
+		http.Error(w, "email service unavailable", 503)
+		return
+	}
 	var payload models.LoginWithPasswordPayload
 	if err := handlerHelpers.DecodeJSONBody(r, &payload); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)

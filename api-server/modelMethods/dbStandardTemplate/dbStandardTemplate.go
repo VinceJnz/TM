@@ -19,7 +19,7 @@ const debugTag = "dbStandardTemplate."
 
 // GetAll: retrieves and returns all records
 func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string) {
-	err := Db.Select(dest, query)
+	err := Db.SelectContext(r.Context(), dest, query)
 	if err == sql.ErrNoRows {
 		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
@@ -33,7 +33,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // Get: retrieves and returns a single record identified by id
 func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	err := Db.Get(dest, query, args...)
+	err := Db.GetContext(r.Context(), dest, query, args...)
 	if err == sql.ErrNoRows {
 		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
@@ -47,7 +47,7 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 
 // Get: retrieves and returns a list of records identified by parent id
 func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	err := Db.Select(dest, query, args...)
+	err := Db.SelectContext(r.Context(), dest, query, args...)
 	if err == sql.ErrNoRows {
 		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
@@ -63,13 +63,13 @@ func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.D
 func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	log.Printf(debugTag+debugStr+"Create dest=%+v", dest)
 
-	tx, err := Db.Beginx() // Start transaction
+	tx, err := Db.BeginTxx(r.Context(), nil) // Start transaction
 	if err != nil {
 		http.Error(w, debugTag+debugStr+"Create: Could not start transaction", http.StatusInternalServerError)
 		return
 	}
 
-	err = tx.QueryRow(query, args...).Scan(dest)
+	err = tx.QueryRowContext(r.Context(), query, args...).Scan(dest)
 	if err != nil {
 		tx.Rollback() // Rollback on error
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -89,13 +89,13 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // Update: modifies the existing record identified by id and returns the updated record
 func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	tx, err := Db.Beginx() // Start transaction
+	tx, err := Db.BeginTxx(r.Context(), nil) // Start transaction
 	if err != nil {
 		http.Error(w, debugTag+debugStr+"Create: Could not start transaction", http.StatusInternalServerError)
 		return
 	}
 
-	result, err := tx.Exec(query, args...)
+	result, err := tx.ExecContext(r.Context(), query, args...)
 	if err != nil {
 		tx.Rollback() // Rollback on error
 		log.Printf(debugTag+debugStr+"Update err=%+v, result=%+v", err, result)
@@ -118,13 +118,13 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 // WARNING: This function does NOT check for child records. Use DeleteWithChildCheck for safer deletion.
 func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	// Begin transaction
-	tx, err := Db.Beginx()
+	tx, err := Db.BeginTxx(r.Context(), nil)
 	if err != nil {
 		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 		return
 	}
 
-	result, err := tx.Exec(query, args...)
+	result, err := tx.ExecContext(r.Context(), query, args...)
 	if err != nil {
 		tx.Rollback()
 		log.Printf(debugTag+debugStr+"Delete result=%+v, error=%v", result, err)
@@ -184,13 +184,13 @@ func DeleteWithChildCheck(w http.ResponseWriter, r *http.Request, debugStr strin
 	}
 
 	// Proceed with delete if no children found
-	tx, err := Db.Beginx()
+	tx, err := Db.BeginTxx(r.Context(), nil)
 	if err != nil {
 		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
 		return
 	}
 
-	result, err := tx.Exec(query, args...)
+	result, err := tx.ExecContext(r.Context(), query, args...)
 	if err != nil {
 		tx.Rollback()
 		log.Printf("%sDeleteWithChildCheck: Delete failed: %v", debugTag+debugStr, err)

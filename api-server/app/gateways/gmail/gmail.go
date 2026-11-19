@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -55,6 +56,7 @@ func getClient(tokenFile string, config *oauth2.Config, authCode string) (*http.
 	// The config.Client will automatically renew tokens when they expire
 	// as long as the refresh token is valid
 	client := config.Client(context.Background(), tok)
+	client.Timeout = 15 * time.Second
 	return client, nil
 }
 
@@ -73,13 +75,12 @@ func getTokenFromWeb(config *oauth2.Config, providedAuthCode string) (*oauth2.To
 	authCode = providedAuthCode
 
 	if authCode == "" {
-		// Fall back to stdin
-		if _, err := fmt.Scan(&authCode); err != nil {
-			return nil, fmt.Errorf("unable to read authorization code: %w", err)
-		}
+		return nil, errors.New("Gmail authorization required; configure a token or GMAIL_AUTH_CODE")
 	}
 
-	tok, err := config.Exchange(context.Background(), authCode, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	tok, err := config.Exchange(ctx, authCode, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve token from web: %w", err)
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/app/httpserver"
 	"api-server/v2/localHandlers/handlerAccessLevel"
 	"api-server/v2/localHandlers/handlerAccessScope"
 	"api-server/v2/localHandlers/handlerAuth"
@@ -32,16 +33,17 @@ import (
 	"api-server/v2/localHandlers/handlerUserAgeGroups"
 	"api-server/v2/localHandlers/handlerUserPayments"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbAuthTemplate"
-	"fmt"
+	"context"
 	"log"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
-	"time"
+	"syscall"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 )
 
 const debugTag = "main."
@@ -60,41 +62,20 @@ func parseOrigins(csv string) []string {
 	return origins
 }
 
-// startTokenCleanupJob runs token cleanup every 15 minutes in the background.
-// This removes expired tokens from the database to prevent storage bloat and maintain security.
-// Token cleanup was moved from the hot read path (FindSessionToken/FindToken) to this
-// background job to improve performance and reduce database write pressure on authenticated requests.
-func startTokenCleanupJob(db *sqlx.DB) {
-	ticker := time.NewTicker(15 * time.Minute)
-	go func() {
-		// Run cleanup immediately on startup
-		if err := dbAuthTemplate.TokenCleanExpired("background-cleanup-startup", db); err != nil {
-			log.Printf("%sToken cleanup job (startup) failed: %v", debugTag, err)
-		} else {
-			log.Printf("%sToken cleanup job (startup) completed successfully", debugTag)
-		}
-
-		// Then run on schedule
-		for range ticker.C {
-			if err := dbAuthTemplate.TokenCleanExpired("background-cleanup", db); err != nil {
-				log.Printf("%sToken cleanup job failed: %v", debugTag, err)
-			} else {
-				log.Printf("%sToken cleanup job completed successfully", debugTag)
-			}
-		}
-	}()
-	log.Printf("%sToken cleanup background job started (runs every 15 minutes)", debugTag)
-}
-
 func main() {
-	debugFlag := true
-	app := appCore.New(debugFlag)
-	app.Run()
+	if err := run(); err != nil {
+		log.Print(err)
+		os.Exit(1)
+	}
+}
+func run() error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	app := appCore.New(false)
 	defer app.Close()
-
-	// Start background jobs
-	startTokenCleanupJob(app.Db)
-
+	if err := app.Run(ctx); err != nil {
+		return err
+	}
 	r := buildRouter(app)
 	// Define CORS options
 	allowedOrigins := parseOrigins(app.Settings.CoreOrigins)
@@ -109,32 +90,14 @@ func main() {
 	corsMuxHandler := corsOpts(r)
 	loggedHandler := corsMuxHandler
 
-	// Paths to certificate and key files
-	crtFile := app.Settings.ServerCert
-	keyFile := app.Settings.ServerKey
-	httpAddr := ":" + app.Settings.PortHttp
-	httpsAddr := ":" + app.Settings.PortHttps
-	serverErrCh := make(chan error, 2)
-
-	go func() {
-		log.Printf("%sHTTP server running on http://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttp)
-		if err := http.ListenAndServe(httpAddr, loggedHandler); err != nil {
-			serverErrCh <- fmt.Errorf("http server error: %w", err)
-		}
-	}()
-
-	go func() {
-		log.Printf("%sHTTPS server running on https://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttps)
-		if err := http.ListenAndServeTLS(httpsAddr, crtFile, keyFile, loggedHandler); err != nil {
-			serverErrCh <- fmt.Errorf("https server error: %w", err)
-		}
-	}()
-
-	log.Fatalf("%v", <-serverErrCh)
+	origin := "https://" + net.JoinHostPort(app.Settings.Host, app.Settings.PortHttps)
+	servers := httpserver.New(loggedHandler, ":"+app.Settings.PortHttp, ":"+app.Settings.PortHttps, origin)
+	return servers.Serve(ctx, app.Settings.ServerCert, app.Settings.ServerKey)
 }
-
 func buildRouter(app *appCore.Config) *mux.Router {
 	r := mux.NewRouter()
+	r.HandleFunc("/livez", app.Liveness).Methods("GET")
+	r.HandleFunc("/readyz", app.Readiness).Methods("GET")
 	// *****************************************************
 	// Setup your API subrouter with CORS middleware. These routes are unprotected, i.e. do not require authentication to use. This is where you would register any routes that should be accessible without authentication, such as login or registration endpoints.
 	public := r.PathPrefix(app.Settings.APIprefix).Subrouter()

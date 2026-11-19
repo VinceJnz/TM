@@ -42,16 +42,16 @@ func New(appConf *appCore.Config) *Handler {
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL+"/login", h.loginHandler).Methods("GET")
-	r.HandleFunc(baseURL+"/callback", h.callbackHandler).Methods("GET")
+	r.HandleFunc(baseURL+"/login", h.available(h.loginHandler)).Methods("GET")
+	r.HandleFunc(baseURL+"/callback", h.available(h.callbackHandler)).Methods("GET")
 	r.HandleFunc(baseURL+"/verify-email", h.VerifyEmail).Methods("GET", "POST") // Email verification endpoint
-	r.HandleFunc(baseURL+"/logout", h.logoutHandler).Methods("GET")
+	r.HandleFunc(baseURL+"/logout", h.available(h.logoutHandler)).Methods("GET")
 	r.HandleFunc(baseURL+"/me", h.meHandler).Methods("GET")
 	// Endpoint used to collect additional registration info from OAuth users after email verification (username, address, birthdate, accountHidden)
 	// Public because it authenticates via session cookie OR oauth-state token from the OAuth flow
 	r.HandleFunc(baseURL+"/complete-registration", h.CompleteRegistration).Methods("POST")
 	// Temporary debug route (DEV only)
-	r.HandleFunc(baseURL+"/debug", h.debugHandler).Methods("GET")
+	r.HandleFunc(baseURL+"/debug", h.available(h.debugHandler)).Methods("GET")
 }
 
 // RegisterRoutesProtected registers handler routes on the provided router.
@@ -100,6 +100,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := h.appConf.OAuthSvc.OAuthConfig.Client(r.Context(), token)
+	client.Timeout = 15 * time.Second
 	request, err := http.NewRequestWithContext(r.Context(), http.MethodGet, h.userInfoURL, nil)
 	if err != nil {
 		handlerHelpers.WriteInternalServerError(w, "failed to request identity")
@@ -511,4 +512,14 @@ func decodeOAuthPendingRegistration(raw string) (oauthPendingRegistration, error
 	}
 
 	return pending, nil
+}
+
+func (h *Handler) available(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if h.appConf == nil || h.appConf.OAuthSvc == nil {
+			handlerHelpers.WriteError(w, 503, "service_unavailable", "OAuth service unavailable")
+			return
+		}
+		next(w, r)
+	}
 }
