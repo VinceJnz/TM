@@ -29,7 +29,15 @@ func main() {
 	log.Printf("%v", "main")
 
 	// Set up the HTML structure
-	appCore := appCore.New("https://localhost:8086/api/v1")
+	apiBase := "/api/v1"
+	config := js.Global().Get("TM_CONFIG")
+	if !config.IsUndefined() && !config.IsNull() {
+		configured := config.Get("apiBase")
+		if configured.Type() == js.TypeString {
+			apiBase = configured.String()
+		}
+	}
+	appCore := appCore.New(apiBase)
 	defer appCore.Destroy() // ensure resources are cleaned up if main ever exits
 
 	if isOAuthPopupCallback() {

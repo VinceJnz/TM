@@ -84,3 +84,15 @@ error bodies. Log records report the actual first final HTTP status (including
 implicit 200) and response bytes rather than request Content-Length. Existing
 query/cookie redaction remains in place. Update any diagnostics that depended on
 the optional ResponseBody field; structured application events remain available.
+
+## WASM loading and transport
+
+The frontend reads the API prefix from the uncached `/client-config.js` served by
+its API host. Requests remain on the current origin; a localhost URL is no longer
+compiled into the client. Rebuild the client artifact together with the API image.
+
+WASM and its matching runtime JS use content validators and normal revalidation,
+replacing timestamp cache-busting URLs. The bootstrap reports loading failures and
+can fall back from streaming instantiation. Fetch response-body rejections now
+reach the error callback and release JS handlers instead of leaving requests
+blocked. Browser-runtime Go tests cover both rejection and successful body reads.

@@ -284,17 +284,13 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	// Prepare handlers so we can Release them after use
 	var thenHandler js.Func
 	var catchHandler js.Func
+	var textHandler js.Func
+	var textHandlerSet bool
 	var thenHandlerSet bool
 	var catchHandlerSet bool
 
 	// Handle promise resolution
 	thenHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
-		// Release catch handler if set
-		if catchHandlerSet {
-			catchHandler.Release()
-			catchHandlerSet = false
-		}
-
 		response := args[0]
 
 		// Create Go http.Response
@@ -321,7 +317,6 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 
 		// Get response text
 		textPromise := response.Call("text")
-		var textHandler js.Func
 		textHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
 			// Stop abort timer if running
 			if timer != nil {
@@ -331,18 +326,22 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 				text := args[0].String()
 				resp.Body = &stringReadCloser{strings.NewReader(text)}
 			}
+			if catchHandlerSet {
+				catchHandler.Release()
+				catchHandlerSet = false
+			}
 			done <- resp
 			// Release handlers
 			textHandler.Release()
+			textHandlerSet = false
 			if thenHandlerSet {
 				thenHandler.Release()
 				thenHandlerSet = false
 			}
 			return nil
 		})
-		textPromise.Call("then", textHandler)
-
-		return nil
+		textHandlerSet = true
+		return textPromise.Call("then", textHandler)
 	})
 
 	// Handle promise rejection
@@ -355,6 +354,10 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		if thenHandlerSet {
 			thenHandler.Release()
 			thenHandlerSet = false
+		}
+		if textHandlerSet {
+			textHandler.Release()
+			textHandlerSet = false
 		}
 		// Attempt to read message
 		msg := "fetch failed"
@@ -374,10 +377,9 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		return nil
 	})
 
-	promise.Call("then", thenHandler)
 	thenHandlerSet = true
-	promise.Call("catch", catchHandler)
 	catchHandlerSet = true
+	promise.Call("then", thenHandler).Call("catch", catchHandler)
 
 	// Wait for completion
 	select {

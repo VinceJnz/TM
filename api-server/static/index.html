@@ -3,14 +3,30 @@
 <head>
     <meta charset="utf-8">
     <title>Go WASM Dropdown and Side Menu</title>
+    <script src="/client-config.js"></script>
     <script src="wasm_exec.js"></script>
     <script>
         const go = new Go();
 
+        function loadError(error) {
+            console.error("Application loading failed", error);
+            const notice = document.createElement("p");
+            notice.setAttribute("role", "alert");
+            notice.textContent = "Unable to load the app. Refresh to try again.";
+            document.body.prepend(notice);
+        }
         async function loadWasm() {
-            const wasmURL = `main.wasm?v=${Date.now()}`;
-            const wasmModule = await WebAssembly.instantiateStreaming(fetch(wasmURL), go.importObject);
-            go.run(wasmModule.instance);
+            try {
+                const response = await fetch("main.wasm", {cache: "no-cache"});
+                if (!response.ok) throw new Error("Application download failed");
+                let module;
+                try {
+                    module = await WebAssembly.instantiateStreaming(response.clone(), go.importObject);
+                } catch (_) {
+                    module = await WebAssembly.instantiate(await response.arrayBuffer(), go.importObject);
+                }
+                go.run(module.instance).catch(loadError);
+            } catch (error) { loadError(error); }
         }
 
         window.addEventListener('load', loadWasm);

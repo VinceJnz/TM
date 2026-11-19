@@ -98,6 +98,7 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/livez", app.Liveness).Methods("GET")
 	r.HandleFunc("/readyz", app.Readiness).Methods("GET")
+	r.HandleFunc("/client-config.js", httpserver.ClientConfig(app.Settings.APIprefix)).Methods("GET")
 	// *****************************************************
 	// Setup your API subrouter with CORS middleware. These routes are unprotected, i.e. do not require authentication to use. This is where you would register any routes that should be accessible without authentication, such as login or registration endpoints.
 	public := r.PathPrefix(app.Settings.APIprefix).Subrouter()
@@ -167,7 +168,7 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	handlerGmailCert.New(app).RegisterRoutes(protected, "/gmailcert")                         // Gmail cert management (Sys Admin only)
 
 	// Static handlers
-	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
+	r.PathPrefix("/").Handler(httpserver.Static("./static"))
 
 	return r
 }
