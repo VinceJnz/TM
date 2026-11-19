@@ -96,3 +96,19 @@ replacing timestamp cache-busting URLs. The bootstrap reports loading failures a
 can fall back from streaming instantiation. Fetch response-body rejections now
 reach the error callback and release JS handlers instead of leaving requests
 blocked. Browser-runtime Go tests cover both rejection and successful body reads.
+
+## Full release verification
+
+`scripts/verify-release.ps1` now checks both frontend compilers, runs Go WASM tests
+under Node, builds/inspects the production image, then invokes
+`scripts/verify-runtime.ps1`. The runtime verifier creates its own isolated network,
+fresh PostgreSQL database, synthetic accounts/OTP, restricted API role and one-day
+TLS certificate. It runs API/PostgreSQL tests, migrates the fresh database, starts
+the real production image, checks readiness/login/ownership/403s/cache validators,
+and loads the authenticated WASM UI in headless Chromium using a non-default API
+prefix. It verifies graceful shutdown and removes its containers/network/cert volume.
+
+CI runs the same checks. No host ports, live databases, real mail delivery, Google
+accounts or Stripe charges are used. This verifies the email-token completion path
+with a synthetic token, not external email delivery. Docker and dependency/image
+downloads are required; the browser tools run only in a test container.

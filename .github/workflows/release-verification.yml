@@ -44,9 +44,19 @@ jobs:
             golang:1.24.0-alpine \
             sh -c 'go test -count=1 ./... && go vet ./...'
 
+      - name: Verify standard Go frontend and WASM transport
+        run: |
+          docker build -f Dockerfile.client1 --build-arg CLIENT_BUILDER=go-builder -t tm-client1-wasm:go-verify .
+          docker run --rm -v "$GITHUB_WORKSPACE/client1:/app:ro" -w /app golang:1.23.4-alpine \
+            sh -c 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/misc/wasm/go_js_wasm_exec ./app/httpProcessor'
+
       - name: Build and inspect production image
         run: |
           docker build -f Dockerfile.apibuild --target final \
             --build-arg CLIENT_IMAGE=tm-client1-wasm:tinygo -t tm-apiserver:verify .
           docker run --rm --entrypoint sh tm-apiserver:verify -ec \
             'id -u | grep -qx 10001; test ! -e /app/.env; test -s /app/static/main.wasm; test -s /app/static/wasm_exec.js; if find /etc/certs -type f | grep -q .; then exit 1; fi'
+
+      - name: Verify fresh database and real-browser runtime
+        shell: pwsh
+        run: ./scripts/verify-runtime.ps1 -Image tm-apiserver:verify -SkipAPITests

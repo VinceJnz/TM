@@ -24,13 +24,17 @@ Invoke-Docker @(
 	$repositoryRoot
 )
 
-Write-Host "Running API tests in Linux Go 1.24..."
+Write-Host "Checking the standard Go frontend build..."
 Invoke-Docker @(
-	"run", "--rm",
-	"-v", "${apiPath}:/app:ro",
-	"-w", "/app",
-	"golang:1.24.0-alpine",
-	"sh", "-c", "go test ./..."
+	"build", "-f", (Join-Path $repositoryRoot "Dockerfile.client1"),
+	"--build-arg", "CLIENT_BUILDER=go-builder", "-t", "tm-client1-wasm:go-verify", $repositoryRoot
+)
+
+Write-Host "Running frontend WASM transport tests..."
+$clientPath = (Resolve-Path (Join-Path $repositoryRoot "client1")).Path
+Invoke-Docker @(
+	"run", "--rm", "-v", "${clientPath}:/app:ro", "-w", "/app", "golang:1.23.4-alpine",
+	"sh", "-c", 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/misc/wasm/go_js_wasm_exec ./app/httpProcessor'
 )
 
 Write-Host "Building the production API image without credentials..."
@@ -46,4 +50,5 @@ Invoke-Docker @(
 	'id -u | grep -qx 10001; test ! -e /app/.env; test -s /app/static/main.wasm; test -s /app/static/wasm_exec.js; if find /etc/certs -type f | grep -q .; then exit 1; fi'
 )
 
+& (Join-Path $PSScriptRoot "verify-runtime.ps1") -Image "tm-apiserver:verify"
 Write-Host "Release verification passed."

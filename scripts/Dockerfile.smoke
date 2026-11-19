@@ -1,0 +1,5 @@
+FROM node:22-alpine
+RUN apk add --no-cache chromium openssl
+WORKDIR /checks
+COPY scripts/release-smoke.mjs /checks/release-smoke.mjs
+CMD ["node", "/checks/release-smoke.mjs"]

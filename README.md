@@ -15,6 +15,8 @@ An app to allow people to create trips for club members (for a club such as a hi
 
 Deployment prerequisites, security migrations, runtime credentials and compatibility
 changes are documented in [SECURITY-ROLLOUT.md](SECURITY-ROLLOUT.md).
+Current migration, server lifecycle, frontend and full release verification
+instructions are in [MEDIUM-ROLLOUT.md](MEDIUM-ROLLOUT.md).
 
 This app is JS free (more or less).
 
