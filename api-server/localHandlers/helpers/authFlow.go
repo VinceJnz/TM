@@ -3,6 +3,7 @@ package helpers
 import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -164,8 +165,8 @@ func ResolveUserIDFromSessionOrOAuthState(debugStr string, r *http.Request, db *
 	return 0
 }
 
-func VerifyOTPTokenAndLoadUser(debugStr string, db *sqlx.DB, tokenName, tokenValue string, requireActive bool) (int, models.User, error) {
-	tok, err := dbAuthTemplate.FindToken(debugStr+"VerifyOTPTokenAndLoadUser:find", db, tokenName, tokenValue)
+func VerifyOTPTokenAndLoadUser(ctx context.Context, debugStr string, db *sqlx.DB, tokenName, tokenValue string, requireActive bool) (int, models.User, error) {
+	tok, err := dbAuthTemplate.ConsumeToken(ctx, db, tokenName, tokenValue)
 	if err != nil {
 		return 0, models.User{}, fmt.Errorf("%w: %v", ErrAuthTokenInvalid, err)
 	}
@@ -184,7 +185,7 @@ func VerifyOTPTokenAndLoadUser(debugStr string, db *sqlx.DB, tokenName, tokenVal
 		return 0, models.User{}, ErrAuthUserInactive
 	}
 
-	_ = dbAuthTemplate.TokenDeleteQry(debugStr+"VerifyOTPTokenAndLoadUser:del", db, tok.ID)
+	// Token was consumed atomically before account lookup.
 
 	return userID, user, nil
 }

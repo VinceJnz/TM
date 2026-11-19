@@ -269,7 +269,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find registration-verification token
-	tok, err := dbAuthTemplate.FindToken(debugTag+"VerifyRegistration:find", h.appConf.Db, "registration-verification", payload.Token)
+	tok, err := dbAuthTemplate.ConsumeToken(r.Context(), h.appConf.Db, "registration-verification", payload.Token)
 	if err != nil {
 		log.Printf("%vVerifyRegistration registration verification token not found: %v", debugTag, err)
 		http.Error(w, "invalid or expired verification token", http.StatusForbidden)
@@ -342,7 +342,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the registration verification token (one-time use)
-	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyRegistration:del", h.appConf.Db, tok.ID)
+	// Verification token was consumed atomically before creating the account.
 
 	log.Printf("%vVerifyRegistration user registered and verified: userID=%d (pending admin activation)", debugTag, userID)
 
@@ -449,8 +449,12 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, user, err := handlerHelpers.VerifyOTPTokenAndLoadUser(debugTag+"VerifyOTP:", h.appConf.Db, "login-otp", payload.Token, false)
+	userID, user, err := handlerHelpers.VerifyOTPTokenAndLoadUser(r.Context(), debugTag+"VerifyOTP:", h.appConf.Db, "login-otp", payload.Token, true)
 	if err != nil {
+		if errors.Is(err, handlerHelpers.ErrAuthUserInactive) {
+			http.Error(w, "user account not active", http.StatusForbidden)
+			return
+		}
 		if errors.Is(err, handlerHelpers.ErrAuthTokenInvalid) {
 			log.Printf("%vVerifyOTP OTP token not found: %v", debugTag, err)
 			http.Error(w, "invalid or expired OTP", http.StatusForbidden)
@@ -507,7 +511,7 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 	control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
 	urlSplit = strings.Split(control.PrevURL, "/")
 	if len(urlSplit) == 0 {
-		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+		log.Print(debugTag + "request authorization failed")
 		err = errors.New(debugTag + "SetRestResource - Resource info not found") //this is the error returned if a valid resource is not identified
 		return RestResource{}, err
 	}
@@ -537,15 +541,15 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 					control.ResourceName = urlSplit[5]
 				}
 			default:
-				log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+				log.Print(debugTag + "request authorization failed")
 				return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
 			}
 		default:
-			log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+			log.Print(debugTag + "request authorization failed")
 			return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
 		}
 	default:
-		log.Printf("%v %v %v %v %+v %v %v %+v %v %+v", debugTag+"SetRestResource invalid url: ", "err =", err, "urlSplit =", urlSplit, len(urlSplit), "control =", control, "r =", r)
+		log.Print(debugTag + "request authorization failed")
 		return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
 	}
 
@@ -561,9 +565,9 @@ func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
 func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var user models.User
-	restResource, err := h.setRestResource(r) //stores prev-URL for redirect
+	_, err = h.setRestResource(r)
 	if err != nil {
-		log.Println(debugTag+"Handler.SessionCheckRestHandler", "err =", err, "restResource =", restResource, "r =", r)
+		log.Print(debugTag + "request authorization failed")
 	}
 	sessionToken, err := r.Cookie("session")
 	if err == http.ErrNoCookie { // If there is no session cookie
@@ -704,7 +708,7 @@ func (h *Handler) VerifyPasswordOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, user, err := handlerHelpers.VerifyOTPTokenAndLoadUser(debugTag+"VerifyPasswordOTP:", h.appConf.Db, "password-login-otp", payload.Token, true)
+	userID, user, err := handlerHelpers.VerifyOTPTokenAndLoadUser(r.Context(), debugTag+"VerifyPasswordOTP:", h.appConf.Db, "password-login-otp", payload.Token, true)
 	if err != nil {
 		if errors.Is(err, handlerHelpers.ErrAuthTokenInvalid) {
 			log.Printf("%v OTP token not found or invalid: %v", debugTag, err)

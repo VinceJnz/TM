@@ -101,3 +101,34 @@ and rotate exposed credentials through the appropriate deployment process; this
 change does not rewrite image history or rotate credentials in live services.
 Release verification now builds and inspects the production image. CI also runs
 the PostgreSQL integration tests against an isolated synthetic database service.
+
+## One-time tokens, hashed storage and authentication rate limits
+
+Stop older API instances, apply
+`db-server/sql/postgreSQL/20261119_02_auth_token_integrity.sql`, and deploy the
+matching API together. The migration widens the old token column and hashes
+existing tokens in place, preserving the relationship to existing cookies. It
+adds a unique token-purpose/digest index and shared authentication counters.
+Do not restart old API code against the converted token table. Resolve duplicate
+purpose/token records before migration if the unique index reports a conflict.
+
+New bearer tokens are stored only as SHA-256 digests. A stored digest is not itself
+accepted as a bearer. Token updates preserve the digest. OTPs, email verification,
+registration verification, OAuth callbacks and OAuth registration continuation
+are consumed atomically, so concurrent replicas cannot accept the same token
+twice. Failed account writes after consumption require restarting the flow.
+Email verification never grants administrator activation.
+
+Public authentication requests are rate-limited by direct peer IP; email/flow
+creation also has per-account/hour budgets. Counters persist across API restarts
+and replicas, expire after two hours, and contain hashed identifiers. Verification
+allows 20 requests/IP/minute; sending/flow creation allows 5/IP/minute and
+15/IP/hour, with 10/account/hour when an email or username is supplied. A limit
+returns HTTP 429 with Retry-After; unavailable counter storage fails closed with
+HTTP 503. Forwarding headers are not trusted. For reverse-proxy deployments,
+review shared-IP limits and configure a trusted edge policy before rollout.
+
+Grant the restricted API role SELECT/INSERT/UPDATE/DELETE on the new rate-limit,
+quote and event tables as appropriate for their operations, and the existing
+payment-table sequence privileges. Review the role name and grants for your
+deployment; migrations do not grant privileges to an assumed role automatically.

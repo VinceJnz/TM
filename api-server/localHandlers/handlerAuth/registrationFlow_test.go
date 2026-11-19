@@ -72,7 +72,10 @@ func (db *registrationDB) QueryContext(_ context.Context, query string, args []d
 			return &registrationRows{[]string{"id"}, []driver.Value{int64(1)}}, nil
 		}
 		return &registrationRows{columns: []string{"id"}}, nil
-	case strings.Contains(query, "SELECT stt.ID"):
+	case strings.Contains(query, "SELECT stt.ID"), strings.HasPrefix(query, "DELETE FROM st_token WHERE name"):
+		if strings.HasPrefix(query, "DELETE") {
+			db.tokenDeleted = true
+		}
 		return &registrationRows{
 			[]string{"id", "user_id", "name", "token", "session_data", "token_valid", "valid_from", "valid_to"},
 			[]driver.Value{int64(1), int64(0), "registration-verification", db.token, db.data, true, time.Now().Add(-time.Minute), time.Now().Add(time.Hour)},
@@ -93,7 +96,7 @@ func (db *registrationDB) ExecContext(_ context.Context, query string, args []dr
 		if db.failSave {
 			return nil, errors.New("simulated pending registration write failure")
 		}
-		db.data = args[5].Value.(string)
+		db.data = args[4].Value.(string)
 	} else if strings.HasPrefix(query, "DELETE FROM st_token WHERE") {
 		db.tokenDeleted = true
 	} else if !strings.HasPrefix(query, "DELETE FROM st_token") {

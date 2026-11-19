@@ -263,7 +263,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find the email-verification token
-	tok, err := dbAuthTemplate.FindToken(debugTag+"VerifyEmail:find", h.appConf.Db, "email-verification", tokenStr)
+	tok, err := dbAuthTemplate.ConsumeToken(r.Context(), h.appConf.Db, "email-verification", tokenStr)
 	if err != nil {
 		log.Printf("%v verification token not found or invalid: %v", debugTag, err)
 		handlerHelpers.WriteForbidden(w, "invalid or expired verification token")
@@ -285,7 +285,13 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.AccountStatusID.SetValid(int64(models.AccountActive)) // Mark as verified
+	if user.AccountStatusID.Int64 == int64(models.AccountNew) {
+		user.AccountStatusID.SetValid(int64(models.AccountVerified))
+	}
+	if !user.UserActive() && user.AccountStatusID.Int64 != int64(models.AccountVerified) {
+		handlerHelpers.WriteForbidden(w, "account is not active")
+		return
+	}
 	_, err = dbAuthTemplate.UserWriteQry(debugTag+"VerifyEmail:write", h.appConf.Db, user)
 	if err != nil {
 		log.Printf("%v failed to update user: %v", debugTag, err)
@@ -294,16 +300,18 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the verification token (one-time use)
-	_ = dbAuthTemplate.TokenDeleteQry(debugTag+"VerifyEmail:del", h.appConf.Db, tok.ID)
+	// Verification token was consumed atomically.
 
 	// Create session cookie
-	if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"VerifyEmail:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
-		log.Printf("%v failed to create session token: %v", debugTag, err)
-		handlerHelpers.WriteInternalServerError(w, "failed to create session")
-		return
-	}
+	if user.UserActive() {
+		if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"VerifyEmail:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
+			log.Printf("%v failed to create session token: %v", debugTag, err)
+			handlerHelpers.WriteInternalServerError(w, "failed to create session")
+			return
+		}
 
-	log.Printf("%v email verified and session created for user %d", debugTag, userID)
+	}
+	log.Printf("%v email verified for user %d", debugTag, userID)
 
 	// Return user info
 	handlerHelpers.WriteJSON(w, http.StatusOK, map[string]any{

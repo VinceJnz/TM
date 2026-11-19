@@ -8,7 +8,9 @@ import (
 // Generate cryptographically secure token
 func GenerateSecureToken() string {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		panic("secure token generation unavailable")
+	}
 	//return base64.URLEncoding.EncodeToString(bytes)
 	return base64.RawURLEncoding.EncodeToString(bytes)
 }
@@ -16,6 +18,8 @@ func GenerateSecureToken() string {
 // Generate cryptographically secure token
 func GenerateSecureTokenBytes() []byte {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		panic("secure token generation unavailable")
+	}
 	return bytes
 }

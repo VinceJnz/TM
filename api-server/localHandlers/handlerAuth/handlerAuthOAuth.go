@@ -32,13 +32,13 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 				// build session context (same as RequireRestAuth)
 
 				if resource, err = h.setRestResource(r); err != nil {
-					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireSessionAuth", "err =", err, "resource =", resource, "r =", r)
+					log.Print(debugTag + "request authorization failed")
 					http.Error(w, "Not authorised - You don't have access to the requested resource.", http.StatusUnauthorized)
 					return
 				}
 				// check access to resource
 				if accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireSessionAuth ", h.appConf.Db, dbToken.UserID, resource.ResourceName, resource.AccessMethod); err != nil {
-					log.Printf("%v %v %v %v %+v %v %+v\n", debugTag+"RequireSessionAuth", "err =", err, "resource =", resource, "r =", r)
+					log.Print(debugTag + "request authorization failed")
 					http.Error(w, "Not authorised - You don't have access to the requested resource.", http.StatusUnauthorized)
 					return
 				}

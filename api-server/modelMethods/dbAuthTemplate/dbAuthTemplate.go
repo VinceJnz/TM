@@ -86,18 +86,18 @@ const (
 	// Include session_data so arbitrary JSON payloads can be stored on tokens (e.g. registration data)
 	sqlTokenInsert = `INSERT INTO st_token (user_id, name, host, token, session_data, token_valid, valid_from, valid_to) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
 	sqlTokenRead   = `SELECT c.id, c.user_id, c.name, c.host, c.token, c.session_data, c.token_valid, c.valid_from, c.valid_to FROM st_token c WHERE c.ID=$1`
-	sqlTokenUpdate = `UPDATE st_token SET (user_id, name, host, token, session_data, token_valid, valid_from, valid_to) = ($2, $3, $4, $5, $6, $7, $8, $9) WHERE id=$1`
+	sqlTokenUpdate = `UPDATE st_token SET (user_id, name, host, session_data, token_valid, valid_from, valid_to) = ($2, $3, $4, $5, $6, $7, $8) WHERE id=$1`
 )
 
 func TokenInsertQry(debugStr string, Db *sqlx.DB, record models.Token) (int, error) {
 	err := Db.QueryRow(sqlTokenInsert,
-		record.UserID, record.Name, record.Host, record.TokenStr, record.SessionData, record.Valid, record.ValidFrom, record.ValidTo).Scan(&record.ID)
+		record.UserID, record.Name, record.Host, tokenDigest(record.TokenStr.String), record.SessionData, record.Valid, record.ValidFrom, record.ValidTo).Scan(&record.ID)
 	return record.ID, err
 }
 
 func TokenUpdateQry(debugStr string, Db *sqlx.DB, record models.Token) error {
 	result, err := Db.Exec(sqlTokenUpdate,
-		record.ID, record.UserID, record.Name, record.Host, record.TokenStr, record.SessionData, record.Valid, record.ValidFrom, record.ValidTo)
+		record.ID, record.UserID, record.Name, record.Host, record.SessionData, record.Valid, record.ValidFrom, record.ValidTo)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
-	err = Db.QueryRow(sqlFindSessionToken, result.TokenStr, models.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
+	err = Db.QueryRow(sqlFindSessionToken, tokenDigest(cookieStr), models.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		return result, err
 	}
@@ -219,7 +219,7 @@ func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Tok
 	result := models.Token{}
 	//result.TokenStr.SetValid(cookieStr)
 	//result.Name.SetValid(name)
-	err = Db.QueryRow(sqlFindToken, cookieStr, name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
+	err = Db.QueryRow(sqlFindToken, tokenDigest(cookieStr), name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%sFindToken failed (sensitive details omitted)", debugTag)
 		return result, err
