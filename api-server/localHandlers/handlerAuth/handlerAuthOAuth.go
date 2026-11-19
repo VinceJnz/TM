@@ -1,87 +1,78 @@
 package handlerAuth
 
 import (
-	"context"
-	"log"
-	"net/http"
-
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
+	"context"
+	"database/sql"
+	"errors"
+	"net/http"
 )
 
-// The function RequireSessionAuth needs to do the following:
-//1. Check to see the the users is already logged in (It already deos this)
-//2. Try logging in using OAuth
-//3. Try using a password and emailed token for authentication.
-
-// RequireSessionAuth returns a middleware that accepts either a DB session cookie ("session")
-// or an OAuth session ("auth-session") from the provided gateway. It ensures an internal session
-// context (models.Session) is available for downstream handlers.
+// RequireSessionAuth authenticates the session; authorization is a separate step.
 func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var resource RestResource
-		//var dbToken models.Token
-		var accessCheck models.AccessCheck
-		var user models.User
-		//var err error
-		log.Printf("%vRequireSessionAuth checking auth for request: %v %v\n", debugTag, r.Method, r.URL.Path)
-
-		// 1) Try existing DB session cookie to see if the user is already logged in
-		if sessionCookie, err := r.Cookie("session"); err == nil {
-			if dbToken, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionCookie.Value); err == nil {
-				// build session context (same as RequireRestAuth)
-
-				if resource, err = h.setRestResource(r); err != nil {
-					log.Print(debugTag + "request authorization failed")
-					http.Error(w, "Not authorised - You don't have access to the requested resource.", http.StatusUnauthorized)
-					return
-				}
-				// check access to resource
-				if accessCheck, err = dbAuthTemplate.UserCheckAccess(debugTag+"RequireSessionAuth ", h.appConf.Db, dbToken.UserID, resource.ResourceName, resource.AccessMethod); err != nil {
-					log.Print(debugTag + "request authorization failed")
-					http.Error(w, "Not authorised - You don't have access to the requested resource.", http.StatusUnauthorized)
-					return
-				}
-				if !supportsScope(resource.ResourceName, resource.AccessMethod, accessCheck.AccessScope) {
-					writeJSONResponse(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "scope is not supported for this operation"}, "RequireSessionAuth")
-					return
-				}
-				// Check the user record is still valid/active
-				if user, err = dbAuthTemplate.UserReadQry(debugTag+"", h.appConf.Db, dbToken.UserID); err != nil {
-					log.Printf("%v failed reading user record: %v", debugTag, err)
-					http.Error(w, "internal server error", http.StatusInternalServerError)
-					return
-				}
-				if !user.UserActive() {
-					log.Printf("%v user account not active: %v", debugTag, user.ID)
-					http.Error(w, "user account not active", http.StatusForbidden)
-					return
-				}
-				// 6) Attach session to context and continue
-				session := &models.Session{
-					UserID:         dbToken.UserID,
-					PrevURL:        resource.PrevURL,
-					ResourceName:   resource.ResourceName,
-					ResourceID:     0,
-					AccessMethod:   resource.AccessMethod,
-					AccessMethodID: 0,
-					AccessScope:    accessCheck.AccessScope,
-					AccessScopeID:  accessCheck.AccessScopeID,
-					//AdminFlag:      accessCheck.AdminFlag,
-					Group: accessCheck.Group,
-					Email: user.Email.String,
-				}
-				// 7) Give the user access
-				ctx := context.WithValue(r.Context(), h.appConf.SessionIDKey, session)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
-			}
-			// If DB lookup failed, continue to try OAuth session
+		cookie, err := r.Cookie("session")
+		if err != nil {
+			writeJSONResponse(w, 401, map[string]string{"error": "unauthorized", "message": "authentication required"}, "auth")
+			return
 		}
-		log.Printf("%vRequireSessionAuth no valid DB session, trying OAuth session\n", debugTag)
-		writeJSONResponse(w, http.StatusUnauthorized, map[string]string{
-			"error":   "unauthorized",
-			"message": "authentication required",
-		}, "RequireSessionAuth")
+		token, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, cookie.Value)
+		if err != nil {
+			code := 503
+			if errors.Is(err, sql.ErrNoRows) {
+				code = 401
+			}
+			writeJSONResponse(w, code, map[string]string{"error": "unauthorized", "message": "session unavailable or invalid"}, "auth")
+			return
+		}
+		user, err := dbAuthTemplate.UserReadQry(debugTag, h.appConf.Db, token.UserID)
+		if err != nil {
+			writeJSONResponse(w, 503, map[string]string{"error": "unavailable", "message": "account lookup unavailable"}, "auth")
+			return
+		}
+		if !user.UserActive() {
+			writeJSONResponse(w, 403, map[string]string{"error": "forbidden", "message": "account is not active"}, "auth")
+			return
+		}
+		session := &models.Session{UserID: user.ID, Email: user.Email.String}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), h.appConf.SessionIDKey, session)))
+	})
+}
+
+// RequireCapability uses the matched route's declaration, never URL inference.
+func (h *Handler) RequireCapability(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session)
+		if !ok || session == nil {
+			writeJSONResponse(w, 401, map[string]string{"error": "unauthorized"}, "capability")
+			return
+		}
+		resource, err := h.setRestResource(r)
+		if err != nil {
+			writeJSONResponse(w, 500, map[string]string{"error": "configuration_error", "message": "route capability is not configured"}, "capability")
+			return
+		}
+		grant, err := dbAuthTemplate.UserCheckAccess(debugTag, h.appConf.Db, session.UserID, resource.ResourceName, resource.AccessMethod)
+		if err != nil {
+			code := 503
+			if errors.Is(err, sql.ErrNoRows) {
+				code = 403
+			}
+			writeJSONResponse(w, code, map[string]string{"error": "forbidden", "message": "resource access unavailable or denied"}, "capability")
+			return
+		}
+		if !supportsScope(resource.ResourceName, resource.AccessMethod, grant.AccessScope) {
+			writeJSONResponse(w, 403, map[string]string{"error": "forbidden", "message": "unsupported scope"}, "capability")
+			return
+		}
+		authorized := *session
+		authorized.PrevURL = resource.PrevURL
+		authorized.ResourceName = resource.ResourceName
+		authorized.AccessMethod = resource.AccessMethod
+		authorized.AccessScope = grant.AccessScope
+		authorized.AccessScopeID = grant.AccessScopeID
+		authorized.Group = grant.Group
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), h.appConf.SessionIDKey, &authorized)))
 	})
 }

@@ -51,8 +51,8 @@ func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
 // RegisterRoutesProtected registers protected authentication routes (requires auth middleware)
 func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 	// Protected endpoints - require valid authentication
-	r.HandleFunc(baseURL+"/logout/", h.AuthLogout).Methods("Get")
-	r.HandleFunc(baseURL+"/menuList/", h.MenuListGet).Methods("Get")
+	handlerHelpers.CapabilityRoute(r, baseURL+"/logout/", "auth", h.AuthLogout).Methods("Get")
+	handlerHelpers.CapabilityRoute(r, baseURL+"/menuList/", "auth", h.MenuListGet).Methods("Get")
 }
 
 // RequestLoginToken accepts {"username":"..."} or {"email":"..."} and sends a one-time token
@@ -503,62 +503,15 @@ type RestResource struct {
 // This is used to determine if a user is permitted to access the resource
 // func setRestResource(session *mdlSession.Session, r *http.Request) error {
 func (h *Handler) setRestResource(r *http.Request) (RestResource, error) {
-	var err error
-	var urlSplit []string
-	var apiVersion string
-	var control RestResource
-
-	control.PrevURL = r.URL.Path //PrevURL is written to some of the forms in the browser so that it can be supplied back to the server when a form is submitted
-	urlSplit = strings.Split(control.PrevURL, "/")
-	if len(urlSplit) == 0 {
-		log.Print(debugTag + "request authorization failed")
-		err = errors.New(debugTag + "SetRestResource - Resource info not found") //this is the error returned if a valid resource is not identified
-		return RestResource{}, err
+	route := mux.CurrentRoute(r)
+	if route == nil {
+		return RestResource{}, errors.New("route capability is not declared")
 	}
-	control.AccessMethod = r.Method // get, put, post, del, ...
-	switch urlSplit[1] {
-	case "api":
-		apiVersion = urlSplit[2]
-		switch apiVersion {
-		case "v1":
-			switch len(urlSplit) {
-			case 3:
-				control.ResourceName = urlSplit[3]
-			case 4:
-				control.ResourceName = urlSplit[3]
-			case 5:
-				control.ResourceName = urlSplit[3]
-			case 6:
-				control.ResourceName = urlSplit[3]
-				if urlSplit[5] == "bookings" || urlSplit[5] == "bookingPeople" {
-					control.ResourceName = urlSplit[5]
-				}
-			case 7:
-				if urlSplit[4] == "checkout" {
-					// Keep checkout actions (create/check/success/cancel) bound to the bookings resource.
-					control.ResourceName = urlSplit[3]
-				} else {
-					control.ResourceName = urlSplit[5]
-				}
-			default:
-				log.Print(debugTag + "request authorization failed")
-				return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
-			}
-		default:
-			log.Print(debugTag + "request authorization failed")
-			return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
-		}
-	default:
-		log.Print(debugTag + "request authorization failed")
-		return RestResource{}, errors.New(debugTag + "setRestResource invalid url")
+	name := route.GetName()
+	if !strings.HasPrefix(name, "capability:") || strings.TrimPrefix(name, "capability:") == "" {
+		return RestResource{}, errors.New("route capability is not declared")
 	}
-
-	// Reuse existing own-scope profile capability model via myBookings resource.
-	if strings.EqualFold(control.ResourceName, "myProfile") {
-		control.ResourceName = "myBookings"
-	}
-
-	return control, err
+	return RestResource{PrevURL: r.URL.Path, ResourceName: strings.TrimPrefix(name, "capability:"), AccessMethod: r.Method}, nil
 }
 
 // SessionCheck is used by the client to see if the token it is using is still valid, if it is valid the the client is still logged in.

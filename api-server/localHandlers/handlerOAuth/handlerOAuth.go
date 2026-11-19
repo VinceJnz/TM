@@ -59,7 +59,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 // This endpoint is protected by RequireOAuthOrSessionAuth so calling it after OAuth login will cause
 // the middleware to create an internal session and set the "session" cookie for subsequent API calls.
 func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL+"/ensure", h.OAuthEnsure).Methods("GET")
+	handlerHelpers.CapabilityRoute(r, baseURL+"/ensure", "auth", h.OAuthEnsure).Methods("GET")
 }
 
 // loginHandler initiates the OAuth flow by creating a temporary DB-backed token to hold the state and pending registration data, then redirects the user to the provider's auth URL with the state parameter. The callbackHandler will validate the state and complete the login/registration process.

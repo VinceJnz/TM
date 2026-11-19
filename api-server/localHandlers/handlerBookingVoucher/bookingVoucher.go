@@ -49,14 +49,14 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL, h.GetAll).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL, "bookingVouchers", h.GetAll).Methods("GET")
 }
 
 func (h *Handler) RegisterRoutesAdmin(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL+"/{id:[0-9]+}", h.Get).Methods("GET")
-	r.HandleFunc(baseURL, h.Create).Methods("POST")
-	r.HandleFunc(baseURL+"/{id:[0-9]+}", h.Update).Methods("PUT")
-	r.HandleFunc(baseURL+"/{id:[0-9]+}", h.Delete).Methods("DELETE")
+	helpers.CapabilityRoute(r, baseURL+"/{id:[0-9]+}", "bookingVouchers", h.Get).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL, "bookingVouchers", h.Create).Methods("POST")
+	helpers.CapabilityRoute(r, baseURL+"/{id:[0-9]+}", "bookingVouchers", h.Update).Methods("PUT")
+	helpers.CapabilityRoute(r, baseURL+"/{id:[0-9]+}", "bookingVouchers", h.Delete).Methods("DELETE")
 }
 
 func normalizeVoucher(v *models.BookingVoucher) {

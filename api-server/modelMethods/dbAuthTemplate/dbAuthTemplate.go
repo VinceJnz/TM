@@ -3,7 +3,7 @@ package dbAuthTemplate
 import (
 	"api-server/v2/models"
 	"database/sql"
-	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -56,7 +56,7 @@ func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, Act
 	err = Db.QueryRow(sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessScopeID, &access.AccessScope, &access.Group)
 	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
 		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"UserCheckAccess Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
-		return models.AccessCheck{}, errors.New(debugTag + "UserCheckAccess: access denied (" + err.Error() + ")")
+		return models.AccessCheck{}, fmt.Errorf("access lookup: %w", err)
 	}
 	return access, nil
 }

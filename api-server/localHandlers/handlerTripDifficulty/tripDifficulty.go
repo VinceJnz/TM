@@ -37,7 +37,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // RegisterRoutes registers the legacy trip-difficulty API routes.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h)
+	helpers.AddRouteGroup(r, baseURL, h, "tripDifficulty")
 }
 
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {

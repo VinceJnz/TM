@@ -3,6 +3,7 @@ package handlerGmailCert
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/gateways/gmail"
+	"api-server/v2/localHandlers/helpers"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,9 +28,9 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL, h.Get).Methods("GET")
-	r.HandleFunc(baseURL, h.Update).Methods("PUT")
-	r.HandleFunc(baseURL+"/renew-url", h.GetRenewURL).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL, "gmailcert", h.Get).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL, "gmailcert", h.Update).Methods("PUT")
+	helpers.CapabilityRoute(r, baseURL+"/renew-url", "gmailcert", h.GetRenewURL).Methods("GET")
 }
 
 // CertStatus is returned by GET and describes the current state of both cert files.

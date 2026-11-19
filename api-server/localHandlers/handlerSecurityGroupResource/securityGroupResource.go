@@ -59,7 +59,7 @@ func New(appConf *appCore.Config) *Handler {
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h)
+	helpers.AddRouteGroup(r, baseURL, h, "securityGroupResource")
 }
 
 // GetAll: retrieves and returns all records

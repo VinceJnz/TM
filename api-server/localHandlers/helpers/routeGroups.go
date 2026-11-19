@@ -14,11 +14,17 @@ type genericHandler interface {
 	Delete(w http.ResponseWriter, r *http.Request)
 }
 
-func AddRouteGroup(r *mux.Router, resourcePath string, handler genericHandler) {
-	r.HandleFunc(resourcePath, handler.GetAll).Methods("GET")
-	r.HandleFunc(resourcePath+"/{id:[0-9]+}", handler.Get).Methods("GET")
-	r.HandleFunc(resourcePath, handler.Create).Methods("POST")
-	r.HandleFunc(resourcePath+"/{id:[0-9]+}", handler.Update).Methods("PUT")
-	r.HandleFunc(resourcePath+"/{id:[0-9]+}", handler.Delete).Methods("DELETE")
+func AddRouteGroup(r *mux.Router, resourcePath string, handler genericHandler, resource string) {
+	CapabilityRoute(r, resourcePath, resource, handler.GetAll).Methods("GET")
+	CapabilityRoute(r, resourcePath+"/{id:[0-9]+}", resource, handler.Get).Methods("GET")
+	CapabilityRoute(r, resourcePath, resource, handler.Create).Methods("POST")
+	CapabilityRoute(r, resourcePath+"/{id:[0-9]+}", resource, handler.Update).Methods("PUT")
+	CapabilityRoute(r, resourcePath+"/{id:[0-9]+}", resource, handler.Delete).Methods("DELETE")
 	// Add some code to register the route resource for managing security access
+}
+
+// A route's capability is declared alongside its path and methods. Request URL
+// layout and API version never determine authorization.
+func CapabilityRoute(r *mux.Router, path, resource string, handler http.HandlerFunc) *mux.Route {
+	return r.HandleFunc(path, handler).Name("capability:" + resource)
 }

@@ -61,8 +61,8 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h)
-	r.HandleFunc(baseURL+"/payment/{id:[0-9]+}", h.GetList).Methods("GET")
+	helpers.AddRouteGroup(r, baseURL, h, "refunds")
+	helpers.CapabilityRoute(r, baseURL+"/payment/{id:[0-9]+}", "refunds", h.GetList).Methods("GET")
 }
 
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {

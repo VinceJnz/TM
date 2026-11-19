@@ -44,8 +44,8 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL, h.Get).Methods("GET")
-	r.HandleFunc(baseURL, h.Update).Methods("PUT")
+	helpers.CapabilityRoute(r, baseURL, "myBookings", h.Get).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL, "myBookings", h.Update).Methods("PUT")
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {

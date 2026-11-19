@@ -1,52 +1,27 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/helpers"
+	"github.com/gorilla/mux"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestNestedCollectionsUseChildCapability(t *testing.T) {
-	for path, want := range map[string]string{
-		"/api/v1/trips/12/bookings":         "bookings",
-		"/api/v1/bookings/12/bookingPeople": "bookingPeople",
-	} {
-		resource, err := (&Handler{}).setRestResource(httptest.NewRequest("GET", path, nil))
-		if err != nil || resource.ResourceName != want {
-			t.Fatalf("%s: %+v %v", path, resource, err)
-		}
+func TestCapabilityComesFromRouteDeclaration(t *testing.T) {
+	for _, path := range []string{"/custom/v9/trips/12/bookings", "/custom/v9/bookings/checkout/create/37", "/anything/with/many/segments"} {
+		router := mux.NewRouter()
+		helpers.CapabilityRoute(router, path, "bookings", func(w http.ResponseWriter, r *http.Request) {
+			resource, err := (&Handler{}).setRestResource(r)
+			if err != nil || resource.ResourceName != "bookings" || resource.AccessMethod != "GET" {
+				t.Fatalf("wrong capability: %+v %v", resource, err)
+			}
+		}).Methods("GET")
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", path, nil))
 	}
 }
-
-func TestSetRestResource_CheckoutRouteUsesBookingsResource(t *testing.T) {
-	h := &Handler{}
-	req := httptest.NewRequest("POST", "/api/v1/bookings/checkout/create/37", nil)
-
-	resource, err := h.setRestResource(req)
-	if err != nil {
-		t.Fatalf("setRestResource returned error: %v", err)
-	}
-
-	if resource.ResourceName != "bookings" {
-		t.Fatalf("expected resource name bookings, got %q", resource.ResourceName)
-	}
-	if resource.AccessMethod != "POST" {
-		t.Fatalf("expected access method POST, got %q", resource.AccessMethod)
-	}
-}
-
-func TestSetRestResource_LegacySevenSegmentBehaviorPreserved(t *testing.T) {
-	h := &Handler{}
-	req := httptest.NewRequest("GET", "/api/v1/trips/12/bookings/77", nil)
-
-	resource, err := h.setRestResource(req)
-	if err != nil {
-		t.Fatalf("setRestResource returned error: %v", err)
-	}
-
-	if resource.ResourceName != "bookings" {
-		t.Fatalf("expected resource name bookings, got %q", resource.ResourceName)
-	}
-	if resource.AccessMethod != "GET" {
-		t.Fatalf("expected access method GET, got %q", resource.AccessMethod)
+func TestUndeclaredCapabilityFailsClosed(t *testing.T) {
+	if _, err := (&Handler{}).setRestResource(httptest.NewRequest("GET", "/api/v1/bookings", nil)); err == nil {
+		t.Fatal("inferred capability from URL")
 	}
 }

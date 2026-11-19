@@ -95,6 +95,45 @@ func main() {
 	// Start background jobs
 	startTokenCleanupJob(app.Db)
 
+	r := buildRouter(app)
+	// Define CORS options
+	allowedOrigins := parseOrigins(app.Settings.CoreOrigins)
+	log.Printf("%sCORS allowed origins: %v", debugTag, allowedOrigins)
+	corsOpts := handlers.CORS(
+		handlers.AllowedOrigins(allowedOrigins),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}),
+		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
+	)
+
+	corsMuxHandler := corsOpts(r)
+	loggedHandler := corsMuxHandler
+
+	// Paths to certificate and key files
+	crtFile := app.Settings.ServerCert
+	keyFile := app.Settings.ServerKey
+	httpAddr := ":" + app.Settings.PortHttp
+	httpsAddr := ":" + app.Settings.PortHttps
+	serverErrCh := make(chan error, 2)
+
+	go func() {
+		log.Printf("%sHTTP server running on http://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttp)
+		if err := http.ListenAndServe(httpAddr, loggedHandler); err != nil {
+			serverErrCh <- fmt.Errorf("http server error: %w", err)
+		}
+	}()
+
+	go func() {
+		log.Printf("%sHTTPS server running on https://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttps)
+		if err := http.ListenAndServeTLS(httpsAddr, crtFile, keyFile, loggedHandler); err != nil {
+			serverErrCh <- fmt.Errorf("https server error: %w", err)
+		}
+	}()
+
+	log.Fatalf("%v", <-serverErrCh)
+}
+
+func buildRouter(app *appCore.Config) *mux.Router {
 	r := mux.NewRouter()
 	// *****************************************************
 	// Setup your API subrouter with CORS middleware. These routes are unprotected, i.e. do not require authentication to use. This is where you would register any routes that should be accessible without authentication, such as login or registration endpoints.
@@ -118,8 +157,8 @@ func main() {
 
 	// *****************************************************
 	// Protected routes (require authentication) - These are registered on a subrouter so that the auth middleware is only applied to these routes and not the public routes above. This allows us to have a mix of protected and unprotected routes.
-	protected := r.PathPrefix(app.Settings.APIprefix).Subrouter()
-	protected.Use(auth.RequireSessionAuth) // This needs to be here to protect the routes below. It checks for a valid session cookie and ensures the user has access to the requested resource. If the session is valid and access is granted, it allows the request to proceed to the appropriate handler. If not, it returns an unauthorized error.
+	protected := r.PathPrefix(app.Settings.APIprefix).Name("protected-api").Subrouter()
+	protected.Use(auth.RequireSessionAuth, auth.RequireCapability) // This needs to be here to protect the routes below. It checks for a valid session cookie and ensures the user has access to the requested resource. If the session is valid and access is granted, it allows the request to proceed to the appropriate handler. If not, it returns an unauthorized error.
 	protected.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "protected") // Then logging
 	})
@@ -167,39 +206,5 @@ func main() {
 	// Static handlers
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./static")))) // Serve static files from the "/static" directory under the url "/"
 
-	// Define CORS options
-	allowedOrigins := parseOrigins(app.Settings.CoreOrigins)
-	log.Printf("%sCORS allowed origins: %v", debugTag, allowedOrigins)
-	corsOpts := handlers.CORS(
-		handlers.AllowedOrigins(allowedOrigins),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}),
-		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
-	)
-
-	corsMuxHandler := corsOpts(r)
-	loggedHandler := corsMuxHandler
-
-	// Paths to certificate and key files
-	crtFile := app.Settings.ServerCert
-	keyFile := app.Settings.ServerKey
-	httpAddr := ":" + app.Settings.PortHttp
-	httpsAddr := ":" + app.Settings.PortHttps
-	serverErrCh := make(chan error, 2)
-
-	go func() {
-		log.Printf("%sHTTP server running on http://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttp)
-		if err := http.ListenAndServe(httpAddr, loggedHandler); err != nil {
-			serverErrCh <- fmt.Errorf("http server error: %w", err)
-		}
-	}()
-
-	go func() {
-		log.Printf("%sHTTPS server running on https://%s:%s", debugTag, app.Settings.Host, app.Settings.PortHttps)
-		if err := http.ListenAndServeTLS(httpsAddr, crtFile, keyFile, loggedHandler); err != nil {
-			serverErrCh <- fmt.Errorf("https server error: %w", err)
-		}
-	}()
-
-	log.Fatalf("%v", <-serverErrCh)
+	return r
 }

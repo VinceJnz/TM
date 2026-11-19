@@ -53,13 +53,13 @@ func New(appConf *appCore.Config) *Handler {
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h)
+	helpers.AddRouteGroup(r, baseURL, h, "userAgeGroups")
 }
 
 // RegisterRoutesPublic registers only the read-only routes (GET) for public access
 func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL, h.GetAll).Methods("GET")
-	r.HandleFunc(baseURL+"/{id:[0-9]+}", h.Get).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL, "userAgeGroups", h.GetAll).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL+"/{id:[0-9]+}", "userAgeGroups", h.Get).Methods("GET")
 }
 
 // GetAll: retrieves and returns all records

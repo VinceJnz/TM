@@ -1,6 +1,7 @@
 package handlerBooking
 
 import (
+	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/models"
@@ -92,15 +93,15 @@ type CheckoutStatusResponse struct {
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutesStripe(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL+"/checkout/create/{id:[0-9]+}", h.CheckoutCreate).Methods("POST")
-	r.HandleFunc(baseURL+"/checkout/check/{id:[0-9]+}", h.CheckoutCheck).Methods("GET")
-	r.HandleFunc(baseURL+"/checkout/success/{id:[0-9]+}", h.CheckoutSuccess).Methods("GET")
-	r.HandleFunc(baseURL+"/checkout/cancel/{id:[0-9]+}", h.CheckoutCancel).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL+"/checkout/create/{id:[0-9]+}", "bookings", h.CheckoutCreate).Methods("POST")
+	helpers.CapabilityRoute(r, baseURL+"/checkout/check/{id:[0-9]+}", "bookings", h.CheckoutCheck).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL+"/checkout/success/{id:[0-9]+}", "bookings", h.CheckoutSuccess).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL+"/checkout/cancel/{id:[0-9]+}", "bookings", h.CheckoutCancel).Methods("GET")
 }
 
 // RegisterRoutesStripeWebhook registers the public Stripe webhook endpoint.
 func (h *Handler) RegisterRoutesStripeWebhook(r *mux.Router, baseURL string) {
-	r.HandleFunc(baseURL+"/checkout/webhook", h.CheckoutWebhook).Methods("POST")
+	helpers.CapabilityRoute(r, baseURL+"/checkout/webhook", "bookings", h.CheckoutWebhook).Methods("POST")
 }
 
 // CheckoutCreate This handler collects the data from the client and creates a payment intent.
