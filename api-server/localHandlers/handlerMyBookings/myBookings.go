@@ -90,6 +90,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGet, id, session.UserID, session.AccessScope)
 }
 
@@ -100,6 +103,9 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.Booking{}, qryGetList, id, session.UserID, session.AccessScope)
 }
 
@@ -139,6 +145,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Booking
 
 	id := dbStandardTemplate.GetID(w, r)
+
+	if id <= 0 {
+		return
+	}
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -169,6 +179,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)

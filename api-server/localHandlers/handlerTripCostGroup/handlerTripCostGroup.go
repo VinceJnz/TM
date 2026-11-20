@@ -46,6 +46,9 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 // Get: retrieves a single trip cost by ID
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.TripCostGroup{}, qryGet, id)
 }
 
@@ -64,7 +67,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.TripCostGroup
 	id := dbStandardTemplate.GetID(w, r)
-
+	if id <= 0 {
+		return
+	}
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		log.Printf(debugTag+"Update err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -78,5 +83,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // Delete: removes a trip cost by ID
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }

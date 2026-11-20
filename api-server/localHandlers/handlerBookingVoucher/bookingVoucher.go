@@ -102,6 +102,9 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.BookingVoucher{}, qryGet, id)
 }
 
@@ -127,6 +130,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	var record models.BookingVoucher
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -149,5 +155,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
 }

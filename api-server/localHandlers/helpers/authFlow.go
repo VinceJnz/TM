@@ -3,10 +3,12 @@ package helpers
 import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -141,7 +143,29 @@ func WriteJSON(w http.ResponseWriter, status int, payload any) {
 }
 
 func DecodeJSONBody(r *http.Request, payload any) error {
-	return json.NewDecoder(r.Body).Decode(payload)
+	const maxBody = 64 << 10
+	if r.Body == nil {
+		return errors.New("missing request body")
+	}
+	data, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
+	if err != nil {
+		return err
+	}
+	if len(data) > maxBody {
+		return errors.New("request body too large")
+	}
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		return errors.New("request object required")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	if err = decoder.Decode(payload); err != nil {
+		return err
+	}
+	var trailing any
+	if err = decoder.Decode(&trailing); err != io.EOF {
+		return errors.New("exactly one JSON value required")
+	}
+	return nil
 }
 
 func SessionExpiryFromRememberMe(rememberMe bool) time.Time {

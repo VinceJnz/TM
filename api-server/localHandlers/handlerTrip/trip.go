@@ -58,6 +58,9 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.Trip{}, qryGet, id)
 }
 
@@ -87,6 +90,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var record models.Trip
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -117,6 +123,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)

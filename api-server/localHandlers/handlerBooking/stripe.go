@@ -167,6 +167,9 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 
 	bookingID := dbStandardTemplate.GetID(w, r)
 
+	if bookingID <= 0 {
+		return
+	}
 	// Fetch booking details
 	bookingItem := &models.BookingPaymentInfo{}
 	err = Get(w, r, debugTag, h.appConf.Db, bookingItem, qryGetBookingForPayment, bookingID)
@@ -237,7 +240,9 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v handling checkout success", debugTag+"CheckoutSuccess()")
 	bookingID := dbStandardTemplate.GetID(w, r)
-
+	if bookingID <= 0 {
+		return
+	}
 	if h.appConf.TestMode {
 		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 		if email := h.appConf.EmailService(); email != nil && appSession != nil && appSession.Email != "" {
@@ -428,7 +433,9 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v handling checkout cancel", debugTag+"CheckoutCancel()")
 	bookingID := dbStandardTemplate.GetID(w, r)
-
+	if bookingID <= 0 {
+		return
+	}
 	// Return HTML page with cancellation message
 	html := fmt.Sprintf(`<!DOCTYPE html>
 <html>

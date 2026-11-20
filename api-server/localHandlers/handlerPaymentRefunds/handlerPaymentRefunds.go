@@ -78,6 +78,9 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.PaymentRefund{}, qryGetList, id)
 }
 
@@ -137,7 +140,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	var record models.PaymentRefund
 	id := dbStandardTemplate.GetID(w, r)
-	if id == 0 {
+	if id <= 0 {
 		return
 	}
 	if err := helpers.DecodeJSONBody(r, &record); err != nil {
@@ -203,7 +206,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := dbStandardTemplate.GetID(w, r)
-	if id == 0 {
+	if id <= 0 {
 		return
 	}
 

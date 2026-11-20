@@ -1,7 +1,7 @@
 package dbStandardTemplate
 
 import (
-	"encoding/json"
+	"api-server/v2/localHandlers/helpers"
 	"log"
 	"net/http"
 
@@ -43,12 +43,15 @@ func (rc *ResourceCRUD[T]) GetAll(w http.ResponseWriter, r *http.Request) {
 
 func (rc *ResourceCRUD[T]) Get(w http.ResponseWriter, r *http.Request) {
 	id := GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	Get(w, r, rc.cfg.DebugTag, rc.cfg.Db, rc.cfg.NewListDest(), rc.cfg.Queries.Get, id)
 }
 
 func (rc *ResourceCRUD[T]) Create(w http.ResponseWriter, r *http.Request) {
 	record := rc.cfg.NewRecord()
-	if err := json.NewDecoder(r.Body).Decode(record); err != nil {
+	if err := helpers.DecodeJSONBody(r, record); err != nil {
 		log.Printf(rc.cfg.DebugTag+"Create err=%+v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
@@ -59,8 +62,11 @@ func (rc *ResourceCRUD[T]) Create(w http.ResponseWriter, r *http.Request) {
 func (rc *ResourceCRUD[T]) Update(w http.ResponseWriter, r *http.Request) {
 	record := rc.cfg.NewRecord()
 	id := GetID(w, r)
-	if err := json.NewDecoder(r.Body).Decode(record); err != nil {
-		log.Printf(rc.cfg.DebugTag+"Update dest=%+v", *record)
+	if id <= 0 {
+		return
+	}
+	if err := helpers.DecodeJSONBody(r, record); err != nil {
+		log.Print(rc.cfg.DebugTag + "Update: invalid request")
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -70,5 +76,8 @@ func (rc *ResourceCRUD[T]) Update(w http.ResponseWriter, r *http.Request) {
 
 func (rc *ResourceCRUD[T]) Delete(w http.ResponseWriter, r *http.Request) {
 	id := GetID(w, r)
+	if id <= 0 {
+		return
+	}
 	Delete(w, r, rc.cfg.DebugTag, rc.cfg.Db, nil, rc.cfg.Queries.Delete, id)
 }

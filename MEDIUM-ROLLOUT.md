@@ -148,3 +148,12 @@ must also acquire trip capacity. Ledger writers acquire a shared PostgreSQL
 transaction advisory lock before mutation; this deliberately favors correctness
 for administrative cross-booking edits over parallel ledger throughput. Provider
 network calls do not hold this lock. No historical ledger rows are rewritten.
+
+## Request contracts
+
+Shared JSON decoding now accepts exactly one non-null value and limits bodies to
+64 KiB. Generic CRUD uses that decoder; malformed/nonpositive IDs stop handlers
+before database access. Generic UPDATE/DELETE return 404 when no row is affected,
+and JSON headers are set before the response status. Existing resource-specific
+DTOs and field validation remain authoritative; unknown legacy fields remain
+accepted for compatibility. Sensitive input records are not logged on decode errors.

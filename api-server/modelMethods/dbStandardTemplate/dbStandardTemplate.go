@@ -65,7 +65,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 	tx, err := Db.BeginTxx(r.Context(), nil) // Start transaction
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create: Could not start transaction", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -78,12 +78,12 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 	err = tx.Commit() // Commit on success
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create: Could not commit transaction", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(dest)
 }
 
@@ -91,7 +91,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	tx, err := Db.BeginTxx(r.Context(), nil) // Start transaction
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create: Could not start transaction", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -103,14 +103,23 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 		return
 	}
 
+	if count, err := result.RowsAffected(); err != nil || count == 0 {
+		tx.Rollback()
+		if err != nil {
+			http.Error(w, "Internal server error", 500)
+		} else {
+			http.Error(w, "Record not found", 404)
+		}
+		return
+	}
 	err = tx.Commit() // Commit on success
 	if err != nil {
-		http.Error(w, debugTag+debugStr+"Create: Could not commit transaction", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(dest) // Not sure why this is returning a copy of the record (dest) that was sent in.
 }
 
@@ -142,6 +151,15 @@ func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	}
 
 	// Commit transaction
+	if count, err := result.RowsAffected(); err != nil || count == 0 {
+		tx.Rollback()
+		if err != nil {
+			http.Error(w, "Internal server error", 500)
+		} else {
+			http.Error(w, "Record not found", 404)
+		}
+		return
+	}
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
@@ -239,7 +257,7 @@ func DeleteWithChildCheck(w http.ResponseWriter, r *http.Request, debugStr strin
 func GetID(w http.ResponseWriter, r *http.Request) int {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
-	if err != nil {
+	if err != nil || id <= 0 {
 		http.Error(w, "Invalid record ID", http.StatusBadRequest)
 		return 0
 	}
@@ -271,5 +289,5 @@ func CanAccessAny(session *models.Session) bool {
 func ReturnError(w http.ResponseWriter, r *http.Request, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnprocessableEntity)
-	json.NewEncoder(w).Encode(map[string]string{"error": debugTag + "Update: " + err.Error()})
+	json.NewEncoder(w).Encode(map[string]string{"error": "invalid operation"})
 }
