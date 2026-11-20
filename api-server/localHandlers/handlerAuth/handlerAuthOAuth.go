@@ -17,7 +17,7 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 			writeJSONResponse(w, 401, map[string]string{"error": "unauthorized", "message": "authentication required"}, "auth")
 			return
 		}
-		token, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, cookie.Value)
+		token, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag, h.appConf.Db, cookie.Value)
 		if err != nil {
 			code := 503
 			if errors.Is(err, sql.ErrNoRows) {
@@ -26,7 +26,7 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 			writeJSONResponse(w, code, map[string]string{"error": "unauthorized", "message": "session unavailable or invalid"}, "auth")
 			return
 		}
-		user, err := dbAuthTemplate.UserReadQry(debugTag, h.appConf.Db, token.UserID)
+		user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag, h.appConf.Db, token.UserID)
 		if err != nil {
 			writeJSONResponse(w, 503, map[string]string{"error": "unavailable", "message": "account lookup unavailable"}, "auth")
 			return
@@ -53,7 +53,7 @@ func (h *Handler) RequireCapability(next http.Handler) http.Handler {
 			writeJSONResponse(w, 500, map[string]string{"error": "configuration_error", "message": "route capability is not configured"}, "capability")
 			return
 		}
-		grant, err := dbAuthTemplate.UserCheckAccess(debugTag, h.appConf.Db, session.UserID, resource.ResourceName, resource.AccessMethod)
+		grant, err := dbAuthTemplate.UserCheckAccessContext(r.Context(), h.appConf.Db, session.UserID, resource.ResourceName, resource.AccessMethod)
 		if err != nil {
 			code := 503
 			if errors.Is(err, sql.ErrNoRows) {

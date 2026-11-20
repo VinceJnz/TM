@@ -205,11 +205,16 @@ const (
 // FindSessionToken using the session cookie string find session cookie data in the DB and return the token item
 // if the cookie is not found return the DB error
 func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.Token, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return FindSessionTokenContext(ctx, debugStr, Db, cookieStr)
+}
+func FindSessionTokenContext(ctx context.Context, debugStr string, Db *sqlx.DB, cookieStr string) (models.Token, error) {
 	var err error
 	result := models.Token{}
 	result.TokenStr.SetValid(cookieStr)
 	//err = r.DBConn.QueryRow(sqlFindCookie, result.CookieStr).Scan(&result.ID, &result.UserID, &result.Name, &result.CookieStr, &result.Valid, &result.ValidID, &result.ValidFrom, &result.ValidTo)
-	err = Db.QueryRow(sqlFindSessionToken, tokenDigest(cookieStr), models.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
+	err = Db.QueryRowContext(ctx, sqlFindSessionToken, tokenDigest(cookieStr), models.AccountActive).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		return result, err
 	}
@@ -220,11 +225,16 @@ func FindSessionToken(debugStr string, Db *sqlx.DB, cookieStr string) (models.To
 
 // FindToken using the session cookie name and cookie string find session cookie data in the DB and return the token item
 func FindToken(debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Token, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return FindTokenContext(ctx, debugStr, Db, name, cookieStr)
+}
+func FindTokenContext(ctx context.Context, debugStr string, Db *sqlx.DB, name, cookieStr string) (models.Token, error) {
 	var err error
 	result := models.Token{}
 	//result.TokenStr.SetValid(cookieStr)
 	//result.Name.SetValid(name)
-	err = Db.QueryRow(sqlFindToken, tokenDigest(cookieStr), name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
+	err = Db.QueryRowContext(ctx, sqlFindToken, tokenDigest(cookieStr), name).Scan(&result.ID, &result.UserID, &result.Name, &result.TokenStr, &result.SessionData, &result.Valid, &result.ValidFrom, &result.ValidTo)
 	if err != nil {
 		log.Printf("%sFindToken failed (sensitive details omitted)", debugTag)
 		return result, err
@@ -253,8 +263,13 @@ const (
 )
 
 func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return UserReadQryContext(ctx, debugStr, Db, id)
+}
+func UserReadQryContext(ctx context.Context, debugStr string, Db *sqlx.DB, id int) (models.User, error) {
 	record := models.User{}
-	err := Db.Get(&record, sqlUserRead, id)
+	err := Db.GetContext(ctx, &record, sqlUserRead, id)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -262,8 +277,13 @@ func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
 }
 
 func UserNameReadQry(debugStr string, Db *sqlx.DB, username string) (models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return UserNameReadQryContext(ctx, debugStr, Db, username)
+}
+func UserNameReadQryContext(ctx context.Context, debugStr string, Db *sqlx.DB, username string) (models.User, error) {
 	record := models.User{}
-	err := Db.Get(&record, sqlUserNameRead, username)
+	err := Db.GetContext(ctx, &record, sqlUserNameRead, username)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -271,8 +291,13 @@ func UserNameReadQry(debugStr string, Db *sqlx.DB, username string) (models.User
 }
 
 func UserEmailReadQry(debugStr string, Db *sqlx.DB, email string) (models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return UserEmailReadQryContext(ctx, debugStr, Db, email)
+}
+func UserEmailReadQryContext(ctx context.Context, debugStr string, Db *sqlx.DB, email string) (models.User, error) {
 	record := models.User{}
-	err := Db.Get(&record, sqlUserEmailRead, email)
+	err := Db.GetContext(ctx, &record, sqlUserEmailRead, email)
 	if err != nil {
 		return models.User{}, err
 	}

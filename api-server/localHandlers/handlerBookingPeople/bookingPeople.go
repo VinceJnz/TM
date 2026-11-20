@@ -1,6 +1,7 @@
 package handlerBookingPeople
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -58,7 +59,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	records := []models.BookingPeople{}
-	err := h.appConf.Db.Select(&records, qryGetAll, session.UserID, session.AccessScope)
+	err := h.appConf.Db.SelectContext(r.Context(), &records, qryGetAll, session.UserID, session.AccessScope)
 	if err == sql.ErrNoRows {
 		log.Printf("%v.GetAll %v\n", debugTag, err)
 		http.Error(w, "Record not found", http.StatusNotFound)
@@ -90,7 +91,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	records := []models.BookingPeople{}
-	err = h.appConf.Db.Select(&records, qryGetList, parentID, session.UserID, session.AccessScope)
+	err = h.appConf.Db.SelectContext(r.Context(), &records, qryGetList, parentID, session.UserID, session.AccessScope)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Record not found", http.StatusNotFound)
 		return
@@ -134,7 +135,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.RecordValidation(session, record); err != nil {
+	if err := h.RecordValidation(r.Context(), session, record); err != nil {
 		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -163,7 +164,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	record.ID = id
 
-	if err := h.RecordValidation(session, record); err != nil {
+	if err := h.RecordValidation(r.Context(), session, record); err != nil {
 		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -187,13 +188,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// Validation stuff
 	record.ID = id
-	err = h.appConf.Db.Get(&record, qryGet, record.ID, session.UserID, session.AccessScope)
+	err = h.appConf.Db.GetContext(r.Context(), &record, qryGet, record.ID, session.UserID, session.AccessScope)
 	if err != nil {
 		http.Error(w, debugTag+"Delete - Record not found: ", http.StatusUnprocessableEntity)
 		return
 	}
 
-	if err := h.RecordValidation(session, record); err != nil {
+	if err := h.RecordValidation(r.Context(), session, record); err != nil {
 		http.Error(w, debugTag+"Delete: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -205,12 +206,12 @@ const (
 	qryParentRecordValidation = `SELECT id,owner_id,booking_status_id,stripe_session_id FROM at_bookings WHERE id = $1`
 )
 
-func (h *Handler) RecordValidation(session *models.Session, record models.BookingPeople) error {
+func (h *Handler) RecordValidation(ctx context.Context, session *models.Session, record models.BookingPeople) error {
 	var err error
 
 	parentID := record.BookingID
 	validationRecord := models.Booking{}
-	err = h.appConf.Db.Get(&validationRecord, qryParentRecordValidation, parentID)
+	err = h.appConf.Db.GetContext(ctx, &validationRecord, qryParentRecordValidation, parentID)
 	switch {
 	case err == sql.ErrNoRows:
 		return fmt.Errorf("booking not found for booking_id=%v", parentID)

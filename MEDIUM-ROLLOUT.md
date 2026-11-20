@@ -157,3 +157,12 @@ before database access. Generic UPDATE/DELETE return 404 when no row is affected
 and JSON headers are set before the response status. Existing resource-specific
 DTOs and field validation remain authoritative; unknown legacy fields remain
 accepted for compatibility. Sensitive input records are not logged on decode errors.
+
+## Request cancellation
+
+Protected-session, account and capability lookups now use the HTTP request context.
+Booking/participant reads and parent validation do likewise; financial transactions
+and Stripe calls already carry request context. Legacy authentication lookup wrappers
+retain compatibility and use a five-second deadline when no caller context exists.
+Cancellation tests cover the protected-route lookup chain. Background jobs retain
+their own bounded contexts.

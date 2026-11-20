@@ -185,7 +185,7 @@ func DeleteWithChildCheck(w http.ResponseWriter, r *http.Request, debugStr strin
 	// Check for child records first
 	for _, check := range childChecks {
 		var count int
-		err := Db.Get(&count, check.Query, args...)
+		err := Db.GetContext(r.Context(), &count, check.Query, args...)
 		if err != nil {
 			log.Printf("%sDeleteWithChildCheck: Error checking %s: %v", debugTag+debugStr, check.TableName, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

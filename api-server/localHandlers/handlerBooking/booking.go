@@ -5,6 +5,7 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -130,7 +131,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.RecordValidation(record); err != nil {
+	if err := h.RecordValidation(r.Context(), record); err != nil {
 		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -162,7 +163,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	if err := h.RecordValidation(record); err != nil {
+	if err := h.RecordValidation(r.Context(), record); err != nil {
 		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -188,11 +189,11 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AccessScope)
 }
 
-func (h *Handler) RecordValidation(record models.Booking) error {
+func (h *Handler) RecordValidation(ctx context.Context, record models.Booking) error {
 	if err := helpers.ValidateDatesFromLtTo(record.FromDate, record.ToDate); err != nil {
 		return err
 	}
-	if err := h.ParentRecordValidation(record); err != nil {
+	if err := h.ParentRecordValidation(ctx, record); err != nil {
 		return err
 	}
 	return nil
@@ -202,11 +203,11 @@ const (
 	sqlBookingParentRecordValidation = `SELECT * FROM at_trips WHERE id = $1`
 )
 
-func (h *Handler) ParentRecordValidation(record models.Booking) error {
+func (h *Handler) ParentRecordValidation(ctx context.Context, record models.Booking) error {
 	parentID := record.TripID
 
 	validationRecord := models.Trip{}
-	err := h.appConf.Db.Get(&validationRecord, sqlBookingParentRecordValidation, parentID)
+	err := h.appConf.Db.GetContext(ctx, &validationRecord, sqlBookingParentRecordValidation, parentID)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("trip not found for trip_id=%v", parentID)
 	} else if err != nil {
