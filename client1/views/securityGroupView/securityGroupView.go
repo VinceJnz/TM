@@ -426,14 +426,14 @@ func (editor *ItemEditor) populateItemList() {
 		resourcesContainer.Call("appendChild", resourceEditor.Div)
 
 		// Set up toggle handler
-		groupCard.Call("addEventListener", "click", editor.createGroupToggleHandler(groupID, resourcesContainer, toggleIndicator, resourceEditor))
+		domEvents.Listen(groupCard, "click", editor.createGroupToggleHandler(groupID, resourcesContainer, toggleIndicator, resourceEditor))
 
 		editor.ListDiv.Call("appendChild", groupCard)
 	}
 }
 
-func (editor *ItemEditor) createGroupToggleHandler(groupID int, resourcesContainer js.Value, toggleIndicator js.Value, resourceEditor *securityGroupResourceView.ItemEditor) js.Func {
-	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) createGroupToggleHandler(groupID int, resourcesContainer js.Value, toggleIndicator js.Value, resourceEditor *securityGroupResourceView.ItemEditor) func(js.Value, []js.Value) any {
+	return func(this js.Value, args []js.Value) interface{} {
 		isExpanded := editor.groupExpanded[groupID]
 		editor.groupExpanded[groupID] = !isExpanded
 
@@ -451,7 +451,7 @@ func (editor *ItemEditor) createGroupToggleHandler(groupID int, resourcesContain
 			toggleIndicator.Set("innerHTML", "▶")
 		}
 		return nil
-	})
+	}
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {

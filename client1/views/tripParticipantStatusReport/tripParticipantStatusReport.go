@@ -2,6 +2,7 @@ package tripParticipantStatusReport
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingView"
@@ -287,9 +288,9 @@ func (editor *ItemEditor) populateItemList() {
 
 			// Create click handler with proper closure capture
 			tripID := record.TripID
-			tripCard.Call("addEventListener", "click", editor.createTripToggleHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
+			domEvents.Listen(tripCard, "click", editor.createTripToggleHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
 
-			makeBookingButton.Call("addEventListener", "click", editor.createMakeBookingHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
+			domEvents.Listen(makeBookingButton, "click", editor.createMakeBookingHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
 
 			editor.ListDiv.Call("appendChild", tripCard)
 		}
@@ -352,8 +353,8 @@ func (editor *ItemEditor) populateItemList() {
 	}
 }
 
-func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) js.Func {
-	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) func(js.Value, []js.Value) any {
+	return func(this js.Value, args []js.Value) interface{} {
 		isExpanded := editor.tripExpanded[tripID]
 		editor.tripExpanded[tripID] = !isExpanded
 
@@ -370,11 +371,11 @@ func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer 
 			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
 		}
 		return nil
-	})
+	}
 }
 
-func (editor *ItemEditor) createMakeBookingHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) js.Func {
-	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) createMakeBookingHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) func(js.Value, []js.Value) any {
+	return func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			args[0].Call("stopPropagation")
 		}
@@ -386,7 +387,7 @@ func (editor *ItemEditor) createMakeBookingHandler(tripID int, bookingsContainer
 		bookingEditor.NewItemData(js.Null(), nil)
 		bookingEditor.Div.Get("style").Call("setProperty", "display", "block")
 		return nil
-	})
+	}
 }
 
 type statusStyle struct {

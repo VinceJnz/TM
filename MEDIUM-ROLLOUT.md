@@ -198,7 +198,7 @@ Anonymous view promise callbacks now use settlement helpers that release both
 branches and preserve rejection propagation. Explicitly managed window message
 listeners retain their existing owner cleanup. Tests exercise repeated destruction,
 observer-driven cleanup, and successful/rejected promises under Node WASM; TinyGo
-also builds the updated application. Timers remain owned by their existing views.
+also builds the updated application. OAuth popup timers release callbacks after execution and are cancelled/released when their owning process view is destroyed.
 
 ## Read-only baseline compatibility
 

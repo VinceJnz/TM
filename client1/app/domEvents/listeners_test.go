@@ -67,3 +67,23 @@ func TestRemovedOwnerReleasesListeners(t *testing.T) {
 		}
 	}
 }
+
+func TestTimeoutExecutionAndOwnerCancellation(t *testing.T) {
+	done := make(chan struct{}, 1)
+	cancel := Timeout(func(js.Value, []js.Value) any { done <- struct{}{}; return nil }, 1)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timer did not execute")
+	}
+	cancel()
+	cancel()
+	cancelled := false
+	cancel = Timeout(func(js.Value, []js.Value) any { cancelled = true; return nil }, 5)
+	cancel()
+	cancel()
+	<-time.After(20 * time.Millisecond)
+	if cancelled {
+		t.Fatal("destroyed owner's timer ran")
+	}
+}

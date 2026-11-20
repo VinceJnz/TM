@@ -13,6 +13,28 @@ var sequence int
 var observer js.Value
 var observerCallback js.Func
 
+// Timeout releases its callback after execution or explicit cancellation.
+func Timeout(callback func(js.Value, []js.Value) any, milliseconds int) func() {
+	active := true
+	var handler js.Func
+	handler = js.FuncOf(func(this js.Value, args []js.Value) any {
+		if !active {
+			return nil
+		}
+		active = false
+		defer handler.Release()
+		return callback(this, args)
+	})
+	id := js.Global().Call("setTimeout", handler, milliseconds)
+	return func() {
+		if active {
+			active = false
+			js.Global().Call("clearTimeout", id)
+			handler.Release()
+		}
+	}
+}
+
 // Then and Catch release both branches when the promise settles, including the
 // branch that never executes. Rejections keep propagating through the chain.
 func Then(promise js.Value, callback func(js.Value, []js.Value) any) js.Value {

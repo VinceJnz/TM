@@ -517,7 +517,7 @@ func (editor *ItemEditor) populateItemList() {
 		childContainer.Call("appendChild", groupEditor.GetDiv())
 
 		userID := record.ID
-		userCard.Call("addEventListener", "click", editor.createUserToggleHandler(userID, childContainer, toggleIndicator, groupEditor))
+		domEvents.Listen(userCard, "click", editor.createUserToggleHandler(userID, childContainer, toggleIndicator, groupEditor))
 		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
@@ -554,8 +554,8 @@ func (editor *ItemEditor) populateItemList() {
 	}
 }
 
-func (editor *ItemEditor) createUserToggleHandler(userID int, childContainer js.Value, toggleIndicator js.Value, groupEditor *userSecurityGroupView.ItemEditor) js.Func {
-	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+func (editor *ItemEditor) createUserToggleHandler(userID int, childContainer js.Value, toggleIndicator js.Value, groupEditor *userSecurityGroupView.ItemEditor) func(js.Value, []js.Value) any {
+	return func(this js.Value, args []js.Value) interface{} {
 		isExpanded := editor.userExpanded[userID]
 		editor.userExpanded[userID] = !isExpanded
 
@@ -571,7 +571,7 @@ func (editor *ItemEditor) createUserToggleHandler(userID int, childContainer js.
 			toggleIndicator.Set("innerHTML", "▶")
 		}
 		return nil
-	})
+	}
 }
 
 func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableData) {

@@ -17,7 +17,7 @@ import (
 func (editor *ItemEditor) authProcess() {
 	// Try DB-backed session first
 	menuPromise := js.Global().Call("fetch", "/api/v1/auth/menuUser/", map[string]any{"method": "GET", "credentials": "include"})
-	menuThen := js.FuncOf(func(this js.Value, args []js.Value) any {
+	menuThen := func(this js.Value, args []js.Value) any {
 		resp := args[0]
 		if resp.Get("ok").Bool() {
 			// Parse JSON
@@ -99,8 +99,8 @@ func (editor *ItemEditor) authProcess() {
 			return nil
 		})
 		return nil
-	})
-	menuCatch := js.FuncOf(func(this js.Value, args []js.Value) any {
+	}
+	menuCatch := func(this js.Value, args []js.Value) any {
 		// If fetch fails, try the OAuth flow directly
 		mePromise := js.Global().Call("fetch", ApiURL+"/me", map[string]any{"method": "GET", "credentials": "include"})
 		domEvents.Then(mePromise, func(this js.Value, args []js.Value) any {
@@ -140,8 +140,8 @@ func (editor *ItemEditor) authProcess() {
 			return nil
 		})
 		return nil
-	})
-	menuPromise.Call("then", menuThen).Call("catch", menuCatch)
+	}
+	domEvents.Catch(domEvents.Then(menuPromise, menuThen), menuCatch)
 
 }
 

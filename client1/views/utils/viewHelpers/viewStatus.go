@@ -1,6 +1,7 @@
 package viewHelpers
 
 import (
+	"client1/v2/app/domEvents"
 	"syscall/js"
 	"time"
 )
@@ -18,13 +19,12 @@ const (
 )
 
 type ItemStateView struct {
-	document      js.Value
-	itemState     ItemState
-	stateDiv      js.Value
-	messagesDiv   js.Value
-	toggleBtn     js.Value
-	messagesOpen  bool
-	toggleHandler js.Func
+	document     js.Value
+	itemState    ItemState
+	stateDiv     js.Value
+	messagesDiv  js.Value
+	toggleBtn    js.Value
+	messagesOpen bool
 }
 
 func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
@@ -58,7 +58,7 @@ func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
 		messagesOpen: false,
 	}
 
-	itemState.toggleHandler = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	domEvents.Listen(itemState.toggleBtn, "click", func(this js.Value, args []js.Value) interface{} {
 		itemState.messagesOpen = !itemState.messagesOpen
 		if itemState.messagesOpen {
 			itemState.messagesDiv.Get("style").Call("removeProperty", "display")
@@ -69,7 +69,6 @@ func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
 		}
 		return nil
 	})
-	itemState.toggleBtn.Call("addEventListener", "click", itemState.toggleHandler)
 
 	return itemState
 }

@@ -43,6 +43,7 @@ type Process struct {
 	isVisible     bool
 	msgHandler    js.Func
 	msgHandlerSet bool
+	timers        []func()
 }
 
 // New creates a new OAuth registration process view that implements editorElement interface
@@ -74,16 +75,16 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 
 	if hasLoginParam {
 		// Returning user - just notify parent and close
-		js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any {
+		p.timers = append(p.timers, domEvents.Timeout(func(this js.Value, args []js.Value) any {
 			p.handleLoginComplete()
 			return nil
-		}), 500)
+		}, 500))
 	} else if hasRegisterParam {
 		// New user - show registration form
-		js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any {
+		p.timers = append(p.timers, domEvents.Timeout(func(this js.Value, args []js.Value) any {
 			p.showRegistrationFormInPopup()
 			return nil
-		}), 500)
+		}, 500))
 	} else if !p.isPopup {
 		// We're in parent window, set up message listener
 		p.setupParentMessageListener()
@@ -166,10 +167,10 @@ func (p *Process) handleLoginComplete() {
 	}
 
 	// Close popup after delay
-	js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any {
+	p.timers = append(p.timers, domEvents.Timeout(func(this js.Value, args []js.Value) any {
 		js.Global().Get("window").Call("close")
 		return nil
-	}), 1500)
+	}, 1500))
 }
 
 // StartRegistration initiates the OAuth registration flow by opening the OAuth popup.
@@ -480,10 +481,10 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 			}
 
 			// Close popup after delay
-			js.Global().Call("setTimeout", js.FuncOf(func(this js.Value, args []js.Value) any {
+			p.timers = append(p.timers, domEvents.Timeout(func(this js.Value, args []js.Value) any {
 				js.Global().Get("window").Call("close")
 				return nil
-			}), 1500)
+			}, 1500))
 		},
 		func(err error) {
 			// Failure callback
@@ -557,6 +558,10 @@ func (p *Process) showStatus(statusDiv js.Value, message string, messageType str
 
 // Destroy releases resources
 func (p *Process) Destroy() {
+	for _, cancel := range p.timers {
+		cancel()
+	}
+	p.timers = nil
 	if p.msgHandlerSet {
 		js.Global().Call("removeEventListener", "message", p.msgHandler)
 		p.msgHandler.Release()
