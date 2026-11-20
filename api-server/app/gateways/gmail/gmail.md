@@ -1,3 +1,27 @@
+## Sysadmin gateway credentials
+
+Open **System Administrator → Gateway Credentials**. The screen uses the existing
+`gmailcert` capability with `any` scope. GET grants access to status and PUT
+permits changes.
+
+- **Refresh Gmail token** exchanges the saved refresh token and installs the
+  result immediately. A failed exchange leaves the saved file and loaded client
+  in place.
+- **Reconnect Gmail** starts a Google consent flow for a missing or revoked
+  refresh token. Configure a Google OAuth web client and register the full API
+  callback URL as an authorized redirect URI. Set `GMAIL_RENEW_REDIRECT_URL`
+  to that exact URL, for example
+  `https://trips.example.com/api/gmailcert/callback` for an `/api` prefix.
+  The callback must receive the same signed-in Sysadmin session. Start and
+  complete consent against the same API instance within ten minutes.
+- Configure `EMAIL_SECRET` and `EMAIL_TOKEN` as file paths. Replacement
+  requires writable parent directories on persistent storage. When replacing
+  the OAuth client JSON, refresh with its matching token or reconnect to
+  activate the new client. Complete that step before restarting the API.
+- Stripe and Google sign-in show startup configuration status. Rotate those
+  credentials in the provider console, update the deployment secrets, and
+  restart the API.
+
 # Gmail API Info
 
 ## API Info

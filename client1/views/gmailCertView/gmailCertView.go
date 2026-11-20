@@ -5,332 +5,235 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
-	"encoding/json"
-	"log"
 	"net/http"
+	"strings"
 	"syscall/js"
 	"time"
 )
 
-const debugTag = "gmailCertView."
 const ApiURL = "/gmailcert"
 
-type ItemState int
-
-const (
-	ItemStateNone ItemState = iota
-	ItemStateFetching
-	ItemStateSaving
-)
-
-type ViewState int
-
-const (
-	ViewStateNone  ViewState = iota
-	ViewStateBlock ViewState = iota
-)
-
-// CertStatus mirrors the server's GET response.
 type CertStatus struct {
-	EmailAddr      string    `json:"email_addr"`
-	TokenFile      string    `json:"token_file"`
-	TokenExists    bool      `json:"token_exists"`
-	TokenModified  time.Time `json:"token_modified"`
-	SecretFile     string    `json:"secret_file"`
-	SecretExists   bool      `json:"secret_exists"`
-	SecretModified time.Time `json:"secret_modified"`
+	EmailAddr               string     `json:"email_addr"`
+	TokenExists             bool       `json:"token_exists"`
+	TokenModified           time.Time  `json:"token_modified"`
+	SecretExists            bool       `json:"secret_exists"`
+	SecretModified          time.Time  `json:"secret_modified"`
+	GmailLoaded             bool       `json:"gmail_loaded"`
+	GmailRefreshAvailable   bool       `json:"gmail_refresh_available"`
+	GmailTokenExpiry        *time.Time `json:"gmail_token_expiry"`
+	CanReconnect            bool       `json:"can_reconnect"`
+	StripeLoaded            bool       `json:"stripe_loaded"`
+	StripeWebhookConfigured bool       `json:"stripe_webhook_configured"`
+	GoogleSignInLoaded      bool       `json:"google_sign_in_loaded"`
 }
 
-// UpdateRequest mirrors the server's PUT request body.
-type UpdateRequest struct {
-	Type    string `json:"type"`
-	Content string `json:"content"`
-}
-
-// RenewURLResponse mirrors the server's GET /renew-url response.
-type RenewURLResponse struct {
-	URL     string `json:"url"`
-	Message string `json:"message"`
-}
-
-type UI struct {
-	TokenTextarea  js.Value
-	SecretTextarea js.Value
-	RenewURLDiv    js.Value
+type listener struct {
+	element  js.Value
+	callback js.Func
 }
 
 type ItemEditor struct {
-	appCore   *appCore.AppCore
-	client    *httpProcessor.Client
-	document  js.Value
-	events    *eventProcessor.EventProcessor
-	ItemState ItemState
-	ViewState ViewState
-	Status    CertStatus
-	UI        UI
-	Div       js.Value
-	StatusDiv js.Value
-	EditDiv   js.Value
-	StateDiv  js.Value
+	app                              *appCore.AppCore
+	client                           httpProcessor.Client
+	document, div, content, feedback js.Value
+	listeners                        []listener
+	generation                       int
+	busy                             bool
 }
 
-func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore, idList ...int) *ItemEditor {
-	editor := &ItemEditor{
-		appCore:  appCore,
-		document: document,
-		events:   events,
-		client:   appCore.HttpClient,
-	}
-
-	editor.Div = document.Call("createElement", "div")
-	editor.Div.Set("id", debugTag+"Div")
-
-	editor.StatusDiv = document.Call("createElement", "div")
-	editor.StatusDiv.Set("id", debugTag+"StatusDiv")
-	editor.Div.Call("appendChild", editor.StatusDiv)
-
-	editor.EditDiv = document.Call("createElement", "div")
-	editor.EditDiv.Set("id", debugTag+"EditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
-
-	editor.StateDiv = document.Call("createElement", "div")
-	editor.StateDiv.Set("id", debugTag+"StateDiv")
-	editor.Div.Call("appendChild", editor.StateDiv)
-
+func New(document js.Value, _ *eventProcessor.EventProcessor, app *appCore.AppCore, _ ...int) *ItemEditor {
+	editor := &ItemEditor{app: app, document: document, client: *app.HttpClient}
+	editor.client.HTTPClient = &http.Client{Timeout: 15 * time.Second}
+	editor.div = editor.add(js.Undefined(), "div", "")
+	editor.feedback = editor.add(editor.div, "p", "")
+	editor.feedback.Call("setAttribute", "role", "status")
+	editor.content = editor.add(editor.div, "div", "")
 	return editor
 }
 
-func (editor *ItemEditor) GetDiv() js.Value { return editor.Div }
+func (e *ItemEditor) GetDiv() js.Value { return e.div }
 
-func (editor *ItemEditor) Display() {
-	editor.Div.Get("style").Call("setProperty", "display", "block")
-	editor.ViewState = ViewStateBlock
+func (e *ItemEditor) Display() { e.div.Get("style").Set("display", "block") }
+
+func (e *ItemEditor) Hide() {
+	e.div.Get("style").Set("display", "none")
+	e.generation++
+	e.clear()
+	e.busy = false
 }
 
-func (editor *ItemEditor) Hide() {
-	editor.Div.Get("style").Call("setProperty", "display", "none")
-	editor.ViewState = ViewStateNone
+func (e *ItemEditor) ResetView() {
+	e.generation++
+	e.clear()
+	e.busy = false
 }
 
-func (editor *ItemEditor) ResetView() {
-	editor.StatusDiv.Set("innerHTML", "")
-	editor.EditDiv.Set("innerHTML", "")
-	editor.FetchItems()
-}
-
-func (editor *ItemEditor) FetchItems() {
-	go func() {
-		editor.setStateText("Loading...")
-		var status CertStatus
-		editor.client.NewRequest(http.MethodGet, ApiURL, &status, nil)
-		editor.Status = status
-		editor.renderView()
-		editor.setStateText("")
-	}()
-}
-
-// renderView builds the status display and the two upload forms.
-func (editor *ItemEditor) renderView() {
-	editor.StatusDiv.Set("innerHTML", "")
-	editor.EditDiv.Set("innerHTML", "")
-
-	// --- Status section ---
-	statusCard := editor.document.Call("createElement", "div")
-	viewHelpers.SetStyles(statusCard, map[string]string{
-		"border":        "1px solid #ccc",
-		"border-radius": "6px",
-		"padding":       "12px 16px",
-		"margin-bottom": "16px",
-		"background":    "#f9f9f9",
-	})
-
-	heading := editor.document.Call("createElement", "h3")
-	heading.Set("innerText", "Gmail Gateway Status")
-	viewHelpers.SetStyleProperty(heading, "margin-top", "0")
-	statusCard.Call("appendChild", heading)
-
-	statusCard.Call("appendChild", editor.infoRow("From address", editor.Status.EmailAddr))
-	statusCard.Call("appendChild", editor.fileStatusRow("Token file", editor.Status.TokenFile, editor.Status.TokenExists, editor.Status.TokenModified))
-	statusCard.Call("appendChild", editor.fileStatusRow("Secret file", editor.Status.SecretFile, editor.Status.SecretExists, editor.Status.SecretModified))
-
-	editor.StatusDiv.Call("appendChild", statusCard)
-
-	// --- Renew URL section ---
-	editor.EditDiv.Call("appendChild", editor.buildRenewURLSection())
-
-	// --- Token upload form ---
-	editor.EditDiv.Call("appendChild", editor.buildUploadSection(
-		"Update Token File",
-		"Paste the contents of client_token.json below.",
-		"token",
-		&editor.UI.TokenTextarea,
-		"tokenContent",
-		editor.submitTokenUpdate,
-	))
-
-	// --- Secret upload form ---
-	editor.EditDiv.Call("appendChild", editor.buildUploadSection(
-		"Update Secret File",
-		"Paste the contents of client_secret.json below.",
-		"secret",
-		&editor.UI.SecretTextarea,
-		"secretContent",
-		editor.submitSecretUpdate,
-	))
-}
-
-func (editor *ItemEditor) infoRow(label, value string) js.Value {
-	row := editor.document.Call("createElement", "p")
-	row.Set("innerHTML", "<strong>"+label+":</strong> "+value)
-	viewHelpers.SetStyleProperty(row, "margin", "4px 0")
-	return row
-}
-
-func (editor *ItemEditor) fileStatusRow(label, path string, exists bool, modified time.Time) js.Value {
-	status := "missing"
-	modStr := ""
-	if exists {
-		status = "present"
-		modStr = " — last modified " + modified.Format("2006-01-02 15:04:05 UTC")
+func (e *ItemEditor) FetchItems() {
+	if e.busy {
+		return
 	}
-	row := editor.document.Call("createElement", "p")
-	row.Set("innerHTML", "<strong>"+label+":</strong> <code>"+path+"</code> ("+status+modStr+")")
-	viewHelpers.SetStyleProperty(row, "margin", "4px 0")
-	return row
+	if len(e.listeners) == 0 {
+		e.addReloadButton()
+	}
+	e.load("Loading gateway status…", "")
 }
 
-func (editor *ItemEditor) buildUploadSection(title, hint, certType string, textareaPtr *js.Value, textareaID string, onSubmit func(js.Value, []js.Value) interface{}) js.Value {
-	card := editor.document.Call("createElement", "div")
-	viewHelpers.SetStyles(card, map[string]string{
-		"border":        "1px solid #ccc",
-		"border-radius": "6px",
-		"padding":       "12px 16px",
-		"margin-bottom": "16px",
-	})
-
-	h4 := editor.document.Call("createElement", "h4")
-	h4.Set("innerText", title)
-	viewHelpers.SetStyleProperty(h4, "margin-top", "0")
-	card.Call("appendChild", h4)
-
-	hintEl := editor.document.Call("createElement", "p")
-	hintEl.Set("innerText", hint)
-	viewHelpers.SetStyles(hintEl, map[string]string{"color": "#555", "margin": "0 0 8px"})
-	card.Call("appendChild", hintEl)
-
-	textarea := editor.document.Call("createElement", "textarea")
-	textarea.Set("id", textareaID)
-	textarea.Set("placeholder", "{}")
-	textarea.Set("rows", "8")
-	viewHelpers.SetStyles(textarea, map[string]string{
-		"width":         "100%",
-		"font-family":   "monospace",
-		"font-size":     "0.85em",
-		"box-sizing":    "border-box",
-		"margin-bottom": "8px",
-	})
-	*textareaPtr = textarea
-	card.Call("appendChild", textarea)
-
-	saveBtn := viewHelpers.Button(onSubmit, editor.document, "Save "+title, certType+"SaveBtn")
-	viewHelpers.StyleButtonPrimary(saveBtn)
-	card.Call("appendChild", saveBtn)
-
-	return card
+func (e *ItemEditor) addReloadButton() {
+	e.button(e.content, "Reload status", e.FetchItems)
 }
 
-func (editor *ItemEditor) buildRenewURLSection() js.Value {
-	card := editor.document.Call("createElement", "div")
-	viewHelpers.SetStyles(card, map[string]string{
-		"border":        "1px solid #ccc",
-		"border-radius": "6px",
-		"padding":       "12px 16px",
-		"margin-bottom": "16px",
-	})
-
-	h4 := editor.document.Call("createElement", "h4")
-	h4.Set("innerText", "Get OAuth Renewal URL")
-	viewHelpers.SetStyleProperty(h4, "margin-top", "0")
-	card.Call("appendChild", h4)
-
-	hintEl := editor.document.Call("createElement", "p")
-	hintEl.Set("innerText", "Click the button to generate a Google authorisation URL. Open it in a browser, grant access, then paste the returned auth code into the token update form below.")
-	viewHelpers.SetStyles(hintEl, map[string]string{"color": "#555", "margin": "0 0 8px"})
-	card.Call("appendChild", hintEl)
-
-	getBtn := viewHelpers.Button(editor.fetchRenewURL, editor.document, "Get Renewal URL", "getRenewURLBtn")
-	viewHelpers.StyleButtonPrimary(getBtn)
-	card.Call("appendChild", getBtn)
-
-	// Container where the URL will be displayed after fetch.
-	urlDiv := editor.document.Call("createElement", "div")
-	urlDiv.Set("id", "renewURLResult")
-	viewHelpers.SetStyleProperty(urlDiv, "margin-top", "10px")
-	editor.UI.RenewURLDiv = urlDiv
-	card.Call("appendChild", urlDiv)
-
-	return card
+func (e *ItemEditor) clear() {
+	for _, listener := range e.listeners {
+		listener.element.Call("removeEventListener", "click", listener.callback)
+		listener.callback.Release()
+	}
+	e.listeners = nil
+	e.content.Set("textContent", "")
 }
 
-func (editor *ItemEditor) fetchRenewURL(this js.Value, p []js.Value) interface{} {
-	go func() {
-		editor.setStateText("Fetching renewal URL...")
-		var resp RenewURLResponse
-		editor.client.NewRequest(http.MethodGet, ApiURL+"/renew-url", &resp, nil)
-		editor.setStateText("")
-		if resp.URL == "" {
-			editor.UI.RenewURLDiv.Set("innerHTML", "<p style='color:red'>Failed to retrieve renewal URL.</p>")
+func (e *ItemEditor) add(parent js.Value, tag, label string) js.Value {
+	element := e.document.Call("createElement", tag)
+	element.Set("textContent", label)
+	if !parent.IsUndefined() {
+		parent.Call("appendChild", element)
+	}
+	return element
+}
+
+func (e *ItemEditor) button(parent js.Value, label string, action func()) {
+	button := e.add(parent, "button", label)
+	button.Set("type", "button")
+	viewHelpers.StyleButtonPrimary(button)
+	callback := js.FuncOf(func(this js.Value, args []js.Value) any {
+		if !e.busy {
+			action()
+		}
+		return nil
+	})
+	button.Call("addEventListener", "click", callback)
+	e.listeners = append(e.listeners, listener{button, callback})
+}
+
+func (e *ItemEditor) request(method, path, activity string, result, payload any, done func()) {
+	e.busy = true
+	e.feedback.Set("textContent", activity)
+	generation := e.generation
+	go e.client.NewRequest2(method, path, result, payload, httpProcessor.Callbacks{
+		OnSuccess: func() {
+			if generation == e.generation {
+				e.busy = false
+				done()
+			}
+		},
+		OnError: func(err error) {
+			if generation == e.generation {
+				e.busy = false
+				message := "Request failed. Check your connection and permissions, then retry."
+				if _, body, found := strings.Cut(err.Error(), "server message="); found && strings.TrimSpace(body) != "" {
+					message = strings.TrimSpace(body)
+				}
+				e.feedback.Set("textContent", message)
+			}
+		},
+	})
+}
+
+func (e *ItemEditor) load(activity, message string) {
+	var status CertStatus
+	e.request(http.MethodGet, ApiURL, activity, &status, nil, func() {
+		e.clear()
+		e.render(status)
+		e.feedback.Set("textContent", message)
+	})
+}
+
+func (e *ItemEditor) render(status CertStatus) {
+	e.addReloadButton()
+	e.add(e.content, "h3", "Gmail")
+	e.add(e.content, "p", "Sender: "+status.EmailAddr)
+	e.add(e.content, "p", "Client: "+configured(status.GmailLoaded))
+	e.add(e.content, "p", fileStatus("Token file", status.TokenExists, status.TokenModified))
+	e.add(e.content, "p", fileStatus("OAuth client file", status.SecretExists, status.SecretModified))
+	if status.GmailTokenExpiry != nil {
+		e.add(e.content, "p", "Saved access token expires: "+status.GmailTokenExpiry.UTC().Format("2006-01-02 15:04 UTC"))
+	}
+
+	if e.app.HasAccess("gmailcert", []string{"put"}, []string{"any"}) {
+		if status.GmailRefreshAvailable {
+			e.button(e.content, "Refresh Gmail token", func() {
+				e.update(ApiURL+"/refresh", nil)
+			})
+		}
+		if status.CanReconnect {
+			link := e.add(e.content, "p", "")
+			e.button(e.content, "Reconnect Gmail", func() {
+				var result struct {
+					URL     string `json:"url"`
+					Message string `json:"message"`
+				}
+				link.Set("textContent", "")
+				e.request(http.MethodGet, ApiURL+"/renew-url", "Preparing Gmail authorization…", &result, nil, func() {
+					e.feedback.Set("textContent", result.Message)
+					authorize := e.add(link, "a", "Continue to Google")
+					authorize.Set("href", result.URL)
+					authorize.Set("target", "_blank")
+					authorize.Set("rel", "noopener noreferrer")
+				})
+			})
+		} else {
+			e.add(e.content, "p", "To enable reconnection, configure the Gmail credential paths and register the GMAIL_RENEW_REDIRECT_URL callback in Google Cloud.")
+		}
+		advanced := e.add(e.content, "details", "")
+		e.add(advanced, "summary", "Replace Gmail credential files")
+		e.upload(advanced, "OAuth client JSON", "secret")
+		e.upload(advanced, "Token JSON", "token")
+	}
+
+	e.add(e.content, "h3", "Stripe")
+	e.add(e.content, "p", "API client: "+configured(status.StripeLoaded))
+	e.add(e.content, "p", "Webhook signing secret: "+configured(status.StripeWebhookConfigured))
+	e.add(e.content, "p", "Rotate credentials in Stripe Dashboard, update PAYMENT_KEY or STRIPE_WEBHOOK_SECRET in deployment settings, and restart the API.")
+	e.add(e.content, "h3", "Google sign-in")
+	e.add(e.content, "p", "OAuth client: "+configured(status.GoogleSignInLoaded))
+	e.add(e.content, "p", "Rotate the OAuth client secret in Google Cloud, update GOOGLE_CLIENT_SECRET in deployment settings, and restart the API.")
+}
+
+func (e *ItemEditor) upload(parent js.Value, title, kind string) {
+	label := e.add(parent, "label", title+" ")
+	input := e.add(label, "input", "")
+	input.Set("type", "password")
+	input.Set("autocomplete", "off")
+	e.button(parent, "Save "+title, func() {
+		content := strings.TrimSpace(input.Get("value").String())
+		if content == "" {
+			e.feedback.Set("textContent", "Paste the credential JSON before saving.")
 			return
 		}
-		editor.UI.RenewURLDiv.Set("innerHTML",
-			"<p style='margin:4px 0'>"+resp.Message+"</p>"+
-				"<a href='"+resp.URL+"' target='_blank' rel='noopener noreferrer' "+
-				"style='word-break:break-all;font-size:0.85em'>"+resp.URL+"</a>")
-	}()
-	return nil
-}
-
-func (editor *ItemEditor) submitTokenUpdate(this js.Value, p []js.Value) interface{} {
-	go editor.submitUpdate("token", editor.UI.TokenTextarea)
-	return nil
-}
-
-func (editor *ItemEditor) submitSecretUpdate(this js.Value, p []js.Value) interface{} {
-	go editor.submitUpdate("secret", editor.UI.SecretTextarea)
-	return nil
-}
-
-func (editor *ItemEditor) submitUpdate(certType string, textarea js.Value) {
-	content := textarea.Get("value").String()
-	if content == "" {
-		editor.onCompletionMsg("Content is empty — nothing was saved.")
-		return
-	}
-
-	// Validate JSON client-side before sending.
-	if !json.Valid([]byte(content)) {
-		editor.onCompletionMsg("The pasted content is not valid JSON. Please check and try again.")
-		return
-	}
-
-	editor.setStateText("Saving...")
-	req := UpdateRequest{Type: certType, Content: content}
-	editor.client.NewRequest(http.MethodPut, ApiURL, nil, &req)
-	editor.setStateText("")
-	editor.onCompletionMsg(certType + " cert saved successfully.")
-	log.Printf("%ssubmitUpdate %s cert submitted", debugTag, certType)
-	// Refresh status display to show updated modification time.
-	editor.FetchItems()
-}
-
-func (editor *ItemEditor) setStateText(msg string) {
-	editor.StateDiv.Set("innerText", msg)
-}
-
-func (editor *ItemEditor) onCompletionMsg(msg string) {
-	editor.events.ProcessEvent(eventProcessor.Event{
-		Type:     eventProcessor.EventTypeDisplayMessage,
-		DebugTag: debugTag,
-		Data:     msg,
+		input.Set("value", "")
+		e.update(ApiURL, map[string]string{"type": kind, "content": content})
 	})
+}
+
+func (e *ItemEditor) update(path string, payload any) {
+	var result struct {
+		Message string `json:"message"`
+	}
+	e.request(http.MethodPut, path, "Updating Gmail credentials…", &result, payload, func() {
+		e.load("Reloading status…", result.Message)
+	})
+}
+
+func configured(ok bool) string {
+	if ok {
+		return "Configured"
+	}
+	return "Unavailable"
+}
+
+func fileStatus(name string, exists bool, modified time.Time) string {
+	if !exists {
+		return name + ": missing"
+	}
+	return name + ": updated " + modified.UTC().Format("2006-01-02 15:04 UTC")
 }

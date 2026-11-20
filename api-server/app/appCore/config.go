@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -29,6 +30,7 @@ type EmailService interface {
 type Config struct {
 	Db           *sqlx.DB
 	EmailSvc     EmailService
+	emailMu      sync.RWMutex
 	PaymentSvc   *stripe.Gateway
 	OAuthSvc     *oAuthGateway.Gateway
 	SessionIDKey ContextKey // User for passing the user id value via the context (ctx)
@@ -102,6 +104,18 @@ func (c *Config) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (c *Config) EmailService() EmailService {
+	c.emailMu.RLock()
+	defer c.emailMu.RUnlock()
+	return c.EmailSvc
+}
+
+func (c *Config) SetEmailService(service EmailService) {
+	c.emailMu.Lock()
+	defer c.emailMu.Unlock()
+	c.EmailSvc = service
 }
 
 func (c *Config) Close() {

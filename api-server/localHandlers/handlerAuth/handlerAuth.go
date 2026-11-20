@@ -57,7 +57,7 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 
 // RequestLoginToken accepts {"username":"..."} or {"email":"..."} and sends a one-time token
 func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
-	if h.appConf == nil || h.appConf.EmailSvc == nil {
+	if h.appConf == nil || h.appConf.EmailService() == nil {
 		http.Error(w, "email service unavailable", 503)
 		return
 	}
@@ -99,8 +99,8 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 	body := fmt.Sprintf("Hi %s,\n\nUse this one-time token to log in: %s\n\nThis token expires in 1 hour.", user.Name, tokenCookie.Value)
 
 	// Send email using configured EmailSvc
-	if h.appConf.EmailSvc != nil {
-		if success, err := h.appConf.EmailSvc.SendMail(user.Email.String, subject, body); err != nil {
+	if email := h.appConf.EmailService(); email != nil {
+		if success, err := email.SendMail(user.Email.String, subject, body); err != nil {
 			log.Printf("%vRequestLoginToken failed to send login token email: %v", debugTag, err)
 			// Fall back to logging the token for debugging
 		} else {
@@ -156,7 +156,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.appConf == nil || h.appConf.EmailSvc == nil {
+	if h.appConf == nil || h.appConf.EmailService() == nil {
 		http.Error(w, "email service unavailable", 503)
 		return
 	}
@@ -235,8 +235,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	subject := "Verify your email to complete registration"
 	body := fmt.Sprintf("Hi %s,\n\nVerify your email using this code: %s\n\nThis code expires in 24 hours.\n\nIf you didn't register, you can ignore this email.", payload.Username, tokenCookie.Value)
 
-	if h.appConf.EmailSvc != nil {
-		if success, err := h.appConf.EmailSvc.SendMail(payload.Email.String, subject, body); err != nil {
+	if email := h.appConf.EmailService(); email != nil {
+		if success, err := email.SendMail(payload.Email.String, subject, body); err != nil {
 			log.Printf("%vRegister failed to send registration verification email: %v", debugTag, err)
 			// Delete the token if email failed
 			tok, err := dbAuthTemplate.FindToken(debugTag+"Register:findTokenForDeletion", h.appConf.Db, "registration-verification", tokenCookie.Value) // Find the token to get its ID for deletion
@@ -357,7 +357,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	if err := handlerHelpers.NotifyAdminsUserReviewRequired(
 		debugTag+"VerifyRegistration:",
 		h.appConf.Db,
-		h.appConf.EmailSvc,
+		h.appConf.EmailService(),
 		h.appConf.Settings.AdminNotifyGroup,
 		userID,
 		user.Username,
@@ -378,7 +378,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 // Expects: {"username": "..."} or {"email": "..."}
 // Returns: OTP sent to email
 func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
-	if h.appConf == nil || h.appConf.EmailSvc == nil {
+	if h.appConf == nil || h.appConf.EmailService() == nil {
 		http.Error(w, "email service unavailable", 503)
 		return
 	}
@@ -417,7 +417,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
 		debugTag+"LoginSendOTP:",
 		h.appConf.Db,
-		h.appConf.EmailSvc,
+		h.appConf.EmailService(),
 		user.ID,
 		h.appConf.Settings.Host,
 		"login-otp",
@@ -567,7 +567,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 // Expects: {"username": "...", "password": "..."}
 // Returns: OTP sent to registered email
 func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
-	if h.appConf == nil || h.appConf.EmailSvc == nil {
+	if h.appConf == nil || h.appConf.EmailService() == nil {
 		http.Error(w, "email service unavailable", 503)
 		return
 	}
@@ -618,7 +618,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
 		debugTag+"LoginWithPassword:",
 		h.appConf.Db,
-		h.appConf.EmailSvc,
+		h.appConf.EmailService(),
 		user.ID,
 		h.appConf.Settings.Host,
 		"password-login-otp",

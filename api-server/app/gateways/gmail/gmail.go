@@ -62,27 +62,14 @@ func getClient(tokenFile string, config *oauth2.Config, authCode string) (*http.
 
 // Request a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config, providedAuthCode string) (*oauth2.Token, error) {
-	// The following generates a URL that the user can follow to create or renew a token
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-	log.Printf(debugTag+"Handler.getTokenFromWeb ... Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
-
-	//The following waits for the user to paste a token into stdin
-	//The token is obtained in the previous step
-	var authCode string
-
-	// Check if auth code was provided by caller
-	authCode = providedAuthCode
-
-	if authCode == "" {
+	if providedAuthCode == "" {
 		return nil, errors.New("Gmail authorization required; configure a token or GMAIL_AUTH_CODE")
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	tok, err := config.Exchange(ctx, authCode, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	tok, err := config.Exchange(ctx, providedAuthCode)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve token from web: %w", err)
+		return nil, errors.New("Google rejected the Gmail authorization code")
 	}
 	return tok, nil
 }
@@ -94,7 +81,7 @@ func RenewToken(config *oauth2.Config, tok *oauth2.Token, cacheFile string) *oau
 	tokenSource := config.TokenSource(context.Background(), tok)
 	newToken, err := tokenSource.Token()
 	if err != nil {
-		log.Printf(debugTag+"RenewToken Error refreshing token: %v\n", err)
+		log.Print(debugTag + "RenewToken refresh failed")
 		log.Printf(debugTag + "RenewToken You may need to re-authorize. Delete the token file and restart.\n")
 		return tok // Return original token, let the caller handle the failure
 	}
@@ -134,7 +121,6 @@ func saveToken(path string, token *oauth2.Token) error {
 }
 
 func New(credentialsFile, tokenFile, from, debugEmail, authCode string) (*Gateway, error) {
-	ctx := context.Background()
 	if credentialsFile == "" {
 		return nil, errors.New("gmail credentials file is required")
 	}
@@ -146,17 +132,35 @@ func New(credentialsFile, tokenFile, from, debugEmail, authCode string) (*Gatewa
 		return nil, fmt.Errorf("unable to read client secret json file: %w", err)
 	}
 
-	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(credential, gmail.GmailSendScope) //This is a non restricted scope
+	config, err := OAuthConfig(credential)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse client secret json file to config: %w", err)
+		return nil, err
 	}
 
 	client, err := getClient(tokenFile, config, authCode)
 	if err != nil {
 		return nil, err
 	}
-	gmailService, err := gmail.NewService(ctx, option.WithHTTPClient(client))
+	return newGateway(config, client, from, debugEmail)
+}
+
+func OAuthConfig(credentials []byte) (*oauth2.Config, error) {
+	config, err := google.ConfigFromJSON(credentials, gmail.GmailSendScope)
+	if err != nil || config.ClientID == "" || config.ClientSecret == "" {
+		return nil, errors.New("invalid Google OAuth client credentials")
+	}
+	config.Endpoint = google.Endpoint
+	return config, nil
+}
+
+func NewWithToken(config *oauth2.Config, token *oauth2.Token, from, debugEmail string) (*Gateway, error) {
+	client := config.Client(context.Background(), token)
+	client.Timeout = 15 * time.Second
+	return newGateway(config, client, from, debugEmail)
+}
+
+func newGateway(config *oauth2.Config, client *http.Client, from, debugEmail string) (*Gateway, error) {
+	gmailService, err := gmail.NewService(context.Background(), option.WithHTTPClient(client))
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve Gmail client: %w", err)
 	}
@@ -197,7 +201,7 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 	// Send the message
 	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
 	if err != nil {
-		log.Println(debugTag+"Handler.SendMail ... Could not send mail>", err, "to:", to, "subject:", title)
+		log.Print(debugTag + "SendMail failed")
 		// SECURITY: Message body not logged as it may contain sensitive data (OTPs, tokens, PII)
 		return false, err
 	}

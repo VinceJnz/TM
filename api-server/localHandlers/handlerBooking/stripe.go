@@ -317,8 +317,8 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 
 	if h.appConf.TestMode {
 		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-		if h.appConf.EmailSvc != nil && appSession != nil && appSession.Email != "" {
-			if _, err := h.appConf.EmailSvc.SendMail(appSession.Email, "Test Mode - Payment Successful", "Test mode enabled - payment successful for user email:"+appSession.Email); err != nil {
+		if email := h.appConf.EmailService(); email != nil && appSession != nil && appSession.Email != "" {
+			if _, err := email.SendMail(appSession.Email, "Test Mode - Payment Successful", "Test mode enabled - payment successful for user email:"+appSession.Email); err != nil {
 				log.Printf("%v failed to send test-mode payment success email: %v", debugTag+"CheckoutSuccess()", err)
 			}
 		}

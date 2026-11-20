@@ -118,7 +118,7 @@ func (v *View) buildSysadminMenuItems() []menuItemSpec {
 	return []menuItemSpec{
 		{title: "Access Level", apiURL: accessLevelView.ApiURL, element: accessLevelView.New(v.document, v.events, v.appCore)},
 		{title: "Access Scope", apiURL: accessScopeView.ApiURL, element: accessScopeView.New(v.document, v.events, v.appCore)},
-		{title: "Gmail Certificate", apiURL: gmailCertView.ApiURL, element: gmailCertView.New(v.document, v.events, v.appCore)},
+		{title: "Gateway Credentials", apiURL: gmailCertView.ApiURL, element: gmailCertView.New(v.document, v.events, v.appCore)},
 		{title: "Resource", apiURL: resourceView.ApiURL, element: resourceView.New(v.document, v.events, v.appCore)},
 		{title: "Season", apiURL: seasonView.ApiURL, element: seasonView.New(v.document, v.events, v.appCore)},
 		{title: "Security Group", apiURL: securityGroupView.ApiURL, element: securityGroupView.New(v.document, v.events, v.appCore)},
@@ -338,6 +338,9 @@ func (v *View) Setup() {
 func (v *View) Destroy() {
 	if v == nil {
 		return
+	}
+	if gateways := v.childElements["Gateway Credentials"]; gateways != nil {
+		gateways.Hide()
 	}
 	window := js.Global().Get("window")
 	if v.hashChangeSet {

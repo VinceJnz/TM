@@ -476,7 +476,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		if err := handlerHelpers.NotifyAdminsUserReviewRequired(
 			debugTag+"CompleteRegistration:",
 			h.appConf.Db,
-			h.appConf.EmailSvc,
+			h.appConf.EmailService(),
 			h.appConf.Settings.AdminNotifyGroup,
 			userID,
 			user.Username,

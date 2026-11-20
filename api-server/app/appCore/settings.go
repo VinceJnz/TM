@@ -34,6 +34,7 @@ type settings struct {
 	GoogleRedirectURL   string `json:"GoogleRedirectURL"`
 	SessionKey          string `json:"SessionKey"`
 	ClientRedirectURL   string `json:"ClientRedirectURL"`
+	GmailRenewRedirect  string `json:"GmailRenewRedirect"`
 	GmailAuthCode       string `json:"GmailAuthCode"`
 	EmailDebugAddr      string `json:"EmailDebugAddr"`
 	AdminNotifyGroup    string `json:"AdminNotifyGroup"`
@@ -122,6 +123,7 @@ func (s *settings) LoadEnv() error {
 	s.GoogleRedirectURL = os.Getenv("GOOGLE_REDIRECT_URL")
 	s.SessionKey = os.Getenv("SESSION_KEY")
 	s.ClientRedirectURL = os.Getenv("CLIENT_REDIRECT_URL")
+	s.GmailRenewRedirect = os.Getenv("GMAIL_RENEW_REDIRECT_URL")
 	s.GmailAuthCode = os.Getenv("GMAIL_AUTH_CODE")
 	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
 	s.AdminNotifyGroup = os.Getenv("ADMIN_NOTIFY_GROUP")

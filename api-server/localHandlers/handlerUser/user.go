@@ -74,7 +74,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		if err := helpers.NotifyAdminsUserReviewRequired(
 			debugTag+"Create:",
 			h.appConf.Db,
-			h.appConf.EmailSvc,
+			h.appConf.EmailService(),
 			h.appConf.Settings.AdminNotifyGroup,
 			record.ID,
 			record.Username,

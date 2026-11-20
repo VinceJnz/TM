@@ -127,8 +127,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.TripID, record.Notes, record.FromDate, record.ToDate)
 
 	// Send notification email to user
-	if h.appConf.EmailSvc != nil && session.Email != "" {
-		if _, err := h.appConf.EmailSvc.SendMail(session.Email, "New Booking Created", fmt.Sprintf("A new booking has been created by user ID %d for trip %d, %s.", session.UserID, record.TripID.Int64, record.TripName)); err != nil {
+	if email := h.appConf.EmailService(); email != nil && session.Email != "" {
+		if _, err := email.SendMail(session.Email, "New Booking Created", fmt.Sprintf("A new booking has been created by user ID %d for trip %d, %s.", session.UserID, record.TripID.Int64, record.TripName)); err != nil {
 			log.Printf("%sCreate failed to send booking notification email: %v", debugTag, err)
 		}
 	}
