@@ -107,7 +107,14 @@ func Apply(ctx context.Context, db *sqlx.DB, adopt bool) error {
 						}
 					}
 				}
-				data = nil // Existing schema was audited; never run CREATE TABLE over it.
+				differences, err := compareCatalog(ctx, conn)
+				if err != nil {
+					return fmt.Errorf("cannot inspect baseline compatibility: %w", err)
+				}
+				if len(differences) > 0 {
+					return fmt.Errorf("baseline has %d compatibility differences; run tm-migrate -check-existing and reconcile them before adoption", len(differences))
+				}
+				data = nil // Never recreate an adopted schema.
 			}
 		}
 		tx, err := conn.BeginTxx(ctx, nil)

@@ -1,0 +1,2767 @@
+[
+    {
+        "kind":  "column",
+        "name":  "at_booking_people.booking_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_people.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_people.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_people.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_people.notes",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_people.owner_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_people.person_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.code",
+        "definition":  "text NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.created",
+        "definition":  "timestamp with time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.discount_percent",
+        "definition":  "numeric"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.expiry_date",
+        "definition":  "date"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.fixed_cost",
+        "definition":  "numeric"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.is_active",
+        "definition":  "boolean"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_booking_vouchers.modified",
+        "definition":  "timestamp with time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.amount_paid",
+        "definition":  "bigint"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.booking_date",
+        "definition":  "date"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.booking_price",
+        "definition":  "numeric(8,2)"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.booking_status_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.currency",
+        "definition":  "character(3)"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.from_date",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.group_booking_id",
+        "definition":  "integer"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.notes",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.owner_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.payment_date",
+        "definition":  "date"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.stripe_session_id",
+        "definition":  "character varying(100)"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.to_date",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_bookings.trip_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_group_bookings.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_group_bookings.group_name",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_group_bookings.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_group_bookings.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_group_bookings.owner_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.amount",
+        "definition":  "numeric(10,2) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.booking_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.payment_date",
+        "definition":  "date NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.payment_method",
+        "definition":  "character varying(255)"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_payments.stripe_session_id",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.amount",
+        "definition":  "numeric(10,2) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.created",
+        "definition":  "timestamp with time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.external_ref",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.modified",
+        "definition":  "timestamp with time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.payment_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.reason",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_refunds.refund_date",
+        "definition":  "timestamp with time zone NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_cost_groups.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_cost_groups.description",
+        "definition":  "character varying(50) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_cost_groups.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_cost_groups.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.amount",
+        "definition":  "numeric(10,2) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.description",
+        "definition":  "character varying(50)"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.member_status_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.season_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.trip_cost_group_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trip_costs.user_age_group_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.description",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.difficulty_level_id",
+        "definition":  "integer"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.from_date",
+        "definition":  "date"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.location",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.max_participants",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.owner_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.to_date",
+        "definition":  "date"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.trip_cost_group_id",
+        "definition":  "integer"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.trip_name",
+        "definition":  "text NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.trip_status_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "at_trips.trip_type_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_level.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_level.description",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_level.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_level.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_level.name",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_scope.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_scope.description",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_scope.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_scope.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_access_scope.name",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_booking_status.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_booking_status.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_booking_status.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_booking_status.status",
+        "definition":  "character varying(50) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_member_status.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_member_status.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_member_status.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_member_status.status",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_resource.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_resource.description",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_resource.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_resource.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_resource.name",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_seasons.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_seasons.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_seasons.length",
+        "definition":  "integer"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_seasons.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_seasons.season",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_seasons.start_day",
+        "definition":  "integer"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_difficulty.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_difficulty.description",
+        "definition":  "character varying(255)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_difficulty.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_difficulty.level",
+        "definition":  "character varying(50) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_difficulty.level_short",
+        "definition":  "character varying(3)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_difficulty.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_status.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_status.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_status.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_status.status",
+        "definition":  "character varying(50) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_type.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_type.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_type.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_trip_type.type",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_account_status.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_account_status.description",
+        "definition":  "character varying(255)"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_account_status.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_account_status.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_account_status.status",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_age_groups.age_group",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_age_groups.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_age_groups.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "et_user_age_groups.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group.description",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group.name",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group.role",
+        "definition":  "text"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group_resource.access_level_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group_resource.access_scope_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group_resource.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group_resource.group_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group_resource.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group_resource.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_group_resource.resource_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.host",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.name",
+        "definition":  "character varying(45) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.session_data",
+        "definition":  "json"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.token",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.token_valid",
+        "definition":  "boolean NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.user_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.valid_from",
+        "definition":  "timestamp with time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_token.valid_to",
+        "definition":  "timestamp with time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.credential_data",
+        "definition":  "jsonb NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.credential_id",
+        "definition":  "bytea"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.device_metadata",
+        "definition":  "jsonb"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.device_name",
+        "definition":  "character varying(45)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.last_used",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_credentials.user_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_group.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_group.group_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_group.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_group.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_user_group.user_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.created",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.email",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.member_code",
+        "definition":  "character varying(20)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.member_status_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.modified",
+        "definition":  "timestamp without time zone"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.name",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.provider",
+        "definition":  "character varying(30)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.provider_id",
+        "definition":  "character varying(255)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.user_account_hidden",
+        "definition":  "boolean"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.user_account_status_id",
+        "definition":  "integer NOT NULL"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.user_address",
+        "definition":  "character varying(255)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.user_age_group_id",
+        "definition":  "integer"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.user_birth_date",
+        "definition":  "date"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.user_password",
+        "definition":  "character varying(100)"
+    },
+    {
+        "kind":  "column",
+        "name":  "st_users.username",
+        "definition":  "character varying(255) NOT NULL"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_people.at_booking_people_booking_id_fkey",
+        "definition":  "FOREIGN KEY (booking_id) REFERENCES at_bookings(id) ON DELETE CASCADE"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_people.at_booking_people_booking_id_person_id_key",
+        "definition":  "UNIQUE (booking_id, person_id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_people.at_booking_people_owner_id_fkey",
+        "definition":  "FOREIGN KEY (owner_id) REFERENCES st_users(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_people.at_booking_people_person_id_fkey",
+        "definition":  "FOREIGN KEY (person_id) REFERENCES st_users(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_people.at_booking_people_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_vouchers.at_booking_vouchers_code_key",
+        "definition":  "UNIQUE (code)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_vouchers.at_booking_vouchers_discount_percent_check",
+        "definition":  "CHECK (((discount_percent \u003e= (0)::numeric) AND (discount_percent \u003c= (100)::numeric)))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_vouchers.at_booking_vouchers_fixed_cost_check",
+        "definition":  "CHECK ((fixed_cost \u003e= (0)::numeric))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_booking_vouchers.at_booking_vouchers_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_bookings.at_bookings_booking_price_check",
+        "definition":  "CHECK ((booking_price \u003e= (0)::numeric))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_bookings.at_bookings_booking_status_id_fkey",
+        "definition":  "FOREIGN KEY (booking_status_id) REFERENCES et_booking_status(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_bookings.at_bookings_check",
+        "definition":  "CHECK ((to_date \u003e from_date))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_bookings.at_bookings_group_booking_id_fkey",
+        "definition":  "FOREIGN KEY (group_booking_id) REFERENCES at_group_bookings(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_bookings.at_bookings_owner_id_fkey",
+        "definition":  "FOREIGN KEY (owner_id) REFERENCES st_users(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_bookings.at_bookings_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_bookings.at_bookings_trip_id_fkey",
+        "definition":  "FOREIGN KEY (trip_id) REFERENCES at_trips(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_group_bookings.at_group_bookings_owner_id_fkey",
+        "definition":  "FOREIGN KEY (owner_id) REFERENCES st_users(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_group_bookings.at_group_bookings_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_payments.at_payments_amount_check",
+        "definition":  "CHECK ((amount \u003e= (0)::numeric))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_payments.at_payments_booking_id_fkey",
+        "definition":  "FOREIGN KEY (booking_id) REFERENCES at_bookings(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_payments.at_payments_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_refunds.at_refunds_amount_check",
+        "definition":  "CHECK ((amount \u003e= (0)::numeric))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_refunds.at_refunds_payment_id_fkey",
+        "definition":  "FOREIGN KEY (payment_id) REFERENCES at_payments(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_refunds.at_refunds_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_cost_groups.at_trip_cost_groups_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_costs.at_trip_costs_amount_check",
+        "definition":  "CHECK ((amount \u003e= (0)::numeric))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_costs.at_trip_costs_member_status_id_fkey",
+        "definition":  "FOREIGN KEY (member_status_id) REFERENCES et_member_status(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_costs.at_trip_costs_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_costs.at_trip_costs_season_id_fkey",
+        "definition":  "FOREIGN KEY (season_id) REFERENCES et_seasons(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_costs.at_trip_costs_trip_cost_group_id_fkey",
+        "definition":  "FOREIGN KEY (trip_cost_group_id) REFERENCES at_trip_cost_groups(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_costs.at_trip_costs_trip_cost_group_id_member_status_id_user_age__key",
+        "definition":  "UNIQUE (trip_cost_group_id, member_status_id, user_age_group_id, season_id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trip_costs.at_trip_costs_user_age_group_id_fkey",
+        "definition":  "FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_groups(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_check",
+        "definition":  "CHECK ((to_date \u003e= from_date))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_difficulty_level_id_fkey",
+        "definition":  "FOREIGN KEY (difficulty_level_id) REFERENCES et_trip_difficulty(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_max_participants_check",
+        "definition":  "CHECK ((max_participants \u003e= 0))"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_owner_id_fkey",
+        "definition":  "FOREIGN KEY (owner_id) REFERENCES st_users(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_trip_cost_group_id_fkey",
+        "definition":  "FOREIGN KEY (trip_cost_group_id) REFERENCES at_trip_cost_groups(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_trip_status_id_fkey",
+        "definition":  "FOREIGN KEY (trip_status_id) REFERENCES et_trip_status(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "at_trips.at_trips_trip_type_id_fkey",
+        "definition":  "FOREIGN KEY (trip_type_id) REFERENCES et_trip_type(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_access_level.et_access_level_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_access_scope.et_access_scope_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_booking_status.et_booking_status_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_member_status.et_member_status_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_resource.et_resource_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_seasons.et_seasons_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_trip_difficulty.et_trip_difficulty_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_trip_status.et_trip_status_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_trip_type.et_trip_type_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_user_account_status.et_user_account_status_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "et_user_age_groups.et_user_age_groups_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_group.st_group_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_group_resource.st_group_resource_access_level_id_fkey",
+        "definition":  "FOREIGN KEY (access_level_id) REFERENCES et_access_level(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_group_resource.st_group_resource_access_scope_id_fkey",
+        "definition":  "FOREIGN KEY (access_scope_id) REFERENCES et_access_scope(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_group_resource.st_group_resource_group_id_fkey",
+        "definition":  "FOREIGN KEY (group_id) REFERENCES st_group(id) ON DELETE CASCADE"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_group_resource.st_group_resource_group_id_resource_id_access_level_id_acce_key",
+        "definition":  "UNIQUE (group_id, resource_id, access_level_id, access_scope_id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_group_resource.st_group_resource_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_group_resource.st_group_resource_resource_id_fkey",
+        "definition":  "FOREIGN KEY (resource_id) REFERENCES et_resource(id) ON DELETE CASCADE"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_token.st_token_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_user_credentials.st_user_credentials_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_user_credentials.st_user_credentials_user_id_fkey",
+        "definition":  "FOREIGN KEY (user_id) REFERENCES st_users(id) ON DELETE CASCADE"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_user_group.st_user_group_group_id_fkey",
+        "definition":  "FOREIGN KEY (group_id) REFERENCES st_group(id) ON DELETE CASCADE"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_user_group.st_user_group_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_user_group.st_user_group_user_id_fkey",
+        "definition":  "FOREIGN KEY (user_id) REFERENCES st_users(id) ON DELETE CASCADE"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_user_group.st_user_group_user_id_group_id_key",
+        "definition":  "UNIQUE (user_id, group_id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_users.st_users_member_status_id_fkey",
+        "definition":  "FOREIGN KEY (member_status_id) REFERENCES et_member_status(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_users.st_users_pkey",
+        "definition":  "PRIMARY KEY (id)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_users.st_users_user_account_status_id_fkey",
+        "definition":  "FOREIGN KEY (user_account_status_id) REFERENCES et_user_account_status(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_users.st_users_user_age_group_id_fkey",
+        "definition":  "FOREIGN KEY (user_age_group_id) REFERENCES et_user_age_groups(id) ON DELETE RESTRICT"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_users.users_email_unique",
+        "definition":  "UNIQUE (email)"
+    },
+    {
+        "kind":  "constraint",
+        "name":  "st_users.users_username_unique",
+        "definition":  "UNIQUE (username)"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.1.1.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.11.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.14.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.16.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.17.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.18.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.19.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.2.1.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.2.2.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.2.3.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.2.4.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.20.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.21.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.3.1.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.3.2.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.3.3.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.3.4.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.4.1.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.4.2.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.4.3.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.4.4.1",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.5.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "1.8.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.1.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.1.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.1.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.1.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.10.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.10.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.10.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.10.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.11.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.11.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.11.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.11.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.12.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.12.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.12.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.12.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.13.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.13.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.13.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.13.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.14.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.14.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.14.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.14.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.15.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.15.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.15.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.15.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.16.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.16.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.16.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.16.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.17.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.17.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.17.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.17.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.18.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.18.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.18.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.18.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.19.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.19.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.19.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.19.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.2.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.2.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.2.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.2.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.20.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.20.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.20.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.20.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.21.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.21.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.21.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.21.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.3.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.3.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.3.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.3.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.4.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.4.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.4.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.4.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.5.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.5.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.5.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.5.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.6.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.6.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.6.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.6.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.7.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.7.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.7.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.7.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.8.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.8.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.8.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.8.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.9.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.9.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.9.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "2.9.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.1.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.1.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.1.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.1.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.10.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.10.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.10.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.10.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.11.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.11.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.11.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.11.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.12.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.12.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.12.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.12.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.13.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.13.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.13.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.13.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.14.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.14.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.14.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.14.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.15.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.15.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.15.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.15.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.16.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.16.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.16.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.16.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.17.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.17.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.17.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.17.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.18.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.18.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.18.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.18.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.19.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.19.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.19.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.19.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.2.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.2.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.2.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.2.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.20.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.20.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.20.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.20.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.21.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.21.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.21.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.21.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.22.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.22.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.22.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.22.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.23.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.23.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.23.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.23.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.24.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.24.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.24.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.24.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.25.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.25.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.25.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.25.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.26.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.26.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.26.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.26.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.27.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.27.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.27.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.27.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.28.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.28.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.28.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.28.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.3.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.3.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.3.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.3.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.4.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.4.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.4.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.4.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.5.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.5.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.5.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.5.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.6.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.6.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.6.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.6.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.7.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.7.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.7.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.7.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.8.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.8.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.8.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.8.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.9.1.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.9.2.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.9.3.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "grant",
+        "name":  "3.9.4.2",
+        "definition":  "present"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_booking_people.at_booking_people_booking_id_person_id_key",
+        "definition":  "CREATE UNIQUE INDEX at_booking_people_booking_id_person_id_key ON at_booking_people USING btree (booking_id, person_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_booking_people.at_booking_people_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_booking_people_pkey ON at_booking_people USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_booking_people.participant_booking",
+        "definition":  "CREATE INDEX participant_booking ON at_booking_people USING btree (booking_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_booking_vouchers.at_booking_vouchers_code_key",
+        "definition":  "CREATE UNIQUE INDEX at_booking_vouchers_code_key ON at_booking_vouchers USING btree (code)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_booking_vouchers.at_booking_vouchers_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_booking_vouchers_pkey ON at_booking_vouchers USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_bookings.at_bookings_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_bookings_pkey ON at_bookings USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_bookings.booking_owner",
+        "definition":  "CREATE INDEX booking_owner ON at_bookings USING btree (owner_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_bookings.booking_stripe_session",
+        "definition":  "CREATE UNIQUE INDEX booking_stripe_session ON at_bookings USING btree (stripe_session_id) WHERE (stripe_session_id IS NOT NULL)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_bookings.booking_trip",
+        "definition":  "CREATE INDEX booking_trip ON at_bookings USING btree (trip_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_group_bookings.at_group_bookings_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_group_bookings_pkey ON at_group_bookings USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_payments.at_payments_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_payments_pkey ON at_payments USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_payments.payment_booking",
+        "definition":  "CREATE INDEX payment_booking ON at_payments USING btree (booking_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_refunds.at_refunds_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_refunds_pkey ON at_refunds USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_refunds.refund_payment",
+        "definition":  "CREATE INDEX refund_payment ON at_refunds USING btree (payment_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_trip_cost_groups.at_trip_cost_groups_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_trip_cost_groups_pkey ON at_trip_cost_groups USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_trip_costs.at_trip_costs_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_trip_costs_pkey ON at_trip_costs USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_trip_costs.at_trip_costs_trip_cost_group_id_member_status_id_user_age__key",
+        "definition":  "CREATE UNIQUE INDEX at_trip_costs_trip_cost_group_id_member_status_id_user_age__key ON at_trip_costs USING btree (trip_cost_group_id, member_status_id, user_age_group_id, season_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "at_trips.at_trips_pkey",
+        "definition":  "CREATE UNIQUE INDEX at_trips_pkey ON at_trips USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_access_level.et_access_level_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_access_level_pkey ON et_access_level USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_access_scope.et_access_scope_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_access_scope_pkey ON et_access_scope USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_booking_status.et_booking_status_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_booking_status_pkey ON et_booking_status USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_member_status.et_member_status_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_member_status_pkey ON et_member_status USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_resource.et_resource_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_resource_pkey ON et_resource USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_seasons.et_seasons_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_seasons_pkey ON et_seasons USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_trip_difficulty.et_trip_difficulty_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_trip_difficulty_pkey ON et_trip_difficulty USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_trip_status.et_trip_status_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_trip_status_pkey ON et_trip_status USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_trip_type.et_trip_type_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_trip_type_pkey ON et_trip_type USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_user_account_status.et_user_account_status_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_user_account_status_pkey ON et_user_account_status USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "et_user_age_groups.et_user_age_groups_pkey",
+        "definition":  "CREATE UNIQUE INDEX et_user_age_groups_pkey ON et_user_age_groups USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_group.st_group_pkey",
+        "definition":  "CREATE UNIQUE INDEX st_group_pkey ON st_group USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_group_resource.st_group_resource_group_id_resource_id_access_level_id_acce_key",
+        "definition":  "CREATE UNIQUE INDEX st_group_resource_group_id_resource_id_access_level_id_acce_key ON st_group_resource USING btree (group_id, resource_id, access_level_id, access_scope_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_group_resource.st_group_resource_pkey",
+        "definition":  "CREATE UNIQUE INDEX st_group_resource_pkey ON st_group_resource USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_token.st_token_pkey",
+        "definition":  "CREATE UNIQUE INDEX st_token_pkey ON st_token USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_token.token_expiry",
+        "definition":  "CREATE INDEX token_expiry ON st_token USING btree (valid_to)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_user_credentials.st_user_credentials_pkey",
+        "definition":  "CREATE UNIQUE INDEX st_user_credentials_pkey ON st_user_credentials USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_user_group.st_user_group_pkey",
+        "definition":  "CREATE UNIQUE INDEX st_user_group_pkey ON st_user_group USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_user_group.st_user_group_user_id_group_id_key",
+        "definition":  "CREATE UNIQUE INDEX st_user_group_user_id_group_id_key ON st_user_group USING btree (user_id, group_id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_users.st_users_pkey",
+        "definition":  "CREATE UNIQUE INDEX st_users_pkey ON st_users USING btree (id)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_users.users_email_normalized",
+        "definition":  "CREATE UNIQUE INDEX users_email_normalized ON st_users USING btree (lower((email)::text))"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_users.users_email_unique",
+        "definition":  "CREATE UNIQUE INDEX users_email_unique ON st_users USING btree (email)"
+    },
+    {
+        "kind":  "index",
+        "name":  "st_users.users_username_unique",
+        "definition":  "CREATE UNIQUE INDEX users_username_unique ON st_users USING btree (username)"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_access_level.1",
+        "definition":  "GET"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_access_level.2",
+        "definition":  "POST"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_access_level.3",
+        "definition":  "PUT"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_access_level.4",
+        "definition":  "DELETE"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_access_scope.1",
+        "definition":  "own"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_access_scope.2",
+        "definition":  "any"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.1",
+        "definition":  "auth"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.10",
+        "definition":  "refunds"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.11",
+        "definition":  "userMemberStatus"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.12",
+        "definition":  "userAccountStatus"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.13",
+        "definition":  "groupBooking"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.14",
+        "definition":  "bookingStatus"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.15",
+        "definition":  "bookingVouchers"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.16",
+        "definition":  "tripType"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.17",
+        "definition":  "tripStatus"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.18",
+        "definition":  "tripDifficulty"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.19",
+        "definition":  "tripCosts"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.2",
+        "definition":  "myBookings"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.20",
+        "definition":  "tripCostGroups"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.21",
+        "definition":  "seasons"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.22",
+        "definition":  "securityResource"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.23",
+        "definition":  "securityGroup"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.24",
+        "definition":  "securityGroupResource"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.25",
+        "definition":  "securityUserGroup"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.26",
+        "definition":  "securityAccessLevel"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.27",
+        "definition":  "securityAccessScope"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.28",
+        "definition":  "gmailcert"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.3",
+        "definition":  "bookings"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.4",
+        "definition":  "bookingPeople"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.5",
+        "definition":  "trips"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.6",
+        "definition":  "tripsReport"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.7",
+        "definition":  "users"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.8",
+        "definition":  "userAgeGroups"
+    },
+    {
+        "kind":  "seed",
+        "name":  "et_resource.9",
+        "definition":  "payments"
+    },
+    {
+        "kind":  "seed",
+        "name":  "st_group.1",
+        "definition":  "User"
+    },
+    {
+        "kind":  "seed",
+        "name":  "st_group.2",
+        "definition":  "Admin"
+    },
+    {
+        "kind":  "seed",
+        "name":  "st_group.3",
+        "definition":  "SysAdmin"
+    }
+]

@@ -199,3 +199,17 @@ branches and preserve rejection propagation. Explicitly managed window message
 listeners retain their existing owner cleanup. Tests exercise repeated destruction,
 observer-driven cleanup, and successful/rejected promises under Node WASM; TinyGo
 also builds the updated application. Timers remain owned by their existing views.
+
+## Read-only baseline compatibility
+
+Use `go run ./cmd/migrate -check-existing` (or `/app/tm-migrate -check-existing`)
+to inspect an existing database before adoption. The report runs in a read-only,
+repeatable-read transaction and compares column types/nullability, named constraints,
+index definitions/validity, required seed identities and baseline capability grants.
+It prints JSON differences and exits nonzero when reconciliation is needed; it
+never applies DDL, grants, seeds or migration history. Baseline adoption refuses
+those differences. Additional objects are allowed, and the known 0003 token-column
+widening is explicitly accepted. Equivalent constraints with different names are
+reported for owner review rather than silently treated as identical. The checked-in
+manifest comes only from the canonical baseline in disposable PostgreSQL; it
+contains no user/booking/payment data. Do not regenerate it from a live database.

@@ -1,0 +1,19 @@
+SELECT kind,name,definition FROM (
+ SELECT 'column'::text AS kind,c.relname||'.'||a.attname AS name,
+ format_type(a.atttypid,a.atttypmod)||CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END AS definition
+ FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid
+ WHERE n.nspname=current_schema() AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped
+ UNION ALL
+ SELECT 'constraint',c.relname||'.'||p.conname,replace(pg_get_constraintdef(p.oid),quote_ident(current_schema())||'.','')||CASE WHEN p.convalidated THEN '' ELSE ' NOT VALID' END
+ FROM pg_constraint p JOIN pg_class c ON c.oid=p.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+ WHERE n.nspname=current_schema()
+ UNION ALL
+ SELECT 'index',c.relname||'.'||idx.relname,replace(pg_get_indexdef(i.indexrelid),quote_ident(current_schema())||'.','')||CASE WHEN i.indisvalid THEN '' ELSE ' INVALID' END
+ FROM pg_index i JOIN pg_class c ON c.oid=i.indrelid JOIN pg_class idx ON idx.oid=i.indexrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+ WHERE n.nspname=current_schema()
+ UNION ALL SELECT 'seed','et_resource.'||id,name FROM et_resource
+ UNION ALL SELECT 'seed','et_access_scope.'||id,name FROM et_access_scope
+ UNION ALL SELECT 'seed','et_access_level.'||id,name FROM et_access_level
+ UNION ALL SELECT 'seed','st_group.'||id,name FROM st_group
+ UNION ALL SELECT 'grant',group_id||'.'||resource_id||'.'||access_level_id||'.'||access_scope_id,'present' FROM st_group_resource
+) AS catalog ORDER BY kind,name
