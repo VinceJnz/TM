@@ -35,20 +35,20 @@ jobs:
             -t tm-client1-wasm:tinygo \
             .
 
-      - name: Run API tests in Linux Go 1.24
+      - name: Run API tests in Linux Go 1.26
         run: |
           docker run --rm --network host \
             -e TM_TEST_DATABASE_URL=postgres://tm_test:synthetic-ci-only@127.0.0.1:5432/tm_test?sslmode=disable \
             -v "$GITHUB_WORKSPACE/api-server:/app:ro" \
             -w /app \
-            golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c \
+            golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab \
             sh -c 'go test -count=1 ./... && go vet ./...'
 
       - name: Verify standard Go frontend and WASM transport
         run: |
           docker build -f Dockerfile.client1 --build-arg CLIENT_BUILDER=go-builder -t tm-client1-wasm:go-verify .
-          docker run --rm -v "$GITHUB_WORKSPACE/client1:/app:ro" -w /app golang:1.23.4-alpine@sha256:c23339199a08b0e12032856908589a6d41a0dab141b8b3b21f156fc571a3f1d3 \
-            sh -c 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/misc/wasm/go_js_wasm_exec ./...'
+          docker run --rm -v "$GITHUB_WORKSPACE/client1:/app:ro" -w /app golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab \
+            sh -c 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/lib/wasm/go_js_wasm_exec ./...'
 
       - name: Build and inspect production image
         run: |
@@ -60,3 +60,7 @@ jobs:
       - name: Verify fresh database and real-browser runtime
         shell: pwsh
         run: ./scripts/verify-runtime.ps1 -Image tm-apiserver:verify -SkipAPITests
+
+      - name: Audit API and WASM dependencies
+        shell: pwsh
+        run: ./scripts/audit-dependencies.ps1

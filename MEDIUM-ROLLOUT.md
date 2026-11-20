@@ -231,3 +231,25 @@ advisory IDs, including standard-library and transitive dependency findings. JSO
 scanner exit status alone is not a clean result. These findings require a deliberate
 patched toolchain/dependency update, tracked separately from image pinning.
 AGENTS.md now describes capability metadata and the actual release verification.
+
+## Patched toolchain and dependency audit
+
+The deliberate security update uses Go 1.26.11 for the API and standard Go WASM
+build, pinned by digest. The standard compiler now supplies runtime files from
+lib/wasm. TinyGo remains 0.40.0 with its own matching runtime; its build is checked
+separately. The API module now requires Go 1.26 and updates the dependencies flagged
+by the audit (crypto/net/sys/text, grpc, telemetry and Edwards25519, with their
+required transitive updates). Go module checksums are verified.
+
+Run `./scripts/audit-dependencies.ps1` to audit the API and js/wasm package graphs
+using pinned govulncheck v1.10.0. CI runs this in text mode so reachable findings
+fail the job. The previous 64-advisory result is historical, not the updated branch
+status. A clean Go scan does not audit PostgreSQL, browser packages or TinyGo's
+compiler implementation; those need their own lifecycle/security updates.
+
+Verification of this update passed: module checksums, API tests/vet with disposable
+PostgreSQL, all WASM package tests, both compiler builds, Chromium runtime checks
+for both TinyGo and standard-Go artifacts, and the Delve 1.27.2 debug-image build.
+The pinned v1.10.0 scanner reported no vulnerabilities for either Go package graph.
+The client module's older minimum/toolchain hint is retained for TinyGo compatibility;
+release standard-Go compilation is controlled by the patched Docker builder.

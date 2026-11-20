@@ -2,7 +2,7 @@
 
 ARG CLIENT_BUILDER=go-builder
 
-FROM golang:1.23.4-alpine@sha256:c23339199a08b0e12032856908589a6d41a0dab141b8b3b21f156fc571a3f1d3 AS go-builder
+FROM golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab AS go-builder
 WORKDIR /app
 
 COPY client1/go.mod client1/go.sum ./
@@ -14,10 +14,10 @@ RUN mkdir -p /tmp/client1-out
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     GOOS=js GOARCH=wasm go build -o /tmp/client1-out/main.wasm .
-RUN cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" /tmp/client1-out/wasm_exec.js
+RUN cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /tmp/client1-out/wasm_exec.js
 #RUN --mount=type=cache,target=/go/pkg/mod \
 #    GOOS=js GOARCH=wasm go build -o /out/main.wasm .
-#RUN cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" /out/wasm_exec.js
+#RUN cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js
 
 
 #FROM tinygo/tinygo:latest AS wasmbuilder

@@ -2,7 +2,7 @@
 ARG CLIENT_IMAGE
 FROM ${CLIENT_IMAGE} AS client1-artifact
 
-FROM golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c AS apibuilder
+FROM golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab AS apibuilder
 WORKDIR /app
 COPY api-server/go.mod api-server/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
@@ -31,7 +31,7 @@ FROM runtime AS interactive
 CMD ["/bin/sh", "-c", "while :; do sleep 2073600; done"]
 
 FROM apibuilder AS debug
-ARG DELVE_VERSION=v1.24.2
+ARG DELVE_VERSION=v1.27.2
 RUN apk add --no-cache ca-certificates git && \
     GOBIN=/usr/local/bin go install github.com/go-delve/delve/cmd/dlv@${DELVE_VERSION} && \
     go build -gcflags='all=-N -l' -o /app/apiserver . && \

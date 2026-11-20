@@ -26,7 +26,7 @@ try {
     if (!$SkipAPITests) {
         Write-Host "Running Linux API and PostgreSQL integration tests..."
         $apiPath = (Resolve-Path (Join-Path $repositoryRoot "api-server")).Path
-        Invoke-TestDocker @("run","--rm","--network",$network,"-e","TM_TEST_DATABASE_URL=$adminSource","-v","${apiPath}:/app:ro","-v","tm-codex-go-mod:/go/pkg/mod","-v","tm-codex-go-cache:/root/.cache/go-build","-w","/app","golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c","sh","-c","go test -count=1 ./... && go vet ./...")
+        Invoke-TestDocker @("run","--rm","--network",$network,"-e","TM_TEST_DATABASE_URL=$adminSource","-v","${apiPath}:/app:ro","-v","tm-codex-go-mod:/go/pkg/mod","-v","tm-codex-go-cache:/root/.cache/go-build","-w","/app","golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab","sh","-c","go test -count=1 ./... && go vet ./...")
     }
     Invoke-TestDocker @("run","--rm","--network",$network,"-e","DATA_SOURCE=$adminSource","--entrypoint","/app/tm-migrate",$Image)
     Get-Content -Raw (Join-Path $PSScriptRoot "fixtures/release-smoke.sql") | & docker exec -i $database psql -U tm_test -d tm_test -v ON_ERROR_STOP=1
