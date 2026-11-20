@@ -175,3 +175,15 @@ more rows exist. Ownership filters remain inside the paged SQL query. Array
 response bodies stay compatible. The common WASM transport follows pages for
 legacy list views, with a 10,000-row safety ceiling and an explicit error instead
 of silently truncating larger results. Existing custom reports are separate queries.
+
+## Direct and proxy deployment
+
+TRUSTED_PROXY_CIDRS is empty by default: forwarding headers are ignored. For a
+reverse proxy, configure only its actual peer network(s), require that proxy to
+append/replace X-Forwarded-For correctly, and restrict direct access to the API.
+The middleware validates the full address chain and walks from the trusted peer
+back to the nearest untrusted client; spoofed prefixes cannot select a rate-limit
+identity. This does not trust forwarded host/protocol for redirects or TLS.
+Compose now clears env-file DATA_SOURCE unless TM_API_DATA_SOURCE is explicitly
+set, so its DB_* settings cannot be silently overridden by a stale env-file DSN.
+TM_API_DATA_SOURCE is the deliberate full-DSN override. Never log its value.

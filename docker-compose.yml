@@ -8,6 +8,7 @@ x-api: &api
   env_file:
     - ${TM_API_ENV_FILE:-./api-server/.env}
   environment:
+    DATA_SOURCE: ${TM_API_DATA_SOURCE:-}
     DEV_MODE: "false"
     EMAIL_DEBUG_ADDR: ""
     DB_HOST: dbserver

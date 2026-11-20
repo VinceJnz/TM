@@ -87,7 +87,11 @@ func run() error {
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 
-	corsMuxHandler := corsOpts(r)
+	proxy, err := helpers.TrustedProxy(os.Getenv("TRUSTED_PROXY_CIDRS"))
+	if err != nil {
+		return err
+	}
+	corsMuxHandler := proxy(corsOpts(r))
 	loggedHandler := corsMuxHandler
 
 	origin := "https://" + net.JoinHostPort(app.Settings.Host, app.Settings.PortHttps)
