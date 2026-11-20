@@ -1,9 +1,12 @@
 package viewHelpers
 
-import "syscall/js"
+import (
+	"syscall/js"
+	"client1/v2/app/domEvents"
 
-// These are composite view helpers that are used to create more complex UI components.
-// They add themselves to the DOM via the parent parameter.
+	// These are composite view helpers that are used to create more complex UI components.
+	// They add themselves to the DOM via the parent parameter.
+)
 
 // StringEdit creates a fieldset with a label and an input element for editing a string value.
 func StringEdit(value string, document js.Value, labelText string, inputType string, htmlID string) (object, inputObj js.Value) {
@@ -147,19 +150,19 @@ func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn fu
 	editButton := document.Call("createElement", "button")
 	editButton.Set("innerHTML", "Edit")
 	editButton.Set("className", "btn btn-secondary")
-	editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 		editFn()
 		return nil
-	}))
+	})
 
 	// Create a delete button
 	deleteButton := document.Call("createElement", "button")
 	deleteButton.Set("innerHTML", "Delete")
 	deleteButton.Set("className", "btn btn-danger")
-	deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 		deleteFn()
 		return nil
-	}))
+	})
 
 	itemDiv.Call("appendChild", editButton)
 	itemDiv.Call("appendChild", deleteButton)

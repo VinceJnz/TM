@@ -2,6 +2,7 @@ package accountResetView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -231,7 +232,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	localObjs.PasswordChk, editor.UiComponents.PasswordChk = viewHelpers.StringEdit("", editor.document, "Reenter Password", "password", "itemPasswordChk")
 	editor.UiComponents.PasswordChk.Call("setAttribute", "required", "true")
-	editor.UiComponents.PasswordChk.Call("addEventListener", "change", js.FuncOf(editor.ValidatePasswords))
+	domEvents.Listen(editor.UiComponents.PasswordChk, "change", editor.ValidatePasswords)
 
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)

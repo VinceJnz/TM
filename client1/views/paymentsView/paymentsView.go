@@ -2,6 +2,7 @@ package paymentsView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -276,12 +277,12 @@ func (editor *ItemEditor) populateEditForm() {
 	}
 	host.Set("innerHTML", "")
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
-	form.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Listen(form, "click", func(this js.Value, args []js.Value) any {
 		if len(args) > 0 {
 			args[0].Call("stopPropagation")
 		}
 		return nil
-	}))
+	})
 
 	var localObjs UI
 
@@ -321,14 +322,14 @@ func (editor *ItemEditor) populateEditForm() {
 		editor.setFieldReadOnly(editor.UiComponents.PaymentMethod)
 		editor.UiComponents.AmountHint.Get("style").Call("setProperty", "display", "none")
 	} else {
-		editor.UiComponents.BookingID.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(editor.UiComponents.BookingID, "change", func(this js.Value, args []js.Value) any {
 			editor.autoFillAmountFromBookingSelection()
 			return nil
-		}))
-		editor.UiComponents.Amount.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) any {
+		})
+		domEvents.Listen(editor.UiComponents.Amount, "input", func(this js.Value, args []js.Value) any {
 			editor.UiComponents.AmountHint.Get("style").Call("setProperty", "display", "none")
 			return nil
-		}))
+		})
 		editor.autoFillAmountFromBookingSelection()
 	}
 
@@ -546,55 +547,55 @@ func (editor *ItemEditor) populateItemList() {
 		inlineFormHost := editor.document.Call("createElement", "div")
 		inlineFormHost.Set("className", "inline-record-form")
 		inlineFormHost.Get("style").Call("setProperty", "margin-top", "8px")
-		itemDiv.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(itemDiv, "click", func(this js.Value, args []js.Value) any {
 			editor.openRecord(record, true, inlineFormHost)
 			return nil
-		}))
+		})
 
 		viewButton := editor.document.Call("createElement", "button")
 		viewButton.Set("innerHTML", "View")
 		viewButton.Set("className", "btn btn-secondary")
-		viewButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(viewButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.toggleReadOnlyRecord(record, inlineFormHost, itemDiv)
 			return nil
-		}))
+		})
 
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.openRecord(record, false, inlineFormHost)
 			return nil
-		}))
+		})
 
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.deleteItem(record.ID)
 			return nil
-		}))
+		})
 
 		openRefundsBtn := editor.document.Call("createElement", "button")
 		openRefundsBtn.Set("innerHTML", "Open Refunds")
 		openRefundsBtn.Set("className", "btn btn-secondary")
-		openRefundsBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(openRefundsBtn, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			js.Global().Get("location").Set("hash", fmt.Sprintf("#/refunds?paymentId=%d&bookingId=%d", record.ID, record.BookingID))
 			return nil
-		}))
+		})
 
 		addRefundBtn := editor.document.Call("createElement", "button")
 		addRefundBtn.Set("innerHTML", "Add Refund")
 		addRefundBtn.Set("className", "btn btn-secondary")
-		addRefundBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(addRefundBtn, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			js.Global().Get("location").Set("hash", fmt.Sprintf("#/refunds?paymentId=%d&bookingId=%d&action=new", record.ID, record.BookingID))
 			return nil
-		}))
+		})
 
 		itemDiv.Call("appendChild", viewButton)
 		itemDiv.Call("appendChild", editButton)

@@ -2,6 +2,7 @@ package bookingVoucherView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -158,7 +159,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.DiscountPercent.Set("min", "0")
 	editor.UiComponents.DiscountPercent.Set("max", "100")
 	editor.UiComponents.DiscountPercent.Set("step", "0.01")
-	editor.UiComponents.DiscountPercent.Call("addEventListener", "input", js.FuncOf(editor.updatePricingModeInputs))
+	domEvents.Listen(editor.UiComponents.DiscountPercent, "input", editor.updatePricingModeInputs)
 
 	fixedCostText := ""
 	if editor.CurrentRecord.FixedCost != nil {
@@ -167,7 +168,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.FixedCost, editor.UiComponents.FixedCost = viewHelpers.StringEdit(fixedCostText, editor.document, "Fixed Cost", "number", "itemFixedCost")
 	editor.UiComponents.FixedCost.Set("min", "0")
 	editor.UiComponents.FixedCost.Set("step", "0.01")
-	editor.UiComponents.FixedCost.Call("addEventListener", "input", js.FuncOf(editor.updatePricingModeInputs))
+	domEvents.Listen(editor.UiComponents.FixedCost, "input", editor.updatePricingModeInputs)
 
 	expiryDateText := ""
 	if editor.CurrentRecord.ExpiryDate != nil {
@@ -396,25 +397,25 @@ func (editor *ItemEditor) populateItemList() {
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()
 			return nil
-		}))
+		})
 		itemDiv.Call("appendChild", editButton)
 
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 			confirmed := js.Global().Call("confirm", "Delete voucher '"+record.Code+"'?").Bool()
 			if !confirmed {
 				return nil
 			}
 			editor.deleteItem(record.ID)
 			return nil
-		}))
+		})
 		itemDiv.Call("appendChild", deleteButton)
 
 		editor.ListDiv.Call("appendChild", itemDiv)

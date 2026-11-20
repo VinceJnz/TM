@@ -1,6 +1,7 @@
 package basicAuthLoginView
 
 import (
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
@@ -367,8 +368,7 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value) {
 		"method":      "GET",
 		"credentials": "include",
 	})
-
-	pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
 		resp := args[0]
 		if !resp.Get("ok").Bool() {
 			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
@@ -376,7 +376,7 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value) {
 		}
 
 		jsonP := resp.Call("json")
-		jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 			data := args[0]
 
 			// Data should be an array of age groups
@@ -393,8 +393,8 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value) {
 				selectElement.Call("appendChild", opt)
 			}
 			return nil
-		}))
+		})
 
 		return nil
-	}))
+	})
 }

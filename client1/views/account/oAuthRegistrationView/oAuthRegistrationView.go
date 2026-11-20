@@ -2,6 +2,7 @@ package oAuthRegistrationView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -562,8 +563,7 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value, sele
 		"method":      "GET",
 		"credentials": "include",
 	})
-
-	pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
 		resp := args[0]
 		if !resp.Get("ok").Bool() {
 			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
@@ -571,7 +571,7 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value, sele
 		}
 
 		jsonP := resp.Call("json")
-		jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 			data := args[0]
 			length := data.Get("length").Int()
 			for i := 0; i < length; i++ {
@@ -588,10 +588,10 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value, sele
 				selectElement.Call("appendChild", opt)
 			}
 			return nil
-		}))
+		})
 
 		return nil
-	}))
+	})
 }
 
 func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {

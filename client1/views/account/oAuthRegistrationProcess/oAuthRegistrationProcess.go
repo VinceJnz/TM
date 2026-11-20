@@ -2,6 +2,7 @@ package oAuthRegistrationProcess
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -132,11 +133,10 @@ func (p *Process) FetchItems() {
 	registerBtn := p.document.Call("createElement", "button")
 	registerBtn.Set("textContent", "Register with Google")
 	registerBtn.Set("className", "btn btn-primary")
-
-	registerBtn.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Listen(registerBtn, "click", func(this js.Value, args []js.Value) any {
 		p.StartRegistration()
 		return nil
-	}))
+	})
 
 	container.Call("appendChild", registerBtn)
 	p.Elements.Content.Call("appendChild", container)
@@ -377,15 +377,16 @@ func (p *Process) showRegistrationFormInPopup() {
 	})
 
 	form.Call("appendChild", submitBtn)
+	domEvents.
 
-	// Handle form submission
-	form.Call("addEventListener", "submit", js.FuncOf(func(this js.Value, args []js.Value) any {
-		if len(args) > 0 {
-			args[0].Call("preventDefault")
-		}
-		p.handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn)
-		return nil
-	}))
+		// Handle form submission
+		Listen(form, "submit", func(this js.Value, args []js.Value) any {
+			if len(args) > 0 {
+				args[0].Call("preventDefault")
+			}
+			p.handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn)
+			return nil
+		})
 
 	container.Call("appendChild", form)
 	body.Call("appendChild", container)
@@ -504,8 +505,7 @@ func (p *Process) populateAgeGroupsDropdown(selectElement js.Value) {
 		"method":      "GET",
 		"credentials": "include",
 	})
-
-	pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
 		resp := args[0]
 		if !resp.Get("ok").Bool() {
 			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
@@ -513,7 +513,7 @@ func (p *Process) populateAgeGroupsDropdown(selectElement js.Value) {
 		}
 
 		jsonP := resp.Call("json")
-		jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 			data := args[0]
 			length := data.Get("length").Int()
 			for i := 0; i < length; i++ {
@@ -527,10 +527,10 @@ func (p *Process) populateAgeGroupsDropdown(selectElement js.Value) {
 				selectElement.Call("appendChild", opt)
 			}
 			return nil
-		}))
+		})
 
 		return nil
-	}))
+	})
 }
 
 // showStatus displays a status message

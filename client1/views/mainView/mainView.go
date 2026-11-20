@@ -2,6 +2,7 @@ package mainView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/accessLevelView"
@@ -218,10 +219,10 @@ func (v *View) Setup() {
 	menuIcon.Set("id", "menuIcon")
 	menuIcon.Set("title", "Open menu")
 	menuIcon.Set("innerHTML", "&#9776;")
-	menuIcon.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Listen(menuIcon, "click", func(this js.Value, args []js.Value) any {
 		v.toggleSideMenu()
 		return nil
-	}))
+	})
 	v.elements.navbar.Call("appendChild", menuIcon)
 
 	appTitle := "Trip Manager"
@@ -250,7 +251,7 @@ func (v *View) Setup() {
 	v.elements.userDisplay.Set("id", "userDisplay")
 	v.elements.topmenu.Set("className", "right-align")
 	v.elements.navbar.Call("appendChild", v.elements.userDisplay)
-	v.document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Listen(v.document, "keydown", func(this js.Value, args []js.Value) any {
 		if len(args) == 0 {
 			return nil
 		}
@@ -258,7 +259,7 @@ func (v *View) Setup() {
 			v.closeSideMenu()
 		}
 		return nil
-	}))
+	})
 
 	loginTopView := basicAuthLoginView.New(v.document, v.events, v.appCore)
 

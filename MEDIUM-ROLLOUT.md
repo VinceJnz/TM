@@ -187,3 +187,15 @@ identity. This does not trust forwarded host/protocol for redirects or TLS.
 Compose now clears env-file DATA_SOURCE unless TM_API_DATA_SOURCE is explicitly
 set, so its DB_* settings cannot be silently overridden by a stale env-file DSN.
 TM_API_DATA_SOURCE is the deliberate full-DSN override. Never log its value.
+
+## WASM callback ownership
+
+DOM listener creation in the shared UI helpers and views now uses one ownership
+registry. A shared MutationObserver removes listeners and releases Go callbacks
+when their DOM subtree is removed; moving a connected node does not destroy it.
+Repeated row/form rendering therefore does not retain anonymous event callbacks.
+Anonymous view promise callbacks now use settlement helpers that release both
+branches and preserve rejection propagation. Explicitly managed window message
+listeners retain their existing owner cleanup. Tests exercise repeated destruction,
+observer-driven cleanup, and successful/rejected promises under Node WASM; TinyGo
+also builds the updated application. Timers remain owned by their existing views.

@@ -2,6 +2,7 @@ package templateView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -308,20 +309,20 @@ func (v *ItemEditor) populateItemList() {
 		editButton := v.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 			v.updateStateDisplay(ItemStateEditing)
 			v.populateEditForm(record)
 			return nil
-		}))
+		})
 
 		// Create a delete button
 		deleteButton := v.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 			v.deleteItem(record)
 			return nil
-		}))
+		})
 
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)

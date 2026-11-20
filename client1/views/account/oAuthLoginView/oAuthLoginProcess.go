@@ -1,6 +1,7 @@
 package oAuthLoginView
 
 import (
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"syscall/js"
 )
@@ -21,7 +22,7 @@ func (editor *ItemEditor) authProcess() {
 		if resp.Get("ok").Bool() {
 			// Parse JSON
 			jsonP := resp.Call("json")
-			jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+			domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 				data := args[0]
 				// Check if user is actually authenticated (user_id > 0)
 				userID := 0
@@ -50,18 +51,18 @@ func (editor *ItemEditor) authProcess() {
 				editor.LoggedIn = false
 				editor.onCompletionMsg(debugTag + "Not authenticated.")
 				return nil
-			}))
+			})
 			return nil
 		}
 		// Not authenticated via DB session; try OAuth session
 		// Fall through to next step
 		mePromise := js.Global().Call("fetch", ApiURL+"/me", map[string]any{"method": "GET", "credentials": "include"})
-		mePromise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Then(mePromise, func(this js.Value, args []js.Value) any {
 			meResp := args[0]
 			if meResp.Get("ok").Bool() {
 				// parse user info
 				jsonP := meResp.Call("json")
-				jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+				domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 					data := args[0]
 					name := ""
 					if n := data.Get("name"); n.Truthy() {
@@ -74,7 +75,7 @@ func (editor *ItemEditor) authProcess() {
 					}
 					// Call /auth/ensure to create DB session cookie
 					ensureP := js.Global().Call("fetch", "/api/v1/auth/oauth/ensure", map[string]any{"method": "GET", "credentials": "include"})
-					ensureP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+					domEvents.Then(ensureP, func(this js.Value, args []js.Value) any {
 						enResp := args[0]
 						if enResp.Get("ok").Bool() {
 							// success; finalize login
@@ -87,27 +88,27 @@ func (editor *ItemEditor) authProcess() {
 							editor.loginComplete(name)
 						}
 						return nil
-					}))
+					})
 					return nil
-				}))
+				})
 			} else {
 				// Not authenticated at all - don't show prompt, just remain logged out
 				editor.LoggedIn = false
 				editor.onCompletionMsg(debugTag + "Not authenticated.")
 			}
 			return nil
-		}))
+		})
 		return nil
 	})
 	menuCatch := js.FuncOf(func(this js.Value, args []js.Value) any {
 		// If fetch fails, try the OAuth flow directly
 		mePromise := js.Global().Call("fetch", ApiURL+"/me", map[string]any{"method": "GET", "credentials": "include"})
-		mePromise.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Then(mePromise, func(this js.Value, args []js.Value) any {
 			meResp := args[0]
 			if meResp.Get("ok").Bool() {
 				// parse user info then call ensure
 				jsonP := meResp.Call("json")
-				jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+				domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 					data := args[0]
 					name := ""
 					if n := data.Get("name"); n.Truthy() {
@@ -119,7 +120,7 @@ func (editor *ItemEditor) authProcess() {
 						}
 					}
 					ensureP := js.Global().Call("fetch", "/api/v1/auth/oauth/ensure", map[string]any{"method": "GET", "credentials": "include"})
-					ensureP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+					domEvents.Then(ensureP, func(this js.Value, args []js.Value) any {
 						enResp := args[0]
 						if enResp.Get("ok").Bool() {
 							editor.LoggedIn = true
@@ -130,14 +131,14 @@ func (editor *ItemEditor) authProcess() {
 							editor.loginComplete(name)
 						}
 						return nil
-					}))
+					})
 					return nil
-				}))
+				})
 			} else {
 				editor.onCompletionMsg(debugTag + "Not authenticated; please log in.")
 			}
 			return nil
-		}))
+		})
 		return nil
 	})
 	menuPromise.Call("then", menuThen).Call("catch", menuCatch)

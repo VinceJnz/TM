@@ -2,6 +2,7 @@ package tripCostGroupView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/tripCostView"
@@ -340,31 +341,31 @@ func (editor *ItemEditor) populateItemList() {
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()
 			return nil
-		}))
+		})
 
 		// Create a delete button
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 			editor.deleteItem(record.ID)
 			return nil
-		}))
+		})
 
 		// Create a toggle modify-booking-list button
 		costItemButton := editor.document.Call("createElement", "button")
 		costItemButton.Set("innerHTML", "Cost Item")
 		costItemButton.Set("className", "btn btn-secondary")
-		costItemButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(costItemButton, "click", func(this js.Value, args []js.Value) interface{} {
 			tripCostItem.FetchItems()
 			tripCostItem.Toggle()
 			return nil
-		}))
+		})
 
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)

@@ -2,6 +2,7 @@ package userView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/userAccountStatusView"
@@ -497,12 +498,12 @@ func (editor *ItemEditor) populateItemList() {
 			"border-top":  "1px solid #e0e8f0",
 			"padding-top": "8px",
 		})
-		childContainer.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(childContainer, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
 			}
 			return nil
-		}))
+		})
 		userCard.Call("appendChild", childContainer)
 
 		// Inline edit host, hidden until Edit is clicked
@@ -517,8 +518,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		userID := record.ID
 		userCard.Call("addEventListener", "click", editor.createUserToggleHandler(userID, childContainer, toggleIndicator, groupEditor))
-
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
 			}
@@ -541,15 +541,14 @@ func (editor *ItemEditor) populateItemList() {
 			editor.renderInlineEditForm(editContainer, record)
 			editContainer.Get("style").Call("setProperty", "display", "block")
 			return nil
-		}))
-
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		})
+		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
 			}
 			editor.deleteItem(record.ID)
 			return nil
-		}))
+		})
 
 		editor.ListDiv.Call("appendChild", userCard)
 	}

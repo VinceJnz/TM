@@ -14,6 +14,7 @@ import (
 	"syscall/js"
 	"time"
 
+	"client1/v2/app/domEvents"
 	"github.com/shopspring/decimal"
 )
 
@@ -207,20 +208,20 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	editor.UiComponents.FromDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
-	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
+	domEvents.Listen(editor.UiComponents.FromDate, "change", editor.ValidateFromDate)
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
 	localObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	editor.UiComponents.ToDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
-	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
+	domEvents.Listen(editor.UiComponents.ToDate, "change", editor.ValidateToDate)
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
 	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.Children.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
 	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
 
 	localObjs.VoucherCode, editor.UiComponents.VoucherCode = viewHelpers.StringEdit("", editor.document, "Voucher Code", "text", "itemVoucherCode")
-	editor.UiComponents.VoucherCode.Call("addEventListener", "change", js.FuncOf(editor.updateBookingPriceFromVoucher))
+	domEvents.Listen(editor.UiComponents.VoucherCode, "change", editor.updateBookingPriceFromVoucher)
 
 	localObjs.BookingPrice, editor.UiComponents.BookingPrice = viewHelpers.StringEdit(editor.CurrentRecord.BookingPrice.StringFixed(2), editor.document, "Booking Price", "number", "itemBookingPrice")
 	editor.UiComponents.BookingPrice.Set("step", "0.01")
@@ -567,22 +568,22 @@ func (editor *ItemEditor) populateItemList() {
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
 			editButton.Set("className", "btn btn-secondary")
-			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 				editor.populateEditForm()
 				return nil
-			}))
+			})
 			itemDiv.Call("appendChild", editButton)
 
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
 			deleteButton.Set("className", "btn btn-danger")
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) any {
 				editor.deleteItem(record.ID)
 				return nil
-			}))
+			})
 			itemDiv.Call("appendChild", deleteButton)
 		}
 
@@ -590,11 +591,11 @@ func (editor *ItemEditor) populateItemList() {
 		peopleButton := editor.document.Call("createElement", "button")
 		peopleButton.Set("innerHTML", "People")
 		peopleButton.Set("className", "btn btn-secondary")
-		peopleButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(peopleButton, "click", func(this js.Value, args []js.Value) any {
 			bookingPeople.FetchItems()
 			bookingPeople.Toggle()
 			return nil
-		}))
+		})
 		itemDiv.Call("appendChild", peopleButton)
 
 		itemDiv.Call("appendChild", bookingPeople.Div)

@@ -2,6 +2,7 @@ package securityGroupView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/securityGroupResourceView"
@@ -371,7 +372,7 @@ func (editor *ItemEditor) populateItemList() {
 			"padding":   "4px 8px",
 			"font-size": "0.82em",
 		})
-		editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
 			}
@@ -379,7 +380,7 @@ func (editor *ItemEditor) populateItemList() {
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()
 			return nil
-		}))
+		})
 		headerDiv.Call("appendChild", editButton)
 
 		// Delete button
@@ -390,13 +391,13 @@ func (editor *ItemEditor) populateItemList() {
 			"padding":   "4px 8px",
 			"font-size": "0.82em",
 		})
-		deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
 			}
 			editor.deleteItem(record.ID)
 			return nil
-		}))
+		})
 		headerDiv.Call("appendChild", deleteButton)
 
 		groupCard.Call("appendChild", headerDiv)
@@ -409,12 +410,12 @@ func (editor *ItemEditor) populateItemList() {
 			"border-top":  "1px solid #e0e8f0",
 			"padding-top": "8px",
 		})
-		resourcesContainer.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		domEvents.Listen(resourcesContainer, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
 			}
 			return nil
-		}))
+		})
 		groupCard.Call("appendChild", resourcesContainer)
 
 		groupID := record.ID

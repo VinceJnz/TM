@@ -2,6 +2,7 @@ package basicAuthLoginView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -290,12 +291,12 @@ func (editor *ItemEditor) populateEditForm() {
 	loginButton := editor.document.Call("createElement", "button")
 	loginButton.Set("innerHTML", "Continue with Google")
 	loginButton.Set("className", "btn btn-primary oauth-btn")
-	loginButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Listen(loginButton, "click", func(this js.Value, args []js.Value) any {
 		editor.oauthMessageReceived = false
 		popup := js.Global().Call("open", "/api/v1/auth/oauth/login", "oauth", "width=600,height=800")
 		editor.startOAuthPopupCloseWatcher(popup)
 		return nil
-	}))
+	})
 	oauthContainer.Call("appendChild", loginButton)
 
 	container.Call("appendChild", oauthContainer)
@@ -385,13 +386,13 @@ func (editor *ItemEditor) renderForm(mode string) {
 		link := editor.document.Call("createElement", "a")
 		link.Set("href", "#")
 		link.Set("innerHTML", "Already have an account? Sign in")
-		link.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(link, "click", func(this js.Value, args []js.Value) any {
 			if len(args) > 0 {
 				args[0].Call("preventDefault")
 			}
 			editor.renderForm("login")
 			return nil
-		}))
+		})
 		editor.Elements.AuthDiv.Call("appendChild", link)
 	} else {
 		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
@@ -400,13 +401,13 @@ func (editor *ItemEditor) renderForm(mode string) {
 		link := editor.document.Call("createElement", "a")
 		link.Set("href", "#")
 		link.Set("innerHTML", "New to TM? Create an account")
-		link.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(link, "click", func(this js.Value, args []js.Value) any {
 			if len(args) > 0 {
 				args[0].Call("preventDefault")
 			}
 			editor.renderForm("register")
 			return nil
-		}))
+		})
 		editor.Elements.AuthDiv.Call("appendChild", link)
 	}
 }
@@ -500,11 +501,11 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 			"credentials": "include",
 			"headers":     map[string]any{"Authorization": "Basic " + enc},
 		})
-		pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
 			resp := args[0]
 			if resp.Get("ok").Bool() {
 				jsonP := resp.Call("json")
-				jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+				domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 					data := args[0]
 					name := ""
 					if n := data.Get("name"); n.Truthy() {
@@ -521,12 +522,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 					editor.LoggedIn = true
 					editor.onCompletionMsg(debugTag + "Basic auth/token login successful." + " Welcome, " + name + "!")
 					return nil
-				}))
+				})
 			} else {
 				editor.onCompletionMsg(debugTag + "Basic auth/token login failed; please try again.")
 			}
 			return nil
-		}))
+		})
 		editor.resetEditForm()
 		return nil
 	}

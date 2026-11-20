@@ -1,7 +1,8 @@
-﻿package securityGroupResourceView
+package securityGroupResourceView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/accessLevelView"
@@ -469,7 +470,7 @@ func (editor *ItemEditor) populateItemList() {
 				"padding":   "2px 6px",
 				"font-size": "0.8em",
 			})
-			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 				if len(args) > 0 {
 					args[0].Call("stopPropagation")
 				}
@@ -477,7 +478,7 @@ func (editor *ItemEditor) populateItemList() {
 				editor.updateStateDisplay(ItemStateEditing)
 				editor.populateEditForm()
 				return nil
-			}))
+			})
 
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
@@ -486,13 +487,13 @@ func (editor *ItemEditor) populateItemList() {
 				"padding":   "2px 6px",
 				"font-size": "0.8em",
 			})
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 				if len(args) > 0 {
 					args[0].Call("stopPropagation")
 				}
 				editor.deleteItem(record.ID)
 				return nil
-			}))
+			})
 
 			actionDiv.Call("appendChild", editButton)
 			actionDiv.Call("appendChild", deleteButton)

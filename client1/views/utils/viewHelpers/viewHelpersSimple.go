@@ -1,6 +1,7 @@
 package viewHelpers
 
 import (
+	"client1/v2/app/domEvents"
 	"syscall/js"
 )
 
@@ -65,13 +66,13 @@ func InputCheckBox(value bool, doc js.Value, labelText string, inputType string,
 func Form(onSubmit func(this js.Value, args []js.Value) interface{}, doc js.Value, htmlID string) js.Value {
 	Form := doc.Call("createElement", "form")
 	Form.Set("id", htmlID)
-	Form.Call("addEventListener", "submit", js.FuncOf(onSubmit))
+	domEvents.Listen(Form, "submit", onSubmit)
 	return Form
 }
 
 func Button(onClick func(this js.Value, args []js.Value) interface{}, doc js.Value, displayText, htmlID string) js.Value {
 	button := newButtonElement(doc, "button", "btn", displayText, htmlID)
-	button.Call("addEventListener", "click", js.FuncOf(onClick))
+	domEvents.Listen(button, "click", onClick)
 	return button
 }
 
@@ -81,7 +82,7 @@ func Button2(onClick func() interface{}, doc js.Value, displayText, htmlID strin
 		onClick()
 		return nil
 	}
-	button.Call("addEventListener", "click", js.FuncOf(f))
+	domEvents.Listen(button, "click", f)
 	return button
 }
 
@@ -96,7 +97,7 @@ func SubmitValidateButton(onClick func(), doc js.Value, displayText, htmlID stri
 			onClick()
 			return nil
 		}
-		button.Call("addEventListener", "click", js.FuncOf(f))
+		domEvents.Listen(button, "click", f)
 	}
 	return button
 }
@@ -108,7 +109,7 @@ func SubmitValidateButton2(onClick func(this js.Value, args []js.Value) any, doc
 			onClick(this, args)
 			return nil
 		}
-		button.Call("addEventListener", "click", js.FuncOf(f))
+		domEvents.Listen(button, "click", f)
 	}
 	return button
 }
@@ -133,6 +134,6 @@ func HRef(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 		onClick()
 		return nil
 	}
-	link.Call("addEventListener", "click", js.FuncOf(f))
+	domEvents.Listen(link, "click", f)
 	return link
 }

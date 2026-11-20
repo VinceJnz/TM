@@ -2,6 +2,7 @@ package tripView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingView"
@@ -210,15 +211,16 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	// Create an span element of error messages
 	span := viewHelpers.Span(editor.document, htmlID+"-error")
 	fieldset.Call("appendChild", span)
+	domEvents.
 
-	// Add event listener to update CurrentRecord based on selected option
-	StateDropDown.Call("addEventListener", "change", js.FuncOf(func(this js.Value, p []js.Value) any {
-		selectedIndex, _ := strconv.Atoi(StateDropDown.Get("value").String())
-		if selectedIndex >= 0 && selectedIndex < len(editor.Records) {
-			editor.CurrentRecord = editor.Records[selectedIndex] // Update the current record with the selected item. This allows the app to use the current record to update UI values.
-		}
-		return nil
-	}))
+		// Add event listener to update CurrentRecord based on selected option
+		Listen(StateDropDown, "change", func(this js.Value, p []js.Value) any {
+			selectedIndex, _ := strconv.Atoi(StateDropDown.Get("value").String())
+			if selectedIndex >= 0 && selectedIndex < len(editor.Records) {
+				editor.CurrentRecord = editor.Records[selectedIndex] // Update the current record with the selected item. This allows the app to use the current record to update UI values.
+			}
+			return nil
+		})
 
 	return fieldset, StateDropDown
 }
@@ -239,14 +241,16 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
 	uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
-	//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
-	//editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
-	editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
+	domEvents.
+		//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
+		//editor.UiComponents.FromDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateFromDate))
+		Listen(editor.UiComponents.FromDate, "change", editor.ValidateFromDate)
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
 	uiObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
-	//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
-	editor.UiComponents.ToDate.Call("addEventListener", "change", js.FuncOf(editor.ValidateToDate))
+	domEvents.
+		//editor.UiComponents.ToDate.Set("min", time.Now().Format(viewHelpers.Layout))
+		Listen(editor.UiComponents.ToDate, "change", editor.ValidateToDate)
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
 	uiObjs.Location, editor.UiComponents.Location = viewHelpers.StringEdit(editor.CurrentRecord.Location, editor.document, "Location", "text", "itemLocation")
@@ -496,22 +500,22 @@ func (editor *ItemEditor) populateItemList() {
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
 			editButton.Set("className", "btn btn-secondary")
-			editButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 				editor.populateEditForm()
 				return nil
-			}))
+			})
 			itemDiv.Call("appendChild", editButton)
 
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
 			deleteButton.Set("className", "btn btn-danger")
-			deleteButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+			domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) any {
 				editor.deleteItem(record.ID)
 				return nil
-			}))
+			})
 			itemDiv.Call("appendChild", deleteButton)
 		}
 
@@ -522,11 +526,11 @@ func (editor *ItemEditor) populateItemList() {
 		bookingButton := editor.document.Call("createElement", "button")
 		bookingButton.Set("innerHTML", "Bookings")
 		bookingButton.Set("className", "btn btn-secondary")
-		bookingButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Listen(bookingButton, "click", func(this js.Value, args []js.Value) any {
 			booking.FetchItems()
 			booking.Toggle()
 			return nil
-		}))
+		})
 
 		// Append child buttons to item
 		itemDiv.Call("appendChild", bookingButton)

@@ -1,8 +1,11 @@
 package validator
 
-import "syscall/js"
+import (
+	"syscall/js"
+	"client1/v2/app/domEvents"
 
-//const debugTag = "validator."
+	//const debugTag = "validator."
+)
 
 type UI struct {
 	UsernameInput js.Value
@@ -76,11 +79,11 @@ func (v *Validator) toggleSubmitButton(isValid bool) {
 }
 
 func (v *Validator) BindEvents() {
-	v.UI.UsernameInput.Call("addEventListener", "input", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	domEvents.Listen(v.UI.UsernameInput, "input", func(this js.Value, args []js.Value) interface{} {
 		isValid := v.Validate()
 		v.toggleSubmitButton(isValid)
 		return nil
-	}))
+	})
 }
 
 /*

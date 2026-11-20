@@ -2,6 +2,7 @@ package oAuthLoginView
 
 import (
 	"client1/v2/app/appCore"
+	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/account/oAuthRegistrationView"
@@ -215,24 +216,24 @@ func (editor *ItemEditor) populateEditForm() {
 	loginButton.Set("id", "oauthLoginOption")
 	loginButton.Set("innerHTML", "Login with Google")
 	loginButton.Set("className", "btn btn-primary")
-	loginButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Listen(loginButton, "click", func(this js.Value, args []js.Value) any {
 		editor.setActiveButtons("oauthLoginOption", "oauthLoginOption", "oauthRegisterOption")
 		// Open OAuth popup; server will set cookies on completion
 		js.Global().Call("open", ApiURL+"/login", "oauth", "width=600,height=800")
 		return nil
-	}))
+	})
 
 	// Create a toggle child button for registration
 	registerButton := editor.document.Call("createElement", "button")
 	registerButton.Set("id", "oauthRegisterOption")
 	registerButton.Set("innerHTML", "OAuth Register")
 	registerButton.Set("className", "btn btn-secondary")
-	registerButton.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	domEvents.Listen(registerButton, "click", func(this js.Value, args []js.Value) any {
 		editor.setActiveButtons("oauthRegisterOption", "oauthLoginOption", "oauthRegisterOption")
 		register.NewItemData()
 		register.Toggle()
 		return nil
-	}))
+	})
 	editor.setActiveButtons("oauthLoginOption", "oauthLoginOption", "oauthRegisterOption")
 
 	// Append child components to editor div
@@ -270,11 +271,11 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 			"credentials": "include",
 			"headers":     map[string]any{"Authorization": "Basic " + enc},
 		})
-		pfetch.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+		domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
 			resp := args[0]
 			if resp.Get("ok").Bool() {
 				jsonP := resp.Call("json")
-				jsonP.Call("then", js.FuncOf(func(this js.Value, args []js.Value) any {
+				domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
 					data := args[0]
 					name := ""
 					if n := data.Get("name"); n.Truthy() {
@@ -291,12 +292,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 					editor.LoggedIn = true
 					editor.loginComplete(name)
 					return nil
-				}))
+				})
 			} else {
 				editor.onCompletionMsg(debugTag + "Basic auth/token login failed; please try again.")
 			}
 			return nil
-		}))
+		})
 		editor.resetEditForm()
 		return nil
 	}

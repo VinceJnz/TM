@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"client1/v2/app/domEvents"
 	"syscall/js"
 	"time"
 )
@@ -9,33 +10,33 @@ func MainDemo() {
 	doc := js.Global().Get("document")
 
 	form := doc.Call("getElementById", "my-form")
-	//submitButton := doc.Call("getElementById", "submit-btn")
+	domEvents.
+		//submitButton := doc.Call("getElementById", "submit-btn")
+		Listen( // Add event listener for form submission
+			form, "submit", func(this js.Value, args []js.Value) interface{} {
+				event := args[0]
 
-	// Add event listener for form submission
-	form.Call("addEventListener", "submit", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		event := args[0]
+				// Prevent default form submission behavior
+				event.Call("preventDefault")
 
-		// Prevent default form submission behavior
-		event.Call("preventDefault")
+				// Validate dates
+				fromDate := doc.Call("getElementById", "fromDate").Get("value").String()
+				toDate := doc.Call("getElementById", "toDate").Get("value").String()
 
-		// Validate dates
-		fromDate := doc.Call("getElementById", "fromDate").Get("value").String()
-		toDate := doc.Call("getElementById", "toDate").Get("value").String()
+				if !ValidateDates(fromDate, toDate) {
+					// Show error if validation fails
+					doc.Call("getElementById", "toDate-error").Set("innerHTML", "To Date must be greater than or equal to From Date")
+					return nil
+				}
 
-		if !ValidateDates(fromDate, toDate) {
-			// Show error if validation fails
-			doc.Call("getElementById", "toDate-error").Set("innerHTML", "To Date must be greater than or equal to From Date")
-			return nil
-		}
+				// Clear errors if validation passes
+				ClearErrors2()
 
-		// Clear errors if validation passes
-		ClearErrors2()
+				// Proceed with form submission or other actions
+				ProcessFormData()
 
-		// Proceed with form submission or other actions
-		ProcessFormData()
-
-		return nil
-	}))
+				return nil
+			})
 }
 
 // validateDates compares the fromDate and toDate and returns true if toDate >= fromDate
