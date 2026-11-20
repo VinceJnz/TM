@@ -16,7 +16,7 @@ func TestMoneyNumericContractAndPrecision(t *testing.T) {
 			t.Fatal(string(out), err)
 		}
 	}
-	for _, input := range []string{`-1`, `0.001`, `"NaN"`} {
+	for _, input := range []string{`-1`, `0.001`, `"NaN"`, `1e1000000000`, `1e-1000000000`, `100000000`} {
 		var m Money
 		if json.Unmarshal([]byte(input), &m) == nil {
 			t.Fatal("invalid amount accepted", input)

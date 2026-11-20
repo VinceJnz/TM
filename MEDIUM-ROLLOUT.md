@@ -253,3 +253,8 @@ for both TinyGo and standard-Go artifacts, and the Delve 1.27.2 debug-image buil
 The pinned v1.10.0 scanner reported no vulnerabilities for either Go package graph.
 The client module's older minimum/toolchain hint is retained for TinyGo compatibility;
 release standard-Go compilation is controlled by the patched Docker builder.
+
+Money input validation also bounds text length, exponent and the numeric(10,2)
+range before decimal rounding, so a short adversarial exponent cannot trigger an
+unbounded big-integer allocation. Regression tests cover extreme positive/negative
+exponents and values above the database range.
