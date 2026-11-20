@@ -166,3 +166,12 @@ and Stripe calls already carry request context. Legacy authentication lookup wra
 retain compatibility and use a five-second deadline when no caller context exists.
 Cancellation tests cover the protected-route lookup chain. Background jobs retain
 their own bounded contexts.
+
+## Bounded collections
+
+Shared CRUD collection queries accept limit (default 100, maximum 500) and offset,
+order by their first selected resource-ID column, and return X-Next-Offset when
+more rows exist. Ownership filters remain inside the paged SQL query. Array
+response bodies stay compatible. The common WASM transport follows pages for
+legacy list views, with a 10,000-row safety ceiling and an explicit error instead
+of silently truncating larger results. Existing custom reports are separate queries.

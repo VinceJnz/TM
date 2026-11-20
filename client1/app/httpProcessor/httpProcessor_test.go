@@ -55,3 +55,30 @@ func TestFetchHandlesBodyRejectionAndSuccess(t *testing.T) {
 		text.Release()
 	}
 }
+
+func TestListFollowsNextOffsetWithoutLosingRows(t *testing.T) {
+	old := js.Global().Get("fetch")
+	defer js.Global().Set("fetch", old)
+	js.Global().Set("fetch", js.Global().Get("Function").New("url", "options", `
+  const next = new URL(url).searchParams.get('offset');
+  return Promise.resolve(new Response(JSON.stringify(next ? [{id:2}] : [{id:1}]),
+    {status:200, headers:next ? {} : {'X-Next-Offset':'1'}}));
+ `))
+	client := New("https://example.test/custom/v9")
+	var records []struct {
+		ID int `json:"id"`
+	}
+	finished := make(chan error, 1)
+	go func() { finished <- client.newRequest("GET", "/bookings", &records, nil) }()
+	select {
+	case err := <-finished:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("paginated fetch blocked")
+	}
+	if len(records) != 2 || records[0].ID != 1 || records[1].ID != 2 {
+		t.Fatal(records)
+	}
+}

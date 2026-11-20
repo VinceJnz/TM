@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"reflect"
+	"strconv"
 	"strings"
 	"syscall/js"
 	"time"
@@ -203,6 +205,50 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 			err = fmt.Errorf(debugTag+"newRequest()8b failed to decode JSON data: %w", err)
 			callBackFail(err)
 			return err
+		}
+		// Follow bounded pages for legacy list views; never silently truncate their data.
+		if method == http.MethodGet && res.Header.Get("X-Next-Offset") != "" {
+			list := reflect.ValueOf(rxDataStru)
+			if list.Kind() != reflect.Pointer || list.Elem().Kind() != reflect.Slice {
+				err = fmt.Errorf("paginated response requires list destination")
+				callBackFail(err)
+				return err
+			}
+			lastOffset := -1
+			for next := res.Header.Get("X-Next-Offset"); next != ""; next = res.Header.Get("X-Next-Offset") {
+				offset, parseErr := strconv.Atoi(next)
+				if parseErr != nil || offset <= lastOffset || list.Elem().Len() >= 10000 {
+					err = fmt.Errorf("collection too large; narrow the request")
+					callBackFail(err)
+					return err
+				}
+				lastOffset = offset
+				pageURL := *req.URL
+				query := pageURL.Query()
+				query.Set("offset", next)
+				pageURL.RawQuery = query.Encode()
+				pageReq := req.Clone(req.Context())
+				pageReq.URL = &pageURL
+				res, err = c.doRequest(pageReq)
+				if err != nil {
+					callBackFail(err)
+					return err
+				}
+				if res.StatusCode != http.StatusOK {
+					res.Body.Close()
+					err = fmt.Errorf("page request failed: %d", res.StatusCode)
+					callBackFail(err)
+					return err
+				}
+				page := reflect.New(list.Elem().Type())
+				err = decodeJSON(res, page.Interface())
+				res.Body.Close()
+				if err != nil {
+					callBackFail(err)
+					return err
+				}
+				list.Elem().Set(reflect.AppendSlice(list.Elem(), page.Elem()))
+			}
 		}
 	} else {
 		//Data struct is nil - this is not necesssarily an error, e.g. we might be deleting an item?????

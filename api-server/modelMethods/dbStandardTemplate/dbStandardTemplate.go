@@ -19,8 +19,11 @@ const debugTag = "dbStandardTemplate."
 
 // GetAll: retrieves and returns all records
 func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string) {
-	err := Db.SelectContext(r.Context(), dest, query)
-	if err == sql.ErrNoRows {
+	err := selectPage(w, r, Db, dest, query)
+	if err == ErrPagination {
+		helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+		return
+	} else if err == sql.ErrNoRows {
 		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
 	} else if err != nil {
@@ -34,7 +37,10 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 // Get: retrieves and returns a single record identified by id
 func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
 	err := Db.GetContext(r.Context(), dest, query, args...)
-	if err == sql.ErrNoRows {
+	if err == ErrPagination {
+		helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+		return
+	} else if err == sql.ErrNoRows {
 		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
 	} else if err != nil {
@@ -47,8 +53,11 @@ func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, d
 
 // Get: retrieves and returns a list of records identified by parent id
 func GetList(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	err := Db.SelectContext(r.Context(), dest, query, args...)
-	if err == sql.ErrNoRows {
+	err := selectPage(w, r, Db, dest, query, args...)
+	if err == ErrPagination {
+		helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+		return
+	} else if err == sql.ErrNoRows {
 		helpers.WriteError(w, http.StatusNotFound, "not_found", "Record not found")
 		return
 	} else if err != nil {
