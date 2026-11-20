@@ -15,7 +15,7 @@ function Invoke-TestDocker([string[]]$Arguments) {
 try {
     Write-Host "Preparing disposable release verification resources..."
     Invoke-TestDocker @("network","create",$network)
-    Invoke-TestDocker @("run","-d","--name",$database,"--network",$network,"--network-alias","database","-e","POSTGRES_USER=tm_test","-e","POSTGRES_PASSWORD=synthetic-test-only","-e","POSTGRES_DB=tm_test","postgres:13")
+    Invoke-TestDocker @("run","-d","--name",$database,"--network",$network,"--network-alias","database","-e","POSTGRES_USER=tm_test","-e","POSTGRES_PASSWORD=synthetic-test-only","-e","POSTGRES_DB=tm_test","postgres:13@sha256:4689940c683801b4ab839ab3b0a0a3555a5fe425371422310944e89eca7d8068")
     $ready = $false
     for ($attempt=0;$attempt -lt 60;$attempt++) {
         & docker exec $database pg_isready -U tm_test -d tm_test *> $null
@@ -26,7 +26,7 @@ try {
     if (!$SkipAPITests) {
         Write-Host "Running Linux API and PostgreSQL integration tests..."
         $apiPath = (Resolve-Path (Join-Path $repositoryRoot "api-server")).Path
-        Invoke-TestDocker @("run","--rm","--network",$network,"-e","TM_TEST_DATABASE_URL=$adminSource","-v","${apiPath}:/app:ro","-v","tm-codex-go-mod:/go/pkg/mod","-v","tm-codex-go-cache:/root/.cache/go-build","-w","/app","golang:1.24.0-alpine","sh","-c","go test -count=1 ./... && go vet ./...")
+        Invoke-TestDocker @("run","--rm","--network",$network,"-e","TM_TEST_DATABASE_URL=$adminSource","-v","${apiPath}:/app:ro","-v","tm-codex-go-mod:/go/pkg/mod","-v","tm-codex-go-cache:/root/.cache/go-build","-w","/app","golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c","sh","-c","go test -count=1 ./... && go vet ./...")
     }
     Invoke-TestDocker @("run","--rm","--network",$network,"-e","DATA_SOURCE=$adminSource","--entrypoint","/app/tm-migrate",$Image)
     Get-Content -Raw (Join-Path $PSScriptRoot "fixtures/release-smoke.sql") | & docker exec -i $database psql -U tm_test -d tm_test -v ON_ERROR_STOP=1

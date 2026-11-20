@@ -1,20 +1,22 @@
-# syntax=docker/dockerfile:1.7
-ARG CLIENT_IMAGE=tm-client1-wasm:go-dev
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+ARG CLIENT_IMAGE
 FROM ${CLIENT_IMAGE} AS client1-artifact
 
-FROM golang:1.24.0-alpine AS apibuilder
+FROM golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c AS apibuilder
 WORKDIR /app
 COPY api-server/go.mod api-server/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY api-server/ ./
 RUN --mount=type=cache,target=/go/pkg/mod go build -o /app/apiserver . && go build -o /app/tm-migrate ./cmd/migrate
 
-FROM alpine:latest AS runtime
+FROM alpine:latest@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 RUN apk add --no-cache ca-certificates && \
     addgroup -g 10001 tm && adduser -D -u 10001 -G tm tm && \
     mkdir -p /etc/certs/ssl /etc/certs/gmail-tokens /etc/certs/gmail-credentials && \
     chown -R 10001:10001 /etc/certs/gmail-tokens
 WORKDIR /app
+ARG SOURCE_REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/VinceJnz/TM" org.opencontainers.image.revision=$SOURCE_REVISION
 COPY --from=apibuilder /app/static/ ./static/
 COPY --from=client1-artifact /out/main.wasm /out/wasm_exec.js ./static/
 COPY --from=apibuilder /app/apiserver ./apiserver

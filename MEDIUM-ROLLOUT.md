@@ -213,3 +213,21 @@ widening is explicitly accepted. Equivalent constraints with different names are
 reported for owner review rather than silently treated as identical. The checked-in
 manifest comes only from the canonical baseline in disposable PostgreSQL; it
 contains no user/booking/payment data. Do not regenerate it from a live database.
+
+## Reproducible release inputs and dependency review
+
+Container base images (including verification tools and Compose services) and the
+BuildKit frontend are pinned by digest. The API Dockerfile requires CLIENT_IMAGE
+explicitly. For a published release, supply the matching client artifact by digest
+and SOURCE_REVISION as its source commit; CI passes GITHUB_SHA into the OCI image
+revision label. Local verification tags are temporary build outputs, not published
+release identities. Update pinned digests through reviewed changes and rerun the
+full release verifier. APK package repositories remain a separate reproducibility
+boundary; digest pinning alone does not freeze their package indexes.
+
+Dependabot now checks both Go modules, Docker inputs and GitHub Actions weekly.
+A govulncheck v1.1.4 audit of the old API inputs reported 64 distinct reachable
+advisory IDs, including standard-library and transitive dependency findings. JSON
+scanner exit status alone is not a clean result. These findings require a deliberate
+patched toolchain/dependency update, tracked separately from image pinning.
+AGENTS.md now describes capability metadata and the actual release verification.

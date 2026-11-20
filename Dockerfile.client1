@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 
 ARG CLIENT_BUILDER=go-builder
 
-FROM golang:1.23.4-alpine AS go-builder
+FROM golang:1.23.4-alpine@sha256:c23339199a08b0e12032856908589a6d41a0dab141b8b3b21f156fc571a3f1d3 AS go-builder
 WORKDIR /app
 
 COPY client1/go.mod client1/go.sum ./
@@ -22,7 +22,7 @@ RUN cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" /tmp/client1-out/wasm_exec.js
 
 #FROM tinygo/tinygo:latest AS wasmbuilder
 #FROM tinygo/tinygo:0.41.1 AS tinygo-builder #(TinyGo 0.41.1: currently incompatible with this client’s net/http dependency.)
-FROM tinygo/tinygo:0.40.0 AS tinygo-builder
+FROM tinygo/tinygo:0.40.0@sha256:920aea27ca83fe66e1173d9924b108651363f75a06b65c3b9428a62ed6f606e6 AS tinygo-builder
 
 WORKDIR /app
 

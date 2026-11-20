@@ -21,7 +21,7 @@ Status: proposed for owner review.
 - `api-server/static/`: browser bootstrap HTML, CSS, and other static assets served by the API.
 - `client1/`: separate Go module `client1/v2`, compiled to browser WASM using Go or TinyGo.
 - `client1/app/`: Core app utilitites
-- `client1/sevice/`: A new approach that needs to be considered.
+- `client1/service/` and `client1/app/api/`: booking cache and API adapter; API DTOs sit below the service to avoid import cycles.
 - `client1/views/`: DOM-based views; `client1/app/`: application state, events, and HTTP processing.
 - `db-server/sql/postgreSQL/`: PostgreSQL schema and migration scripts; historical dumps and alternative schemas also exist.
 - `Dockerfile.client1`: builds a frontend artifact image. `Dockerfile.apibuild`: combines that artifact with the API.
@@ -44,7 +44,7 @@ Status: proposed for owner review.
 - Middleware capability approval does not establish record ownership. Enforce scope for collection reads, single-record reads, nested routes, writes, and referenced parent records.
 - Treat UI capabilities as presentation only. Every protected operation must be authorized on the server.
 - Do not add permissions based only on role names or hardcoded group IDs when the capability model can express them.
-- When changing routes, check `handlerAuth.setRestResource`: its URL parsing currently determines the permission resource. Test nested and custom routes explicitly.
+- Protected routes declare capability metadata with `CapabilityRoute` or `AddRouteGroup`; `handlerAuth.setRestResource` reads the matched route declaration. Test nested and custom routes explicitly.
 - Never log or return passwords, password hashes, session tokens, OTPs, OAuth codes, or secrets. Avoid logging complete user structs or authentication payloads.
 - Hash passwords before any persistence, including pending-registration data. Use explicit request/response DTOs so sensitive model fields cannot be serialized accidentally.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
@@ -73,10 +73,10 @@ Status: proposed for owner review.
 
 - Read the module files and Dockerfiles for current toolchain versions; do not upgrade dependencies or base images incidentally.
 - `CLIENT_BUILDER` selects `go-builder` or `tinygo-builder`. `CLIENT_IMAGE` selects the prebuilt artifact consumed by the API image. Build and select matching artifacts explicitly.
-- Runtime database settings are `DATA_SOURCE` or the supported `DB_*` fallback. Do not assume Compose's existing `DATABASE_URL` is consumed by the application.
+- Runtime database settings are `DATA_SOURCE` or the supported `DB_*` fallback. Compose uses its DB_* settings unless TM_API_DATA_SOURCE is explicitly supplied; forwarding headers require TRUSTED_PROXY_CIDRS.
 - Do not add secrets, private keys, credentials, tokens, or real user data to source control, image layers, logs, or test fixtures. Prefer runtime secret injection for deployment changes.
 - Keep database/Adminer/debugger exposure limited to the intended environment. Do not enable development authentication behavior in production.
-- Existing debug-stage references and initialization mounts need verification before relying on them. A successful client build does not prove the assembled API image works.
+- Select the Docker final, interactive, or debug target explicitly. Keep base-image digests pinned and refresh them through tested changes. A successful client build does not prove the assembled API image works.
 
 ## Verification
 
@@ -91,7 +91,7 @@ Status: proposed for owner review.
   ./scripts/verify-release.ps1
   ```
 
-  This builds the TinyGo client and runs API tests in Linux Go 1.24 containers. It requires Docker and dependency access; it does not test a complete production deployment.
+  This builds both Go and TinyGo clients, runs all WASM package tests and API/PostgreSQL integration tests, and verifies the packaged runtime in Chromium with synthetic OTP login, ownership checks, and graceful shutdown. It requires Docker and dependency access. External mail, Google accounts, and Stripe charges are not exercised.
 - To build the standard Go client artifact separately:
 
   ```powershell

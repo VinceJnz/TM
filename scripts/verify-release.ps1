@@ -33,7 +33,7 @@ Invoke-Docker @(
 Write-Host "Running frontend WASM transport tests..."
 $clientPath = (Resolve-Path (Join-Path $repositoryRoot "client1")).Path
 Invoke-Docker @(
-	"run", "--rm", "-v", "${clientPath}:/app:ro", "-w", "/app", "golang:1.23.4-alpine",
+	"run", "--rm", "-v", "${clientPath}:/app:ro", "-w", "/app", "golang:1.23.4-alpine@sha256:c23339199a08b0e12032856908589a6d41a0dab141b8b3b21f156fc571a3f1d3",
 	"sh", "-c", 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/misc/wasm/go_js_wasm_exec ./...'
 )
 

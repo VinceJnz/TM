@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:13
+        image: postgres:13@sha256:4689940c683801b4ab839ab3b0a0a3555a5fe425371422310944e89eca7d8068
         env:
           POSTGRES_USER: tm_test
           POSTGRES_PASSWORD: synthetic-ci-only
@@ -41,18 +41,18 @@ jobs:
             -e TM_TEST_DATABASE_URL=postgres://tm_test:synthetic-ci-only@127.0.0.1:5432/tm_test?sslmode=disable \
             -v "$GITHUB_WORKSPACE/api-server:/app:ro" \
             -w /app \
-            golang:1.24.0-alpine \
+            golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c \
             sh -c 'go test -count=1 ./... && go vet ./...'
 
       - name: Verify standard Go frontend and WASM transport
         run: |
           docker build -f Dockerfile.client1 --build-arg CLIENT_BUILDER=go-builder -t tm-client1-wasm:go-verify .
-          docker run --rm -v "$GITHUB_WORKSPACE/client1:/app:ro" -w /app golang:1.23.4-alpine \
+          docker run --rm -v "$GITHUB_WORKSPACE/client1:/app:ro" -w /app golang:1.23.4-alpine@sha256:c23339199a08b0e12032856908589a6d41a0dab141b8b3b21f156fc571a3f1d3 \
             sh -c 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/misc/wasm/go_js_wasm_exec ./...'
 
       - name: Build and inspect production image
         run: |
-          docker build -f Dockerfile.apibuild --target final \
+          docker build -f Dockerfile.apibuild --target final --build-arg SOURCE_REVISION="$GITHUB_SHA" \
             --build-arg CLIENT_IMAGE=tm-client1-wasm:tinygo -t tm-apiserver:verify .
           docker run --rm --entrypoint sh tm-apiserver:verify -ec \
             'id -u | grep -qx 10001; test ! -e /app/.env; test -s /app/static/main.wasm; test -s /app/static/wasm_exec.js; if find /etc/certs -type f | grep -q .; then exit 1; fi'
