@@ -34,7 +34,7 @@ Write-Host "Running frontend WASM transport tests..."
 $clientPath = (Resolve-Path (Join-Path $repositoryRoot "client1")).Path
 Invoke-Docker @(
 	"run", "--rm", "-v", "${clientPath}:/app:ro", "-w", "/app", "golang:1.23.4-alpine",
-	"sh", "-c", 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/misc/wasm/go_js_wasm_exec ./app/httpProcessor'
+	"sh", "-c", 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/misc/wasm/go_js_wasm_exec ./...'
 )
 
 Write-Host "Building the production API image without credentials..."

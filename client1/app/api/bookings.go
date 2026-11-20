@@ -2,7 +2,8 @@ package api
 
 import (
 	"client1/v2/app/httpProcessor"
-	"client1/v2/service"
+
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,10 +54,10 @@ type BookingDTO struct {
 }
 
 type BookingAPI interface {
-	GetBookings(onSuccess func([]service.Booking), onError func(error))
-	CreateBooking(req BookingRequest, onSuccess func(service.Booking), onError func(error))
+	GetBookings(onSuccess func([]BookingDTO), onError func(error))
+	CreateBooking(req BookingRequest, onSuccess func(BookingDTO), onError func(error))
 	DeleteBooking(id int, onSuccess func(), onError func(error))
-	UpdateBooking(id int, req BookingRequest, onSuccess func(service.Booking), onError func(error))
+	UpdateBooking(id int, req BookingRequest, onSuccess func(BookingDTO), onError func(error))
 }
 
 type Booking struct {
@@ -64,8 +65,8 @@ type Booking struct {
 	ApiUrl string
 }
 
-func (a *Booking) GetBookings(onSuccess func([]service.Booking), onError func(error)) {
-	var records []service.Booking
+func (a *Booking) GetBookings(onSuccess func([]BookingDTO), onError func(error)) {
+	var records []BookingDTO
 	callbacks := httpProcessor.Callbacks{
 		OnSuccess: func() { onSuccess(records) },
 		OnError:   onError,
@@ -77,12 +78,31 @@ func (a *Booking) GetBookings(onSuccess func([]service.Booking), onError func(er
 	a.client.NewRequest2(http.MethodGet, a.ApiUrl, &records, nil, callbacks)
 }
 
-func (a *Booking) CreateBooking() {}
-func (a *Booking) DeleteBooking() {}
-func (a *Booking) UpdateBooking(id int, item BookingRequest, onSuccess func(), onError func(error)) {
-	callbacks := httpProcessor.Callbacks{
-		OnSuccess: onSuccess,
-		OnError:   onError,
-	}
-	a.client.NewRequest2(http.MethodPut, a.ApiUrl+"/"+strconv.Itoa(item.ID), nil, &item, callbacks)
+func NewBooking(client *httpProcessor.Client) *Booking {
+	return &Booking{client: client, ApiUrl: "/bookings"}
 }
+
+func (a *Booking) CreateBooking(req BookingRequest, onSuccess func(BookingDTO), onError func(error)) {
+	var id int
+	a.client.NewRequest2(http.MethodPost, a.ApiUrl, &id, &req, httpProcessor.Callbacks{
+		OnSuccess: func() { a.GetBooking(id, onSuccess, onError) }, OnError: onError})
+}
+func (a *Booking) GetBooking(id int, onSuccess func(BookingDTO), onError func(error)) {
+	var records []BookingDTO
+	a.client.NewRequest2(http.MethodGet, a.ApiUrl+"/"+strconv.Itoa(id), &records, nil, httpProcessor.Callbacks{OnSuccess: func() {
+		if len(records) != 1 {
+			onError(fmt.Errorf("booking %d unavailable", id))
+			return
+		}
+		onSuccess(records[0])
+	}, OnError: onError})
+}
+func (a *Booking) DeleteBooking(id int, onSuccess func(), onError func(error)) {
+	a.client.NewRequest2(http.MethodDelete, a.ApiUrl+"/"+strconv.Itoa(id), nil, nil, httpProcessor.Callbacks{OnSuccess: onSuccess, OnError: onError})
+}
+func (a *Booking) UpdateBooking(id int, req BookingRequest, onSuccess func(BookingDTO), onError func(error)) {
+	req.ID = id
+	a.client.NewRequest2(http.MethodPut, a.ApiUrl+"/"+strconv.Itoa(id), nil, &req, httpProcessor.Callbacks{OnSuccess: func() { a.GetBooking(id, onSuccess, onError) }, OnError: onError})
+}
+
+var _ BookingAPI = (*Booking)(nil)
