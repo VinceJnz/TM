@@ -19,7 +19,7 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 	if eventID == "" || sessionID == "" || amountMinor <= 0 {
 		return false, ErrInvalidPayment
 	}
-	tx, err := db.BeginTxx(ctx, nil)
+	tx, err := Begin(ctx, db)
 	if err != nil {
 		return false, err
 	}
@@ -70,23 +70,7 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 	if err != nil {
 		return false, err
 	}
-	var net decimal.Decimal
-	err = tx.GetContext(ctx, &net, `SELECT COALESCE((SELECT SUM(amount) FROM at_payments WHERE booking_id=$1),0)-COALESCE((SELECT SUM(r.amount) FROM at_refunds r JOIN at_payments p ON p.id=r.payment_id WHERE p.booking_id=$1),0)`, bookingID)
-	if err != nil {
-		return false, err
-	}
-	status := 1
-	pct := int64(0)
-	if net.IsPositive() {
-		status = 4
-		pct = net.Div(amount).Mul(decimal.NewFromInt(100)).Round(0).IntPart()
-		if net.GreaterThanOrEqual(amount) {
-			status = 3
-			pct = 100
-		}
-	}
-	_, err = tx.ExecContext(ctx, `UPDATE at_bookings SET booking_status_id=CASE WHEN booking_status_id=2 THEN 2 ELSE $2 END,amount_paid=$3,payment_date=(SELECT MAX(payment_date) FROM at_payments WHERE booking_id=$1) WHERE id=$1`, bookingID, status, pct)
-	if err != nil {
+	if err := Sync(ctx, tx, bookingID); err != nil {
 		return false, err
 	}
 	return false, tx.Commit()

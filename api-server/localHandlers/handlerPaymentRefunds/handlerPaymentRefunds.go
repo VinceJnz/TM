@@ -4,6 +4,7 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
+	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/models"
 	"database/sql"
 	"log"
@@ -98,25 +99,25 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.appConf.Db.Beginx()
+	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := tx.QueryRow(qryCreate, record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef).Scan(&record.ID); err != nil {
+	if err := tx.QueryRowContext(r.Context(), qryCreate, record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef).Scan(&record.ID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	bookingID, err := helpers.GetBookingIDByPaymentIDTx(tx, record.PaymentID)
+	bookingID, err := paymentLedger.GetBookingIDByPaymentIDTx(r.Context(), tx, record.PaymentID)
 	if err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	if err := helpers.SyncBookingPaymentStatusTx(tx, bookingID); err != nil {
+	if err := paymentLedger.Sync(r.Context(), tx, bookingID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -146,13 +147,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	tx, err := h.appConf.Db.Beginx()
+	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	oldBookingID, err := helpers.GetBookingIDByRefundIDTx(tx, id)
+	oldBookingID, err := paymentLedger.GetBookingIDByRefundIDTx(r.Context(), tx, id)
 	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
@@ -163,26 +164,26 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := tx.Exec(qryUpdate, record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef, id); err != nil {
+	if _, err := tx.ExecContext(r.Context(), qryUpdate, record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef, id); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	newBookingID, err := helpers.GetBookingIDByPaymentIDTx(tx, record.PaymentID)
+	newBookingID, err := paymentLedger.GetBookingIDByPaymentIDTx(r.Context(), tx, record.PaymentID)
 	if err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := helpers.SyncBookingPaymentStatusTx(tx, newBookingID); err != nil {
+	if err := paymentLedger.Sync(r.Context(), tx, newBookingID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	if oldBookingID != newBookingID {
-		if err := helpers.SyncBookingPaymentStatusTx(tx, oldBookingID); err != nil {
+		if err := paymentLedger.Sync(r.Context(), tx, oldBookingID); err != nil {
 			tx.Rollback()
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -206,13 +207,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.appConf.Db.Beginx()
+	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	bookingID, err := helpers.GetBookingIDByRefundIDTx(tx, id)
+	bookingID, err := paymentLedger.GetBookingIDByRefundIDTx(r.Context(), tx, id)
 	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
@@ -223,13 +224,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := tx.Exec(qryDelete, id); err != nil {
+	if _, err := tx.ExecContext(r.Context(), qryDelete, id); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := helpers.SyncBookingPaymentStatusTx(tx, bookingID); err != nil {
+	if err := paymentLedger.Sync(r.Context(), tx, bookingID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

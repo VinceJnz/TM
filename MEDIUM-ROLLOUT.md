@@ -137,3 +137,14 @@ exists. Expired uncertain attempts return 409 rather than silently creating a
 second payable session: reconcile the provider outcome before releasing/replacing
 an attempt. Preserve attempt/payment history during that operator procedure.
 Apply 0006 and refresh runtime grants before deploying this API.
+
+## One decimal ledger policy
+
+Stripe finalization and manual payment/refund writes now use the same SQL store
+and exact decimal status calculation. Payment/refund JSON amounts remain numbers;
+negative amounts and fractions smaller than a cent are rejected. A transaction
+rejects aggregate refunds exceeding their payment, and full-payment transitions
+must also acquire trip capacity. Ledger writers acquire a shared PostgreSQL
+transaction advisory lock before mutation; this deliberately favors correctness
+for administrative cross-booking edits over parallel ledger throughput. Provider
+network calls do not hold this lock. No historical ledger rows are rewritten.

@@ -4,6 +4,7 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
+	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/models"
 	"database/sql"
 	"log"
@@ -102,19 +103,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.appConf.Db.Beginx()
+	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := tx.QueryRow(qryCreate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod).Scan(&record.ID); err != nil {
+	if err := tx.QueryRowContext(r.Context(), qryCreate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod).Scan(&record.ID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := helpers.SyncBookingPaymentStatusTx(tx, record.BookingID); err != nil {
+	if err := paymentLedger.Sync(r.Context(), tx, record.BookingID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -145,14 +146,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	record.ID = id
 
-	tx, err := h.appConf.Db.Beginx()
+	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	oldBookingID := 0
-	if err := tx.Get(&oldBookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
+	if err := tx.GetContext(r.Context(), &oldBookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			http.Error(w, "Record not found", http.StatusNotFound)
@@ -162,19 +163,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := tx.Exec(qryUpdate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod, id); err != nil {
+	if _, err := tx.ExecContext(r.Context(), qryUpdate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod, id); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := helpers.SyncBookingPaymentStatusTx(tx, record.BookingID); err != nil {
+	if err := paymentLedger.Sync(r.Context(), tx, record.BookingID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	if oldBookingID != record.BookingID {
-		if err := helpers.SyncBookingPaymentStatusTx(tx, oldBookingID); err != nil {
+		if err := paymentLedger.Sync(r.Context(), tx, oldBookingID); err != nil {
 			tx.Rollback()
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -199,14 +200,14 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.appConf.Db.Beginx()
+	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	bookingID := 0
-	if err := tx.Get(&bookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
+	if err := tx.GetContext(r.Context(), &bookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			http.Error(w, "Record not found", http.StatusNotFound)
@@ -218,13 +219,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, err := tx.Exec(qryDelete, id); err != nil {
+	if _, err := tx.ExecContext(r.Context(), qryDelete, id); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := helpers.SyncBookingPaymentStatusTx(tx, bookingID); err != nil {
+	if err := paymentLedger.Sync(r.Context(), tx, bookingID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

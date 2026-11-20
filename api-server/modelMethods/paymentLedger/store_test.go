@@ -108,3 +108,39 @@ func TestQuoteUsesExactMinorUnits(t *testing.T) {
 		t.Fatalf("quote=%d, err=%v", quote, err)
 	}
 }
+
+func TestManualLedgerUsesExactStatusAndRejectsExcessRefund(t *testing.T) {
+	db := testdb.Open(t, ledgerFixture+`UPDATE at_bookings SET booking_price=0.29 WHERE id=11;INSERT INTO at_payments(booking_id,amount,payment_date) VALUES(11,0.29,NOW());`)
+	ctx := context.Background()
+	tx, err := Begin(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if err = Sync(ctx, tx, 11); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	var status int
+	if err = db.Get(&status, "SELECT booking_status_id FROM at_bookings WHERE id=11"); err != nil || status != 3 {
+		t.Fatal(status, err)
+	}
+	tx, err = Begin(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec("INSERT INTO at_refunds(payment_id,amount) SELECT id,0.30 FROM at_payments"); err != nil {
+		t.Fatal(err)
+	}
+	if err = Sync(ctx, tx, 11); err == nil {
+		t.Fatal("excess refund accepted")
+	}
+	tx.Rollback()
+	var refunds int
+	if err = db.Get(&refunds, "SELECT COUNT(*) FROM at_refunds"); err != nil || refunds != 0 {
+		t.Fatal("invalid refund persisted", err)
+	}
+}

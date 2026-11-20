@@ -64,7 +64,7 @@ type UserPayments struct {
 	ID            int         `json:"id" db:"id"`
 	BookingID     int         `json:"booking_id" db:"booking_id"`
 	PaymentDate   zero.Time   `json:"payment_date" db:"payment_date"`
-	Amount        zero.Float  `json:"amount" db:"amount"`
+	Amount        Money       `json:"amount" db:"amount"`
 	PaymentMethod zero.String `json:"payment_method" db:"payment_method"`
 	StripeSession zero.String `json:"stripe_session_id" db:"stripe_session_id"`
 	Created       time.Time   `json:"created" db:"created"`
@@ -75,7 +75,7 @@ type PaymentRefund struct {
 	ID          int         `json:"id" db:"id"`
 	PaymentID   int         `json:"payment_id" db:"payment_id"`
 	RefundDate  zero.Time   `json:"refund_date" db:"refund_date"`
-	Amount      zero.Float  `json:"amount" db:"amount"`
+	Amount      Money       `json:"amount" db:"amount"`
 	Reason      zero.String `json:"reason" db:"reason"`
 	ExternalRef zero.String `json:"external_ref" db:"external_ref"`
 	Created     time.Time   `json:"created" db:"created"`
