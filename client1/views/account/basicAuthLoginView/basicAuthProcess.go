@@ -350,11 +350,6 @@ func (editor *ItemEditor) loginForm() js.Value {
 		viewHelpers.Button(editor.handleVerifyOTP, editor.document, "Verify OTP", "verifyOtpBtn"),
 	)
 	loginForm.Call("appendChild", loginActions)
-	// Add forgot password link
-	forgotLink := viewHelpers.HRef(func() {
-		js.Global().Call("alert", "Forgot password functionality not implemented")
-	}, editor.document, "Forgot password?", "forgotPassword")
-	loginForm.Call("appendChild", forgotLink)
 	return loginForm
 }
 

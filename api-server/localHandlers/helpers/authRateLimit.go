@@ -29,7 +29,7 @@ func AuthRateLimit(db *sqlx.DB) func(http.Handler) http.Handler {
 				ip = r.RemoteAddr
 			}
 			// Sending email and creating flows have tighter budgets than verification.
-			sending := strings.HasSuffix(path, "/register") || strings.HasSuffix(path, "/login") || strings.HasSuffix(path, "/login-password") || strings.HasSuffix(path, "/requestToken")
+			sending := strings.HasSuffix(path, "/register") || strings.HasSuffix(path, "/login") || strings.HasSuffix(path, "/login-password") || strings.HasSuffix(path, "/requestToken") || strings.HasSuffix(path, "/forgot-password")
 			limit := 20
 			category := "verify"
 			if sending {

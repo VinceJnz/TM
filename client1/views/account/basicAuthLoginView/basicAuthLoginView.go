@@ -123,6 +123,7 @@ type ItemEditor struct {
 	msgHandler           js.Func
 	msgHandlerSet        bool
 	oauthMessageReceived bool
+	removePasswordReset  func()
 }
 
 func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
@@ -219,6 +220,7 @@ func (editor *ItemEditor) setupOAuthPopupMessageListener() {
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.clearPasswordReset()
 	editor.Elements.EditDiv.Set("innerHTML", "")
 	editor.Elements.ListDiv.Set("innerHTML", "")
 }
@@ -253,6 +255,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	editor.clearPasswordReset()
 	editor.Elements.EditDiv.Set("innerHTML", "") // Clear existing content
 
 	// Create a centered container
@@ -369,6 +372,7 @@ func (editor *ItemEditor) fallbackCheckOAuthSession() {
 }
 
 func (editor *ItemEditor) renderForm(mode string) {
+	editor.clearPasswordReset()
 	editor.authMode = mode
 	editor.UiComponents = UI{}
 	editor.CurrentRecord = TableData{}
@@ -391,6 +395,7 @@ func (editor *ItemEditor) renderForm(mode string) {
 		editor.Elements.AuthDiv.Call("appendChild", link)
 	} else {
 		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
+		editor.Elements.AuthDiv.Call("appendChild", editor.passwordResetForm())
 		// Add link to register
 		link := editor.document.Call("createElement", "a")
 		link.Set("href", "#")
@@ -407,6 +412,7 @@ func (editor *ItemEditor) renderForm(mode string) {
 }
 
 func (editor *ItemEditor) resetEditForm() {
+	editor.clearPasswordReset()
 	editor.Elements.EditDiv.Set("innerHTML", "")
 	editor.UiComponents = UI{}
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -436,6 +442,7 @@ func (editor *ItemEditor) setActiveButtons(activeID string, buttonIDs ...string)
 }
 
 func (editor *ItemEditor) renderAuthForm(mode string) {
+	editor.clearPasswordReset()
 	editor.authMode = mode
 	editor.UiComponents = UI{}
 	editor.CurrentRecord = TableData{}
@@ -444,6 +451,7 @@ func (editor *ItemEditor) renderAuthForm(mode string) {
 	}
 	if mode == "login" {
 		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
+		editor.Elements.AuthDiv.Call("appendChild", editor.passwordResetForm())
 		editor.setActiveButtons("showLogin", "showRegister", "showLogin")
 		return
 	}

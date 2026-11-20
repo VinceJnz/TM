@@ -44,6 +44,8 @@ func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
 	// Password-based login endpoints
 	r.HandleFunc(baseURL+"/login-password", h.LoginWithPassword).Methods("POST")
 	r.HandleFunc(baseURL+"/verify-password-otp", h.VerifyPasswordOTP).Methods("POST")
+	r.HandleFunc(baseURL+"/forgot-password", h.ForgotPassword).Methods("POST")
+	r.HandleFunc(baseURL+"/reset-password", h.ResetPassword).Methods("POST")
 	// Token request (for existing users)
 	r.HandleFunc(baseURL+"/requestToken/", h.RequestLoginToken).Methods("POST")
 }

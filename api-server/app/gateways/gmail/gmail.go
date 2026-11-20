@@ -187,6 +187,10 @@ func (s *Gateway) RenewURL() string {
 // SendMail sends an email using the Gmail API. It constructs the email message, encodes it, and sends it through the Gmail service.
 // It returns true if the email was sent successfully, or false along with an error if there was an issue.
 func (s *Gateway) SendMail(to string, title string, message string) (bool, error) {
+	return s.SendMailContext(context.Background(), to, title, message)
+}
+
+func (s *Gateway) SendMailContext(ctx context.Context, to string, title string, message string) (bool, error) {
 	// Create the message
 	if s.debugEmailAddress != "" {
 		log.Printf(debugTag+"Handler.SendMail ... Debug email address configured, overriding recipient. Original to: %s, title: %s", to, title)
@@ -199,7 +203,7 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 	gMessage := &gmail.Message{Raw: base64.URLEncoding.EncodeToString(msg)}
 
 	// Send the message
-	_, err := s.srv.Users.Messages.Send("me", gMessage).Do()
+	_, err := s.srv.Users.Messages.Send("me", gMessage).Context(ctx).Do()
 	if err != nil {
 		log.Print(debugTag + "SendMail failed")
 		// SECURITY: Message body not logged as it may contain sensitive data (OTPs, tokens, PII)
