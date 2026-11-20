@@ -124,3 +124,16 @@ investigate capacity-related webhook failures and reconcile/refund externally pa
 sessions that cannot be admitted; the application never silently overbooks them.
 Apply migrations with the administrative migration connection before API startup;
 reapply runtime grants for the new table. No existing booking/payment is deleted.
+
+## Durable checkout attempts
+
+Migration 0006 stores the quote, seat hold, provider inputs and idempotency key
+before contacting Stripe. Provider calls run outside database transactions and
+carry the request context. Retrying an uncertain creation reuses the same key and
+inputs. Signed paid webhooks can recover the local session/quote from attempt
+metadata if the original process failed before saving Stripe's response.
+Participant and booking date/trip/ownership changes are frozen while an attempt
+exists. Expired uncertain attempts return 409 rather than silently creating a
+second payable session: reconcile the provider outcome before releasing/replacing
+an attempt. Preserve attempt/payment history during that operator procedure.
+Apply 0006 and refresh runtime grants before deploying this API.

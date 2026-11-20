@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/shopspring/decimal"
+
 	"io"
 	"log"
 	"net/http"
@@ -108,141 +108,53 @@ func (h *Handler) RegisterRoutesStripeWebhook(r *mux.Router, baseURL string) {
 // The client requests a checkout session by sending the booking ID
 // This sets up a checkout session with stripe and sends the stripe checkout url to the client
 func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
-	var err error
-	var CheckoutSession *stripe.CheckoutSession
 	if h.appConf.PaymentSvc == nil || h.appConf.PaymentSvc.Client == nil {
-		log.Printf("%v Stripe payment service unavailable", debugTag+"Handler.CheckoutCreate()")
-		http.Error(w, "Payment service unavailable", http.StatusServiceUnavailable)
+		http.Error(w, "payment service unavailable", 503)
 		return
 	}
-	appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if appSession == nil || appSession.UserID == 0 {
-		log.Printf("%v missing authenticated session", debugTag+"Handler.CheckoutCreate()")
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	user := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if user == nil {
 		return
 	}
-	log.Printf("%v appSession=%+v", debugTag+"Handler.CheckoutCreate()", appSession)
-
-	// Need to create a structure and queries here to get the booking and trip details
-	// which neeeds to be passed to stripe to create the checkout session
-	// Trip details include trip name, trip cost, trip Max Participants etc.
-	// Booking details include booking id, booking person, place in booking queue etc.
-	// Compare with participant-status behavior in tripParticipantStatus flow if this query changes.
-
-	// Get booking ID from URL parameter
-	bookingID := dbStandardTemplate.GetID(w, r)
-	if bookingID == 0 {
-		http.Error(w, "Invalid booking ID", http.StatusBadRequest)
+	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
 		return
 	}
-
-	tx, err := h.appConf.Db.BeginTxx(r.Context(), nil)
+	attempt, err := paymentLedger.Prepare(r.Context(), h.appConf.Db, id, user.UserID, user.Email, h.appConf.PaymentSvc.Domain)
 	if err != nil {
-		http.Error(w, "database unavailable", 500)
-		return
-	}
-	defer tx.Rollback()
-	if err := paymentLedger.LockTrip(r.Context(), tx, bookingID); err != nil {
-		http.Error(w, "booking unavailable", 409)
-		return
-	}
-	var locked int
-	if err := tx.GetContext(r.Context(), &locked, `SELECT id FROM at_bookings WHERE id=$1 AND owner_id=$2 AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS(SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id) FOR UPDATE`, bookingID, appSession.UserID); err != nil {
 		http.Error(w, "booking unavailable for checkout", 409)
 		return
 	}
-	// Fetch booking details
-	bookingItem := &models.BookingPaymentInfo{}
-	err = tx.GetContext(r.Context(), bookingItem, qryGetBookingForPayment, bookingID)
-	if err != nil {
-		log.Printf("%v get booking failed err=%v booking=%+v", debugTag+"Handler.CheckoutCreate()", err, bookingItem)
-		return
-	}
-
-	// Validate booking can be paid
-	if err := h.validateBookingForPayment(bookingItem, int64(appSession.UserID)); err != nil {
-		log.Printf("%v validation error: %v", debugTag+"Handler.CheckoutCreate()", err)
-		http.Error(w, err.Error(), http.StatusConflict)
-		return
-	}
-
-	if err := paymentLedger.Reserve(r.Context(), tx, bookingID, time.Now().Add(45*time.Minute)); err != nil {
-		http.Error(w, "trip capacity unavailable", 409)
-		return
-	}
-	// Create Stripe checkout session
-	chargeMinor, err := paymentLedger.Quote(r.Context(), tx, bookingID)
-	if err != nil {
-		http.Error(w, "cannot calculate checkout price", 409)
+	if attempt.SessionID.Valid && attempt.URL.Valid {
+		helpers.WriteJSON(w, 200, CheckoutCreateResponse{CheckoutURL: attempt.URL.String, SessionID: attempt.SessionID.String, Status: "created"})
 		return
 	}
 	params := &stripe.CheckoutSessionParams{
-		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			{
-				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-					Currency: stripe.String(string(stripe.CurrencyNZD)),
-					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-						Description: stripe.String("Trip description: " + bookingItem.Description.String),
-						Name:        stripe.String("Trip name = " + bookingItem.TripName.String),
-					},
-					UnitAmount: stripe.Int64(chargeMinor), //Amount in cents
-				},
-				Quantity: stripe.Int64(1),
-			},
-		},
-		ExpiresAt:  stripe.Int64(time.Now().Add(30 * time.Minute).Unix()),
-		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/success/" + strconv.Itoa(bookingID)),
-		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(bookingID)),
-
-		// Add this for invoice emails (works in test mode):
-		InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{
-			Enabled: stripe.Bool(true),
-		},
+		LineItems: []*stripe.CheckoutSessionLineItemParams{{PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+			Currency: stripe.String("nzd"), UnitAmount: stripe.Int64(attempt.Amount), ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{Name: stripe.String(attempt.Title), Description: stripe.String(attempt.Description)},
+		}, Quantity: stripe.Int64(1)}},
+		Mode: stripe.String("payment"), ExpiresAt: stripe.Int64(attempt.Expires.Unix()),
+		SuccessURL:      stripe.String(attempt.Domain + "/bookings/checkout/success/" + strconv.Itoa(id)),
+		CancelURL:       stripe.String(attempt.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(id)),
+		InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{Enabled: stripe.Bool(true)},
 	}
-	if appSession.Email != "" {
-		params.CustomerEmail = stripe.String(appSession.Email)
+	if attempt.Email != "" {
+		params.CustomerEmail = stripe.String(attempt.Email)
 	}
-
-	// NEW WAY: Use session.New with the client
-	CheckoutSession, err = session.New(params)
+	params.Context = r.Context()
+	params.SetIdempotencyKey("tm-checkout-" + attempt.ID)
+	params.AddMetadata("tm_attempt", attempt.ID)
+	checkout, err := session.New(params)
 	if err != nil {
-		log.Printf("%v session.New error: %v", debugTag+"Handler.CheckoutCreate()", err)
-		http.Error(w, "Error creating checkout session", http.StatusInternalServerError)
+		http.Error(w, "checkout temporarily unavailable; retry this booking", 503)
 		return
 	}
-	log.Printf("%v created session id=%v bookingID=%v", debugTag+"Handler.CheckoutCreate()", CheckoutSession.ID, bookingID)
-
-	if _, err := tx.ExecContext(r.Context(), `INSERT INTO at_checkout_quotes(session_id,booking_id,amount_minor,currency) VALUES($1,$2,$3,'nzd')`, CheckoutSession.ID, bookingID, chargeMinor); err != nil {
-		http.Error(w, "failed to save checkout quote", 500)
+	if err = paymentLedger.Attach(r.Context(), h.appConf.Db, attempt.ID, checkout.ID, checkout.URL, attempt.Amount); err != nil {
+		http.Error(w, "checkout persistence unavailable; retry this booking", 503)
 		return
 	}
-	if _, err := tx.ExecContext(r.Context(), `UPDATE at_bookings SET stripe_session_id=$2,booking_price=$3 WHERE id=$1`, bookingID, CheckoutSession.ID, decimal.NewFromInt(chargeMinor).Shift(-2)); err != nil {
-		http.Error(w, "failed to save checkout", 500)
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "failed to save checkout", 500)
-		return
-	}
-	// Return structured JSON response
-	response := CheckoutCreateResponse{
-		CheckoutURL: CheckoutSession.URL,
-		SessionID:   CheckoutSession.ID,
-		Status:      "created",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("%v failed to write checkout create response: %v", debugTag+"Handler.CheckoutCreate()", err)
-	}
+	helpers.WriteJSON(w, 200, CheckoutCreateResponse{CheckoutURL: checkout.URL, SessionID: checkout.ID, Status: "created"})
 }
-
-// CheckoutCheck verifies the current status of a Stripe checkout session
-// CheckoutCheck is called when the browser client receives focus or some other appropriate trigger.
-// This checks the status of the stripe checkout session with the stripe server
-// The browser client can then take action, e.g. close the payment window and update the payment report.
-// or do nothing and continue to wait for the payment to complete
 func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if h.appConf.PaymentSvc == nil || h.appConf.PaymentSvc.Client == nil {
@@ -274,7 +186,9 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get checkout session from Stripe
-	CheckoutSession, err := session.Get(bookingItem.StripeSessionID.String, nil)
+	queryParams := &stripe.CheckoutSessionParams{}
+	queryParams.Context = r.Context()
+	CheckoutSession, err := session.Get(bookingItem.StripeSessionID.String, queryParams)
 	if err != nil {
 		log.Printf("%v session.Get error: %v booking=%+v", debugTag+"Handler.CheckoutCheck()", err, bookingItem)
 		http.Error(w, "Error retrieving checkout session", http.StatusInternalServerError)
@@ -485,6 +399,16 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 	if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid || checkoutSession.Status != stripe.CheckoutSessionStatusComplete || checkoutSession.Mode != stripe.CheckoutSessionModePayment {
 		http.Error(w, "checkout is not paid", http.StatusBadRequest)
 		return
+	}
+	if key := checkoutSession.Metadata["tm_attempt"]; key != "" {
+		if string(checkoutSession.Currency) != "nzd" {
+			http.Error(w, "invalid currency", 400)
+			return
+		}
+		if err := paymentLedger.Attach(r.Context(), h.appConf.Db, key, checkoutSession.ID, "", checkoutSession.AmountTotal); err != nil {
+			http.Error(w, "checkout recovery failed", 500)
+			return
+		}
 	}
 	replay, err := paymentLedger.Finalize(r.Context(), h.appConf.Db, event.ID, checkoutSession.ID, checkoutSession.AmountTotal, string(checkoutSession.Currency))
 	if err != nil {
