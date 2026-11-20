@@ -54,7 +54,11 @@ func (h *Handler) RegisterRoutesPublic(r *mux.Router, baseURL string) {
 func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 	// Protected endpoints - require valid authentication
 	handlerHelpers.CapabilityRoute(r, baseURL+"/logout/", "auth", h.AuthLogout).Methods("Get")
-	handlerHelpers.CapabilityRoute(r, baseURL+"/menuList/", "auth", h.MenuListGet).Methods("Get")
+}
+
+// RegisterRoutesSession registers session metadata that belongs to the signed-in user.
+func (h *Handler) RegisterRoutesSession(r *mux.Router, baseURL string) {
+	r.HandleFunc(baseURL+"/menuList/", h.MenuListGet).Methods(http.MethodGet)
 }
 
 // RequestLoginToken accepts {"username":"..."} or {"email":"..."} and sends a one-time token

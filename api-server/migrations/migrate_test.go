@@ -29,6 +29,16 @@ func TestEmptyDatabaseBootstrapAndRepeat(t *testing.T) {
 	if users != 0 || versions != len(Names()) {
 		t.Fatal("bootstrap copied user data or omitted migration history")
 	}
+	var profileGrants int
+	if err := db.Get(&profileGrants, `
+		SELECT count(*) FROM st_group_resource gr
+		JOIN et_resource r ON r.id = gr.resource_id
+		JOIN et_access_scope s ON s.id = gr.access_scope_id
+		JOIN et_access_level a ON a.id = gr.access_level_id
+		WHERE r.name = 'myProfile' AND s.name = 'own' AND a.name IN ('GET', 'PUT')
+	`); err != nil || profileGrants != 6 {
+		t.Fatalf("expected own-profile GET and PUT grants for the three default groups, got %d: %v", profileGrants, err)
+	}
 	if _, err := db.Exec(`INSERT INTO st_users(id,name,username,email) VALUES(1,'Synthetic','synthetic','synthetic@example.test');
 INSERT INTO at_trips(id,owner_id,trip_name,trip_status_id,trip_type_id) VALUES(1,1,'Synthetic trip',1,1);
 INSERT INTO at_bookings(id,owner_id,trip_id,booking_status_id) VALUES(1,1,1,1);

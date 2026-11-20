@@ -186,10 +186,19 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.BirthDate)
 	form.Call("appendChild", localObjs.AccountHidden)
 
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Save", "submitProfileEditBtn")
-	viewHelpers.StyleButtonPrimary(submitBtn)
-	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn)
-	form.Call("appendChild", buttonRow)
+	if editor.canEditProfile() {
+		submitBtn := viewHelpers.SubmitButton(editor.document, "Save", "submitProfileEditBtn")
+		viewHelpers.StyleButtonPrimary(submitBtn)
+		buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn)
+		form.Call("appendChild", buttonRow)
+	} else {
+		for _, input := range []js.Value{
+			editor.UiComponents.Name, editor.UiComponents.Email, editor.UiComponents.Address,
+			editor.UiComponents.BirthDate, editor.UiComponents.AccountHidden,
+		} {
+			input.Set("disabled", true)
+		}
+	}
 
 	editor.EditDiv.Call("appendChild", form)
 }
@@ -197,6 +206,9 @@ func (editor *ItemEditor) populateEditForm() {
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {
 	if len(p) > 0 {
 		p[0].Call("preventDefault")
+	}
+	if !editor.canEditProfile() {
+		return nil
 	}
 
 	name := editor.UiComponents.Name.Get("value").String()
@@ -244,4 +256,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}()
 
 	return nil
+}
+
+func (editor *ItemEditor) canEditProfile() bool {
+	return editor.appCore.HasAccess("myProfile", []string{http.MethodPut}, []string{"own", "any"})
 }

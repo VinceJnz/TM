@@ -593,6 +593,11 @@ func (editor *ItemEditor) FetchItems() {
 			log.Println(debugTag + "FetchItems()1 records == nil")
 		}
 		editor.populateItemList()
+		if len(editor.Records) == 0 {
+			message := editor.document.Call("createElement", "p")
+			message.Set("textContent", "You have no bookings yet.")
+			editor.ListDiv.Call("appendChild", message)
+		}
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}
 
@@ -600,6 +605,9 @@ func (editor *ItemEditor) FetchItems() {
 		log.Printf(debugTag+"FetchItems() failed: %v", err)
 		editor.Records = []TableData{}
 		editor.populateItemList()
+		message := editor.document.Call("createElement", "p")
+		message.Set("textContent", "Could not load your bookings.")
+		editor.ListDiv.Call("appendChild", message)
 		editor.RecordState = RecordStateReloadRequired
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	}

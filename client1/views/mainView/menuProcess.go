@@ -34,15 +34,16 @@ func (editor *View) getMenuUser() {
 			log.Printf("%v %v %v %v %+v", debugTag+"getMenuUser()2 success: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		}
 		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
-		editor.authResolved = true
 		editor.setTopAuthAction(menuUser.UserID > 0)
 		editor.elements.userDisplay.Set("innerHTML", editor.appCore.User.Name)
 		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		if menuUser.UserID > 0 {
 			editor.getMenuList()
-		} else {
-			editor.resetMenu()
+			return
 		}
+		editor.authResolved = true
+		editor.appCore.SetCapabilities(nil)
+		editor.resetMenu()
 		editor.applyRouteFromLocation()
 		log.Printf("%v %v", debugTag+"getMenuUser()", "Menu user fetch complete")
 	}
@@ -51,6 +52,7 @@ func (editor *View) getMenuUser() {
 		log.Printf("%v %v %v %v %+v", debugTag+"getMenuUser()4 fail: ", "err =", err, "MenuUser", editor.appCore.User) //Log the error in the browser
 		editor.authResolved = true
 		editor.appCore.SetUser(appCore.User{})
+		editor.appCore.SetCapabilities(nil)
 		editor.setTopAuthAction(false)
 		editor.resetMenu()
 		editor.setMenuFetchState(viewHelpers.ItemStateNone)
@@ -84,12 +86,19 @@ func (editor *View) getMenuList() {
 		editor.appCore.SetCapabilities(capabilities)
 		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		editor.menuComplete()
+		editor.authResolved = true
+		editor.applyRouteFromLocation()
 		log.Printf("%v %v", debugTag+"getMenuList()", "Menu list fetch complete")
 	}
 
 	fail := func(err error) {
 		log.Printf("%v %v %v %v %+v", debugTag+"getMenuList()4 fail: ", "err =", err, "MenuList =", editor.CurrentRecord.MenuList) //Log the error in the browser
 		editor.onCompletionMsg(debugTag + "getMenuList()1 " + err.Error())
+		editor.appCore.SetCapabilities(nil)
+		editor.resetMenu()
+		editor.authResolved = true
+		editor.setMenuFetchState(viewHelpers.ItemStateNone)
+		editor.applyRouteFromLocation()
 	}
 
 	editor.setMenuFetchState(viewHelpers.ItemStateFetching)

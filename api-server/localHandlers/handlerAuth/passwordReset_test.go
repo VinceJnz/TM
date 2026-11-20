@@ -49,6 +49,16 @@ func (m resetTestMailbox) SendMail(to, subject, body string) (bool, error) {
 func (resetTestMailbox) RenewURL() string { return "" }
 
 func TestPasswordResetFromEmailToNewPassword(t *testing.T) {
+	t.Run("registered inbox", func(t *testing.T) {
+		testPasswordResetFromEmail(t, false, "member@example.test")
+	})
+	t.Run("development debug inbox", func(t *testing.T) {
+		testPasswordResetFromEmail(t, true, "debug@example.test")
+	})
+}
+
+func testPasswordResetFromEmail(t *testing.T, devMode bool, expectedRecipient string) {
+	t.Helper()
 	db := testdb.Open(t, testdb.Auth)
 	if _, err := db.Exec(`INSERT INTO st_users (email, user_account_status_id, user_password)
 		VALUES ('member@example.test', $1, 'old-hash')`, models.AccountActive); err != nil {
@@ -56,7 +66,21 @@ func TestPasswordResetFromEmailToNewPassword(t *testing.T) {
 	}
 	mailbox := make(resetTestMailbox, 1)
 	router := mux.NewRouter()
-	New(&appCore.Config{Db: db, EmailSvc: mailbox}).RegisterRoutesPublic(router, "/auth")
+	conf := &appCore.Config{Db: db, EmailSvc: mailbox}
+	conf.Settings.DevMode = devMode
+	conf.Settings.PasswordResetTestEmail = "member@example.test"
+	if devMode {
+		conf.Settings.EmailDebugAddr = expectedRecipient
+	}
+	New(conf).RegisterRoutesPublic(router, "/auth")
+	if devMode {
+		blocked := httptest.NewRecorder()
+		router.ServeHTTP(blocked, httptest.NewRequest(http.MethodPost, "/auth/forgot-password",
+			strings.NewReader(`{"email":"other@example.test"}`)))
+		if blocked.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected debug delivery to be blocked for an unconfigured email, got %d", blocked.Code)
+		}
+	}
 	request := httptest.NewRecorder()
 	router.ServeHTTP(request, httptest.NewRequest(http.MethodPost, "/auth/forgot-password",
 		strings.NewReader(`{"email":"member@example.test"}`)))
@@ -68,7 +92,7 @@ func TestPasswordResetFromEmailToNewPassword(t *testing.T) {
 	select {
 	case message := <-mailbox:
 		parts := strings.Split(message, "\n\n")
-		if len(parts) != 4 || parts[0] != "member@example.test" {
+		if len(parts) != 4 || parts[0] != expectedRecipient {
 			t.Fatal("reset email had an unexpected format or recipient")
 		}
 		code = parts[2]

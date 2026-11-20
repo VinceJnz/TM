@@ -152,18 +152,22 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 	}
 
 	userID := editor.setLoginIdentifierFields(editor.UiComponents.Username.Get("value").String())
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
+	password := editor.UiComponents.Password.Get("value").String()
 
 	if userID == "" {
 		js.Global().Call("alert", "enter username or email")
 		return nil
 	}
-	if editor.CurrentRecord.Password == "" {
+	if password == "" {
 		js.Global().Call("alert", "password required")
 		return nil
 	}
 
-	editor.client.NewRequest("POST", ApiURL+"/login-password", nil, editor.CurrentRecord,
+	tokenInput := editor.UiComponents.Token
+	payload := map[string]string{
+		"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "user_password": password,
+	}
+	go editor.client.NewRequest("POST", ApiURL+"/login-password", nil, payload,
 		func(err error) {
 			if err != nil {
 				js.Global().Call("alert", "password login failed: "+err.Error())
@@ -171,9 +175,8 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 			}
 			// signal to user and set method for verify
 			js.Global().Call("alert", "If the credentials are valid, an OTP has been sent to the email on the account")
-			if editor.UiComponents.Token.Truthy() {
-				editor.UiComponents.Token.Set("disabled", false)
-				editor.UiComponents.Token.Call("focus")
+			if tokenInput.Get("isConnected").Bool() {
+				tokenInput.Call("focus")
 			}
 		},
 		func(err error) {
@@ -182,24 +185,23 @@ func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value
 	return nil
 }
 
-// handleVerifyOTP posts token and remember_me to /auth/verify-otp and triggers loginComplete on success
+// handleVerifyOTP verifies the password-login code and triggers loginComplete on success.
 func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) any {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
 	}
 
-	_ = editor.setLoginIdentifierFields(editor.UiComponents.Username.Get("value").String())
-	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
-	editor.CurrentRecord.Remember = editor.UiComponents.Remember.Get("checked").Bool()
+	token := strings.TrimSpace(editor.UiComponents.Token.Get("value").String())
+	remember := editor.UiComponents.Remember.Get("checked").Bool()
 
-	if editor.CurrentRecord.Token == "" {
+	if token == "" {
 		js.Global().Call("alert", "OTP token required")
 		return nil
 	}
 
-	payload := map[string]any{"token": editor.CurrentRecord.Token, "remember_me": editor.CurrentRecord.Remember}
+	payload := map[string]any{"token": token, "remember_me": remember}
 	var resp map[string]any
-	editor.client.NewRequest("POST", ApiURL+"/verify-password-otp", &resp, payload,
+	go editor.client.NewRequest("POST", ApiURL+"/verify-password-otp", &resp, payload,
 		func(err error) {
 			if err != nil {
 				js.Global().Call("alert", "OTP verify failed: "+err.Error())
@@ -332,8 +334,8 @@ func (editor *ItemEditor) loginForm() js.Value {
 	loginForm := viewHelpers.Form(editor.handleLoginWithPassword, editor.document, "loginForm")
 	loginUserObj, loginUserInp := viewHelpers.StringEdit("", editor.document, "Username or Email", "text", "loginUsername")
 	loginPassObj, loginPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "loginPassword")
-	loginTokenObj, loginTokenInp := viewHelpers.StringEdit("", editor.document, "OTP Token", "text", "loginOtp")
-	loginTokenInp.Set("disabled", true)
+	loginTokenObj, loginTokenInp := viewHelpers.StringEdit("", editor.document, "Sign-in code", "text", "loginOtp")
+	loginTokenInp.Set("autocomplete", "one-time-code")
 	editor.UiComponents.Username = loginUserInp
 	editor.UiComponents.Password = loginPassInp
 	editor.UiComponents.Token = loginTokenInp

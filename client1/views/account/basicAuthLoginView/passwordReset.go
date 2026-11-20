@@ -93,7 +93,6 @@ func (editor *ItemEditor) passwordResetForm() js.Value {
 			resetForm.Call("reset")
 			editor.UiComponents.Password.Set("value", "")
 			editor.UiComponents.Token.Set("value", "")
-			editor.UiComponents.Token.Set("disabled", true)
 			status.Set("textContent", "Password reset. You can now sign in with your new password.")
 		}, "Could not reset the password. Check the code or request a new one.")
 		return nil

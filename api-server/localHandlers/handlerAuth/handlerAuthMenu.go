@@ -4,14 +4,15 @@ import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
+	"log"
 	"net/http"
 )
 
 const (
-	sqlMenuUser = `SELECT stu.ID AS user_id, stu.name, stg.name AS "group"
+	sqlMenuUser = `SELECT stu.ID AS user_id, stu.name, COALESCE(stg.name::text, '') AS "group"
 		FROM st_users stu
-			JOIN st_user_group stug ON stug.User_ID=stu.ID
-			JOIN st_group stg ON stg.ID=stug.Group_ID
+			LEFT JOIN st_user_group stug ON stug.User_ID=stu.ID
+			LEFT JOIN st_group stg ON stg.ID=stug.Group_ID
 		WHERE stu.ID=$1
 			AND stu.user_account_status_id=$2
 		ORDER BY
@@ -71,7 +72,7 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	var menuUser models.MenuUser
 	err = h.appConf.Db.Get(&menuUser, sqlMenuUser, dbToken.UserID, models.AccountActive)
 	if err != nil {
-		// Failed to get menu user (maybe no group assigned)
+		// Failed to get menu user.
 		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
 		return
 	}
@@ -87,7 +88,23 @@ func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.MenuItem{}, sqlMenuList, session.UserID, models.AccountActive)
+	items := []models.MenuItem{}
+	if err := h.appConf.Db.SelectContext(r.Context(), &items, sqlMenuList, session.UserID, models.AccountActive); err != nil {
+		log.Print("menu capability lookup failed")
+		writeJSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Internal server error"}, "MenuListGet()")
+		return
+	}
+	writeJSONResponse(w, http.StatusOK, supportedMenuItems(items), "MenuListGet()")
+}
+
+func supportedMenuItems(items []models.MenuItem) []models.MenuItem {
+	supported := make([]models.MenuItem, 0, len(items))
+	for _, item := range items {
+		if supportsScope(item.Name, item.AccessLevel, item.AccessScope) {
+			supported = append(supported, item)
+		}
+	}
+	return supported
 }
 
 // AuthStatus checks if the user is authenticated and returns their info, or returns not_authenticated status

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -39,6 +40,8 @@ type settings struct {
 	EmailDebugAddr      string `json:"EmailDebugAddr"`
 	AdminNotifyGroup    string `json:"AdminNotifyGroup"`
 	DevMode             bool   `json:"DevMode"`
+
+	PasswordResetTestEmail string `json:"-"`
 }
 
 func (s *settings) SaveJson() error {
@@ -126,6 +129,7 @@ func (s *settings) LoadEnv() error {
 	s.GmailRenewRedirect = os.Getenv("GMAIL_RENEW_REDIRECT_URL")
 	s.GmailAuthCode = os.Getenv("GMAIL_AUTH_CODE")
 	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
+	s.PasswordResetTestEmail = strings.TrimSpace(os.Getenv("PASSWORD_RESET_TEST_EMAIL"))
 	s.AdminNotifyGroup = os.Getenv("ADMIN_NOTIFY_GROUP")
 	s.DevMode = os.Getenv("DEV_MODE") == "true"
 	s.AppTitle = os.Getenv("APP_TITLE")

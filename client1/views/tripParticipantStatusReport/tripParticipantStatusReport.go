@@ -250,7 +250,9 @@ func (editor *ItemEditor) populateItemList() {
 			headerDiv.Call("appendChild", toggleIndicator)
 
 			title := editor.document.Call("createElement", "div")
-			title.Set("innerHTML", "<strong>"+record.TripName+"</strong> - "+record.FromDate.Format(viewHelpers.Layout)+" to "+record.ToDate.Format(viewHelpers.Layout)+" | Capacity: "+strconv.Itoa(record.MaxParticipants))
+			tripName := editor.document.Call("createElement", "strong")
+			tripName.Set("textContent", record.TripName)
+			title.Call("append", tripName, " - "+record.FromDate.Format(viewHelpers.Layout)+" to "+record.ToDate.Format(viewHelpers.Layout)+" | Capacity: "+strconv.Itoa(record.MaxParticipants))
 			viewHelpers.SetStyles(title, map[string]string{
 				"font-size": "0.98em",
 				"color":     "#1d2f45",
@@ -312,7 +314,7 @@ func (editor *ItemEditor) populateItemList() {
 			if record.Name != "" {
 				heading.Set("innerHTML", "<strong>Booking "+strconv.Itoa(bookingCount)+"</strong>")
 			} else {
-				heading.Set("innerHTML", "<strong>No Bookings</strong>")
+				heading.Set("innerHTML", "<strong>No bookings to display</strong>")
 			}
 			viewHelpers.SetStyles(heading, map[string]string{
 				"font-size":     "0.92em",
@@ -339,7 +341,12 @@ func (editor *ItemEditor) populateItemList() {
 			"color":         "#23364a",
 			"font-size":     "0.88em",
 		})
-		participantRow.Set("innerHTML", "<strong>"+record.Name+"</strong> | Status: "+participantStatusLabel(record.BookingStatus)+" | Position: "+strconv.Itoa(record.BookingPosition))
+		name := editor.document.Call("createElement", "strong")
+		name.Set("textContent", record.Name)
+		participantRow.Call("appendChild", name)
+		if record.BookingPosition > 0 {
+			participantRow.Call("append", " | Status: "+participantStatusLabel(record.BookingStatus)+" | Position: "+strconv.Itoa(record.BookingPosition))
+		}
 
 		bookingCard.Call("appendChild", participantRow)
 	}

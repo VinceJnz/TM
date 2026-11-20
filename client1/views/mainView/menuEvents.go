@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"log"
+	"net/http"
 	"strings"
 )
 
@@ -26,12 +27,8 @@ func (v *View) setTopAuthAction(isLoggedIn bool) {
 		}
 	}
 
-	if !v.elements.myProfileBtn.IsUndefined() && !v.elements.myProfileBtn.IsNull() {
-		if isLoggedIn {
-			v.elements.myProfileBtn.Get("style").Call("removeProperty", "display")
-		} else {
-			v.elements.myProfileBtn.Get("style").Call("setProperty", "display", "none")
-		}
+	if v.elements.myProfileBtn.Truthy() {
+		v.elements.myProfileBtn.Get("style").Call("setProperty", "display", "none")
 	}
 }
 
@@ -149,9 +146,18 @@ func (v *View) updateMenu(event eventProcessor.Event) {
 
 	allowedResources := map[string]struct{}{}
 	for _, o := range menuList {
-		allowedResources[strings.ToLower(o.Resource)] = struct{}{}
+		if strings.EqualFold(o.AccessLevel, http.MethodGet) {
+			allowedResources[strings.ToLower(o.Resource)] = struct{}{}
+		}
 	}
-
+	if v.elements.myProfileBtn.Truthy() {
+		style := v.elements.myProfileBtn.Get("style")
+		if _, allowed := allowedResources["myprofile"]; allowed {
+			style.Call("removeProperty", "display")
+		} else {
+			style.Call("setProperty", "display", "none")
+		}
+	}
 	visibleSections := map[string]struct{}{}
 	for key, item := range v.menuButtons {
 		if item.defaultDisplay {

@@ -119,6 +119,10 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	// UserAgeGroups public read-only routes (for registration form dropdown)
 	handlerUserAgeGroups.New(app).RegisterRoutesPublic(public, "/userAgeGroups")
 
+	sessionRoutes := r.PathPrefix(app.Settings.APIprefix).Subrouter()
+	sessionRoutes.Use(auth.RequireSessionAuth)
+	auth.RegisterRoutesSession(sessionRoutes, "/auth")
+
 	// *****************************************************
 	// Protected routes (require authentication) - These are registered on a subrouter so that the auth middleware is only applied to these routes and not the public routes above. This allows us to have a mix of protected and unprotected routes.
 	protected := r.PathPrefix(app.Settings.APIprefix).Name("protected-api").Subrouter()

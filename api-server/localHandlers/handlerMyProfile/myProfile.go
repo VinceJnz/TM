@@ -44,8 +44,8 @@ func New(appConf *appCore.Config) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.CapabilityRoute(r, baseURL, "myBookings", h.Get).Methods("GET")
-	helpers.CapabilityRoute(r, baseURL, "myBookings", h.Update).Methods("PUT")
+	helpers.CapabilityRoute(r, baseURL, "myProfile", h.Get).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL, "myProfile", h.Update).Methods("PUT")
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +114,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			user_account_hidden = $6
 		WHERE id = $1`
 
-	if _, err := h.appConf.Db.Exec(
+	if _, err := h.appConf.Db.ExecContext(
+		r.Context(),
 		qry,
 		session.UserID,
 		name,
