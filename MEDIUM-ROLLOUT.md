@@ -112,3 +112,15 @@ CI runs the same checks. No host ports, live databases, real mail delivery, Goog
 accounts or Stripe charges are used. This verifies the email-token completion path
 with a synthetic token, not external email delivery. Docker and dependency/image
 downloads are required; the browser tools run only in a test container.
+
+## Capacity reservations (follow-up review)
+
+Migration 0005 adds expiring checkout seat holds. Checkout and payment finalization
+serialize on the parent trip before locking the booking. Paid bookings and live
+holds share the trip capacity budget. Stripe checkout expires after 30 minutes;
+the local hold lasts 45 minutes to allow webhook delivery. A delayed payment must
+reacquire capacity and fails closed if another booking has taken it. Operators must
+investigate capacity-related webhook failures and reconcile/refund externally paid
+sessions that cannot be admitted; the application never silently overbooks them.
+Apply migrations with the administrative migration connection before API startup;
+reapply runtime grants for the new table. No existing booking/payment is deleted.

@@ -142,6 +142,10 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if err := paymentLedger.LockTrip(r.Context(), tx, bookingID); err != nil {
+		http.Error(w, "booking unavailable", 409)
+		return
+	}
 	var locked int
 	if err := tx.GetContext(r.Context(), &locked, `SELECT id FROM at_bookings WHERE id=$1 AND owner_id=$2 AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS(SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id) FOR UPDATE`, bookingID, appSession.UserID); err != nil {
 		http.Error(w, "booking unavailable for checkout", 409)
@@ -162,6 +166,10 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := paymentLedger.Reserve(r.Context(), tx, bookingID, time.Now().Add(45*time.Minute)); err != nil {
+		http.Error(w, "trip capacity unavailable", 409)
+		return
+	}
 	// Create Stripe checkout session
 	chargeMinor, err := paymentLedger.Quote(r.Context(), tx, bookingID)
 	if err != nil {
@@ -182,6 +190,7 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 				Quantity: stripe.Int64(1),
 			},
 		},
+		ExpiresAt:  stripe.Int64(time.Now().Add(30 * time.Minute).Unix()),
 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
 		SuccessURL: stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/success/" + strconv.Itoa(bookingID)),
 		CancelURL:  stripe.String(h.appConf.PaymentSvc.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(bookingID)),

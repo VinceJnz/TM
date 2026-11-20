@@ -24,6 +24,13 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 		return false, err
 	}
 	defer tx.Rollback()
+	var capacityBookingID int
+	if err := tx.GetContext(ctx, &capacityBookingID, `SELECT booking_id FROM at_checkout_quotes WHERE session_id=$1`, sessionID); err != nil {
+		return false, err
+	}
+	if err := LockTrip(ctx, tx, capacityBookingID); err != nil {
+		return false, err
+	}
 	var bookingID int
 	var expected int64
 	var expectedCurrency string
@@ -33,6 +40,15 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 	}
 	if expected != amountMinor || strings.ToLower(currency) != expectedCurrency {
 		return false, ErrInvalidPayment
+	}
+	var statusBefore int
+	if err := tx.GetContext(ctx, &statusBefore, "SELECT booking_status_id FROM at_bookings WHERE id=$1", bookingID); err != nil {
+		return false, err
+	}
+	if statusBefore != 2 && statusBefore != 3 {
+		if err := Reserve(ctx, tx, bookingID, time.Now().Add(45*time.Minute)); err != nil {
+			return false, err
+		}
 	}
 	var inserted string
 	err = tx.QueryRowContext(ctx, `INSERT INTO at_stripe_events(event_id,session_id) VALUES ($1,$2) ON CONFLICT(event_id) DO NOTHING RETURNING event_id`, eventID, sessionID).Scan(&inserted)
