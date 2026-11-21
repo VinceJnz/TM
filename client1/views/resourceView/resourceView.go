@@ -128,7 +128,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
-	editor.updateStateDisplay(ItemStateNone)
+	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	editor.load.Cancel()
 	editor.RecordState = RecordStateReloadRequired
 	editor.Div.Get("style").Call("setProperty", "display", "none")
@@ -303,7 +303,7 @@ func (editor *ItemEditor) FetchItems() {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
 		ticket := editor.load.Start()
-		editor.updateStateDisplay(ItemStateFetching)
+		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(viewHelpers.ItemStateFetching)
