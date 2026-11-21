@@ -5,76 +5,38 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
+	"api-server/v2/modelMethods/payments"
 	"api-server/v2/models"
 
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerUserPayments."
 
-const (
-	qryGetAll  = `SELECT * FROM at_payments`
-	qryGet     = `SELECT * FROM at_payments WHERE id = $1`
-	qryGetList = `SELECT atup.*
-					FROM public.at_payments atup
-					WHERE atup.booking_id = $1`
-	qryCreate = `INSERT INTO at_payments (booking_id, payment_date, amount, payment_method) 
-					VALUES ($1, $2, $3, $4)
-					RETURNING id`
-	qryUpdate = `UPDATE at_payments
-					SET booking_id = $1, payment_date = $2, amount = $3, payment_method = $4
-					WHERE id = $5`
-	qryDelete = `DELETE FROM at_payments WHERE id = $1`
-)
-
 type Handler struct {
 	appConf *appCore.Config
-	crud    *dbStandardTemplate.ResourceCRUD[models.UserPayments]
+	store   payments.Store
 }
 
 func New(appConf *appCore.Config) *Handler {
-	h := &Handler{appConf: appConf}
-	h.crud = dbStandardTemplate.NewResourceCRUD(dbStandardTemplate.ResourceCRUDConfig[models.UserPayments]{
-		DebugTag: debugTag,
-		Db:       h.appConf.Db,
-		Queries: dbStandardTemplate.CRUDQueries{
-			GetAll: qryGetAll,
-			Get:    qryGet,
-			Create: qryCreate,
-			Update: qryUpdate,
-			Delete: qryDelete,
-		},
-		NewListDest: func() any { return &[]models.UserPayments{} },
-		NewRecord:   func() *models.UserPayments { return &models.UserPayments{} },
-		IDDest:      func(record *models.UserPayments) any { return &record.ID },
-		SetID:       func(record *models.UserPayments, id int) { record.ID = id },
-		CreateArgs: func(record *models.UserPayments) []any {
-			return []any{record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod}
-		},
-		UpdateArgs: func(id int, record *models.UserPayments) []any {
-			return []any{record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod, id}
-		},
-	})
-	return h
+	return &Handler{appConf: appConf, store: payments.Store{DB: appConf.Db}}
 }
 
-// RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h, "payments")
 	helpers.CapabilityRoute(r, baseURL+"/booking/{id:[0-9]+}", "payments", h.GetList).Methods("GET")
 }
 
-// GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	h.crud.GetAll(w, r)
+	h.list(w, r, 0)
 }
 
-// Get: retrieves and returns a list of records identified by parent id
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
@@ -83,15 +45,71 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	if id <= 0 {
 		return
 	}
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.UserPayments{}, qryGetList, id)
+	h.list(w, r, id)
 }
 
-// Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	h.crud.Get(w, r)
+	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
+	item, err := h.store.Get(r.Context(), id)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	// Preserve the established single-record array response.
+	helpers.WriteJSON(w, 200, []models.UserPayments{item})
+}
+
+func (h *Handler) list(w http.ResponseWriter, r *http.Request, booking int) {
+	limit, offset := 100, 0
+	for key, target := range map[string]*int{"limit": &limit, "offset": &offset} {
+		if raw := r.URL.Query().Get(key); raw != "" {
+			n, err := strconv.Atoi(raw)
+			if err != nil {
+				helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+				return
+			}
+			*target = n
+		}
+	}
+	if limit < 1 || limit > 500 || offset < 0 || offset > 1000000 {
+		helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+		return
+	}
+	var items []models.UserPayments
+	var more bool
+	var err error
+	if r.URL.Query().Get("pagination") == "cursor" {
+		after := int64(0)
+		if raw := r.URL.Query().Get("after"); raw != "" {
+			after, err = strconv.ParseInt(raw, 10, 64)
+			if err != nil || after < 0 {
+				helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+				return
+			}
+		}
+		items, more, err = h.store.ListAfter(r.Context(), booking, limit, after)
+		w.Header().Set("X-Pagination-Mode", "cursor")
+		if more && len(items) > 0 {
+			w.Header().Set("X-Next-Cursor", strconv.Itoa(items[len(items)-1].ID))
+		}
+	} else {
+		items, more, err = h.store.List(r.Context(), booking, limit, offset)
+	}
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	w.Header().Set("X-Page-Limit", strconv.Itoa(limit))
+	if more {
+		w.Header().Set("X-Next-Offset", strconv.Itoa(offset+limit))
+	}
+	helpers.WriteJSON(w, 200, items)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.write(w, r, "create") }
