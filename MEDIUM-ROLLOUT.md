@@ -298,3 +298,11 @@ while a checkout is unresolved. The only permitted snapshot price write is exact
 attachment of that attempt's stored quote/session. Confirmed expiration makes the
 old attempt inactive before clearing the snapshot for repricing. Tests cover a
 price-only edit during the pending interval, attachment, and expiration recovery.
+
+## Architecture follow-up: single-record reads
+
+The SQL-only resourcequery.One adapter scans a struct before wrapping it in the
+legacy one-element array when required. Generic CRUD/trip single-record responses
+therefore preserve their existing JSON shape; missing records return 404. The
+persistence adapter has no HTTP dependency. Regression tests cover multi-column
+records, array responses and missing IDs against PostgreSQL.

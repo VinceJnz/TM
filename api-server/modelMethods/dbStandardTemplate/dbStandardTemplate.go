@@ -3,6 +3,7 @@ package dbStandardTemplate
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
+	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/models"
 	"database/sql"
 	"encoding/json"
@@ -36,7 +37,7 @@ func GetAll(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 
 // Get: retrieves and returns a single record identified by id
 func Get(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB, dest any, query string, args ...any) {
-	err := Db.GetContext(r.Context(), dest, query, args...)
+	err := resourcequery.One(r.Context(), Db, dest, query, args...)
 	if err == ErrPagination {
 		helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
 		return

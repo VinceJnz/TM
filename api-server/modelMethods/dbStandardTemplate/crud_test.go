@@ -18,6 +18,29 @@ func TestInvalidIDStopsBeforeDatabase(t *testing.T) {
 		}
 	}
 }
+
+func TestSingleRecordScansStructAndPreservesArrayContract(t *testing.T) {
+	db := testdb.Open(t, "CREATE TABLE items(id integer PRIMARY KEY,value text);INSERT INTO items VALUES(1,'original')")
+	type item struct {
+		ID    int    `db:"id" json:"id"`
+		Value string `db:"value" json:"value"`
+	}
+	for _, id := range []int{1, 99} {
+		records := []item{}
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/", nil)
+		Get(w, r, "test", db, &records, "SELECT id,value FROM items WHERE id=$1", id)
+		if id == 99 {
+			if w.Code != 404 {
+				t.Fatal(w.Code)
+			}
+			continue
+		}
+		if w.Code != 200 || len(records) != 1 || records[0].Value != "original" || w.Body.String()[0] != '[' {
+			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+}
 func TestMissingWritesReturnNotFound(t *testing.T) {
 	db := testdb.Open(t, "CREATE TABLE items(id integer PRIMARY KEY,value text);INSERT INTO items VALUES(1,'original')")
 	for _, operation := range []string{"update", "delete"} {
