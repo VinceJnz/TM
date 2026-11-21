@@ -16,10 +16,16 @@ type Store struct{ DB *sqlx.DB }
 const grantRead = `SELECT r.id,r.group_id,g.name AS group_name,r.resource_id,e.name AS resource,r.access_level_id,l.name AS access_level,r.access_scope_id,s.name AS access_scope,r.created,r.modified FROM st_group_resource r JOIN st_group g ON g.id=r.group_id JOIN et_resource e ON e.id=r.resource_id JOIN et_access_level l ON l.id=r.access_level_id JOIN et_access_scope s ON s.id=r.access_scope_id`
 const memberRead = `SELECT m.id,m.user_id,u.name AS user_name,m.group_id,g.name AS group_name,m.created,m.modified FROM st_user_group m JOIN st_users u ON u.id=m.user_id JOIN st_group g ON g.id=m.group_id`
 
-func (s Store) Grants(ctx context.Context, p resourcequery.Page) ([]models.GroupResource, resourcequery.PageInfo, error) {
+func (s Store) Grants(ctx context.Context, p resourcequery.Page, group ...int) ([]models.GroupResource, resourcequery.PageInfo, error) {
+	if len(group) > 0 && group[0] > 0 {
+		return resourcequery.SelectPage[models.GroupResource](ctx, s.DB, p, grantRead+" WHERE r.group_id=$1", group[0])
+	}
 	return resourcequery.SelectPage[models.GroupResource](ctx, s.DB, p, grantRead)
 }
-func (s Store) Members(ctx context.Context, p resourcequery.Page) ([]models.UserGroup, resourcequery.PageInfo, error) {
+func (s Store) Members(ctx context.Context, p resourcequery.Page, user ...int) ([]models.UserGroup, resourcequery.PageInfo, error) {
+	if len(user) > 0 && user[0] > 0 {
+		return resourcequery.SelectPage[models.UserGroup](ctx, s.DB, p, memberRead+" WHERE m.user_id=$1", user[0])
+	}
 	return resourcequery.SelectPage[models.UserGroup](ctx, s.DB, p, memberRead)
 }
 func (s Store) Grant(ctx context.Context, id int) (models.GroupResource, error) {

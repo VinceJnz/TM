@@ -40,7 +40,11 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	rows, info, err := h.store.Grants(r.Context(), p)
+	parent, valid := helpers.OptionalQueryID(w, r, "group_id")
+	if !valid {
+		return
+	}
+	rows, info, err := h.store.Grants(r.Context(), p, parent)
 	if err != nil {
 		helpers.WriteDataError(w, err)
 		return

@@ -329,10 +329,14 @@ func (editor *ItemEditor) FetchItems() {
 	editor.Children.Group.FetchItems()
 	ticket := editor.load.Start()
 	pending := editor.Page.Snapshot()
+	path := ApiURL
+	if editor.ParentID > 0 {
+		path += "?user_id=" + strconv.Itoa(editor.ParentID)
+	}
 	editor.updateStateDisplay(ItemStateFetching)
 	go func() {
 		var records []TableData
-		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, ApiURL, &records, nil)
+		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, path, &records, nil)
 		var groupRecs []GroupRecord
 		if err == nil {
 			err = editor.client.RequestContext(ticket.Context, http.MethodGet, groupApiURL, &groupRecs, nil)
