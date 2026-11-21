@@ -5,9 +5,11 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
+	"client1/v2/service"
 	"client1/v2/views/bookingPeopleView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/utils/viewHelpers"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -70,6 +72,7 @@ type children struct {
 }
 
 type ItemEditor struct {
+	bookings *service.BookingService
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -98,6 +101,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	editor.document = document
 	editor.events = events
 	editor.client = appCore.HttpClient
+	editor.bookings = service.NewBookingService(api.NewBooking(editor.client))
 
 	editor.ItemState = viewHelpers.ItemStateNone
 	editor.RowSummaryDiv = map[int]js.Value{}
@@ -122,6 +126,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 		editor.ParentData = parentData[0]
 	}
 
+	editor.bookings.Invalidate()
 	editor.RecordState = RecordStateReloadRequired
 	editor.Children.BookingStatus = bookingStatusView.New(editor.document, events, editor.appCore)
 
@@ -129,6 +134,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.bookings.Invalidate()
 	editor.RecordState = RecordStateReloadRequired
 	editor.RowSummaryDiv = map[int]js.Value{}
 	editor.EditDiv.Set("innerHTML", "")
@@ -150,6 +156,8 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.bookings.Invalidate()
+	editor.RecordState = RecordStateReloadRequired
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -416,6 +424,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	}
 	editor.resetEditForm()
 
+	editor.bookings.Invalidate()
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -442,15 +451,19 @@ func (editor *ItemEditor) FetchItems() {
 			localApiURL = "/trips/" + strconv.Itoa(editor.ParentData.ID) + ApiURL
 		}
 		go func() {
-			if err := editor.client.PageRequest(&editor.Page,
-
-				http.MethodGet, localApiURL, &records, nil, success); err != nil {
+			rows, err := editor.bookings.FetchPage(&editor.Page, localApiURL)
+			if errors.Is(err, service.ErrStale) {
+				return
+			}
+			if err != nil {
+				editor.bookings.Invalidate()
 				editor.RecordState = RecordStateReloadRequired
 				editor.updateStateDisplay(viewHelpers.ItemStateNone)
 				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
 				return
 			}
-
+			records = rows
+			success(nil)
 		}()
 	}
 }
@@ -494,6 +507,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 			return
 		}
 
+		editor.bookings.Invalidate()
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -519,6 +533,7 @@ func (editor *ItemEditor) refreshBookingRow(bookingID int) {
 		}
 
 		if !updatedExisting {
+			editor.bookings.Invalidate()
 			editor.RecordState = RecordStateReloadRequired
 			editor.FetchItems()
 			return
@@ -529,12 +544,14 @@ func (editor *ItemEditor) refreshBookingRow(bookingID int) {
 			return
 		}
 
+		editor.bookings.Invalidate()
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 	}
 
 	fail := func(err error) {
 		log.Printf(debugTag+"refreshBookingRow() error for booking %d: %v", bookingID, err)
+		editor.bookings.Invalidate()
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 	}
@@ -610,6 +627,7 @@ func (editor *ItemEditor) populateItemList() {
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.ListDiv, &editor.Page, len(editor.Records), func() {
+		editor.bookings.Invalidate()
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 	})

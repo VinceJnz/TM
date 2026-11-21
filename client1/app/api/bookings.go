@@ -39,6 +39,11 @@ func NewBooking(client *httpProcessor.Client) *Booking {
 	return &Booking{client: client, ApiUrl: "/bookings"}
 }
 
+// GetPage preserves the view's explicit pagination contract.
+func (a *Booking) GetPage(page *httpProcessor.Page, path string, records *[]BookingDTO) error {
+	return a.client.PageRequest(page, http.MethodGet, path, records, nil)
+}
+
 func (a *Booking) CreateBooking(req BookingRequest, onSuccess func(BookingDTO), onError func(error)) {
 	var id int
 	a.client.NewRequest2(http.MethodPost, a.ApiUrl, &id, BookingPayload(req), httpProcessor.Callbacks{

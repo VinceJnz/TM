@@ -10,10 +10,12 @@ type Booking = api.BookingDTO
 
 // BookingService owns cached state; the API adapter owns transport and DTOs.
 type BookingService struct {
-	mu    sync.Mutex
-	state DataState[[]Booking]
-	ttl   time.Duration
-	api   api.BookingAPI
+	mu         sync.Mutex
+	state      DataState[[]Booking]
+	ttl        time.Duration
+	api        api.BookingAPI
+	generation uint64
+	pageKey    string
 }
 
 func NewBookingService(adapter api.BookingAPI) *BookingService {
@@ -30,6 +32,8 @@ func (s *BookingService) Invalidate() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.LastFetched = time.Time{}
+	s.generation++
+	s.state.Loading = false
 }
 func (s *BookingService) LoadIfNeeded() {
 	s.mu.Lock()
@@ -38,11 +42,15 @@ func (s *BookingService) LoadIfNeeded() {
 		return
 	}
 	s.state.Loading = true
+	generation := s.generation
 	s.state.Err = nil
 	s.mu.Unlock()
 	go s.api.GetBookings(func(data []Booking) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		if generation != s.generation {
+			return
+		}
 		s.state.Data = append([]Booking(nil), data...)
 		s.state.LastFetched = time.Now()
 		s.state.Loading = false
@@ -50,6 +58,9 @@ func (s *BookingService) LoadIfNeeded() {
 	}, func(err error) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		if generation != s.generation {
+			return
+		}
 		s.state.Err = err
 		s.state.Loading = false
 	})
