@@ -184,7 +184,7 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 		return err
 	}
 	defer res.Body.Close()
-	log.Printf("%v %v %v %v %v %v %v", debugTag+"NewRequest()4a ", "err =", err, "res.StatusCode =", res.StatusCode, "req.URL =", req.URL)
+	logResponse(req, res, "response")
 
 	//The following deals with http error responses
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
@@ -208,18 +208,10 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 	}
 
 	if rxDataStru != nil {
-		//if err = json.NewDecoder(res.Body).Decode(&rxDataStru); err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
-		//	resBody, _ := io.ReadAll(res.Body)
-		//	log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8a ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
-		//	err = fmt.Errorf(debugTag+"newRequest()8b failed to decode JSON data: %w", err)
-		//	callBackFail(err)
-		//	return err
-		//}
 		err = decodeJSON(res, &rxDataStru)
-		if err != nil { //This decodes the JSON data in the body and puts it in the supplied structure.
-			resBody, _ := io.ReadAll(res.Body)
-			log.Printf("%v %v %v %v %v %v %v %v %+v %v %v", debugTag+"NewRequest()8a ", "err =", err, "req =", req, "res.Body =", string(resBody), "rxDataStru =", rxDataStru, "req.URL =", req.URL)
-			err = fmt.Errorf(debugTag+"newRequest()8b failed to decode JSON data: %w", err)
+		if err != nil {
+			logResponse(req, res, "invalid_json")
+			err = fmt.Errorf("invalid JSON response (status %d, request %s)", res.StatusCode, safeRequestID(res))
 			callBackFail(err)
 			return err
 		}
@@ -467,7 +459,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 // OpenPopup opens a new browser window/tab pointing to path (relative to Client.BaseURL) with the given name and window features.
 // If an absolute URL is provided (starts with http/https), it will be used as-is.
 // Security notes:
-// - Do not include "noopener" or "noreferrer" in features if you expect the popup to use window.opener.postMessage back to the opener — those disable opener access.
+// - Do not include "noopener" or "noreferrer" in features if you expect the popup to use window.opener.postMessage back to the opener â€” those disable opener access.
 // - We sanitize features to remove noopener/noreferrer if present.
 func (c *Client) OpenPopup(path, name, features string) {
 	var urlStr string
