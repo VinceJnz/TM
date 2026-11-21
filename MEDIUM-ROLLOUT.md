@@ -315,3 +315,12 @@ actual booking query (which starts with owner_username) for multiple bookings of
 one owner, checks consecutive pages, and excludes the other owner's records.
 Offset pagination remains supported; pages are not a cross-request snapshot when
 records are concurrently inserted/deleted.
+
+## Architecture follow-up: financial lock scope
+
+Financial writers no longer acquire a process-wide/global PostgreSQL advisory
+mutex. They lock affected trips, then bookings, then payment/refund rows in sorted
+ID order. Parent mappings are rechecked under lock; a concurrent reassignment
+returns a retryable conflict instead of mutating an unlocked parent. Webhook and
+recovery paths retain trip-before-booking locking. Regression tests cover unrelated
+trip progress, conflicting-lock cancellation and reverse cross-booking lock order.

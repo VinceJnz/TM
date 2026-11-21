@@ -108,6 +108,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lockedBooking, lockErr := paymentLedger.LockPayment(r.Context(), tx, record.PaymentID)
+	_ = lockedBooking
+	if lockErr != nil {
+		tx.Rollback()
+		http.Error(w, "payment unavailable", 409)
+		return
+	}
 	if err := tx.QueryRowContext(r.Context(), qryCreate, record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef).Scan(&record.ID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -156,7 +163,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oldBookingID, err := paymentLedger.GetBookingIDByRefundIDTx(r.Context(), tx, id)
+	oldBookingID, err := paymentLedger.LockRefund(r.Context(), tx, id, record.PaymentID)
 	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
@@ -216,7 +223,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bookingID, err := paymentLedger.GetBookingIDByRefundIDTx(r.Context(), tx, id)
+	bookingID, err := paymentLedger.LockRefund(r.Context(), tx, id, 0)
 	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {

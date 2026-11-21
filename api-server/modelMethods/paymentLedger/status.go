@@ -148,17 +148,6 @@ func Sync(ctx context.Context, tx *sqlx.Tx, bookingID int) error {
 	return err
 }
 
-// Begin serializes ledger mutations before any payment/refund row is changed.
-// This conservative cross-booking lock also handles administrative reassignments
-// without deadlock-prone lock ordering. Provider calls never hold it.
-func Begin(ctx context.Context, db *sqlx.DB) (*sqlx.Tx, error) {
-	tx, err := db.BeginTxx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	if _, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(7462027)"); err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-	return tx, nil
-}
+// Begin leaves lock scope to the affected-trip/booking locking helpers. Provider
+// operations do not hold these transactions; unrelated trips remain independent.
+func Begin(ctx context.Context, db *sqlx.DB) (*sqlx.Tx, error) { return db.BeginTxx(ctx, nil) }

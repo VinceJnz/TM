@@ -112,6 +112,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err = paymentLedger.LockBookings(r.Context(), tx, record.BookingID); err != nil {
+		tx.Rollback()
+		http.Error(w, "booking unavailable", 409)
+		return
+	}
 	if err := tx.QueryRowContext(r.Context(), qryCreate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod).Scan(&record.ID); err != nil {
 		tx.Rollback()
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -155,8 +160,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oldBookingID := 0
-	if err := tx.GetContext(r.Context(), &oldBookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
+	oldBookingID, err := paymentLedger.LockPayment(r.Context(), tx, id, record.BookingID)
+	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			http.Error(w, "Record not found", http.StatusNotFound)
@@ -209,8 +214,8 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bookingID := 0
-	if err := tx.GetContext(r.Context(), &bookingID, `SELECT booking_id FROM at_payments WHERE id = $1`, id); err != nil {
+	bookingID, err := paymentLedger.LockPayment(r.Context(), tx, id)
+	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			http.Error(w, "Record not found", http.StatusNotFound)
