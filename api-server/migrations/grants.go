@@ -16,6 +16,7 @@ func runtimePolicy() map[string]string {
 	}
 	policy["schema_migrations"] = "SELECT"
 	policy["at_financial_audit"] = "SELECT"
+	policy["at_notification_outbox"] = "SELECT,INSERT,UPDATE (attempts,available_at,sent_at)"
 	for _, name := range []string{"at_stripe_events", "at_checkout_quotes", "at_checkout_reconciliations"} {
 		policy[name] = "SELECT,INSERT"
 	}

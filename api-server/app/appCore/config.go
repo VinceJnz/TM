@@ -5,7 +5,9 @@ import (
 	"api-server/v2/app/gateways/oAuthGateway/oAuthGateway"
 	"api-server/v2/app/gateways/stripe"
 	"api-server/v2/app/services/checkout"
+	"api-server/v2/app/services/notifications"
 	"api-server/v2/migrations"
+	notificationStore "api-server/v2/modelMethods/notifications"
 	"context"
 	"errors"
 	"log"
@@ -29,18 +31,20 @@ type EmailService interface {
 }
 
 type Config struct {
-	Db           *sqlx.DB
-	EmailSvc     EmailService
-	emailMu      sync.RWMutex
-	PaymentSvc   *stripe.Gateway
-	OAuthSvc     *oAuthGateway.Gateway
-	SessionIDKey ContextKey // User for passing the user id value via the context (ctx)
-	Settings     settings
-	TestMode     bool
-	stop         context.CancelFunc
-	cleanupDone  chan struct{}
-	paymentStop  context.CancelFunc
-	paymentDone  chan struct{}
+	Db               *sqlx.DB
+	EmailSvc         EmailService
+	emailMu          sync.RWMutex
+	PaymentSvc       *stripe.Gateway
+	OAuthSvc         *oAuthGateway.Gateway
+	SessionIDKey     ContextKey // User for passing the user id value via the context (ctx)
+	Settings         settings
+	TestMode         bool
+	stop             context.CancelFunc
+	cleanupDone      chan struct{}
+	paymentStop      context.CancelFunc
+	paymentDone      chan struct{}
+	notificationStop context.CancelFunc
+	notificationDone chan struct{}
 }
 
 func New(testMode bool) *Config {
@@ -84,6 +88,13 @@ func (c *Config) Run(ctx context.Context) error {
 		log.Print("email integration unavailable")
 	}
 
+	notificationCtx, notificationCancel := context.WithCancel(ctx)
+	c.notificationStop = notificationCancel
+	c.notificationDone = make(chan struct{})
+	go func() {
+		defer close(c.notificationDone)
+		(notifications.Service{Store: notificationStore.Store{DB: c.Db}, Mailer: func() notifications.Mailer { return c.EmailService() }}).Run(notificationCtx)
+	}()
 	// Start the payment service
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
 	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain, c.TestMode)
@@ -128,6 +139,12 @@ func (c *Config) SetEmailService(service EmailService) {
 }
 
 func (c *Config) Close() {
+	if c.notificationStop != nil {
+		c.notificationStop()
+	}
+	if c.notificationDone != nil {
+		<-c.notificationDone
+	}
 	if c.paymentStop != nil {
 		c.paymentStop()
 	}

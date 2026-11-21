@@ -17,8 +17,6 @@ direct audit insertion or rewriting.
 The runtime role must not own application objects or inherit an administrative
 role. Migration 0015 revokes PUBLIC CREATE on the application schema to prevent
 shadow objects; migration owners retain ownership privileges. Review other
-applications sharing that schema before deployment. Existing inherited grants
-must be reviewed separately; the command rejects inherited schema CREATE and
-administrative/owner membership rather than changing other roles. These changes
+applications sharing that schema before deployment. Effective table, column, sequence and grant-option privileges are verified before commit. Unexpected inherited/PUBLIC access is rejected rather than changing other roles. The command also rejects inherited schema CREATE and administrative/owner membership. These changes
 are prepared and tested against disposable databases; applying them to a deployed
 database is a separate operator action.

@@ -3,12 +3,11 @@ package bookings
 import (
 	"api-server/v2/internal/observability"
 	store "api-server/v2/modelMethods/bookings"
+	"api-server/v2/modelMethods/notifications"
 	"api-server/v2/models"
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"log"
 	"time"
 )
 
@@ -81,13 +80,14 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 	if err != nil {
 		return input, err
 	}
+	if operation == "create" && s.ActorEmail != "" {
+		if err = notifications.EnqueueBooking(ctx, tx, input.ID, int(input.TripID.Int64), s.ActorEmail); err != nil {
+			return input, err
+		}
+	}
 	if err = tx.Commit(); err != nil {
 		return input, err
 	}
-	if operation == "create" && s.Email != nil && s.ActorEmail != "" {
-		if _, err = s.Email.SendMail(s.ActorEmail, "New Booking Created", fmt.Sprintf("Booking %d was created for trip %d.", input.ID, input.TripID.Int64)); err != nil {
-			log.Print("booking notification failed after successful commit")
-		}
-	}
+
 	return input, nil
 }
