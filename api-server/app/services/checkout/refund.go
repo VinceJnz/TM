@@ -80,6 +80,28 @@ func ConfirmRefund(ctx context.Context, db *sqlx.DB, provider RefundProvider, pa
 		return err
 	}
 	if refund.Status == "succeeded" {
+		// An operator may have recorded this refund before provider tracking
+		// existed. Bind a unique, exact historical entry instead of crediting
+		// the same refund twice. Ambiguous history requires explicit review.
+		var legacy []struct {
+			ID        int
+			PaymentID int `db:"payment_id"`
+			Amount    decimal.Decimal
+		}
+		if err = tx.SelectContext(ctx, &legacy, `SELECT id,payment_id,amount FROM at_refunds WHERE external_ref=$1 AND provider_refund_id IS NULL FOR UPDATE`, refundID); err != nil {
+			return err
+		}
+		if len(legacy) > 1 {
+			return paymentLedger.ErrLedgerConflict
+		}
+		if len(legacy) == 1 {
+			if legacy[0].PaymentID != payment || !legacy[0].Amount.Equal(decimal.NewFromInt(refund.Amount).Shift(-2)) {
+				return paymentLedger.ErrLedgerConflict
+			}
+			if _, err = tx.ExecContext(ctx, `UPDATE at_refunds SET provider_refund_id=$2 WHERE id=$1`, legacy[0].ID, refundID); err != nil {
+				return err
+			}
+		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO at_refunds(payment_id,refund_date,amount,reason,external_ref,provider_refund_id) VALUES($1,CURRENT_TIMESTAMP,$2,'provider-confirmed refund',$3,$3) ON CONFLICT(provider_refund_id) WHERE provider_refund_id IS NOT NULL DO NOTHING`, payment, decimal.NewFromInt(refund.Amount).Shift(-2), refundID); err != nil {
 			return err
 		}

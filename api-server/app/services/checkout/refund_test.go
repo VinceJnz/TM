@@ -67,3 +67,40 @@ func TestProviderRefundOnlySucceededCountsAndReplayIsImmutable(t *testing.T) {
 		t.Fatal("wrong payment accepted")
 	}
 }
+
+func TestProviderConfirmationBindsHistoricalRefundWithoutDoubleCredit(t *testing.T) {
+	migration, err := os.ReadFile("../../../migrations/0012_provider_refunds.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := testdb.Open(t, testdb.Ledger+`ALTER TABLE at_refunds ADD COLUMN refund_date timestamptz,ADD COLUMN reason text,ADD COLUMN external_ref text;`+string(migration))
+	ctx := context.Background()
+	if _, err = paymentLedger.Finalize(ctx, db, "paid", "checkout", 1000, "nzd"); err != nil {
+		t.Fatal(err)
+	}
+	var payment int
+	db.Get(&payment, `SELECT id FROM at_payments`)
+	if _, err = db.Exec(`INSERT INTO at_refunds(payment_id,amount,external_ref) VALUES($1,5,'re_historical')`, payment); err != nil {
+		t.Fatal(err)
+	}
+	provider := &fakeRefund{Refund{ID: "re_historical", SessionID: "checkout", Currency: "nzd", Status: "succeeded", Amount: 500}}
+	if err = ConfirmRefund(ctx, db, provider, payment, "re_historical", "operator"); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	db.Get(&count, `SELECT count(*) FROM at_refunds`)
+	if count != 1 {
+		t.Fatal("historical refund duplicated")
+	}
+	if err = ConfirmRefund(ctx, db, provider, payment, "re_historical", "operator"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`INSERT INTO at_refunds(payment_id,amount,external_ref) VALUES($1,1,'re_ambiguous'),($1,1,'re_ambiguous')`, payment); err != nil {
+		t.Fatal(err)
+	}
+	provider.result.ID = "re_ambiguous"
+	provider.result.Amount = 100
+	if err = ConfirmRefund(ctx, db, provider, payment, "re_ambiguous", "operator"); err == nil {
+		t.Fatal("ambiguous history silently adopted")
+	}
+}

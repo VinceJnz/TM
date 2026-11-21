@@ -48,3 +48,8 @@ changes status; provider errors retain the pending observation for follow-up.
 Manual refund CRUD rejects provider-backed payments. Provider refund ledger
 entries are immutable, and repeated confirmations cannot duplicate them. This
 command observes existing refunds and never requests a charge or refund.
+
+When a historical manual refund already has the exact provider reference and
+amount, confirmation binds that existing entry instead of crediting it twice.
+Multiple matching entries, different payments, or differing amounts fail closed
+for operator review; no historical entries are deleted or silently rewritten.
