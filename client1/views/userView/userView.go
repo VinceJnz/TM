@@ -1,6 +1,7 @@
 package userView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -12,7 +13,7 @@ import (
 	"client1/v2/views/utils/viewHelpers"
 	safehtml "html"
 	"log"
-	"math/big"
+
 	"net/http"
 	"net/url"
 	"strconv"
@@ -51,36 +52,19 @@ const (
 
 const ApiURL = "/users"
 
-type TableData struct {
-	ID                  int       `json:"id"`
-	Name                string    `json:"name"`
-	Username            string    `json:"username"`
-	Email               string    `json:"email"`
-	Address             string    `json:"user_address"`
-	MemberCode          string    `json:"member_code"`
-	BirthDate           time.Time `json:"user_birth_date"` //This can be used to calculate what age group to apply
-	UserAgeGroupID      int       `json:"user_age_group_id"`
-	MemberStatusID      int       `json:"member_status_id"`
-	Password            string    `json:"user_password"` //This will probably not be used (see: salt, verifier)
-	Salt                []byte    `json:"salt"`
-	Verifier            *big.Int  `json:"verifier"` //[]byte can be converted to/from *big.Int using GobEncode(), GobDecode()
-	UserAccountStatusID int       `json:"user_account_status_id"`
-	UserAccountHidden   bool      `json:"user_account_hidden"`
-	Created             time.Time `json:"created"`
-	Modified            time.Time `json:"modified"`
-}
+type TableData = api.AccountDTO
 
 type UI struct {
-	Name                js.Value
-	Username            js.Value
-	Email               js.Value
-	Address             js.Value
-	MemberCode          js.Value
-	BirthDate           js.Value
-	UserAgeGroupID      js.Value
-	MemberStatusID      js.Value
-	UserAccountStatusID js.Value
-	UserAccountHidden   js.Value
+	Name            js.Value
+	Username        js.Value
+	Email           js.Value
+	Address         js.Value
+	MemberCode      js.Value
+	BirthDate       js.Value
+	UserAgeGroupID  js.Value
+	MemberStatusID  js.Value
+	AccountStatusID js.Value
+	AccountHidden   js.Value
 }
 
 type children struct {
@@ -323,9 +307,9 @@ func (editor *ItemEditor) populateEditForm() {
 
 	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus")
 
-	localObjs.UserAccountStatusID, editor.UiComponents.UserAccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.UserAccountStatusID, "Account Status", "itemAccountStatus")
+	localObjs.AccountStatusID, editor.UiComponents.AccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.AccountStatusID, "Account Status", "itemAccountStatus")
 
-	localObjs.UserAccountHidden, editor.UiComponents.UserAccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.UserAccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
+	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
 
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
@@ -335,8 +319,8 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.BirthDate)
 	form.Call("appendChild", localObjs.UserAgeGroupID)
 	form.Call("appendChild", localObjs.MemberStatusID)
-	form.Call("appendChild", localObjs.UserAccountStatusID)
-	form.Call("appendChild", localObjs.UserAccountHidden)
+	form.Call("appendChild", localObjs.AccountStatusID)
+	form.Call("appendChild", localObjs.AccountHidden)
 
 	// Add Security Groups section if user is being edited (has an ID)
 	if editor.CurrentRecord.ID > 0 {
@@ -425,12 +409,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println("Error parsing User Status:", err)
 		return nil
 	}
-	editor.CurrentRecord.UserAccountStatusID, err = strconv.Atoi(editor.UiComponents.UserAccountStatusID.Get("value").String())
+	editor.CurrentRecord.AccountStatusID, err = strconv.Atoi(editor.UiComponents.AccountStatusID.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing User Account Status:", err)
 		return nil
 	}
-	editor.CurrentRecord.UserAccountHidden = editor.UiComponents.UserAccountHidden.Get("checked").Bool()
+	editor.CurrentRecord.AccountHidden = editor.UiComponents.AccountHidden.Get("checked").Bool()
 
 	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
@@ -453,8 +437,12 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
+	reason := js.Global().Call("prompt", "Reason for this account change")
+	if reason.IsNull() || strings.TrimSpace(reason.String()) == "" {
+		return
+	}
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+	if err := editor.client.RequestWithHeaders(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.AccountPayload(item), map[string]string{"X-Change-Reason": reason.String()}); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
@@ -470,7 +458,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPost, ApiURL, nil, api.AccountPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateAdding)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
@@ -515,9 +503,13 @@ func (editor *ItemEditor) FetchItems() {
 	}()
 }
 func (editor *ItemEditor) deleteItem(itemID int) {
+	reason := js.Global().Call("prompt", "Reason for deleting this account")
+	if reason.IsNull() || strings.TrimSpace(reason.String()) == "" {
+		return
+	}
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		if err := editor.client.Request(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil); err != nil {
+		if err := editor.client.RequestWithHeaders(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil, map[string]string{"X-Change-Reason": reason.String()}); err != nil {
 			editor.updateStateDisplay(ItemStateNone)
 			editor.onCompletionMsg("Change failed; please retry.")
 			return
@@ -726,9 +718,9 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 
 	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus")
 
-	localObjs.UserAccountStatusID, editor.UiComponents.UserAccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.UserAccountStatusID, "Account Status", "itemAccountStatus")
+	localObjs.AccountStatusID, editor.UiComponents.AccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.AccountStatusID, "Account Status", "itemAccountStatus")
 
-	localObjs.UserAccountHidden, editor.UiComponents.UserAccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.UserAccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
+	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
 
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
@@ -738,8 +730,8 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 	form.Call("appendChild", localObjs.BirthDate)
 	form.Call("appendChild", localObjs.UserAgeGroupID)
 	form.Call("appendChild", localObjs.MemberStatusID)
-	form.Call("appendChild", localObjs.UserAccountStatusID)
-	form.Call("appendChild", localObjs.UserAccountHidden)
+	form.Call("appendChild", localObjs.AccountStatusID)
+	form.Call("appendChild", localObjs.AccountHidden)
 
 	// Create submit and cancel buttons
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
