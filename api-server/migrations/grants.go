@@ -5,21 +5,45 @@ import (
 	"errors"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"strings"
 )
 
-// GrantRuntimeAccess is an explicit operator action, not application startup.
-// Migration history stays read-only to the API role.
+// Explicit capabilities: adding a table never silently grants runtime access.
+func runtimePolicy() map[string]string {
+	policy := map[string]string{}
+	for _, name := range strings.Fields(`at_booking_people at_bookings at_group_bookings at_trip_cost_groups at_trip_costs at_trips at_payments at_refunds at_booking_vouchers at_checkout_reservations et_access_level et_access_scope et_booking_status et_member_status et_resource et_seasons et_trip_difficulty et_trip_status et_trip_type et_user_account_status et_user_age_groups st_group st_group_resource st_token st_user_credentials st_user_group st_users st_auth_rate_limits`) {
+		policy[name] = "SELECT,INSERT,UPDATE,DELETE"
+	}
+	policy["schema_migrations"] = "SELECT"
+	policy["at_financial_audit"] = "SELECT"
+	for _, name := range []string{"at_stripe_events", "at_checkout_quotes", "at_checkout_reconciliations"} {
+		policy[name] = "SELECT,INSERT"
+	}
+	policy["at_checkout_attempts"] = "SELECT,INSERT,UPDATE (session_id,checkout_url,state,reconcile_after,reconcile_failures)"
+	policy["at_provider_refunds"] = "SELECT,INSERT,UPDATE (status,amount_minor,checked_at,reconcile_after,reconcile_failures)"
+	policy["at_payment_reviews"] = "SELECT,INSERT,UPDATE (last_seen,failures,resolved_at,resolution,actor,evidence)"
+	return policy
+}
+
+// This explicit operator command replaces previous broad grants atomically.
 func GrantRuntimeAccess(ctx context.Context, db *sqlx.DB, role string) error {
 	var privileged bool
-	if err := db.GetContext(ctx, &privileged, "SELECT rolsuper OR rolcreaterole OR rolcreatedb FROM pg_roles WHERE rolname=$1", role); err != nil {
-		return errors.New("runtime role does not exist")
+	if err := db.GetContext(ctx, &privileged, `SELECT EXISTS(SELECT 1 FROM pg_roles r WHERE (r.rolsuper OR r.rolcreaterole OR r.rolcreatedb) AND pg_has_role($1::text,r.oid,'MEMBER'))`, role); err != nil {
+		return errors.New("runtime role unavailable")
 	}
 	if privileged {
-		return errors.New("runtime role must not have administrative privileges")
+		return errors.New("runtime role must not inherit administrative privileges")
 	}
 	var schema string
-	if err := db.GetContext(ctx, &schema, "SELECT current_schema()"); err != nil {
+	if err := db.GetContext(ctx, &schema, `SELECT current_schema()`); err != nil {
 		return err
+	}
+	var owner bool
+	if err := db.GetContext(ctx, &owner, `SELECT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$2 AND pg_has_role($1::text,c.relowner,'MEMBER')) OR EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$2 AND pg_has_role($1::text,nspowner,'MEMBER'))`, role, schema); err != nil {
+		return err
+	}
+	if owner {
+		return errors.New("runtime role must not own or inherit ownership of application objects")
 	}
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -27,32 +51,51 @@ func GrantRuntimeAccess(ctx context.Context, db *sqlx.DB, role string) error {
 	}
 	defer tx.Rollback()
 	name := pq.QuoteIdentifier(role)
-	if _, err := tx.ExecContext(ctx, "GRANT USAGE ON SCHEMA "+pq.QuoteIdentifier(schema)+" TO "+name); err != nil {
+	namespace := pq.QuoteIdentifier(schema)
+	if _, err = tx.ExecContext(ctx, "REVOKE CREATE ON SCHEMA "+namespace+" FROM "+name); err != nil {
+		return err
+	}
+	var canCreate bool
+	if err = tx.GetContext(ctx, &canCreate, `SELECT has_schema_privilege($1,$2,'CREATE')`, role, schema); err != nil {
+		return err
+	}
+	if canCreate {
+		return errors.New("remove inherited/PUBLIC schema CREATE before granting runtime access")
+	}
+	if _, err = tx.ExecContext(ctx, "GRANT USAGE ON SCHEMA "+namespace+" TO "+name); err != nil {
 		return err
 	}
 	var tables []string
-	if err := tx.SelectContext(ctx, &tables, `SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND left(table_name,3) IN('at_','et_','st_')`); err != nil {
+	if err = tx.SelectContext(ctx, &tables, `SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND (left(table_name,3) IN ('at_','et_','st_') OR table_name='schema_migrations')`); err != nil {
 		return err
 	}
+	if _, err = tx.ExecContext(ctx, "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "+namespace+" FROM "+name); err != nil {
+		return err
+	}
+	policy := runtimePolicy()
 	for _, table := range tables {
-		if table == "at_financial_audit" {
-			if _, err := tx.ExecContext(ctx, "REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON "+pq.QuoteIdentifier(table)+" FROM "+name); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, "GRANT SELECT ON "+pq.QuoteIdentifier(table)+" TO "+name); err != nil {
-				return err
-			}
-			continue
-		}
-		if _, err := tx.ExecContext(ctx, "GRANT SELECT,INSERT,UPDATE,DELETE ON "+pq.QuoteIdentifier(table)+" TO "+name); err != nil {
+		qualified := namespace + "." + pq.QuoteIdentifier(table)
+		if _, err = tx.ExecContext(ctx, "REVOKE ALL PRIVILEGES ON "+qualified+" FROM "+name); err != nil {
 			return err
 		}
-	}
-	if _, err := tx.ExecContext(ctx, "GRANT SELECT ON schema_migrations TO "+name); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, "GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA "+pq.QuoteIdentifier(schema)+" TO "+name); err != nil {
-		return err
+		privileges, known := policy[table]
+		if !known {
+			continue
+		}
+		if _, err = tx.ExecContext(ctx, "GRANT "+privileges+" ON "+qualified+" TO "+name); err != nil {
+			return err
+		}
+		if strings.Contains(privileges, "INSERT") {
+			var sequence *string
+			if err = tx.GetContext(ctx, &sequence, `SELECT CASE WHEN EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=$1::text::regclass AND attname='id' AND NOT attisdropped) THEN pg_get_serial_sequence($1::text,'id') END`, qualified); err != nil {
+				return err
+			}
+			if sequence != nil {
+				if _, err = tx.ExecContext(ctx, "GRANT USAGE,SELECT ON SEQUENCE "+*sequence+" TO "+name); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return tx.Commit()
 }
