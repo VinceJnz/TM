@@ -79,4 +79,17 @@ func TestOutboxRollbackRetryLeaseAndCompletion(t *testing.T) {
 	if count != 1 {
 		t.Fatal(count)
 	}
+	// An informational notification must not freeze an unpaid booking forever.
+	if _, err = db.Exec("DELETE FROM at_bookings WHERE id=1"); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.Get(&count, "SELECT count(*) FROM at_notification_outbox WHERE booking_id IS NULL AND sent_at IS NOT NULL"); err != nil || count != 1 {
+		t.Fatal("notification evidence lost", count, err)
+	}
+	if _, err = db.Exec("UPDATE at_notification_outbox SET sent_at=NULL,available_at=CURRENT_TIMESTAMP"); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Batch(ctx, 10); err != nil || m.calls != 2 {
+		t.Fatal("deleted booking notification sent", err, m.calls)
+	}
 }

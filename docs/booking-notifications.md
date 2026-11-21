@@ -11,3 +11,7 @@ email. This is appropriate for informational booking mail; it never repeats a
 financial operation. Existing bookings are not backfilled. Monitor unsent message
 age and investigate sustained retries. Recipient/body fields contain personal
 information: restrict database access and establish retention before deployment.
+
+Migration 0018 preserves the existing ability to delete unpaid bookings. Their
+notification history retains its content with a NULL booking reference. Pending
+messages for deleted bookings are skipped by the delivery worker.

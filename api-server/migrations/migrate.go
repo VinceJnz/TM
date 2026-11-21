@@ -20,7 +20,7 @@ import (
 //go:embed *.sql
 var files embed.FS
 
-const Latest = "0017_booking_notifications.sql"
+const Latest = "0018_notification_booking_lifecycle.sql"
 
 func Names() []string {
 	entries, _ := files.ReadDir(".")
