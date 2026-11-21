@@ -7,6 +7,13 @@ foreach($entry in @(@('DEV_MODE','true'),@('EMAIL_DEBUG_ADDR','synthetic@example
  try { Assert-ProductionEnvironment $bad } catch {$rejected=$true}
  if(!$rejected){throw 'Unsafe production configuration accepted.'}
 }
+foreach($flag in @('EMAIL_REDIRECT_ALL','STRIPE_TEST_MODE')) {
+ foreach($value in @('TRUE','1','t','invalid','')) {
+  $bad=$good.Clone();$bad[$flag]=$value;$rejected=$false
+  try { Assert-ProductionEnvironment $bad } catch {$rejected=$true}
+  if(!$rejected){throw 'Ambiguous or enabled production test flag accepted.'}
+ }
+}
 $empty=[IO.Path]::GetTempFileName();$previous=@{}
 $values=@{TM_API_ENV_FILE=$empty;TM_API_DB_PASSWORD='synthetic-api';TM_DB_PASSWORD='synthetic-db';TM_EMAIL_REDIRECT_ALL='false';TM_EMAIL_REDIRECT_TO='synthetic@example.test';TM_STRIPE_TEST_MODE='false'}
 try {

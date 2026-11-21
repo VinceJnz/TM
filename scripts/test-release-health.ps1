@@ -30,7 +30,7 @@ try {
 # Validate the actual release override without loading workstation credentials.
 $emptyFile=[IO.Path]::GetTempFileName()
 $previous=@{}
-$testValues=@{TM_API_ENV_FILE=$emptyFile;TM_API_DB_PASSWORD='synthetic-api';TM_DB_PASSWORD='synthetic-db';TM_RELEASE_API_IMAGE=('registry.example.test/tm@sha256:'+('a'*64))}
+$testValues=@{TM_API_ENV_FILE=$emptyFile;TM_API_DB_PASSWORD='synthetic-api';TM_DB_PASSWORD='synthetic-db';TM_EMAIL_REDIRECT_ALL='false';TM_EMAIL_REDIRECT_TO='';TM_STRIPE_TEST_MODE='false';TM_RELEASE_API_IMAGE=('registry.example.test/tm@sha256:'+('a'*64))}
 try {
     foreach ($key in $testValues.Keys) { $previous[$key]=[Environment]::GetEnvironmentVariable($key,'Process');[Environment]::SetEnvironmentVariable($key,$testValues[$key],'Process') }
     $root=Split-Path -Parent $PSScriptRoot

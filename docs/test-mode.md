@@ -14,6 +14,21 @@ For Compose, use root environment names `TM_EMAIL_REDIRECT_ALL`,
 user's email address; it is not selected from an untrusted request or role name.
 No real address or secret has been committed or enabled by this change.
 
+For the root Compose `.env`, the corresponding test controls are:
+
+```dotenv
+TM_EMAIL_REDIRECT_ALL=true
+TM_EMAIL_REDIRECT_TO=tester@example.test
+TM_STRIPE_TEST_MODE=true
+```
+
+Keep `PAYMENT_KEY` in the API's runtime environment file (normally
+`api-server/.env`) or injected secret configuration, using your own Stripe test
+key. Compose's explicit environment entries take precedence over the API env
+file for the three test flags. Recreate the application container after changing
+runtime settings. The production deployment script rejects enabled or ambiguous
+test flags; use a separate controlled testing deployment.
+
 Email redirection applies to OTPs, registration, booking/outbox notifications,
 email-change verification and renewed Gmail services. New Stripe Checkout customer
 email addresses are redirected too. It does not change registered addresses in

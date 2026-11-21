@@ -1,8 +1,8 @@
 function Assert-ProductionEnvironment($Environment) {
     if ([string]$Environment.DEV_MODE -cne 'false') { throw 'Production requires DEV_MODE=false.' }
     if (![string]::IsNullOrWhiteSpace([string]$Environment.EMAIL_DEBUG_ADDR)) { throw 'Production must not use legacy email debug overrides.' }
-    if ([string]$Environment.EMAIL_REDIRECT_ALL -ceq 'true' -or ![string]::IsNullOrWhiteSpace([string]$Environment.EMAIL_REDIRECT_TO)) { throw 'Production must not redirect user email.' }
-    if ([string]$Environment.STRIPE_TEST_MODE -ceq 'true') { throw 'Production must not use Stripe test mode; use a separate test deployment.' }
+    if ([string]$Environment.EMAIL_REDIRECT_ALL -cne 'false' -or ![string]::IsNullOrWhiteSpace([string]$Environment.EMAIL_REDIRECT_TO)) { throw 'Production requires EMAIL_REDIRECT_ALL=false and no redirect address.' }
+    if ([string]$Environment.STRIPE_TEST_MODE -cne 'false') { throw 'Production requires STRIPE_TEST_MODE=false; use a separate test deployment.' }
 }
 
 function Assert-ReleaseDigest {
