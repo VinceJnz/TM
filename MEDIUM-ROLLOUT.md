@@ -265,3 +265,19 @@ Attachment re-reads and locks the attempt after acquiring the trip/booking locks
 checks a conflicting provider session, and requires exactly one booking row to be
 updated. A conflicting attachment rolls back its quote and attempt changes. Tests
 cover simultaneous conflicting responses and retry of the winning response.
+
+## Architecture follow-up: checkout lifecycle and recovery
+
+Apply migration 0007 and refresh runtime grants. Attempts now retain pending,
+attached, paid or expired state; confirmed expired history no longer freezes input.
+POST /bookings/checkout/reconcile/{id} uses booking POST capability and additionally
+checks ownership. Provider lookup happens outside database transactions. Confirmed
+expiration releases the hold, clears the snapshot price for repricing, and records
+an audit entry without deleting attempts or quotes. A subsequent checkout creates
+a new attempt. Paid provider results use normal quote validation/finalization.
+A lost response is looked up by attempt metadata within a bounded provider listing;
+absence is accepted only after provider expiry plus the 15-minute grace interval.
+Lookup errors, ambiguous results, open sessions and unconfirmed outcomes never
+release capacity. Late paid sessions without capacity still require a financial
+operator to reconcile/refund; they are not silently admitted or auto-refunded.
+The new checkout service separates provider orchestration from HTTP and SQL.

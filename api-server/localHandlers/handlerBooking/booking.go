@@ -73,6 +73,7 @@ func New(appConf *appCore.Config) *Handler {
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutes(r *mux.Router, baseUrlBooking, baseUrlTrip string) {
 	helpers.AddRouteGroup(r, baseUrlBooking, h, "bookings")
+	helpers.CapabilityRoute(r, baseUrlBooking+"/checkout/reconcile/{id:[0-9]+}", "bookings", h.CheckoutReconcile).Methods("POST")
 	h.RegisterRoutesStripe(r, baseUrlBooking)
 	helpers.CapabilityRoute(r, baseUrlTrip+"/{id:[0-9]+}"+baseUrlBooking, "bookings", h.GetList).Methods("GET")
 }

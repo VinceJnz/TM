@@ -1,6 +1,7 @@
 package handlerBooking
 
 import (
+	"api-server/v2/app/services/checkout"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
@@ -120,40 +121,36 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 	if id <= 0 {
 		return
 	}
-	attempt, err := paymentLedger.Prepare(r.Context(), h.appConf.Db, id, user.UserID, user.Email, h.appConf.PaymentSvc.Domain)
+	result, err := checkout.New(h.appConf.Db, h.appConf.PaymentSvc).Start(r.Context(), id, user.UserID, user.Email, h.appConf.PaymentSvc.Domain)
 	if err != nil {
-		http.Error(w, "booking unavailable for checkout", 409)
+		code := 503
+		if errors.Is(err, paymentLedger.ErrCheckoutUnavailable) || errors.Is(err, paymentLedger.ErrAttemptExpired) || errors.Is(err, paymentLedger.ErrCapacity) {
+			code = 409
+		}
+		http.Error(w, "checkout unavailable; reconcile the booking or retry", code)
 		return
 	}
-	if attempt.SessionID.Valid && attempt.URL.Valid {
-		helpers.WriteJSON(w, 200, CheckoutCreateResponse{CheckoutURL: attempt.URL.String, SessionID: attempt.SessionID.String, Status: "created"})
+	helpers.WriteJSON(w, 200, CheckoutCreateResponse{CheckoutURL: result.URL, SessionID: result.ID, Status: "created"})
+}
+func (h *Handler) CheckoutReconcile(w http.ResponseWriter, r *http.Request) {
+	user := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if user == nil {
 		return
 	}
-	params := &stripe.CheckoutSessionParams{
-		LineItems: []*stripe.CheckoutSessionLineItemParams{{PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-			Currency: stripe.String("nzd"), UnitAmount: stripe.Int64(attempt.Amount), ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{Name: stripe.String(attempt.Title), Description: stripe.String(attempt.Description)},
-		}, Quantity: stripe.Int64(1)}},
-		Mode: stripe.String("payment"), ExpiresAt: stripe.Int64(attempt.Expires.Unix()),
-		SuccessURL:      stripe.String(attempt.Domain + "/bookings/checkout/success/" + strconv.Itoa(id)),
-		CancelURL:       stripe.String(attempt.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(id)),
-		InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{Enabled: stripe.Bool(true)},
+	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
 	}
-	if attempt.Email != "" {
-		params.CustomerEmail = stripe.String(attempt.Email)
+	if h.appConf.PaymentSvc == nil || h.appConf.PaymentSvc.Client == nil {
+		http.Error(w, "payment service unavailable", 503)
+		return
 	}
-	params.Context = r.Context()
-	params.SetIdempotencyKey("tm-checkout-" + attempt.ID)
-	params.AddMetadata("tm_attempt", attempt.ID)
-	checkout, err := session.New(params)
+	outcome, err := checkout.New(h.appConf.Db, h.appConf.PaymentSvc).Reconcile(r.Context(), id, user.UserID)
 	if err != nil {
-		http.Error(w, "checkout temporarily unavailable; retry this booking", 503)
+		http.Error(w, "checkout reconciliation unavailable", 409)
 		return
 	}
-	if err = paymentLedger.Attach(r.Context(), h.appConf.Db, attempt.ID, checkout.ID, checkout.URL, attempt.Amount); err != nil {
-		http.Error(w, "checkout persistence unavailable; retry this booking", 503)
-		return
-	}
-	helpers.WriteJSON(w, 200, CheckoutCreateResponse{CheckoutURL: checkout.URL, SessionID: checkout.ID, Status: "created"})
+	helpers.WriteJSON(w, 200, map[string]string{"status": outcome})
 }
 func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 	var err error

@@ -70,6 +70,9 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 	if err != nil {
 		return false, err
 	}
+	if _, err := tx.ExecContext(ctx, `UPDATE at_checkout_attempts SET state='paid' WHERE session_id=$1 AND state<>'expired'`, sessionID); err != nil {
+		return false, err
+	}
 	if err := Sync(ctx, tx, bookingID); err != nil {
 		return false, err
 	}

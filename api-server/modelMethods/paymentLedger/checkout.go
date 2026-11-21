@@ -11,6 +11,7 @@ import (
 )
 
 type Attempt struct {
+	State       string         `db:"state"`
 	ID          string         `db:"id"`
 	BookingID   int            `db:"booking_id"`
 	Amount      int64          `db:"amount_minor"`
@@ -23,8 +24,9 @@ type Attempt struct {
 	URL         sql.NullString `db:"checkout_url"`
 }
 
-const attemptColumns = `id,booking_id,amount_minor,email,title,description,domain,expires_at,session_id,checkout_url`
+const attemptColumns = `id,booking_id,amount_minor,email,title,description,domain,expires_at,session_id,checkout_url,state`
 
+var ErrAttemptExpired = errors.New("checkout attempt requires provider reconciliation")
 var ErrCheckoutUnavailable = errors.New("booking unavailable for checkout")
 
 // Prepare durably records the quote, capacity hold and immutable provider inputs
@@ -43,12 +45,12 @@ func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, doma
 	if err = tx.GetContext(ctx, &id, `SELECT id FROM at_bookings WHERE id=$1 AND owner_id=$2 AND booking_status_id=1 AND NOT EXISTS(SELECT 1 FROM at_payments WHERE booking_id=$1) FOR UPDATE`, bookingID, owner); err != nil {
 		return a, ErrCheckoutUnavailable
 	}
-	err = tx.GetContext(ctx, &a, `SELECT `+attemptColumns+` FROM at_checkout_attempts WHERE booking_id=$1 ORDER BY expires_at DESC LIMIT 1`, bookingID)
+	err = tx.GetContext(ctx, &a, `SELECT `+attemptColumns+` FROM at_checkout_attempts WHERE booking_id=$1 AND state IN ('pending','attached') ORDER BY expires_at DESC LIMIT 1`, bookingID)
 	if err == nil {
 		// Do not create a second external session automatically after an uncertain
 		// outcome. Expired attempts are reconciled explicitly, never retried blindly.
 		if !time.Now().Before(a.Expires) {
-			return a, ErrCheckoutUnavailable
+			return a, ErrAttemptExpired
 		}
 		return a, tx.Commit()
 	}
@@ -114,10 +116,13 @@ func Attach(ctx context.Context, db *sqlx.DB, key, sessionID, url string, amount
 	if err = tx.GetContext(ctx, &a, `SELECT `+attemptColumns+` FROM at_checkout_attempts WHERE id=$1 FOR UPDATE`, key); err != nil {
 		return err
 	}
+	if a.State == "expired" {
+		return ErrCheckoutUnavailable
+	}
 	if a.SessionID.Valid && a.SessionID.String != sessionID {
 		return ErrInvalidPayment
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE at_checkout_attempts SET session_id=$2,checkout_url=COALESCE(NULLIF($3,''),checkout_url) WHERE id=$1`, key, sessionID, url)
+	_, err = tx.ExecContext(ctx, `UPDATE at_checkout_attempts SET state=CASE WHEN state='paid' THEN state ELSE 'attached' END,session_id=$2,checkout_url=COALESCE(NULLIF($3,''),checkout_url) WHERE id=$1`, key, sessionID, url)
 	if err != nil {
 		return err
 	}

@@ -15,6 +15,13 @@ func TestDurableAttemptRetriesAndWebhookRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL WHERE id=11;DELETE FROM at_checkout_quotes;`+string(migration))
+	lifecycle, err := os.ReadFile("../../migrations/0007_checkout_lifecycle.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(string(lifecycle)); err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	first, err := Prepare(ctx, db, 11, 1, "one@example.test", "https://example.test/api/v1")
 	if err != nil {
@@ -56,6 +63,13 @@ func TestConcurrentConflictingAttachmentsHaveOneWinner(t *testing.T) {
 		t.Fatal(err)
 	}
 	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL WHERE id=11;DELETE FROM at_checkout_quotes;`+string(migration))
+	lifecycle, err := os.ReadFile("../../migrations/0007_checkout_lifecycle.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(string(lifecycle)); err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	a, err := Prepare(ctx, db, 11, 1, "one@example.test", "https://example.test")
 	if err != nil {
