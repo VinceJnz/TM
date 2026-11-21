@@ -91,6 +91,7 @@ type ItemEditor struct {
 	ActionHandled  bool
 	PaymentOptions []paymentOption
 	LastFetchError string
+	Page           httpProcessor.Page
 }
 
 func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
@@ -457,7 +458,9 @@ func (editor *ItemEditor) FetchItems() {
 			fetchFailed := false
 			editor.LastFetchError = ""
 			if editor.ContextPayID > 0 {
-				editor.client.NewRequest(http.MethodGet, ApiURL+"/payment/"+strconv.Itoa(editor.ContextPayID), &records, nil,
+				editor.client.PageRequest(&editor.Page,
+
+					http.MethodGet, ApiURL+"/payment/"+strconv.Itoa(editor.ContextPayID), &records, nil,
 					func(err error) {},
 					func(err error) {
 						fetchFailed = true
@@ -465,7 +468,9 @@ func (editor *ItemEditor) FetchItems() {
 						editor.onCompletionMsg("Failed to load refund records: " + err.Error())
 					})
 			} else {
-				editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil,
+				editor.client.PageRequest(&editor.Page,
+
+					http.MethodGet, ApiURL, &records, nil,
 					func(err error) {},
 					func(err error) {
 						fetchFailed = true
@@ -585,6 +590,13 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", inlineFormHost)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
+	viewHelpers.PageControls(editor.
+		ListDiv, &editor.Page, len(editor.Records), func() {
+		editor.
+			RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+	})
+
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {

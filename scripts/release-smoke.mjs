@@ -37,7 +37,12 @@ const cookie = login.headers['set-cookie']?.find(item => item.startsWith('sessio
 assert(cookie, 'login did not create a session');
 const bookings = await request(`${prefix}/bookings`, 'GET', undefined, cookie);
 assert.equal(bookings.status, 200);
-assert.deepEqual(JSON.parse(bookings.body).map(item => item.owner_id), [1], 'another member booking was exposed');
+assert.equal(JSON.parse(bookings.body).length, 100, 'collection was not bounded');
+assert(JSON.parse(bookings.body).every(item => item.owner_id === 1), 'another member booking was exposed');
+assert.equal(bookings.headers['x-next-offset'], '100');
+const singleTrip = await request(`${prefix}/trips/1`, 'GET', undefined, cookie);
+assert.equal(singleTrip.status, 200, 'single-record trip query failed');
+assert.equal(JSON.parse(singleTrip.body)[0].id, 1);
 assert.equal((await request(`${prefix}/refunds`, 'GET', undefined, cookie)).status, 403);
 assert.equal((await request(`${prefix}/securityGroup`, 'GET', undefined, cookie)).status, 403);
 const asset = await request('/main.wasm');
@@ -88,6 +93,21 @@ try {
     await delay(100);
   }
   assert(rendered, 'WASM did not render the authenticated UI with the runtime API prefix');
+  await send('Runtime.evaluate', {expression: "location.hash='/mybookings'"});
+  const pager = "Array.from(document.querySelectorAll('.tm-pagination')).find(el=>el.getClientRects().length>0)";
+  async function waitForPage(label) {
+    for (let i=0;i<120;i++) {
+      const result=await send('Runtime.evaluate', {expression:`(${pager})?.textContent.includes('${label}')`,returnByValue:true});
+      if (result.result?.value===true) return;
+      await delay(100);
+    }
+    assert.fail(`visible list page did not render: ${label}`);
+  }
+  await waitForPage('Items 1–100');
+  await send('Runtime.evaluate', {expression:`Array.from((${pager}).querySelectorAll('button')).find(button=>button.textContent==='Next').click()`});
+  await waitForPage('Items 101–106');
+  await send('Runtime.evaluate', {expression:`Array.from((${pager}).querySelectorAll('button')).find(button=>button.textContent==='Previous').click()`});
+  await waitForPage('Items 1–100');
   assert(requests.some(url => url.startsWith(`${origin}${prefix}/auth/menuUser`)), 'frontend did not use its current origin/prefix');
   assert(!requests.some(url => url.includes('localhost:8086')), 'frontend retained a compiled localhost URL');
   assert.equal(exceptions.length, 0, 'browser runtime exception');

@@ -324,3 +324,14 @@ ID order. Parent mappings are rechecked under lock; a concurrent reassignment
 returns a retryable conflict instead of mutating an unlocked parent. Webhook and
 recovery paths retain trip-before-booking locking. Regression tests cover unrelated
 trip progress, conflicting-lock cancellation and reverse cross-booking lock order.
+
+## Architecture follow-up: user-controlled collection pages
+
+Growing booking, participant, user, payment/refund, trip, voucher and permission
+list views now own their paging state and show Previous/Next controls. They fetch
+one page per action; changing a nested parent resets the page. Lookup/dropdown
+callers retain legacy complete-option loading with its safety ceiling. Participant
+collection endpoints now use the bounded shared query path. Chromium verification
+uses 106 synthetic bookings and clicks Next and Previous, in addition to checking
+ownership and single-record trip reads. Node/WASM tests verify that one page does
+not trigger automatic subsequent downloads; the TinyGo build also passes.

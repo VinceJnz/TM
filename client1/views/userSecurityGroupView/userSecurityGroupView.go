@@ -87,6 +87,7 @@ type ItemEditor struct {
 	RecordState   RecordState
 	Children      children
 	GroupRecords  []GroupRecord
+	Page          httpProcessor.Page
 }
 
 // New creates a new ItemEditor instance
@@ -329,7 +330,9 @@ func (editor *ItemEditor) FetchItems() {
 		}()
 		// Fetch user's security group assignments
 		go func() {
-			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
+			editor.client.PageRequest(&editor.Page,
+
+				http.MethodGet, ApiURL, &records, nil)
 			editor.Records = records
 			log.Printf("%sFetchItems() UserGroupAssignments fetched, count=%d", debugTag, len(records))
 			done <- true
@@ -451,6 +454,14 @@ func (editor *ItemEditor) populateItemList() {
 		editor.ListDiv.Call("appendChild", editContainer)
 	}
 	log.Printf("%spopulateItemList() Complete, displayed items for ParentID=%d", debugTag, editor.ParentID)
+	viewHelpers.PageControls(editor.
+		ListDiv,
+		&editor.Page, len(editor.Records), func() {
+			editor.RecordState = RecordStateReloadRequired
+			editor.
+				FetchItems()
+		})
+
 }
 
 func (editor *ItemEditor) toggleGroupEditForm(record TableData) {

@@ -3,11 +3,10 @@ package handlerBookingPeople
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
@@ -58,56 +57,20 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if session == nil || session.UserID <= 0 {
 		return
 	}
-	records := []models.BookingPeople{}
-	err := h.appConf.Db.SelectContext(r.Context(), &records, qryGetAll, session.UserID, session.AccessScope)
-	if err == sql.ErrNoRows {
-		log.Printf("%v.GetAll %v\n", debugTag, err)
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf(debugTag+"GetAll %v\n", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(records); err != nil {
-		log.Printf("%sGetAll failed to encode response: %v", debugTag, err)
-	}
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll, session.UserID, session.AccessScope)
 }
-
-// Get: retrieves and returns a list of records identified by parent id
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID <= 0 {
 		return
 	}
-	params := mux.Vars(r)
-	parentID, err := strconv.Atoi(params["id"])
-	if err != nil {
-		log.Printf("%v.GetList %v\n", debugTag, err)
-		http.Error(w, "Invalid record ID", http.StatusBadRequest)
+	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
 		return
 	}
-
-	records := []models.BookingPeople{}
-	err = h.appConf.Db.SelectContext(r.Context(), &records, qryGetList, parentID, session.UserID, session.AccessScope)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Record not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("%v.GetList %v\n", debugTag, err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(records); err != nil {
-		log.Printf("%sGetList failed to encode response: %v", debugTag, err)
-	}
+	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetList, id, session.UserID, session.AccessScope)
 }
-
-// Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID <= 0 {

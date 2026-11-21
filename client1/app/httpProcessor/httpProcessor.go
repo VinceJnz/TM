@@ -84,7 +84,7 @@ func (c *Client) NewRequest(method, url string, rxDataStru, txDataStru any, call
 	}
 }
 
-func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, callBacks ...func(error)) error {
+func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDataStru any, callBacks ...func(error)) error {
 	var err error
 	var req *http.Request
 	var res *http.Response
@@ -207,7 +207,7 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 			return err
 		}
 		// Follow bounded pages for legacy list views; never silently truncate their data.
-		if method == http.MethodGet && res.Header.Get("X-Next-Offset") != "" {
+		if page == nil && method == http.MethodGet && res.Header.Get("X-Next-Offset") != "" {
 			list := reflect.ValueOf(rxDataStru)
 			if list.Kind() != reflect.Pointer || list.Elem().Kind() != reflect.Slice {
 				err = fmt.Errorf("paginated response requires list destination")
@@ -260,6 +260,15 @@ func (c *Client) newRequest(method, url string, rxDataStru, txDataStru any, call
 
 	//returnData := &ReturnData{FieldNames: fieldNames}
 	//callBackSuccess(nil, returnData)
+	if page != nil {
+		page.Next = -1
+		if next := res.Header.Get("X-Next-Offset"); next != "" {
+			if offset, parseErr := strconv.Atoi(next); parseErr == nil {
+				page.Next = offset
+			}
+		}
+		page.Loading = false
+	}
 	callBackSuccess(nil)
 	return nil
 }

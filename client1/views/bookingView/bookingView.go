@@ -106,6 +106,7 @@ type ItemEditor struct {
 	ViewState     ViewState
 	RecordState   RecordState
 	Children      children
+	Page          httpProcessor.Page
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -448,7 +449,9 @@ func (editor *ItemEditor) FetchItems() {
 			localApiURL = "/trips/" + strconv.Itoa(editor.ParentData.ID) + ApiURL
 		}
 		go func() {
-			editor.client.NewRequest(http.MethodGet, localApiURL, &records, nil, success)
+			editor.client.PageRequest(&editor.Page,
+
+				http.MethodGet, localApiURL, &records, nil, success)
 		}()
 	}
 }
@@ -602,6 +605,12 @@ func (editor *ItemEditor) populateItemList() {
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
+	viewHelpers.PageControls(editor.
+		ListDiv, &editor.Page, len(editor.Records), func() {
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+	})
+
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {

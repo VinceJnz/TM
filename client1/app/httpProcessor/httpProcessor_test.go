@@ -82,3 +82,40 @@ func TestListFollowsNextOffsetWithoutLosingRows(t *testing.T) {
 		t.Fatal(records)
 	}
 }
+
+func TestExplicitPageRequestDoesNotDownloadFollowingPages(t *testing.T) {
+	old := js.Global().Get("fetch")
+	defer js.Global().Set("fetch", old)
+	js.Global().Set("__tmPageFetches", 0)
+	defer js.Global().Delete("__tmPageFetches")
+	js.Global().Set("fetch", js.Global().Get("Function").New("url", "options", `
+  globalThis.__tmPageFetches++;
+  const offset=Number(new URL(url).searchParams.get('offset'));
+  return Promise.resolve(new Response(JSON.stringify([{id:offset+1}]),{status:200,headers:{'X-Next-Offset':String(offset+1)}}));
+ `))
+	page := Page{Limit: 1}
+	client := New("https://example.test/custom/v9")
+	var records []struct {
+		ID int `json:"id"`
+	}
+	done := make(chan struct{}, 1)
+	go func() { client.PageRequest(&page, "GET", "/bookings", &records, nil); done <- struct{}{} }()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("page request blocked")
+	}
+	if len(records) != 1 || records[0].ID != 1 || page.Next != 1 || js.Global().Get("__tmPageFetches").Int() != 1 {
+		t.Fatal(records, page)
+	}
+	page.Offset = page.Next
+	go func() { client.PageRequest(&page, "GET", "/bookings", &records, nil); done <- struct{}{} }()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("next page blocked")
+	}
+	if records[0].ID != 2 || js.Global().Get("__tmPageFetches").Int() != 2 {
+		t.Fatal(records, page)
+	}
+}

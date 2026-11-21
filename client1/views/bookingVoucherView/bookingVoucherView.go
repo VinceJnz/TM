@@ -76,6 +76,7 @@ type ItemEditor struct {
 	ListDiv       js.Value
 	ViewState     ViewState
 	RecordState   RecordState
+	Page          httpProcessor.Page
 }
 
 func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
@@ -346,7 +347,9 @@ func (editor *ItemEditor) FetchItems() {
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
-			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
+			editor.client.PageRequest(&editor.Page,
+
+				http.MethodGet, ApiURL, &records, nil)
 			editor.Records = records
 			editor.populateItemList()
 			editor.updateStateDisplay(ItemStateNone)
@@ -420,6 +423,14 @@ func (editor *ItemEditor) populateItemList() {
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
+	viewHelpers.PageControls(editor.
+		ListDiv,
+		&editor.Page, len(editor.
+			Records), func() {
+			editor.RecordState = RecordStateReloadRequired
+			editor.FetchItems()
+		})
+
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
