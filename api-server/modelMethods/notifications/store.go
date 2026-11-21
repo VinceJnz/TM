@@ -18,7 +18,7 @@ func EnqueueBooking(ctx context.Context, tx *sqlx.Tx, booking, trip int, recipie
 }
 func (s Store) Claim(ctx context.Context) (Message, error) {
 	var v Message
-	err := s.DB.GetContext(ctx, &v, `WITH due AS(SELECT id FROM at_notification_outbox WHERE booking_id IS NOT NULL AND sent_at IS NULL AND available_at<=CURRENT_TIMESTAMP ORDER BY available_at,id FOR UPDATE SKIP LOCKED LIMIT 1) UPDATE at_notification_outbox n SET available_at=CURRENT_TIMESTAMP+interval '2 minutes',attempts=attempts+1 FROM due WHERE n.id=due.id RETURNING n.id,n.recipient,n.subject,n.body`)
+	err := s.DB.GetContext(ctx, &v, `WITH due AS(SELECT id FROM at_notification_outbox WHERE (booking_id IS NOT NULL OR account_id IS NOT NULL) AND sent_at IS NULL AND available_at<=CURRENT_TIMESTAMP ORDER BY available_at,id FOR UPDATE SKIP LOCKED LIMIT 1) UPDATE at_notification_outbox n SET available_at=CURRENT_TIMESTAMP+interval '2 minutes',attempts=attempts+1 FROM due WHERE n.id=due.id RETURNING n.id,n.recipient,n.subject,n.body`)
 	return v, err
 }
 func (s Store) Complete(ctx context.Context, id int64, success bool) error {

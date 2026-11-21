@@ -10,7 +10,7 @@ import (
 	"api-server/v2/models"
 	"errors"
 	"github.com/gorilla/mux"
-	"log"
+
 	"net/http"
 	"strconv"
 	"strings"
@@ -93,9 +93,6 @@ func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
 		return
 	}
 	if !update {
-		if err := helpers.NotifyAdminsUserReviewRequired("account-create", h.appConf.Db, h.appConf.EmailService(), h.appConf.Settings.AdminNotifyGroup, result.ID, result.Username, result.Email, result.Name); err != nil {
-			log.Print("account review notification unavailable")
-		}
 		helpers.WriteJSON(w, 201, result.ID)
 		return
 	}

@@ -14,6 +14,7 @@ type Mailer interface {
 	SendMail(string, string, string) (bool, error)
 }
 type Service struct {
+	ReviewGroups           []string
 	Store                  store.Store
 	Mailer                 func() Mailer
 	DeliveredRetentionDays int
@@ -23,6 +24,11 @@ type Service struct {
 func (s Service) Batch(ctx context.Context, limit int) error {
 	if limit < 1 || limit > 10 {
 		return errors.New("notification batch must be 1..10")
+	}
+	if len(s.ReviewGroups) > 0 {
+		if err := s.Store.ExpandReviews(ctx, s.ReviewGroups, limit); err != nil {
+			return err
+		}
 	}
 	for i := 0; i < limit; i++ {
 		if err := ctx.Err(); err != nil {

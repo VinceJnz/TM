@@ -21,6 +21,9 @@ type Status struct {
 }
 
 func NotificationAlerts(snapshot operations.Snapshot, maxAge time.Duration) []string {
+	if snapshot.PendingAccountReviews > 0 && snapshot.OldestAccountReviewSeconds > int64(maxAge.Seconds()) {
+		return []string{"account_review_queue_age"}
+	}
 	if snapshot.PendingNotifications > 0 && snapshot.OldestNotificationSeconds > int64(maxAge.Seconds()) {
 		return []string{"notification_queue_age"}
 	}

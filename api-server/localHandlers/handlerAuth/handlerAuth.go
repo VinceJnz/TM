@@ -361,19 +361,6 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%vVerifyRegistration user registered and verified: userID=%d (pending admin activation)", debugTag, userID)
 
-	if err := handlerHelpers.NotifyAdminsUserReviewRequired(
-		debugTag+"VerifyRegistration:",
-		h.appConf.Db,
-		h.appConf.EmailService(),
-		h.appConf.Settings.AdminNotifyGroup,
-		userID,
-		user.Username,
-		user.Email.String,
-		user.Name,
-	); err != nil {
-		log.Printf("%vVerifyRegistration failed to send admin notification: %v", debugTag, err)
-	}
-
 	handlerHelpers.WriteJSON(w, http.StatusCreated, map[string]any{
 		"status":  "account_verified",
 		"message": "account created and verified, pending admin approval",

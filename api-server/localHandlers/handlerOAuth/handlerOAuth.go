@@ -460,9 +460,9 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		}
 		http.SetCookie(w, &http.Cookie{Name: "oauth-registration", Path: "/", Domain: h.appConf.Settings.Host, MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	}
-	created := false
+
 	if userID == 0 {
-		userID, created, err = dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"CompleteRegistration:create ", h.appConf.Db, user)
+		userID, _, err = dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"CompleteRegistration:create ", h.appConf.Db, user)
 	} else {
 		_, err = dbAuthTemplate.UserWriteQry(debugTag+"CompleteRegistration:write ", h.appConf.Db, user)
 	}
@@ -470,21 +470,6 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v CompleteRegistration failed: %v", debugTag, err)
 		http.Error(w, "failed to update user", http.StatusInternalServerError)
 		return
-	}
-
-	if created {
-		if err := handlerHelpers.NotifyAdminsUserReviewRequired(
-			debugTag+"CompleteRegistration:",
-			h.appConf.Db,
-			h.appConf.EmailService(),
-			h.appConf.Settings.AdminNotifyGroup,
-			userID,
-			user.Username,
-			user.Email.String,
-			user.Name,
-		); err != nil {
-			log.Printf("%v failed to send admin notification for oauth user %d: %v", debugTag, userID, err)
-		}
 	}
 
 	user, err = dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration:read_back ", h.appConf.Db, userID)
