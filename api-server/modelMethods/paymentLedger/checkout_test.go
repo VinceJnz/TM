@@ -4,6 +4,8 @@ import (
 	"api-server/v2/internal/testdb"
 	"context"
 	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -45,5 +47,50 @@ func TestDurableAttemptRetriesAndWebhookRecovery(t *testing.T) {
 	}
 	if _, err = Finalize(ctx, db, "recovered-event", "recovered", first.Amount, "nzd"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestConcurrentConflictingAttachmentsHaveOneWinner(t *testing.T) {
+	migration, err := os.ReadFile("../../migrations/0006_checkout_attempts.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL WHERE id=11;DELETE FROM at_checkout_quotes;`+string(migration))
+	ctx := context.Background()
+	a, err := Prepare(ctx, db, 11, 1, "one@example.test", "https://example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	var successes atomic.Int32
+	for _, id := range []string{"first", "second"} {
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
+			if Attach(ctx, db, a.ID, id, "url", a.Amount) == nil {
+				successes.Add(1)
+			}
+		}(id)
+	}
+	wg.Wait()
+	if successes.Load() != 1 {
+		t.Fatal("conflicting responses both attached")
+	}
+	var attemptSession, bookingSession string
+	if err = db.Get(&attemptSession, "SELECT session_id FROM at_checkout_attempts WHERE id=$1", a.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.Get(&bookingSession, "SELECT stripe_session_id FROM at_bookings WHERE id=11"); err != nil {
+		t.Fatal(err)
+	}
+	if attemptSession != bookingSession {
+		t.Fatal("attempt and booking disagree")
+	}
+	var quotes int
+	if err = db.Get(&quotes, "SELECT count(*) FROM at_checkout_quotes"); err != nil || quotes != 1 {
+		t.Fatal(quotes, err)
+	}
+	if err = Attach(ctx, db, a.ID, attemptSession, "url", a.Amount); err != nil {
+		t.Fatal("same response was not retry-safe", err)
 	}
 }

@@ -258,3 +258,10 @@ Money input validation also bounds text length, exponent and the numeric(10,2)
 range before decimal rounding, so a short adversarial exponent cannot trigger an
 unbounded big-integer allocation. Regression tests cover extreme positive/negative
 exponents and values above the database range.
+
+## Architecture follow-up: checkout attachment
+
+Attachment re-reads and locks the attempt after acquiring the trip/booking locks,
+checks a conflicting provider session, and requires exactly one booking row to be
+updated. A conflicting attachment rolls back its quote and attempt changes. Tests
+cover simultaneous conflicting responses and retry of the winning response.

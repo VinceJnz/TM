@@ -110,6 +110,10 @@ func Attach(ctx context.Context, db *sqlx.DB, key, sessionID, url string, amount
 	if err = tx.GetContext(ctx, &locked, `SELECT id FROM at_bookings WHERE id=$1 FOR UPDATE`, a.BookingID); err != nil {
 		return err
 	}
+	// Re-read after trip/booking locks; the pre-lock snapshot may be stale.
+	if err = tx.GetContext(ctx, &a, `SELECT `+attemptColumns+` FROM at_checkout_attempts WHERE id=$1 FOR UPDATE`, key); err != nil {
+		return err
+	}
 	if a.SessionID.Valid && a.SessionID.String != sessionID {
 		return ErrInvalidPayment
 	}
@@ -121,9 +125,14 @@ func Attach(ctx context.Context, db *sqlx.DB, key, sessionID, url string, amount
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE at_bookings SET stripe_session_id=$2,booking_price=$3::numeric/100 WHERE id=$1 AND (stripe_session_id IS NULL OR stripe_session_id=$2)`, a.BookingID, sessionID, a.Amount)
+	result, err := tx.ExecContext(ctx, `UPDATE at_bookings SET stripe_session_id=$2,booking_price=$3::numeric/100 WHERE id=$1 AND (stripe_session_id IS NULL OR stripe_session_id=$2)`, a.BookingID, sessionID, a.Amount)
 	if err != nil {
 		return err
+	}
+	if count, err := result.RowsAffected(); err != nil {
+		return err
+	} else if count != 1 {
+		return ErrCheckoutUnavailable
 	}
 	return tx.Commit()
 }
