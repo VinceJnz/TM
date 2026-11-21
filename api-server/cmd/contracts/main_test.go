@@ -28,7 +28,7 @@ func TestGeneratedWriteContractsExcludeProviderFieldsAndAreDeterministic(t *test
 	if err = json.Unmarshal(outputs["api-server/contracts/finance.openapi.json"], &doc); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"PaymentWrite", "RefundWrite", "BookingWrite", "TripWrite"} {
+	for _, name := range []string{"PaymentWrite", "RefundWrite", "BookingWrite", "TripWrite", "TripCostWrite", "TripCostGroupWrite"} {
 		for _, field := range []string{"id", "created", "modified", "stripe_session_id", "provider_refund_id"} {
 			if doc.Components.Schemas[name].Properties[field] != nil {
 				t.Fatal("read-only field in write contract", name, field)

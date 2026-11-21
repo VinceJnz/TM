@@ -28,3 +28,12 @@ legacy finance-named output files now contain these resource contracts as well.
 The schema describes pagination, nested trip-booking reads, report reads and
 required finance correction headers. Extend this generator when migrating other
 resources rather than maintaining another handwritten schema.
+
+Pricing now follows the same pattern: TripCostDTO, TripCostGroupDTO and explicit
+write contracts are generated from server types. Both pricing views use those
+types, excluding IDs, timestamps and joined display fields from writes. Server
+amounts use exact decimals while preserving the existing JSON number contract.
+Service/handler regressions validate rejected amounts, references, any-scope
+access and deletion conflicts; client tests verify nullable display fields and
+the actual mutable-field projection. Legacy resources outside this migration
+remain outside the generated contract coverage.

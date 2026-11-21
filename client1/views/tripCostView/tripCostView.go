@@ -1,6 +1,7 @@
 package tripCostView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -13,7 +14,6 @@ import (
 	"net/http"
 	"strconv"
 	"syscall/js"
-	"time"
 )
 
 const debugTag = "tripCostView."
@@ -46,19 +46,7 @@ const (
 
 const ApiURL = "/tripCosts"
 
-type TableData struct {
-	ID              int       `json:"id"`
-	TripCostGroupID int       `json:"trip_cost_group_id"`
-	MemberStatusID  int       `json:"member_status_id"`
-	MemberStatus    string    `json:"member_status"`
-	UserAgeGroupID  int       `json:"user_age_group_id"`
-	UserAgeGroup    string    `json:"user_age_group"`
-	SeasonID        int       `json:"season_id"`
-	Season          string    `json:"season"`
-	Amount          float64   `json:"amount"`
-	Created         time.Time `json:"created"`
-	Modified        time.Time `json:"modified"`
-}
+type TableData = api.TripCostDTO
 
 type UI struct {
 	UserStatusID   js.Value
@@ -296,7 +284,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.TripCostPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
@@ -313,7 +301,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-		if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+		if err := editor.client.Request(http.MethodPost, ApiURL, nil, api.TripCostPayload(item)); err != nil {
 			editor.updateStateDisplay(ItemStateAdding)
 			editor.onCompletionMsg("Change failed; please retry.")
 			return

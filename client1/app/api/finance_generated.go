@@ -143,3 +143,33 @@ type TripWrite struct {
 	TripTypeID      int       `json:"trip_type_id"`
 	TripCostGroupID int       `json:"trip_cost_group_id"`
 }
+type TripCostDTO struct {
+	ID              int       `json:"id"`
+	TripCostGroupID int       `json:"trip_cost_group_id"`
+	Description     string    `json:"description"`
+	MemberStatusID  int       `json:"member_status_id"`
+	MemberStatus    string    `json:"member_status"`
+	UserAgeGroupID  int       `json:"user_age_group_id"`
+	UserAgeGroup    string    `json:"user_age_group"`
+	SeasonID        int       `json:"season_id"`
+	Season          string    `json:"season"`
+	Amount          float64   `json:"amount"`
+	Created         time.Time `json:"created"`
+	Modified        time.Time `json:"modified"`
+}
+type TripCostGroupDTO struct {
+	ID          int       `json:"id"`
+	Description string    `json:"description"`
+	Created     time.Time `json:"created"`
+	Modified    time.Time `json:"modified"`
+}
+type TripCostWrite struct {
+	TripCostGroupID int     `json:"trip_cost_group_id"`
+	MemberStatusID  int     `json:"member_status_id"`
+	UserAgeGroupID  int     `json:"user_age_group_id"`
+	SeasonID        int     `json:"season_id"`
+	Amount          float64 `json:"amount"`
+}
+type TripCostGroupWrite struct {
+	Description string `json:"description"`
+}

@@ -417,6 +417,110 @@
         },
         "type": "object"
       },
+      "TripCostDTO": {
+        "properties": {
+          "amount": {
+            "description": "Exact decimal on the server; NZD major units. Browser values are display/input only.",
+            "type": "number"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "member_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "member_status_id": {
+            "type": "integer"
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "season": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "season_id": {
+            "type": "integer"
+          },
+          "trip_cost_group_id": {
+            "type": "integer"
+          },
+          "user_age_group": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_age_group_id": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "TripCostGroupDTO": {
+        "properties": {
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TripCostGroupWrite": {
+        "properties": {
+          "description": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TripCostWrite": {
+        "properties": {
+          "amount": {
+            "description": "Exact decimal on the server; NZD major units. Browser values are display/input only.",
+            "type": "number"
+          },
+          "member_status_id": {
+            "type": "integer"
+          },
+          "season_id": {
+            "type": "integer"
+          },
+          "trip_cost_group_id": {
+            "type": "integer"
+          },
+          "user_age_group_id": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "TripDTO": {
         "properties": {
           "created": {
@@ -738,7 +842,7 @@
       "delete": {
         "responses": {
           "200": {
-            "description": "Deleted manual record"
+            "description": "Deleted record"
           },
           "409": {
             "description": "Provider records are immutable"
@@ -802,7 +906,7 @@
             "description": "Updated record"
           },
           "409": {
-            "description": "Ledger conflict; provider records are immutable"
+            "description": "Operation conflicts with existing data or immutable financial state"
           }
         }
       }
@@ -900,7 +1004,7 @@
       "delete": {
         "responses": {
           "200": {
-            "description": "Deleted manual record"
+            "description": "Deleted record"
           },
           "409": {
             "description": "Provider records are immutable"
@@ -964,7 +1068,7 @@
             "description": "Updated record"
           },
           "409": {
-            "description": "Ledger conflict; provider records are immutable"
+            "description": "Operation conflicts with existing data or immutable financial state"
           }
         }
       }
@@ -1074,7 +1178,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Deleted manual record"
+            "description": "Deleted record"
           },
           "409": {
             "description": "Provider records are immutable"
@@ -1150,7 +1254,7 @@
             "description": "Updated record"
           },
           "409": {
-            "description": "Ledger conflict; provider records are immutable"
+            "description": "Operation conflicts with existing data or immutable financial state"
           }
         }
       }
@@ -1260,7 +1364,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Deleted manual record"
+            "description": "Deleted record"
           },
           "409": {
             "description": "Provider records are immutable"
@@ -1336,7 +1440,331 @@
             "description": "Updated record"
           },
           "409": {
-            "description": "Ledger conflict; provider records are immutable"
+            "description": "Operation conflicts with existing data or immutable financial state"
+          }
+        }
+      }
+    },
+    "/tripCostGroups": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripCostGroupDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability and supported scope required"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCostGroupWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Created ID"
+          }
+        }
+      }
+    },
+    "/tripCostGroups/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Deleted record"
+          },
+          "409": {
+            "description": "Provider records are immutable"
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripCostGroupDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability and supported scope required"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCostGroupWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripCostGroupDTO"
+                }
+              }
+            },
+            "description": "Updated record"
+          },
+          "409": {
+            "description": "Operation conflicts with existing data or immutable financial state"
+          }
+        }
+      }
+    },
+    "/tripCosts": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripCostDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability and supported scope required"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCostWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Created ID"
+          }
+        }
+      }
+    },
+    "/tripCosts/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Deleted record"
+          },
+          "409": {
+            "description": "Provider records are immutable"
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripCostDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability and supported scope required"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCostWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripCostDTO"
+                }
+              }
+            },
+            "description": "Updated record"
+          },
+          "409": {
+            "description": "Operation conflicts with existing data or immutable financial state"
           }
         }
       }
@@ -1434,7 +1862,7 @@
       "delete": {
         "responses": {
           "200": {
-            "description": "Deleted manual record"
+            "description": "Deleted record"
           },
           "409": {
             "description": "Provider records are immutable"
@@ -1498,7 +1926,7 @@
             "description": "Updated record"
           },
           "409": {
-            "description": "Ledger conflict; provider records are immutable"
+            "description": "Operation conflicts with existing data or immutable financial state"
           }
         }
       }
