@@ -2,16 +2,21 @@ package handlerTrip
 
 import (
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/tripreport"
+	"api-server/v2/models"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil || session.UserID == 0 {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session)
+	if !ok || session == nil || session.UserID <= 0 {
+		helpers.WriteError(w, 401, "unauthorized", "Authentication required")
+		return
+	}
+	if !strings.EqualFold(strings.TrimSpace(session.AccessScope), "any") {
+		helpers.WriteError(w, 403, "forbidden", "Global trip report requires any scope")
 		return
 	}
 	limit, offset := 100, 0

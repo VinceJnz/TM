@@ -52,6 +52,21 @@ func TestTripReportHTTPPagesHaveNoResourceIDAndKeepHiddenProfiles(t *testing.T) 
 	app.Db = db
 	router := mux.NewRouter()
 	New(app).RegisterRoutes(router, "/trips")
+	for _, scope := range []string{"own", ""} {
+		r := httptest.NewRequest("GET", "/tripsReport", nil)
+		if scope != "" {
+			r = r.WithContext(context.WithValue(r.Context(), app.SessionIDKey, &models.Session{UserID: 1, AccessScope: scope}))
+		}
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+		want := 403
+		if scope == "" {
+			want = 401
+		}
+		if w.Code != want {
+			t.Fatal("global report access", scope, w.Code)
+		}
+	}
 	for offset, wantTrip := range []int{1, 1, 2, 3} {
 		r := httptest.NewRequest("GET", "/tripsReport?limit=1&offset="+strconv.Itoa(offset), nil)
 		r = r.WithContext(context.WithValue(r.Context(), app.SessionIDKey, &models.Session{UserID: 1, AccessScope: "any"}))

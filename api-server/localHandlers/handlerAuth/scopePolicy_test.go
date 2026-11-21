@@ -13,13 +13,13 @@ func TestMenuExcludesUnsupportedGrants(t *testing.T) {
 		{Name: "tripDifficulty", AccessLevel: "get", AccessScope: "any"},
 	}
 	got := supportedMenuItems(items)
-	if len(got) != 3 || got[0] != items[0] || got[1] != items[1] || got[2] != items[3] {
+	if len(got) != 2 || got[0] != items[0] || got[1] != items[3] {
 		t.Fatalf("unexpected menu capabilities: %+v", got)
 	}
 }
 
 func TestUnsupportedOwnAndUnknownScopesFailClosed(t *testing.T) {
-	for _, resource := range []string{"users", "groupBooking", "payments", "refunds", "securityUserGroup", "tripDifficulty", "future-resource"} {
+	for _, resource := range []string{"tripsReport", "users", "groupBooking", "payments", "refunds", "securityUserGroup", "tripDifficulty", "future-resource"} {
 		for _, method := range []string{"GET", "POST", "PUT", "DELETE"} {
 			if supportsScope(resource, method, "own") {
 				t.Fatalf("unsupported ownership grant accepted: %s %s", method, resource)

@@ -15,7 +15,7 @@ func supportsScope(resource, method, scope string) bool {
 		switch resource {
 		case "bookings", "mybookings", "bookingpeople", "myprofile":
 			return method == "GET" || method == "POST" || method == "PUT" || method == "DELETE"
-		case "auth", "tripsreport":
+		case "auth":
 			return method == "GET"
 		case "trips":
 			return method == "POST" || method == "PUT" || method == "DELETE"
