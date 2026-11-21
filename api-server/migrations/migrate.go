@@ -20,7 +20,7 @@ import (
 //go:embed *.sql
 var files embed.FS
 
-const Latest = "0021_verified_profile_email.sql"
+const Latest = "0022_group_definition_audit.sql"
 
 func Names() []string {
 	entries, _ := files.ReadDir(".")

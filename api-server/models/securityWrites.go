@@ -1,5 +1,10 @@
 package models
 
+type GroupWrite struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 type GroupResourceWrite struct {
 	GroupID       int `json:"group_id"`
 	ResourceID    int `json:"resource_id"`

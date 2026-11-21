@@ -1,82 +1,118 @@
 package handlerSecurityGroup
 
 import (
-	"net/http"
-
 	"api-server/v2/app/appCore"
+	service "api-server/v2/app/services/security"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	store "api-server/v2/modelMethods/security"
 	"api-server/v2/models"
-
+	"errors"
 	"github.com/gorilla/mux"
-)
-
-const debugTag = "handlerSecurityGroup."
-
-const (
-	qryGetAll = `SELECT id, name, description FROM st_group`
-	qryGet    = `SELECT id, name, description FROM st_group WHERE id = $1`
-	qryCreate = `INSERT INTO st_group (name, description) VALUES ($1, $2) RETURNING id`
-	qryUpdate = `UPDATE st_group SET name = $1, description = $2 WHERE id = $3`
-
-	qryDelete = `DELETE FROM st_group WHERE id = $1`
+	"net/http"
+	"strings"
 )
 
 type Handler struct {
-	appConf *appCore.Config
-	crud    *dbStandardTemplate.ResourceCRUD[models.Group]
+	app   *appCore.Config
+	store store.Store
 }
 
-func New(appConf *appCore.Config) *Handler {
-	h := &Handler{appConf: appConf}
-	h.crud = dbStandardTemplate.NewResourceCRUD(dbStandardTemplate.ResourceCRUDConfig[models.Group]{
-		DebugTag: debugTag,
-		Db:       h.appConf.Db,
-		Queries: dbStandardTemplate.CRUDQueries{
-			GetAll: qryGetAll,
-			Get:    qryGet,
-			Create: qryCreate,
-			Update: qryUpdate,
-			Delete: qryDelete,
-		},
-		NewListDest: func() any { return &[]models.Group{} },
-		NewRecord:   func() *models.Group { return &models.Group{} },
-		IDDest:      func(record *models.Group) any { return &record.ID },
-		SetID:       func(record *models.Group, id int) { record.ID = id },
-		CreateArgs:  func(record *models.Group) []any { return []any{record.Name, record.Description} },
-		UpdateArgs: func(id int, record *models.Group) []any {
-			return []any{record.Name, record.Description, id}
-		},
-	})
-	return h
+func New(app *appCore.Config) *Handler { return &Handler{app, store.Store{DB: app.Db}} }
+func (h *Handler) RegisterRoutes(r *mux.Router, path string) {
+	helpers.AddRouteGroup(r, path, h, "securityGroup")
 }
-
-// RegisterRoutes registers handler routes on the provided router.
-func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h, "securityGroup")
+func (h *Handler) actor(w http.ResponseWriter, r *http.Request) int {
+	s := helpers.RequiredSession(w, r, h.app.SessionIDKey)
+	if s == nil {
+		return 0
+	}
+	if !strings.EqualFold(s.AccessScope, "any") {
+		helpers.WriteError(w, 403, "forbidden", "Security administration requires any scope")
+		return 0
+	}
+	return s.UserID
 }
-
-// GetAll: retrieves and returns all records
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	h.crud.GetAll(w, r)
+	if h.actor(w, r) == 0 {
+		return
+	}
+	p, ok := helpers.ReadResourcePage(w, r)
+	if !ok {
+		return
+	}
+	rows, info, err := h.store.Groups(r.Context(), p)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteResourcePage(w, rows, info)
 }
-
-// Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	h.crud.Get(w, r)
+	if h.actor(w, r) == 0 {
+		return
+	}
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	v, err := h.store.Group(r.Context(), id)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, []models.Group{v})
 }
-
-// Create: adds a new record and returns the new record
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	h.crud.Create(w, r)
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.save(w, r, false) }
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.save(w, r, true) }
+func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
+	actor := h.actor(w, r)
+	if actor == 0 {
+		return
+	}
+	id := 0
+	if update {
+		id = helpers.RouteID(w, r)
+		if id == 0 {
+			return
+		}
+	}
+	var input models.GroupWrite
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid security payload")
+		return
+	}
+	result, err := (service.Service{Store: h.store}).SaveGroup(r.Context(), actor, id, input)
+	if err != nil {
+		h.failure(w, err)
+		return
+	}
+	if !update {
+		helpers.WriteJSON(w, 201, result.ID)
+		return
+	}
+	helpers.WriteJSON(w, 200, result)
 }
-
-// Update: modifies the existing record identified by id and returns the updated record
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	h.crud.Update(w, r)
+func (h *Handler) failure(w http.ResponseWriter, err error) {
+	if errors.Is(err, store.ErrReferencedGroup) {
+		helpers.WriteError(w, 409, "group_in_use", "Remove or reassign group memberships and grants before deleting the group")
+	} else if errors.Is(err, service.ErrValidation) {
+		helpers.WriteError(w, 422, "invalid_security_change", "A group name is required; name and description must be at most 45 characters")
+	} else {
+		helpers.WriteDataError(w, err)
+	}
 }
-
-// Delete: removes a record identified by id
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	h.crud.Delete(w, r)
+	actor := h.actor(w, r)
+	if actor == 0 {
+		return
+	}
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	if err := (service.Service{Store: h.store}).DeleteGroup(r.Context(), actor, id); err != nil {
+		h.failure(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, nil)
 }
