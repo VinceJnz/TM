@@ -23,3 +23,34 @@ func TestConstraintsValidateTheDocumentedRules(t *testing.T) {
 		t.Fatal("length must count characters", err)
 	}
 }
+func TestInvalidDefinitionsReturnErrorsWithoutPanicking(t *testing.T) {
+	for _, v := range []any{
+		struct {
+			Name string `json:"name" rule:"minimum=1"`
+		}{},
+		struct {
+			ID int `json:"id" rule:"maxLength=1"`
+		}{},
+		struct {
+			Name string `json:"name" rule:"unsupported=1"`
+		}{},
+		struct {
+			Name string `json:"name" rule:"minLength=3,maxLength=1"`
+		}{},
+		struct {
+			Name string `json:"name" rule:"maxLength=-1"`
+		}{}, nil, 42,
+	} {
+		if err := Validate(v); err == nil {
+			t.Fatal("invalid definition accepted")
+		}
+	}
+	type valid struct {
+		Name string `json:"name" rule:"maxLength=2"`
+	}
+	metadata := Fields(reflect.TypeOf(valid{}))
+	metadata[0].Constraints["maxLength"] = 100
+	if err := Validate(valid{"long"}); err == nil {
+		t.Fatal("metadata caller changed cached validation")
+	}
+}

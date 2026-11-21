@@ -8,6 +8,7 @@ import (
 	"api-server/v2/app/services/notifications"
 	"api-server/v2/migrations"
 	notificationStore "api-server/v2/modelMethods/notifications"
+	"api-server/v2/models"
 	"context"
 	"errors"
 	"log"
@@ -58,6 +59,9 @@ func New(testMode bool) *Config {
 }
 
 func (c *Config) Run(ctx context.Context) error {
+	if err := models.ValidateFieldRules(); err != nil {
+		return err
+	}
 	var err error
 	// Load environment variables
 	if err = c.Settings.LoadEnv(); err != nil {

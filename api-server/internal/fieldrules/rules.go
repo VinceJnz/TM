@@ -1,5 +1,5 @@
-// Package fieldrules shares simple field constraints between services and the
-// API contract generator. Ownership and cross-record rules belong in services.
+// Package fieldrules shares field constraints between services and contracts.
+// Ownership and cross-record rules belong in services.
 package fieldrules
 
 import (
@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -15,52 +16,110 @@ type Rule struct {
 	Required    bool
 	Constraints map[string]int
 }
+type compiledRule struct {
+	Rule
+	index int
+}
+type definition struct {
+	rules []compiledRule
+	err   error
+}
 
-func Fields(t reflect.Type) []Rule {
-	var rules []Rule
+var definitions sync.Map
+
+func compile(t reflect.Type) definition {
+	if t == nil || t.Kind() != reflect.Struct {
+		return definition{err: fmt.Errorf("field rules require a struct")}
+	}
+	if cached, ok := definitions.Load(t); ok {
+		return cached.(definition)
+	}
+	result := definition{}
+	seen := map[string]bool{}
 	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		tag := field.Tag.Get("rule")
+		f := t.Field(i)
+		tag := f.Tag.Get("rule")
 		if tag == "" {
 			continue
 		}
-		rule := Rule{Name: strings.Split(field.Tag.Get("json"), ",")[0], Constraints: map[string]int{}}
+		r := compiledRule{Rule: Rule{Name: strings.Split(f.Tag.Get("json"), ",")[0], Constraints: map[string]int{}}, index: i}
+		fail := func() definition {
+			result.err = fmt.Errorf("invalid field rule definition: %s.%s", t.Name(), f.Name)
+			definitions.Store(t, result)
+			return result
+		}
+		if f.PkgPath != "" || r.Name == "" || r.Name == "-" || seen[r.Name] {
+			return fail()
+		}
+		seen[r.Name] = true
 		for _, part := range strings.Split(tag, ",") {
 			if part == "required" {
-				rule.Required = true
+				r.Required = true
 				continue
 			}
 			pieces := strings.SplitN(part, "=", 2)
 			if len(pieces) != 2 {
-				panic("invalid field rule: " + part)
+				return fail()
+			}
+			n, err := strconv.Atoi(pieces[1])
+			if err != nil || n < 0 {
+				return fail()
 			}
 			switch pieces[0] {
-			case "minimum", "minLength", "maxLength":
+			case "minimum":
+				if f.Type.Kind() < reflect.Int || f.Type.Kind() > reflect.Int64 {
+					return fail()
+				}
+			case "minLength", "maxLength":
+				if f.Type.Kind() != reflect.String {
+					return fail()
+				}
 			default:
-				panic("unsupported field rule: " + part)
+				return fail()
 			}
-			value, err := strconv.Atoi(pieces[1])
-			if err != nil {
-				panic("invalid field rule: " + part)
+			if _, exists := r.Constraints[pieces[0]]; exists {
+				return fail()
 			}
-			rule.Constraints[pieces[0]] = value
+			r.Constraints[pieces[0]] = n
 		}
-		rules = append(rules, rule)
+		if maximum, ok := r.Constraints["maxLength"]; ok && r.Constraints["minLength"] > maximum {
+			return fail()
+		}
+		result.rules = append(result.rules, r)
 	}
-	return rules
+	definitions.Store(t, result)
+	return result
+}
+
+// ValidateType is used at startup and by generation, before serving requests.
+func ValidateType(t reflect.Type) error { return compile(t).err }
+func Fields(t reflect.Type) []Rule {
+	compiled := compile(t)
+	if compiled.err != nil {
+		return nil
+	}
+	result := []Rule{}
+	for _, rule := range compiled.rules {
+		copy := rule.Rule
+		copy.Constraints = map[string]int{}
+		for k, v := range rule.Constraints {
+			copy.Constraints[k] = v
+		}
+		result = append(result, copy)
+	}
+	return result
 }
 func Validate(input any) error {
 	value := reflect.ValueOf(input)
-	t := value.Type()
-	rules := Fields(t)
-	for _, rule := range rules {
-		var field reflect.Value
-		for i := 0; i < t.NumField(); i++ {
-			if strings.Split(t.Field(i).Tag.Get("json"), ",")[0] == rule.Name {
-				field = value.Field(i)
-				break
-			}
-		}
+	if !value.IsValid() {
+		return fmt.Errorf("field rules require a struct")
+	}
+	compiled := compile(value.Type())
+	if compiled.err != nil {
+		return compiled.err
+	}
+	for _, rule := range compiled.rules {
+		field := value.Field(rule.index)
 		if rule.Required && (field.IsZero() || (field.Kind() == reflect.String && strings.TrimSpace(field.String()) == "")) {
 			return fmt.Errorf("%s is required", rule.Name)
 		}
