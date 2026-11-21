@@ -4,6 +4,7 @@ import (
 	"api-server/v2/app/gateways/gmail"
 	"api-server/v2/app/gateways/oAuthGateway/oAuthGateway"
 	"api-server/v2/app/gateways/stripe"
+	"api-server/v2/app/services/checkout"
 	"api-server/v2/migrations"
 	"context"
 	"errors"
@@ -38,6 +39,8 @@ type Config struct {
 	TestMode     bool
 	stop         context.CancelFunc
 	cleanupDone  chan struct{}
+	paymentStop  context.CancelFunc
+	paymentDone  chan struct{}
 }
 
 func New(testMode bool) *Config {
@@ -84,6 +87,12 @@ func (c *Config) Run(ctx context.Context) error {
 	// Start the payment service
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
 	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain, c.TestMode)
+	if c.Settings.PaymentKey != "" {
+		paymentCtx, cancel := context.WithCancel(ctx)
+		c.paymentStop = cancel
+		c.paymentDone = make(chan struct{})
+		go func() { defer close(c.paymentDone); checkout.New(c.Db, c.PaymentSvc).RunRecovery(paymentCtx) }()
+	}
 	log.Printf(debugTag+"Run() Stripe gateway initialized with domain: %s", domain)
 	if c.Settings.DevMode && c.Settings.StripeWebhookSecret == "" {
 		log.Printf(debugTag + "Run() WARNING: DEV_MODE=true and STRIPE_WEBHOOK_SECRET is empty; webhook finalization is disabled unless webhook forwarding is configured. Configure webhook forwarding for local tests.")
@@ -119,6 +128,12 @@ func (c *Config) SetEmailService(service EmailService) {
 }
 
 func (c *Config) Close() {
+	if c.paymentStop != nil {
+		c.paymentStop()
+	}
+	if c.paymentDone != nil {
+		<-c.paymentDone
+	}
 	if c.stop != nil {
 		c.stop()
 	}

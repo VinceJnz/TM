@@ -25,3 +25,11 @@ and support evidence in the operational audit system. Monitor open review count
 and oldest age; any database failure preventing case persistence still requires
 webhook retry and an alert from application errors. Existing resolved cases
 cannot be overwritten by this tool.
+
+Migration 0011 adds a durable retry schedule to active checkout attempts. When
+a payment key is configured, each API process runs a minute-based worker with
+at most ten attempts per batch and a twenty-second timeout per provider lookup.
+Claims expire after two minutes and retries back off up to an hour. Monitor
+`reconcile_failures`, oldest due attempt, and unresolved payment reviews. The
+worker never releases a hold based only on a local timeout and never issues a
+refund. Shutdown cancels the worker before closing the database.
