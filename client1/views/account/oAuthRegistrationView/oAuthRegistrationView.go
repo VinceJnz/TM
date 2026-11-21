@@ -43,7 +43,6 @@ const (
 )
 
 const ApiURL = "/auth/oauth"
-const ApiURLWithPrefix = "/api/v1" + ApiURL
 
 type TableData struct {
 	Name           string    `json:"name"`
@@ -385,7 +384,7 @@ func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {
 			})
 	} else {
 		// Fallback: open popup but we can't persist registration without client
-		js.Global().Call("open", "https://localhost:8086"+ApiURLWithPrefix+"/login", "oauth", "width=600,height=800")
+		editor.onCompletionMsg("OAuth service unavailable")
 		js.Global().Call("alert", "Warning: registration info will not be saved when using fallback flow")
 	}
 	return nil
@@ -559,7 +558,7 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value, sele
 		return
 	}
 
-	pfetch := js.Global().Call("fetch", "/api/v1/userAgeGroups", map[string]any{
+	pfetch := js.Global().Call("fetch", editor.client.Endpoint("/userAgeGroups"), map[string]any{
 		"method":      "GET",
 		"credentials": "include",
 	})

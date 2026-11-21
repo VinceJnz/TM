@@ -502,7 +502,7 @@ func (p *Process) populateAgeGroupsDropdown(selectElement js.Value) {
 		return
 	}
 
-	pfetch := js.Global().Call("fetch", "/api/v1/userAgeGroups", map[string]any{
+	pfetch := js.Global().Call("fetch", p.client.Endpoint("/userAgeGroups"), map[string]any{
 		"method":      "GET",
 		"credentials": "include",
 	})

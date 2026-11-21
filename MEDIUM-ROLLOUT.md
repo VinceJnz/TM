@@ -347,3 +347,12 @@ in a service. Existing dictionary/read helpers remain compatibility adapters rat
 than being rewritten wholesale. Router requests now carry a 30-second deadline;
 ledger mutation transactions have a tighter 10-second bound. Tests exercise refund
 overflow rollback, concurrent refunds, cross-booking transfers and error mappings.
+
+## Architecture follow-up: configured OAuth transport
+
+OAuth restoration now uses the shared configured client for session, provider-user
+and ensure requests. Raw OAuth registration lookups and popup URLs also use the
+runtime prefix; the localhost popup fallback is removed. A failed ensure request
+leaves the UI logged out rather than reporting success. WASM tests execute session
+restoration, OAuth restoration, and failed ensure under /custom/v9; TinyGo builds
+the updated flow. These tests use synthetic provider responses, not Google accounts.

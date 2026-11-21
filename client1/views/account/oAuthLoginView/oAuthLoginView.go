@@ -41,7 +41,7 @@ const (
 
 // const ApiURL = "/oAuth"
 // const ApiURL = "/api/v1/auth/google/"
-const ApiURL = "/api/v1/auth/oauth/"
+const ApiURL = "/auth/oauth"
 
 type TableData struct {
 	Username string `json:"username"`
@@ -219,7 +219,7 @@ func (editor *ItemEditor) populateEditForm() {
 	domEvents.Listen(loginButton, "click", func(this js.Value, args []js.Value) any {
 		editor.setActiveButtons("oauthLoginOption", "oauthLoginOption", "oauthRegisterOption")
 		// Open OAuth popup; server will set cookies on completion
-		js.Global().Call("open", ApiURL+"/login", "oauth", "width=600,height=800")
+		editor.client.OpenPopup(ApiURL+"/login", "oauth", "width=600,height=800")
 		return nil
 	})
 
@@ -266,7 +266,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if editor.CurrentRecord.Username != "" && editor.CurrentRecord.Password != "" {
 		cred := editor.CurrentRecord.Username + ":" + editor.CurrentRecord.Password
 		enc := js.Global().Call("btoa", cred).String()
-		pfetch := js.Global().Call("fetch", "/api/v1/auth/menuUser/", map[string]any{
+		pfetch := js.Global().Call("fetch", editor.client.Endpoint("/auth/menuUser/"), map[string]any{
 			"method":      "GET",
 			"credentials": "include",
 			"headers":     map[string]any{"Authorization": "Basic " + enc},
