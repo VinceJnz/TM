@@ -19,6 +19,7 @@ import (
 func TestOwnProfileAccessRequiresGroupGrants(t *testing.T) {
 	db := testdb.Open(t, testdb.Auth+`
 CREATE TABLE st_group(id integer, name text);
+CREATE TABLE et_user_age_groups(id integer,age_group text);
 CREATE TABLE st_user_group(user_id integer, group_id integer);
 CREATE TABLE et_resource(id integer, name text);
 CREATE TABLE et_access_level(id integer, name text);
@@ -92,6 +93,17 @@ INSERT INTO st_group_resource VALUES (1, 1, 1, 1);
 	}
 	if put := call(http.MethodPut, "/myProfile", update, cookie); put.Code != http.StatusOK {
 		t.Fatalf("profile PUT returned %d", put.Code)
+	}
+	if put := call(http.MethodPut, "/myProfile", strings.Replace(update, "member@example.test", "unverified@example.test", 1), cookie); put.Code != http.StatusConflict {
+		t.Fatalf("unverified profile email change returned %d", put.Code)
+	}
+	for _, path := range []string{"/myProfile/email-change", "/myProfile/email-change/confirm"} {
+		if got := call(http.MethodPost, path, `{}`, nil); got.Code != http.StatusUnauthorized {
+			t.Fatalf("anonymous nested route returned %d", got.Code)
+		}
+		if got := call(http.MethodPost, path, `{}`, cookie); got.Code != http.StatusForbidden {
+			t.Fatalf("nested route without POST grant returned %d", got.Code)
+		}
 	}
 	var names []string
 	if err := db.Select(&names, `SELECT name FROM st_users ORDER BY id`); err != nil ||

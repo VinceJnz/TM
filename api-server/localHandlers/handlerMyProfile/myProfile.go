@@ -2,135 +2,116 @@ package handlerMyProfile
 
 import (
 	"api-server/v2/app/appCore"
+	service "api-server/v2/app/services/profiles"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbAuthTemplate"
-	"api-server/v2/modelMethods/dbStandardTemplate"
-	"encoding/json"
-	"log"
+	store "api-server/v2/modelMethods/profiles"
+	"api-server/v2/models"
+	"errors"
+	"github.com/gorilla/mux"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
-const debugTag = "handlerMyProfile."
-
-type ProfileResponse struct {
-	ID            int       `json:"id"`
-	Name          string    `json:"name"`
-	Username      string    `json:"username"`
-	Email         string    `json:"email"`
-	Address       string    `json:"user_address"`
-	MemberCode    string    `json:"member_code"`
-	BirthDate     time.Time `json:"user_birth_date"`
-	AccountHidden bool      `json:"user_account_hidden"`
-}
-
-type ProfileUpdateRequest struct {
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	Address       string `json:"user_address"`
-	BirthDate     string `json:"user_birth_date"`
-	AccountHidden bool   `json:"user_account_hidden"`
-}
-
+type ProfileResponse = models.ProfileDTO
+type ProfileUpdateRequest = models.ProfileWrite
 type Handler struct {
 	appConf *appCore.Config
+	store   store.Store
 }
 
-func New(appConf *appCore.Config) *Handler {
-	return &Handler{appConf: appConf}
+func New(app *appCore.Config) *Handler { return &Handler{app, store.Store{DB: app.Db}} }
+func (h *Handler) RegisterRoutes(r *mux.Router, path string) {
+	helpers.CapabilityRoute(r, path, "myProfile", h.Get).Methods("GET")
+	helpers.CapabilityRoute(r, path, "myProfile", h.Update).Methods("PUT")
+	helpers.CapabilityRoute(r, path+"/email-change", "myProfile", h.RequestEmail).Methods("POST")
+	helpers.CapabilityRoute(r, path+"/email-change/confirm", "myProfile", h.ConfirmEmail).Methods("POST")
 }
-
-func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.CapabilityRoute(r, baseURL, "myProfile", h.Get).Methods("GET")
-	helpers.CapabilityRoute(r, baseURL, "myProfile", h.Update).Methods("PUT")
+func (h *Handler) actor(w http.ResponseWriter, r *http.Request) int {
+	session := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
+	if session == nil {
+		return 0
+	}
+	if !strings.EqualFold(session.AccessScope, "own") && !strings.EqualFold(session.AccessScope, "any") {
+		helpers.WriteError(w, 403, "forbidden", "Profile access denied")
+		return 0
+	}
+	return session.UserID
 }
-
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil {
+	id := h.actor(w, r)
+	if id == 0 {
 		return
 	}
-
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"Get ", h.appConf.Db, session.UserID)
+	v, err := h.store.Get(r.Context(), id)
 	if err != nil {
-		log.Printf("%sGet failed to load user %d: %v", debugTag, session.UserID, err)
-		http.Error(w, "failed to load profile", http.StatusInternalServerError)
+		helpers.WriteDataError(w, err)
 		return
 	}
-
-	resp := ProfileResponse{
-		ID:            user.ID,
-		Name:          user.Name,
-		Username:      user.Username,
-		Email:         user.Email.String,
-		Address:       user.Address.String,
-		MemberCode:    user.MemberCode.String,
-		BirthDate:     user.BirthDate.Time,
-		AccountHidden: user.AccountHidden.Bool,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("%sGet failed to encode response: %v", debugTag, err)
-	}
+	helpers.WriteJSON(w, 200, v)
 }
-
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil {
+	id := h.actor(w, r)
+	if id == 0 {
 		return
 	}
-
-	var req ProfileUpdateRequest
-	if err := helpers.DecodeJSONBody(r, &req); err != nil {
-		log.Printf("%sUpdate decode error: %v", debugTag, err)
-		http.Error(w, "invalid request payload", http.StatusBadRequest)
+	var input ProfileUpdateRequest
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid profile")
 		return
 	}
-
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+	if err := (service.Service{Store: h.store}).Save(r.Context(), id, input); err != nil {
+		h.failure(w, err)
 		return
 	}
-
-	birthDate, err := time.Parse(time.RFC3339, req.BirthDate)
-	if err != nil {
-		birthDate, err = time.Parse("2006-01-02", req.BirthDate)
-		if err != nil {
-			http.Error(w, "invalid birth date format", http.StatusBadRequest)
-			return
-		}
-	}
-
-	const qry = `UPDATE st_users
-		SET name = $2,
-			email = $3,
-			user_address = $4,
-			user_birth_date = $5,
-			user_account_hidden = $6
-		WHERE id = $1`
-
-	if _, err := h.appConf.Db.ExecContext(
-		r.Context(),
-		qry,
-		session.UserID,
-		name,
-		strings.TrimSpace(req.Email),
-		strings.TrimSpace(req.Address),
-		birthDate,
-		req.AccountHidden,
-	); err != nil {
-		log.Printf("%sUpdate failed for user %d: %v", debugTag, session.UserID, err)
-		http.Error(w, "failed to update profile", http.StatusInternalServerError)
+	helpers.WriteJSON(w, 200, map[string]string{"status": "ok"})
+}
+func (h *Handler) RequestEmail(w http.ResponseWriter, r *http.Request) {
+	id := h.actor(w, r)
+	if id == 0 {
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
-		log.Printf("%sUpdate failed to encode response: %v", debugTag, err)
+	var input models.EmailChangeRequest
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid email request")
+		return
+	}
+	if err := (service.Service{Store: h.store, Mailer: h.appConf.EmailService()}).RequestEmail(r.Context(), id, input.Email); err != nil {
+		h.failure(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 202, map[string]string{"status": "verification_required"})
+}
+func (h *Handler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
+	id := h.actor(w, r)
+	if id == 0 {
+		return
+	}
+	var input models.EmailChangeProof
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid verification")
+		return
+	}
+	if err := (service.Service{Store: h.store}).ConfirmEmail(r.Context(), id, input); err != nil {
+		h.failure(w, err)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: "session", Path: "/", Domain: h.appConf.Settings.Host, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1, Expires: time.Unix(1, 0)})
+	helpers.WriteJSON(w, 200, map[string]bool{"reauthentication_required": true})
+}
+func (h *Handler) failure(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, service.ErrValidation):
+		helpers.WriteError(w, 422, "invalid_profile", "Check profile values and age group")
+	case errors.Is(err, service.ErrEmailChange):
+		helpers.WriteError(w, 409, "email_verification_required", "Use the verified email-change flow")
+	case errors.Is(err, service.ErrProof):
+		helpers.WriteError(w, 400, "invalid_verification", "Verification is invalid or expired")
+	case errors.Is(err, service.ErrBusy):
+		helpers.WriteError(w, 429, "rate_limited", "Wait before requesting new codes")
+	case errors.Is(err, service.ErrMail):
+		helpers.WriteError(w, 503, "delivery_unavailable", "Verification delivery is unavailable")
+	default:
+		helpers.WriteDataError(w, err)
 	}
 }

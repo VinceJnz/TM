@@ -5,6 +5,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
+	safehtml "html"
 	"log"
 	"net/http"
 	"syscall/js"
@@ -154,7 +155,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Call("appendChild", title)
 
 	readonly := editor.document.Call("createElement", "div")
-	readonly.Set("innerHTML", "<p><strong>Username:</strong> "+editor.CurrentRecord.Username+"</p><p><strong>Member Code:</strong> "+editor.CurrentRecord.MemberCode+"</p>")
+	readonly.Set("innerHTML", "<p><strong>Username:</strong> "+safehtml.EscapeString(editor.CurrentRecord.Username)+"</p><p><strong>Member Code:</strong> "+safehtml.EscapeString(editor.CurrentRecord.MemberCode)+"</p>")
 	viewHelpers.SetStyles(readonly, map[string]string{
 		"margin-bottom": "16px",
 		"color":         "#4a5a6a",
@@ -230,7 +231,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	payload := UpdateRequest{
 		Name:          name,
-		Email:         email,
+		Email:         editor.CurrentRecord.Email,
 		Address:       address,
 		BirthDate:     birthDate.Format(time.RFC3339),
 		AccountHidden: hidden,
@@ -238,23 +239,24 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	go func() {
 		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-		success := func(err error) {
-			if err != nil {
-				log.Printf("%sSubmitItemEdit success callback err: %v", debugTag, err)
+		defer editor.updateStateDisplay(viewHelpers.ItemStateNone)
+		if err := editor.client.Request(http.MethodPut, ApiURL, nil, &payload); err != nil {
+			editor.onCompletionMsg("Unable to update profile: " + err.Error())
+			return
+		}
+		if email != editor.CurrentRecord.Email {
+			if err := editor.client.Request(http.MethodPost, ApiURL+"/email-change", nil, map[string]string{"email": email}); err != nil {
+				editor.onCompletionMsg("Details saved; email unchanged. " + err.Error())
+				return
 			}
-			editor.onCompletionMsg("Profile updated successfully")
-			editor.RecordState = RecordStateReloadRequired
-			editor.updateStateDisplay(viewHelpers.ItemStateNone)
-			editor.FetchItems()
+			editor.renderEmailVerification()
+			editor.onCompletionMsg("Details saved. Enter the approval codes sent to your current and new email addresses.")
+			return
 		}
-		fail := func(err error) {
-			log.Printf("%sSubmitItemEdit failed: %v", debugTag, err)
-			editor.onCompletionMsg("Unable to update profile")
-			editor.updateStateDisplay(viewHelpers.ItemStateNone)
-		}
-		editor.client.NewRequest(http.MethodPut, ApiURL, nil, &payload, success, fail)
+		editor.onCompletionMsg("Profile updated successfully")
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
 	}()
-
 	return nil
 }
 
