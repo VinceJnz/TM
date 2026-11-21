@@ -15,7 +15,7 @@ function Invoke-TestDocker([string[]]$Arguments) {
 try {
     Write-Host "Preparing disposable release verification resources..."
     Invoke-TestDocker @("network","create",$network)
-    Invoke-TestDocker @("run","-d","--name",$database,"--network",$network,"--network-alias","database","-e","POSTGRES_USER=tm_test","-e","POSTGRES_PASSWORD=synthetic-test-only","-e","POSTGRES_DB=tm_test","postgres:13@sha256:4689940c683801b4ab839ab3b0a0a3555a5fe425371422310944e89eca7d8068")
+    Invoke-TestDocker @("run","-d","--name",$database,"--network",$network,"--network-alias","database","-e","POSTGRES_USER=tm_test","-e","POSTGRES_PASSWORD=synthetic-test-only","-e","POSTGRES_DB=tm_test","postgres:17@sha256:b60e90042aa6b8dbecd58e224b3e36114dbf8ad754465264c2476ad58a86e45c")
     $ready = $false
     for ($attempt=0;$attempt -lt 60;$attempt++) {
         & docker exec $database pg_isready -h 127.0.0.1 -U tm_test -d tm_test *> $null

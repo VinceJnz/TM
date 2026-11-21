@@ -34,7 +34,7 @@ x-api: &api
 
 services:
   dbserver:
-    image: postgres:13@sha256:4689940c683801b4ab839ab3b0a0a3555a5fe425371422310944e89eca7d8068
+    image: postgres:17@sha256:b60e90042aa6b8dbecd58e224b3e36114dbf8ad754465264c2476ad58a86e45c
     ports:
       - "127.0.0.1:5432:5432"
     environment:
@@ -42,7 +42,7 @@ services:
       POSTGRES_USER: ${TM_DB_USER:-myuser}
       POSTGRES_PASSWORD: ${TM_DB_PASSWORD:?Set TM_DB_PASSWORD outside source control}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data_pg17:/var/lib/postgresql/data
     networks: [mynetwork]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
@@ -100,4 +100,6 @@ networks:
     driver: bridge
 
 volumes:
+  # Retained for explicit PostgreSQL 13 rollback; never attach it to PostgreSQL 17.
   db_data:
+  db_data_pg17:
