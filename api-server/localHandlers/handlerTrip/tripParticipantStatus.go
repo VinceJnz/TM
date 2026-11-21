@@ -1,56 +1,42 @@
 package handlerTrip
 
 import (
+	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
-	"api-server/v2/models"
+	"api-server/v2/modelMethods/tripreport"
 	"net/http"
+	"strconv"
 )
 
-const (
-	sqlGetParticipantStatus = `WITH booking_order AS (
-			SELECT 
-				atb.trip_id,
-				atb.payment_date,
-				atb.id as booking_id,
-				atbp.id as participant_id,
-				atbp.person_id as person_id,
-				ROW_NUMBER() OVER (PARTITION BY atb.trip_id ORDER BY atb.payment_date ASC, atbp.id ASC) AS booking_position
-			FROM at_booking_people atbp
-			JOIN at_bookings atb ON atb.id=atbp.booking_id
-			)
-			SELECT 
-				att.id AS trip_id,
-				att.trip_name,
-				att.from_date,
-				att.to_date,
-				att.max_participants,
-				booking_order.booking_id,
-				CASE WHEN stu.user_account_hidden IS NOT TRUE THEN participant_id END AS participant_id,
-				CASE WHEN stu.user_account_hidden IS NOT TRUE THEN booking_order.person_id END AS person_id,
-				CASE
-				WHEN stu.user_account_hidden THEN 'name hidden'
-                    ELSE stu.name
-                END as person_name,
-				CASE WHEN stu.user_account_hidden IS NOT TRUE THEN booking_position END AS booking_position,
-				CASE
-					WHEN stu.user_account_hidden THEN NULL
-					WHEN (booking_position <= att.max_participants AND payment_date IS NOT NULL)  THEN 'before_threshold_paid' 
-					WHEN (booking_position <= att.max_participants)  THEN 'before_threshold' 
-					WHEN (booking_position > att.max_participants) THEN 'after_threshold'
-					ELSE 'n/a'
-				END AS booking_status
-			FROM at_trips att
-			LEFT JOIN booking_order ON att.id=booking_order.trip_id
-			LEFT JOIN st_users stu ON stu.id=booking_order.person_id
-			ORDER BY trip_id, booking_order.booking_position;`
-)
-
-// GetBookingStatus: retrieves and returns all records with the status of each users booking (trip participant booking status list)
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.TripParticipantStatus{}, sqlGetParticipantStatus)
+	limit, offset := 100, 0
+	for name, target := range map[string]*int{"limit": &limit, "offset": &offset} {
+		if raw := r.URL.Query().Get(name); raw != "" {
+			n, err := strconv.Atoi(raw)
+			if err != nil {
+				helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+				return
+			}
+			*target = n
+		}
+	}
+	if limit < 1 || limit > 500 || offset < 0 || offset > 1000000 {
+		helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
+		return
+	}
+	items, more, err := (tripreport.Store{DB: h.appConf.Db}).List(r.Context(), limit, offset)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	w.Header().Set("X-Page-Limit", strconv.Itoa(limit))
+	if more {
+		w.Header().Set("X-Next-Offset", strconv.Itoa(offset+limit))
+	}
+	helpers.WriteJSON(w, 200, items)
 }

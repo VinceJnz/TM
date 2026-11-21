@@ -18,7 +18,7 @@ try {
     Invoke-TestDocker @("run","-d","--name",$database,"--network",$network,"--network-alias","database","-e","POSTGRES_USER=tm_test","-e","POSTGRES_PASSWORD=synthetic-test-only","-e","POSTGRES_DB=tm_test","postgres:13@sha256:4689940c683801b4ab839ab3b0a0a3555a5fe425371422310944e89eca7d8068")
     $ready = $false
     for ($attempt=0;$attempt -lt 60;$attempt++) {
-        & docker exec $database pg_isready -U tm_test -d tm_test *> $null
+        & docker exec $database pg_isready -h 127.0.0.1 -U tm_test -d tm_test *> $null
         if ($LASTEXITCODE -eq 0) { $ready=$true;break }
         Start-Sleep -Milliseconds 250
     }

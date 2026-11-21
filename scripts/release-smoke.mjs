@@ -41,6 +41,16 @@ assert.equal(JSON.parse(bookings.body).length, 100, 'collection was not bounded'
 assert(JSON.parse(bookings.body).every(item => item.owner_id === 1), 'another member booking was exposed');
 assert.equal(bookings.headers['x-next-offset'], '100');
 const singleTrip = await request(`${prefix}/trips/1`, 'GET', undefined, cookie);
+const tripList = await request(`${prefix}/trips?pagination=cursor&after=0&limit=100`, 'GET', undefined, cookie);
+assert.equal(tripList.status, 200, `trip list failed: ${tripList.body}`);
+assert.equal(JSON.parse(tripList.body)[0].trip_name, 'Synthetic trip');
+const tripReport = await request(`${prefix}/tripsReport?limit=1`, 'GET', undefined, cookie);
+assert.equal(tripReport.status, 200, `Trip List report failed: ${tripReport.body}`);
+assert.equal(JSON.parse(tripReport.body)[0].trip_id, 1);
+assert.equal(tripReport.headers['x-next-offset'], '1');
+const tripReportNext = await request(`${prefix}/tripsReport?limit=1&offset=1`, 'GET', undefined, cookie);
+assert.equal(tripReportNext.status, 200);
+assert.equal(JSON.parse(tripReportNext.body)[0].person_name, 'Other Member');
 assert.equal(singleTrip.status, 200, 'single-record trip query failed');
 assert.equal(JSON.parse(singleTrip.body)[0].id, 1);
 assert.equal((await request(`${prefix}/refunds`, 'GET', undefined, cookie)).status, 403);
@@ -103,6 +113,22 @@ try {
     }
     assert.fail(`visible list page did not render: ${label}`);
   }
+  await waitForPage('Items 1–100');
+  await send('Runtime.evaluate', {expression: "location.hash='/trips'"});
+  let tripsRendered=false;
+  for(let i=0;i<120;i++){
+    const result=await send('Runtime.evaluate',{expression:"document.querySelector('#mainContent')?.textContent.includes('Synthetic trip')",returnByValue:true});
+    if(result.result?.value===true){tripsRendered=true;break;}await delay(100);
+  }
+  assert(tripsRendered,'trip list did not render in the browser');
+  await send('Runtime.evaluate', {expression: "location.hash='/tripsreport'"});
+  let reportRendered=false;
+  for(let i=0;i<120;i++){
+    const result=await send('Runtime.evaluate',{expression:"document.querySelector('#mainContent')?.textContent.includes('Trip Participant Status Report')",returnByValue:true});
+    if(result.result?.value===true){reportRendered=true;break;}await delay(100);
+  }
+  assert(reportRendered,'Trip List participant report did not render in the browser');
+  await send('Runtime.evaluate', {expression: "location.hash='/mybookings'"});
   await waitForPage('Items 1–100');
   await send('Runtime.evaluate', {expression:`Array.from((${pager}).querySelectorAll('button')).find(button=>button.textContent==='Next').click()`});
   await waitForPage('Items 101–106');
