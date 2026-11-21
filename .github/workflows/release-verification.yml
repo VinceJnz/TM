@@ -33,6 +33,7 @@ jobs:
           ./scripts/test-release-policy.ps1
           ./scripts/test-release-health.ps1
           ./scripts/test-provider-sandbox-policy.ps1
+          ./scripts/test-production-config.ps1
 
       - name: Build TinyGo client
         run: |

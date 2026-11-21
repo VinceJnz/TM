@@ -37,6 +37,7 @@ try {
     $configuration = & docker compose --env-file $emptyFile --project-directory $root -f (Join-Path $root 'docker-compose.yml') -f (Join-Path $root 'docker-compose.release.yml') --profile prod config --format json
     if ($LASTEXITCODE -ne 0) { throw 'Synthetic release configuration failed.' }
     $api=($configuration | ConvertFrom-Json).services.apiserver
+    Assert-ProductionEnvironment $api.environment
     if ($api.image -cne $testValues.TM_RELEASE_API_IMAGE -or $null -ne $api.build) { throw 'Release override did not preserve the approved image or disable builds.' }
     Write-Host 'Release Compose override validated with synthetic configuration.'
 } finally {

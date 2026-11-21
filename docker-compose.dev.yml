@@ -1,0 +1,7 @@
+services:
+  apiserver:
+    environment:
+      DEV_MODE: "true"
+      EMAIL_REDIRECT_ALL: "true"
+      EMAIL_REDIRECT_TO: ${TM_EMAIL_REDIRECT_TO:?Set TM_EMAIL_REDIRECT_TO to the designated test inbox}
+      STRIPE_TEST_MODE: "true"

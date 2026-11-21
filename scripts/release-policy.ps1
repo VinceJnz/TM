@@ -1,3 +1,10 @@
+function Assert-ProductionEnvironment($Environment) {
+    if ([string]$Environment.DEV_MODE -cne 'false') { throw 'Production requires DEV_MODE=false.' }
+    if (![string]::IsNullOrWhiteSpace([string]$Environment.EMAIL_DEBUG_ADDR)) { throw 'Production must not use legacy email debug overrides.' }
+    if ([string]$Environment.EMAIL_REDIRECT_ALL -ceq 'true' -or ![string]::IsNullOrWhiteSpace([string]$Environment.EMAIL_REDIRECT_TO)) { throw 'Production must not redirect user email.' }
+    if ([string]$Environment.STRIPE_TEST_MODE -ceq 'true') { throw 'Production must not use Stripe test mode; use a separate test deployment.' }
+}
+
 function Assert-ReleaseDigest {
     param([string]$Image)
     if ($Image -cnotmatch '^[a-zA-Z0-9._:/-]+@sha256:[a-f0-9]{64}$') {

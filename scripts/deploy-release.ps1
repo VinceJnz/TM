@@ -21,8 +21,9 @@ $previousImage=$env:TM_RELEASE_API_IMAGE
 try {
     $env:TM_RELEASE_API_IMAGE=$Image
     $root=Split-Path -Parent $PSScriptRoot
-    & docker compose --project-directory $root -f (Join-Path $root 'docker-compose.yml') -f (Join-Path $root 'docker-compose.release.yml') --profile prod config --quiet
+    $configuration = & docker compose --project-directory $root -f (Join-Path $root 'docker-compose.yml') -f (Join-Path $root 'docker-compose.release.yml') --profile prod config --format json
     if ($LASTEXITCODE -ne 0) { throw 'Release configuration validation failed.' }
+    Assert-ProductionEnvironment (($configuration | ConvertFrom-Json).services.apiserver.environment)
     & docker compose --project-directory $root -f (Join-Path $root 'docker-compose.yml') -f (Join-Path $root 'docker-compose.release.yml') --profile prod up -d --no-build apiserver
     if ($LASTEXITCODE -ne 0) { throw 'Release deployment failed.' }
 } finally { $env:TM_RELEASE_API_IMAGE=$previousImage }
