@@ -1,45 +1,80 @@
 package httpProcessor
 
 import (
+	"fmt"
 	"log"
 	"net/url"
+	"reflect"
 	"strconv"
 )
 
 // Page belongs to the view, not the shared client, so callbacks do not retain
 // destroyed views. Lookup callers may continue using the legacy list transport.
 type Page struct {
-	Offset, Limit, Next int
-	Path                string
-	Loading             bool
+	Offset, Limit, Next            int
+	Path                           string
+	Loading                        bool
+	committedOffset, committedNext int
+	committedPath                  string
 }
 
 func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callbacks ...func(error)) {
 	if page.Loading {
 		return
 	}
-	if page.Path != path {
-		page.Offset = 0
-		page.Path = path
-	}
-	if page.Limit <= 0 {
-		page.Limit = 100
-	}
-	parsed, err := url.Parse(path)
-	if err != nil {
+	pending := *page
+	fail := func(err error) {
+		page.Offset, page.Next, page.Path = page.committedOffset, page.committedNext, page.committedPath
+		if page.Path == "" {
+			page.Next = -1
+		}
+		page.Loading = false
 		if len(callbacks) > 1 && callbacks[1] != nil {
 			callbacks[1](err)
 		}
+	}
+	if pending.Path != path {
+		pending.Offset = 0
+		pending.Path = path
+	}
+	if pending.Limit <= 0 {
+		pending.Limit = 100
+	}
+	parsed, err := url.Parse(path)
+	if err != nil {
+		fail(err)
 		return
 	}
 	query := parsed.Query()
-	query.Set("limit", strconv.Itoa(page.Limit))
-	query.Set("offset", strconv.Itoa(page.Offset))
+	query.Set("limit", strconv.Itoa(pending.Limit))
+	query.Set("offset", strconv.Itoa(pending.Offset))
 	parsed.RawQuery = query.Encode()
 	page.Loading = true
 	defer func() { page.Loading = false }()
-	if err = c.newRequestPage(page, method, parsed.String(), rx, tx, callbacks...); err != nil {
+	// Decode into temporary storage: even malformed JSON must not partially
+	// overwrite the currently displayed records.
+	var temporary any
+	if rx != nil {
+		value := reflect.ValueOf(rx)
+		if value.Kind() != reflect.Pointer || value.IsNil() {
+			fail(fmt.Errorf("page destination must be a pointer"))
+			return
+		}
+		temporary = reflect.New(value.Elem().Type()).Interface()
+	}
+	if err = c.newRequestPage(&pending, method, parsed.String(), temporary, tx, nil, func(error) {}); err != nil {
+		fail(err)
 		log.Print("page request failed: ", err)
+		return
+	}
+	if rx != nil {
+		reflect.ValueOf(rx).Elem().Set(reflect.ValueOf(temporary).Elem())
+	}
+	pending.committedOffset, pending.committedNext, pending.committedPath = pending.Offset, pending.Next, pending.Path
+	pending.Loading = false
+	*page = pending
+	if len(callbacks) > 0 && callbacks[0] != nil {
+		callbacks[0](nil)
 	}
 }
 

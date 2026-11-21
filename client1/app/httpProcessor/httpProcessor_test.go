@@ -5,6 +5,7 @@ package httpProcessor
 import (
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"syscall/js"
 	"testing"
@@ -117,5 +118,53 @@ func TestExplicitPageRequestDoesNotDownloadFollowingPages(t *testing.T) {
 	}
 	if records[0].ID != 2 || js.Global().Get("__tmPageFetches").Int() != 2 {
 		t.Fatal(records, page)
+	}
+}
+
+func TestFailedPageNavigationPreservesCommittedRecordsAndPosition(t *testing.T) {
+	old := js.Global().Get("fetch")
+	defer js.Global().Set("fetch", old)
+	client := New("https://example.test")
+	page := Page{Limit: 1}
+	records := []struct {
+		ID int `json:"id"`
+	}{}
+	fetch := func(body string, status int) {
+		js.Global().Set("fetch", js.Global().Get("Function").New("url", "options", `return Promise.resolve(new Response(`+strconv.Quote(body)+`,{status:`+strconv.Itoa(status)+`,headers:{'X-Next-Offset':'1'}}));`))
+	}
+	request := func() {
+		done := make(chan struct{}, 1)
+		go func() {
+			client.PageRequest(&page, "GET", "/bookings", &records, nil, nil, func(error) {
+				if page.Offset != 0 || len(records) != 1 || records[0].ID != 1 {
+					t.Error("failure callback observed uncommitted state")
+				}
+			})
+			done <- struct{}{}
+		}()
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			t.Fatal("page blocked")
+		}
+	}
+	fetch(`[{"id":1}]`, 200)
+	request()
+	for _, body := range []string{`[{"id":2},{"id":"invalid"}]`, `unavailable`} {
+		page.Offset = page.Next
+		fetch(body, 200)
+		request()
+		if page.Offset != 0 || page.Next != 1 || page.Loading || len(records) != 1 || records[0].ID != 1 {
+			t.Fatal("failed navigation changed committed state", page, records)
+		}
+	}
+	page.Offset = page.Next
+	fetch(`unavailable`, 503)
+	request()
+	fetch(`[{"id":2}]`, 200)
+	page.Offset = page.Next
+	request()
+	if page.Offset != 1 || records[0].ID != 2 {
+		t.Fatal("retry did not advance")
 	}
 }
