@@ -91,6 +91,9 @@ type children struct {
 }
 
 type ItemEditor struct {
+	nestedLoads []*userSecurityGroupView.ItemEditor
+	load        httpProcessor.LoadScope
+
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -154,6 +157,13 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	for _, child := range editor.nestedLoads {
+		child.Hide()
+	}
+	editor.nestedLoads = nil
+	editor.load.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
 	editor.ListDiv.Set("innerHTML", "")
@@ -174,6 +184,12 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	for _, child := range editor.nestedLoads {
+		child.Hide()
+	}
+	editor.load.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -468,32 +484,36 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.RecordState = RecordStateCurrent
-		// Fetch child data
-		editor.Children.userAgeGroup.FetchItems()
-		editor.Children.userMemberStatus.FetchItems()
-		editor.Children.userAccountStatus.FetchItems()
-
-		go func() {
-			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
-			if err := editor.client.PageRequest(&editor.Page,
-
-				http.MethodGet, ApiURL, &records, nil); err != nil {
-				editor.RecordState = RecordStateReloadRequired
-				editor.updateStateDisplay(ItemStateNone)
-				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
-				return
-			}
-
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-		}()
+	if editor.RecordState != RecordStateReloadRequired {
+		return
 	}
-}
+	editor.RecordState = RecordStateCurrent
+	editor.Children.userAgeGroup.FetchItems()
+	editor.Children.userMemberStatus.FetchItems()
+	editor.Children.userAccountStatus.FetchItems()
+	ticket := editor.load.Start()
+	pending := editor.Page.Snapshot()
+	editor.updateStateDisplay(ItemStateFetching)
+	go func() {
+		var records []TableData
+		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, ApiURL, &records, nil)
 
+		if !ticket.Finish(err) {
+			return
+		}
+		if err != nil {
+			editor.RecordState = RecordStateReloadRequired
+			editor.updateStateDisplay(ItemStateNone)
+			viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
+			return
+		}
+		editor.Page = pending
+
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+	}()
+}
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
@@ -511,6 +531,10 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	for _, child := range editor.nestedLoads {
+		child.Hide()
+	}
+	editor.nestedLoads = nil
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
@@ -597,6 +621,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		groupEditor := userSecurityGroupView.New(editor.document, editor.events, editor.appCore, record.ID)
 		groupEditor.Hide()
+		editor.nestedLoads = append(editor.nestedLoads, groupEditor)
 		childContainer.Call("appendChild", groupEditor.GetDiv())
 
 		userID := record.ID

@@ -71,6 +71,8 @@ type children struct {
 }
 
 type ItemEditor struct {
+	load httpProcessor.LoadScope
+
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -137,6 +139,9 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.load.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
 	editor.ListDiv.Set("innerHTML", "")
@@ -157,6 +162,9 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.load.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -354,42 +362,39 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.RecordState = RecordStateCurrent
-		// Fetch child data
-		editor.Children.Resource.FetchItems()
-		editor.Children.AccessLevel.FetchItems()
-		editor.Children.AccessScope.FetchItems()
-		go func() {
-			var groupRecs []GroupRecord
-			if err := editor.client.Request(http.MethodGet, groupApiURL, &groupRecs, nil); err != nil {
-				editor.RecordState = RecordStateReloadRequired
-				editor.updateStateDisplay(ItemStateNone)
-				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
-				return
-			}
-
-			editor.GroupRecords = groupRecs
-		}()
-		go func() {
-			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
-			if err := editor.client.PageRequest(&editor.Page,
-
-				http.MethodGet, ApiURL, &records, nil); err != nil {
-				editor.RecordState = RecordStateReloadRequired
-				editor.updateStateDisplay(ItemStateNone)
-				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
-				return
-			}
-
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-		}()
+	if editor.RecordState != RecordStateReloadRequired {
+		return
 	}
+	editor.RecordState = RecordStateCurrent
+	editor.Children.Resource.FetchItems()
+	editor.Children.AccessLevel.FetchItems()
+	editor.Children.AccessScope.FetchItems()
+	ticket := editor.load.Start()
+	pending := editor.Page.Snapshot()
+	editor.updateStateDisplay(ItemStateFetching)
+	go func() {
+		var records []TableData
+		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, ApiURL, &records, nil)
+		var groupRecs []GroupRecord
+		if err == nil {
+			err = editor.client.RequestContext(ticket.Context, http.MethodGet, groupApiURL, &groupRecs, nil)
+		}
+		if !ticket.Finish(err) {
+			return
+		}
+		if err != nil {
+			editor.RecordState = RecordStateReloadRequired
+			editor.updateStateDisplay(ItemStateNone)
+			viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
+			return
+		}
+		editor.Page = pending
+		editor.GroupRecords = groupRecs
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+	}()
 }
-
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)

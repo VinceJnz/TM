@@ -62,6 +62,8 @@ type children struct {
 }
 
 type ItemEditor struct {
+	load httpProcessor.LoadScope
+
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -124,6 +126,9 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.load.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
 	editor.ListDiv.Set("innerHTML", "")
@@ -144,6 +149,9 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.load.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -314,56 +322,37 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.RecordState = RecordStateCurrent
-		editor.updateStateDisplay(ItemStateFetching)
-		log.Printf("%sFetchItems() ParentID=%d", debugTag, editor.ParentID)
-		// Fetch child data first
-		editor.Children.Group.FetchItems()
-		// Fetch group records and security user group records in parallel
-		var groupRecs []GroupRecord
-		var records []TableData
-		// Create a channel for synchronization
-		done := make(chan bool, 2)
-		// Fetch available groups for dropdown
-		go func() {
-			if err := editor.client.Request(http.MethodGet, groupApiURL, &groupRecs, nil); err != nil {
-				editor.RecordState = RecordStateReloadRequired
-				editor.updateStateDisplay(ItemStateNone)
-				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
-				return
-			}
-
-			editor.GroupRecords = groupRecs
-			log.Printf("%sFetchItems() GroupRecords fetched, count=%d", debugTag, len(groupRecs))
-			done <- true
-		}()
-		// Fetch user's security group assignments
-		go func() {
-			if err := editor.client.PageRequest(&editor.Page,
-
-				http.MethodGet, ApiURL, &records, nil); err != nil {
-				editor.RecordState = RecordStateReloadRequired
-				editor.updateStateDisplay(ItemStateNone)
-				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
-				return
-			}
-
-			editor.Records = records
-			log.Printf("%sFetchItems() UserGroupAssignments fetched, count=%d", debugTag, len(records))
-			done <- true
-		}()
-		// Wait for both fetches to complete
-		go func() {
-			<-done
-			<-done
-			log.Printf("%sFetchItems() Both fetches complete, calling populateItemList", debugTag)
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-		}()
+	if editor.RecordState != RecordStateReloadRequired {
+		return
 	}
+	editor.RecordState = RecordStateCurrent
+	editor.Children.Group.FetchItems()
+	ticket := editor.load.Start()
+	pending := editor.Page.Snapshot()
+	editor.updateStateDisplay(ItemStateFetching)
+	go func() {
+		var records []TableData
+		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, ApiURL, &records, nil)
+		var groupRecs []GroupRecord
+		if err == nil {
+			err = editor.client.RequestContext(ticket.Context, http.MethodGet, groupApiURL, &groupRecs, nil)
+		}
+		if !ticket.Finish(err) {
+			return
+		}
+		if err != nil {
+			editor.RecordState = RecordStateReloadRequired
+			editor.updateStateDisplay(ItemStateNone)
+			viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
+			return
+		}
+		editor.Page = pending
+		editor.GroupRecords = groupRecs
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+	}()
 }
-
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)

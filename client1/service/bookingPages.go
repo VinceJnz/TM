@@ -41,7 +41,7 @@ func (s *BookingService) FetchPage(page *httpProcessor.Page, path string) ([]Boo
 	s.pageCancel = cancel
 	defer cancel()
 	generation := s.generation
-	pending := *page
+	pending := page.Snapshot()
 	s.state.Loading = true
 	s.state.Err = nil
 	s.mu.Unlock()

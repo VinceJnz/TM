@@ -21,11 +21,26 @@ type Page struct {
 	cursors                        map[int]string
 }
 
+// Snapshot isolates mutable cursor history from an in-flight page request.
+func (p Page) Snapshot() Page {
+	if p.cursors != nil {
+		p.cursors = cloneCursors(p.cursors)
+	}
+	return p
+}
+func cloneCursors(source map[int]string) map[int]string {
+	copy := make(map[int]string, len(source))
+	for offset, cursor := range source {
+		copy[offset] = cursor
+	}
+	return copy
+}
+
 func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callbacks ...func(error)) (requestErr error) {
 	if page.Loading {
 		return
 	}
-	pending := *page
+	pending := page.Snapshot()
 	fail := func(err error) {
 		requestErr = err
 		page.Offset, page.Next, page.Path = page.committedOffset, page.committedNext, page.committedPath
