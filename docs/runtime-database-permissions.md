@@ -20,3 +20,9 @@ shadow objects; migration owners retain ownership privileges. Review other
 applications sharing that schema before deployment. Effective table, column, sequence and grant-option privileges are verified before commit. Unexpected inherited/PUBLIC access is rejected rather than changing other roles. The command also rejects inherited schema CREATE and administrative/owner membership. These changes
 are prepared and tested against disposable databases; applying them to a deployed
 database is a separate operator action.
+
+For the verified profile-email flow, apply migration 0021 and subsequent migration
+0022 with the migration owner, then re-run the grant command. The runtime policy
+explicitly includes `st_email_changes`; existing roles do not gain access merely
+because the table was created. Migration 0022 adds group-definition audit triggers.
+Neither migration rotates database passwords or rewrites financial history.
