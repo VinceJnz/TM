@@ -5,59 +5,24 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
+	"api-server/v2/modelMethods/refunds"
 	"api-server/v2/models"
 
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 const debugTag = "handlerPaymentRefunds."
 
-const (
-	qryGetAll  = `SELECT * FROM at_refunds`
-	qryGet     = `SELECT * FROM at_refunds WHERE id = $1`
-	qryGetList = `SELECT apr.*
-					FROM public.at_refunds apr
-					WHERE apr.payment_id = $1`
-	qryCreate = `INSERT INTO at_refunds (payment_id, refund_date, amount, reason, external_ref)
-				VALUES ($1, $2, $3, $4, $5)
-				RETURNING id`
-	qryUpdate = `UPDATE at_refunds
-				SET payment_id = $1, refund_date = $2, amount = $3, reason = $4, external_ref = $5
-				WHERE id = $6`
-	qryDelete = `DELETE FROM at_refunds WHERE id = $1`
-)
-
 type Handler struct {
 	appConf *appCore.Config
-	crud    *dbStandardTemplate.ResourceCRUD[models.PaymentRefund]
+	store   refunds.Store
 }
 
 func New(appConf *appCore.Config) *Handler {
-	h := &Handler{appConf: appConf}
-	h.crud = dbStandardTemplate.NewResourceCRUD(dbStandardTemplate.ResourceCRUDConfig[models.PaymentRefund]{
-		DebugTag: debugTag,
-		Db:       h.appConf.Db,
-		Queries: dbStandardTemplate.CRUDQueries{
-			GetAll: qryGetAll,
-			Get:    qryGet,
-			Create: qryCreate,
-			Update: qryUpdate,
-			Delete: qryDelete,
-		},
-		NewListDest: func() any { return &[]models.PaymentRefund{} },
-		NewRecord:   func() *models.PaymentRefund { return &models.PaymentRefund{} },
-		IDDest:      func(record *models.PaymentRefund) any { return &record.ID },
-		SetID:       func(record *models.PaymentRefund, id int) { record.ID = id },
-		CreateArgs: func(record *models.PaymentRefund) []any {
-			return []any{record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef}
-		},
-		UpdateArgs: func(id int, record *models.PaymentRefund) []any {
-			return []any{record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef, id}
-		},
-	})
-	return h
+	return &Handler{appConf: appConf, store: refunds.Store{DB: appConf.Db}}
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
@@ -69,7 +34,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	h.crud.GetAll(w, r)
+	h.list(w, r, 0)
 }
 
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
@@ -80,14 +45,52 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	if id <= 0 {
 		return
 	}
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.PaymentRefund{}, qryGetList, id)
+	h.list(w, r, id)
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	h.crud.Get(w, r)
+	id := dbStandardTemplate.GetID(w, r)
+	if id <= 0 {
+		return
+	}
+	item, err := h.store.Get(r.Context(), id)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	// Preserve the established single-record array response.
+	helpers.WriteJSON(w, 200, []models.PaymentRefund{item})
+}
+
+func (h *Handler) list(w http.ResponseWriter, r *http.Request, payment int) {
+	limit, offset := 100, 0
+	for key, target := range map[string]*int{"limit": &limit, "offset": &offset} {
+		if raw := r.URL.Query().Get(key); raw != "" {
+			n, err := strconv.Atoi(raw)
+			if err != nil {
+				helpers.WriteError(w, 400, "invalid_page", "Invalid pagination")
+				return
+			}
+			*target = n
+		}
+	}
+	if limit < 1 || limit > 500 || offset < 0 || offset > 1000000 {
+		helpers.WriteError(w, 400, "invalid_page", "Invalid pagination")
+		return
+	}
+	items, more, err := h.store.List(r.Context(), payment, limit, offset)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	w.Header().Set("X-Page-Limit", strconv.Itoa(limit))
+	if more {
+		w.Header().Set("X-Next-Offset", strconv.Itoa(offset+limit))
+	}
+	helpers.WriteJSON(w, 200, items)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.write(w, r, "create") }
