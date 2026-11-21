@@ -2,10 +2,12 @@ package checkout
 
 import (
 	"api-server/v2/internal/observability"
+	"api-server/v2/modelMethods/checkoutattempts"
 	"context"
 	"database/sql"
 	"errors"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -20,20 +22,7 @@ func (s *Service) RecoverBatch(ctx context.Context, limit int) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		var candidate struct {
-			ID        string
-			BookingID int `db:"booking_id"`
-			OwnerID   int `db:"owner_id"`
-		}
-		err := s.DB.GetContext(ctx, &candidate, `WITH due AS (
-   SELECT a.id FROM at_checkout_attempts a WHERE a.state IN ('pending','attached')
-   AND a.reconcile_after<=CURRENT_TIMESTAMP
-   AND a.expires_at<CURRENT_TIMESTAMP+interval '34 minutes'
-   AND NOT EXISTS(SELECT 1 FROM at_payment_reviews r WHERE r.session_id=a.session_id AND r.resolution='external-refund-confirmed')
-   ORDER BY a.reconcile_after,a.id FOR UPDATE OF a SKIP LOCKED LIMIT 1
-  ), claimed AS (
-   UPDATE at_checkout_attempts a SET reconcile_after=CURRENT_TIMESTAMP+interval '2 minutes' FROM due WHERE a.id=due.id RETURNING a.id,a.booking_id
-  ) SELECT c.id,c.booking_id,b.owner_id FROM claimed c JOIN at_bookings b ON b.id=c.booking_id`)
+		candidate, err := (checkoutattempts.Store{DB: s.DB}).Claim(ctx)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
 		}
@@ -49,10 +38,7 @@ func (s *Service) RecoverBatch(ctx context.Context, limit int) error {
 		cancel()
 		// Exponential backoff is durable, bounded at an hour. An open provider
 		// session is normal, but should not monopolize the queue.
-		_, err = s.DB.ExecContext(ctx, `UPDATE at_checkout_attempts SET
-   reconcile_failures=CASE WHEN $2 THEN LEAST(reconcile_failures+1,6) ELSE 0 END,
-   reconcile_after=CURRENT_TIMESTAMP+make_interval(secs=>CASE WHEN $2 THEN LEAST(3600,60*power(2,LEAST(reconcile_failures,6)))::integer ELSE 120 END)
-   WHERE id=$1`, candidate.ID, reconcileErr != nil)
+		err = (checkoutattempts.Store{DB: s.DB}).Schedule(ctx, candidate.ID, reconcileErr != nil)
 		if err != nil {
 			return err
 		}
@@ -66,16 +52,26 @@ func (s *Service) RecoverBatch(ctx context.Context, limit int) error {
 // RunRecovery stops with the application's context. Database leases make it
 // safe for more than one API process to run the worker.
 func (s *Service) RunRecovery(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute)
+	var workers sync.WaitGroup
+	start := func(run func(context.Context) error) {
+		workers.Add(1)
+		go func() { defer workers.Done(); runQueue(ctx, time.Minute, run) }()
+	}
+	start(func(ctx context.Context) error { return s.RecoverBatch(ctx, 10) })
+	if provider, ok := s.Provider.(RefundProvider); ok {
+		start(func(ctx context.Context) error { return RecoverRefundBatch(ctx, s.DB, provider, 10) })
+	}
+	workers.Wait()
+}
+func runQueue(ctx context.Context, interval time.Duration, run func(context.Context) error) {
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		if err := s.RecoverBatch(ctx, 10); err != nil && ctx.Err() == nil {
-			log.Print("checkout recovery batch failed")
+		if ctx.Err() != nil {
+			return
 		}
-		if provider, ok := s.Provider.(RefundProvider); ok {
-			if err := RecoverRefundBatch(ctx, s.DB, provider, 10); err != nil && ctx.Err() == nil {
-				log.Print("refund recovery batch failed")
-			}
+		if err := run(ctx); err != nil && ctx.Err() == nil {
+			log.Print("financial recovery batch deferred")
 		}
 		select {
 		case <-ctx.Done():
