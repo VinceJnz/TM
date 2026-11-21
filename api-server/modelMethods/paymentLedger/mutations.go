@@ -67,6 +67,15 @@ func WritePayment(ctx context.Context, db *sqlx.DB, operation string, id int, in
 	if err != nil {
 		return 0, err
 	}
+	if operation == "update" || operation == "delete" {
+		var providerBacked bool
+		if err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL FROM at_payments WHERE id=$1`, id); err != nil {
+			return 0, err
+		}
+		if providerBacked {
+			return 0, ErrLedgerConflict
+		}
+	}
 	switch operation {
 	case "create":
 		err = tx.QueryRowContext(ctx, `INSERT INTO at_payments(booking_id,payment_date,amount,payment_method) VALUES($1,$2,$3,$4) RETURNING id`, input.BookingID, input.PaymentDate, input.Amount, input.PaymentMethod).Scan(&id)

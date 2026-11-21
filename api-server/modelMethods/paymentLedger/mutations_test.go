@@ -14,6 +14,34 @@ import (
 func amount(value string) models.Money {
 	return models.Money{Decimal: decimal.RequireFromString(value)}
 }
+
+func TestProviderPaymentsCannotBeRewrittenOrDeleted(t *testing.T) {
+	db := testdb.Open(t, ledgerFixture)
+	ctx := context.Background()
+	if _, err := Finalize(ctx, db, "immutable-event", "checkout", 1000, "nzd"); err != nil {
+		t.Fatal(err)
+	}
+	var id int
+	if err := db.Get(&id, `SELECT id FROM at_payments WHERE stripe_session_id='checkout'`); err != nil {
+		t.Fatal(err)
+	}
+	for _, operation := range []string{"update", "delete"} {
+		if _, err := WritePayment(ctx, db, operation, id, PaymentWrite{BookingID: 22, Amount: amount("1")}); !errors.Is(err, ErrLedgerConflict) {
+			t.Fatalf("%s: %v", operation, err)
+		}
+	}
+	var bookingID int
+	var value string
+	if err := db.QueryRow(`SELECT booking_id,amount::text FROM at_payments WHERE id=$1`, id).Scan(&bookingID, &value); err != nil {
+		t.Fatal(err)
+	}
+	if bookingID != 11 || !decimal.RequireFromString(value).Equal(decimal.NewFromInt(10)) {
+		t.Fatal("provider payment changed")
+	}
+	if _, err := Finalize(ctx, db, "immutable-replay", "checkout", 1000, "nzd"); err != nil {
+		t.Fatal(err)
+	}
+}
 func TestFinancialCommandsRollbackInvalidRefundAndTransferAtomically(t *testing.T) {
 	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_refunds ADD COLUMN refund_date timestamptz,ADD COLUMN reason text,ADD COLUMN external_ref text;`)
 	ctx := context.Background()
