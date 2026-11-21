@@ -55,6 +55,8 @@ assert.equal(singleTrip.status, 200, 'single-record trip query failed');
 assert.equal(JSON.parse(singleTrip.body)[0].id, 1);
 assert.equal((await request(`${prefix}/refunds`, 'GET', undefined, cookie)).status, 403);
 assert.equal((await request(`${prefix}/securityGroup`, 'GET', undefined, cookie)).status, 403);
+assert.equal((await request(`${prefix}/operations`, 'GET', undefined, cookie)).status, 403, 'member accessed operational metrics');
+assert.match(bookings.headers['x-request-id'] || '', /^[a-f0-9]{24}$/, 'request correlation header missing');
 const asset = await request('/main.wasm');
 assert.equal(asset.status, 200);
 assert(asset.body.length > 1024 && asset.headers.etag, 'WASM artifact or validator missing');

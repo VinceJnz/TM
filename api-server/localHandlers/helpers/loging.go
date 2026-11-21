@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/internal/observability"
 	"api-server/v2/models"
 	"encoding/json"
 	"log"
@@ -11,6 +12,7 @@ import (
 )
 
 type HTTPInfo struct {
+	RequestID     string          `json:"RequestID"`
 	LogTag        string          `json:"LogTag,omitempty"`
 	Duration      time.Duration   `json:"Duration"` // how long did it take to
 	URL           string          `json:"URL"`
@@ -34,6 +36,7 @@ type HTTPInfo struct {
 func LogRequest(next http.Handler, sessionIDKey appCore.ContextKey, logTag string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		info := &HTTPInfo{
+			RequestID:     observability.RequestID(r.Context()),
 			LogTag:        logTag,
 			Duration:      0,
 			URL:           r.URL.EscapedPath(),

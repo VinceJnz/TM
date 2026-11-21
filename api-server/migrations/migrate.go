@@ -20,7 +20,7 @@ import (
 //go:embed *.sql
 var files embed.FS
 
-const Latest = "0015_runtime_boundaries.sql"
+const Latest = "0016_operations_visibility.sql"
 
 func Names() []string {
 	entries, _ := files.ReadDir(".")

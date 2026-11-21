@@ -1,0 +1,11 @@
+[Unit]
+Description=Notify the assigned Trip Manager service owner
+
+[Service]
+Type=oneshot
+User=tm-monitor
+EnvironmentFile=/etc/tm/monitor.env
+# Operator-owned executable integrating the agreed paging/email destination.
+ExecStart=/usr/local/libexec/tm-monitor-alert
+TimeoutStartSec=30
+NoNewPrivileges=true

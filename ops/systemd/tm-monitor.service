@@ -1,0 +1,16 @@
+[Unit]
+Description=Trip Manager release and financial queue monitor
+After=docker.service
+Requires=docker.service
+OnFailure=tm-monitor-alert.service
+
+[Service]
+Type=oneshot
+User=tm-monitor
+SupplementaryGroups=docker
+EnvironmentFile=/etc/tm/monitor.env
+ExecStart=/usr/bin/pwsh -NoProfile -File /srv/tm/scripts/check-release-health.ps1 -Container ${TM_MONITOR_CONTAINER} -Image ${TM_MONITOR_IMAGE} -SourceRevision ${TM_MONITOR_REVISION} -CheckOperations
+TimeoutStartSec=45
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true

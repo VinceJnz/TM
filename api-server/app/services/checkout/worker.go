@@ -1,6 +1,7 @@
 package checkout
 
 import (
+	"api-server/v2/internal/observability"
 	"context"
 	"database/sql"
 	"errors"
@@ -39,8 +40,12 @@ func (s *Service) RecoverBatch(ctx context.Context, limit int) error {
 		if err != nil {
 			return err
 		}
-		job, cancel := context.WithTimeout(ctx, 20*time.Second)
-		_, reconcileErr := s.Reconcile(job, candidate.BookingID, candidate.OwnerID)
+		job, cancel := context.WithTimeout(observability.JobContext(ctx), 20*time.Second)
+		outcome, reconcileErr := s.Reconcile(job, candidate.BookingID, candidate.OwnerID)
+		if reconcileErr != nil {
+			outcome = "deferred"
+		}
+		observability.Event(job, "checkout_recovery", map[string]any{"attempt_id": candidate.ID, "booking_id": candidate.BookingID, "outcome": outcome})
 		cancel()
 		// Exponential backoff is durable, bounded at an hour. An open provider
 		// session is normal, but should not monopolize the queue.

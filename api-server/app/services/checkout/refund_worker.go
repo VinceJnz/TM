@@ -1,6 +1,7 @@
 package checkout
 
 import (
+	"api-server/v2/internal/observability"
 	"api-server/v2/modelMethods/refunds"
 	"context"
 	"database/sql"
@@ -23,8 +24,13 @@ func RecoverRefundBatch(ctx context.Context, db *sqlx.DB, provider RefundProvide
 		if err != nil {
 			return err
 		}
-		job, cancel := context.WithTimeout(ctx, 20*time.Second)
+		job, cancel := context.WithTimeout(observability.JobContext(ctx), 20*time.Second)
 		verifyErr := ConfirmRefund(job, db, provider, candidate.PaymentID, candidate.ID, candidate.Actor)
+		outcome := "verified"
+		if verifyErr != nil {
+			outcome = "deferred"
+		}
+		observability.Event(job, "refund_verification", map[string]any{"refund_id": candidate.ID, "outcome": outcome})
 		cancel()
 		if err = store.Schedule(ctx, candidate.ID, verifyErr != nil); err != nil {
 			return err

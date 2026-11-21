@@ -16,6 +16,7 @@ import (
 	"api-server/v2/localHandlers/handlerMyBookings"
 	"api-server/v2/localHandlers/handlerMyProfile"
 	"api-server/v2/localHandlers/handlerOAuth"
+	"api-server/v2/localHandlers/handlerOperations"
 	"api-server/v2/localHandlers/handlerPaymentRefunds"
 	"api-server/v2/localHandlers/handlerResource"
 	"api-server/v2/localHandlers/handlerSeasons"
@@ -102,7 +103,7 @@ func run() error {
 }
 func buildRouter(app *appCore.Config) *mux.Router {
 	r := mux.NewRouter()
-	r.Use(helpers.RequestDeadline(30 * time.Second))
+	r.Use(helpers.RequestTrace, helpers.RequestDeadline(30*time.Second))
 	r.HandleFunc("/livez", app.Liveness).Methods("GET")
 	r.HandleFunc("/readyz", app.Readiness).Methods("GET")
 	r.HandleFunc("/client-config.js", httpserver.ClientConfig(app.Settings.APIprefix)).Methods("GET")
@@ -137,6 +138,7 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	protected.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "protected") // Then logging
 	})
+	helpers.CapabilityRoute(protected, "/operations", "operations", handlerOperations.Read(app)).Methods("GET")
 
 	// Auth handlers - Protected routes (requires authentication)
 	auth.RegisterRoutesProtected(protected, "/auth") // Protected auth endpoints (menuUser, logout, etc.)

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Trip Manager every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=tm-monitor.service
+
+[Install]
+WantedBy=timers.target

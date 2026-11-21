@@ -7,7 +7,7 @@ WORKDIR /app
 COPY api-server/go.mod api-server/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY api-server/ ./
-RUN --mount=type=cache,target=/go/pkg/mod go build -o /app/apiserver . && go build -o /app/tm-migrate ./cmd/migrate && go build -o /app/tm-healthcheck ./cmd/healthcheck
+RUN --mount=type=cache,target=/go/pkg/mod go build -o /app/apiserver . && go build -o /app/tm-migrate ./cmd/migrate && go build -o /app/tm-healthcheck ./cmd/healthcheck && go build -o /app/tm-operations-check ./cmd/operations-check
 
 FROM alpine:latest@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 RUN apk add --no-cache ca-certificates && \
@@ -22,6 +22,7 @@ COPY --from=client1-artifact /out/main.wasm /out/wasm_exec.js ./static/
 COPY --from=apibuilder /app/apiserver ./apiserver
 COPY --from=apibuilder /app/tm-migrate ./tm-migrate
 COPY --from=apibuilder /app/tm-healthcheck ./tm-healthcheck
+COPY --from=apibuilder /app/tm-operations-check ./tm-operations-check
 USER 10001:10001
 EXPOSE 8085 8086
 

@@ -1,6 +1,7 @@
 package paymentLedger
 
 import (
+	"api-server/v2/internal/observability"
 	"context"
 	"database/sql"
 
@@ -159,7 +160,7 @@ func Begin(ctx context.Context, db *sqlx.DB) (*sqlx.Tx, error) {
 	if supplied, ok := ctx.Value(auditKey{}).(auditIdentity); ok {
 		identity = supplied
 	}
-	if _, err = tx.ExecContext(ctx, `SELECT set_config('tm.actor',$1,true),set_config('tm.reason',$2,true)`, identity.actor, identity.reason); err != nil {
+	if _, err = tx.ExecContext(ctx, `SELECT set_config('tm.actor',$1,true),set_config('tm.reason',$2,true),set_config('tm.request_id',$3,true)`, identity.actor, identity.reason, observability.RequestID(ctx)); err != nil {
 		tx.Rollback()
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package bookings
 
 import (
+	"api-server/v2/internal/observability"
 	store "api-server/v2/modelMethods/bookings"
 	"api-server/v2/models"
 	"context"
@@ -22,7 +23,15 @@ type Service struct {
 	ActorEmail string
 }
 
-func (s Service) Save(ctx context.Context, actor int, any bool, operation string, input models.Booking) (models.Booking, error) {
+func (s Service) Save(ctx context.Context, actor int, any bool, operation string, input models.Booking) (result models.Booking, commandErr error) {
+	start := time.Now()
+	defer func() {
+		outcome := "success"
+		if commandErr != nil {
+			outcome = "failed"
+		}
+		observability.Event(ctx, "booking_command", map[string]interface{}{"booking_id": result.ID, "user_id": actor, "operation": operation, "outcome": outcome, "duration_ms": time.Since(start).Milliseconds()})
+	}()
 	if actor <= 0 {
 		return input, ErrValidation
 	}

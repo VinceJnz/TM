@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"api-server/v2/internal/observability"
 	store "api-server/v2/modelMethods/trips"
 	"api-server/v2/models"
 	"context"
@@ -12,7 +13,15 @@ var ErrValidation = errors.New("invalid trip")
 
 type Service struct{ Store store.Store }
 
-func (s Service) Save(ctx context.Context, actor int, any bool, operation string, input models.Trip) (models.Trip, error) {
+func (s Service) Save(ctx context.Context, actor int, any bool, operation string, input models.Trip) (result models.Trip, commandErr error) {
+	start := time.Now()
+	defer func() {
+		outcome := "success"
+		if commandErr != nil {
+			outcome = "failed"
+		}
+		observability.Event(ctx, "trip_command", map[string]interface{}{"resource": "trips", "user_id": actor, "operation": operation, "outcome": outcome, "duration_ms": time.Since(start).Milliseconds()})
+	}()
 	if actor <= 0 {
 		return input, ErrValidation
 	}

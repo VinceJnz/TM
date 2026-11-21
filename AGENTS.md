@@ -16,6 +16,7 @@ Status: proposed for owner review.
 - `api-server/app/appCore/`: startup, environment settings, database connection, and shared dependencies.
 - `api-server/localHandlers/`: Gorilla mux routes, HTTP handlers, and request helpers.
 - `api-server/modelMethods/`: SQL helpers and resource stores.
+- `api-server/app/services/`: booking/trip workflows, authenticated finance commands, checkout/refund orchestration and operational visibility. Keep SQL in resource stores or transactional ledger commands.
 - `api-server/models/`: database/domain structs; these are not automatically safe public response types.
 - `api-server/app/gateways/`: PostgreSQL and external integrations, including Stripe, Gmail, and Google OAuth.
 - `api-server/static/`: browser bootstrap HTML, CSS, and other static assets served by the API.

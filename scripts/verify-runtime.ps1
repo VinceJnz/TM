@@ -37,6 +37,7 @@ try {
     Invoke-TestDocker @("run","-d","--name",$application,"--network",$network,"--network-alias","tm-smoke","--read-only","--tmpfs","/tmp","--cap-drop","ALL","--security-opt","no-new-privileges:true","-v","${certificates}:/etc/certs/ssl:ro","-e","DATA_SOURCE=postgres://tm_smoke_api:synthetic-api@database:5432/tm_test?sslmode=disable","-e","HOST=tm-smoke","-e","HTTP_PORT=8085","-e","HTTPS_PORT=8443","-e","CORE_ORIGINS=https://tm-smoke:8443","-e","API_PATH_PREFIX=/custom/v9","-e","APP_TITLE=Smoke","-e","CERT_OPTION=0","-e","DEV_MODE=false","-e","SERVER_CERT=/etc/certs/ssl/server.crt","-e","SERVER_KEY=/etc/certs/ssl/server.key",$Image)
     Invoke-TestDocker @("run","--rm","--network",$network,"tm-runtime-checks:local")
     Invoke-TestDocker @("exec",$application,"/app/tm-healthcheck")
+    Invoke-TestDocker @("exec",$application,"/app/tm-operations-check")
     Invoke-TestDocker @("stop","--time","15",$application)
     $exitStatus = & docker inspect --format '{{.State.ExitCode}}' $application
     if ($LASTEXITCODE -ne 0 -or $exitStatus -ne "0") { throw "Application did not shut down gracefully" }
