@@ -20,3 +20,10 @@ also copies cursor history, so stale requests cannot mutate the displayed cursor
 map. Retry state survives failures. Parent user/group views cancel their nested
 editors when hidden or rebuilt. Nested group and assignment loads complete within
 one bounded request flow rather than waiting on success-only channels.
+
+Lookup/editor lists now use the same scope mechanism, including pricing,
+seasons, trip dictionaries, account/member/age dictionaries, group bookings and
+vouchers. My Profile owns separate scopes for loading and commands; hide/reset
+cancels both, and obsolete profile/verification responses cannot update the view.
+Cancellation does not reverse server-side commits. The next display reloads
+authoritative profile data; failed writes leave entered form values available.

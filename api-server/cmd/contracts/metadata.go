@@ -43,6 +43,17 @@ func decorateOperations(paths map[string]any) {
 				continue
 			}
 			op := operation.(map[string]any)
+			if resource == "users" && (method == "put" || method == "delete") {
+				op["parameters"] = []any{map[string]any{"name": "X-Change-Reason", "in": "header", "required": method == "delete", "description": "Required for deletion and changes to email, username or account status; revokes the affected user's tokens.", "schema": map[string]any{"type": "string", "minLength": 1, "maxLength": 500}}}
+			}
+			if method == "get" && !strings.Contains(path, "{id}") && (resource == "securityUserGroup" || resource == "securityGroupResource") {
+				field := "user_id"
+				if resource == "securityGroupResource" {
+					field = "group_id"
+				}
+				parameters, _ := op["parameters"].([]any)
+				op["parameters"] = append(parameters, map[string]any{"name": field, "in": "query", "description": "Parent filter applied before pagination", "schema": map[string]any{"type": "integer", "minimum": 1}})
+			}
 			op["x-permission-resource"] = resource
 			scopes := []string{"any"}
 			if authorization.SupportsScope(resource, strings.ToUpper(method), "own") {

@@ -40,6 +40,18 @@ New custom permission groups need an explicit myProfile POST grant to change ema
 There is no self-service bypass for a lost current inbox; recovery requires an
 authorized administrator's existing account process.
 
-Administrative user CRUD and lookup dictionaries remain candidates for subsequent
-store/service migration. Their continued presence does not route financial writes
-around the checkout service or transactional ledger commands.
+Administrative user CRUD now uses `accounts.Store` and the account service with
+explicit read/write DTOs. Password hashes and provider credentials are excluded.
+Email/username/status changes require `X-Change-Reason` (1..500 bytes), produce
+projected audit records, and revoke the affected user's tokens and pending email
+changes in the same transaction. The administration UI requests the reason before
+saving; deletion also requires a reason. Referenced accounts cannot be deleted;
+disable them while preserving booking and financial history. Runtime membership
+and active-account checks still apply. Migration 0023 installs the audit trigger;
+it does not change existing accounts or invalidate sessions merely by applying it.
+
+Nested assignments use `securityUserGroup?user_id=<id>` and
+`securityGroupResource?group_id=<id>`. Parent filters are applied in SQL before
+offset/cursor pagination. Both remain any-scope administration operations.
+Lookup dictionaries still migrate independently; financial writes continue through
+the checkout service or transactional ledger commands.

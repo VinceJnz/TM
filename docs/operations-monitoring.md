@@ -53,6 +53,22 @@ alerts to the agreed destination. Also monitor missing check results/host loss
 from outside the host. Docker access is privileged; restrict the monitor account
 and keep scripts, environment configuration and the alert executable owner-managed.
 
+`REQUIRED_INTEGRATIONS` in the API runtime environment can contain `mail`,
+`stripe`, and `google`, separated by commas. Unknown names fail configuration
+loading. The default is empty, preserving database-only readiness when external
+integrations are optional. Required unavailable integrations make `/readyz` return
+503; liveness remains independent. For example, use `mail,google` when both login
+methods are required by that deployment. Stripe availability also requires a
+configured webhook secret. Select requirements deliberately before recreation.
+
+The protected operations response includes `integrations` and
+`integration_alerts`. These expose booleans and stable alert names, not credentials.
+They describe local initialization/configuration, not a live provider probe.
+Provider credential expiry or external outages still need sandbox verification,
+delivery/recovery queue monitoring, and operator investigation. The standalone
+operations CLI checks durable queues; the container health check covers configured
+integration requirements through readiness.
+
 The example assumes PowerShell at `/usr/bin/pwsh` and a checkout at `/srv/tm`.
 Adapt paths for the deployment host and validate with `systemd-analyze verify`
 before enabling the timer. On Windows, configure an equivalent one-minute

@@ -1,5 +1,17 @@
 # Release identity and recovery
 
+For a local build, create the frontend and assembled API with one command:
+
+    ./scripts/build-application.ps1
+
+Use `-ClientBuilder tinygo-builder` for TinyGo, or `-ApiTarget interactive` /
+`-ApiTarget debug` for those API targets. The script builds the selected artifact
+first and passes that exact image to Compose's API build. It records the Git
+revision, stops if either build fails, and starts no containers. Normal runtime
+Compose configuration is required. Starting/recreating the application remains
+a separate operator action. Production publishing and digest approval still use
+the release process below.
+
 The supported deployment entry point validates immutable API references and
 checks the image's source revision before invoking Compose:
 

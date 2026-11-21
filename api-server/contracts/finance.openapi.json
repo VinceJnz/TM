@@ -6188,6 +6188,15 @@
               "minimum": 0,
               "type": "integer"
             }
+          },
+          {
+            "description": "Parent filter applied before pagination",
+            "in": "query",
+            "name": "group_id",
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -7035,6 +7044,15 @@
             "name": "after",
             "schema": {
               "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Parent filter applied before pagination",
+            "in": "query",
+            "name": "user_id",
+            "schema": {
+              "minimum": 1,
               "type": "integer"
             }
           }
@@ -11132,6 +11150,19 @@
     },
     "/users/{id}": {
       "delete": {
+        "parameters": [
+          {
+            "description": "Required for deletion and changes to email, username or account status; revokes the affected user's tokens.",
+            "in": "header",
+            "name": "X-Change-Reason",
+            "required": true,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Deleted record"
@@ -11437,6 +11468,19 @@
         }
       ],
       "put": {
+        "parameters": [
+          {
+            "description": "Required for deletion and changes to email, username or account status; revokes the affected user's tokens.",
+            "in": "header",
+            "name": "X-Change-Reason",
+            "required": false,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {

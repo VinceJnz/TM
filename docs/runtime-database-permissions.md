@@ -26,3 +26,11 @@ For the verified profile-email flow, apply migration 0021 and subsequent migrati
 explicitly includes `st_email_changes`; existing roles do not gain access merely
 because the table was created. Migration 0022 adds group-definition audit triggers.
 Neither migration rotates database passwords or rewrites financial history.
+
+The account-administration and durable review changes require migrations 0023 and
+0024 before the new API starts. Apply them with the migration owner and rerun
+`tm-migrate -grant-role <runtime-role>`. The runtime role receives SELECT and only
+the dispatch-timestamp UPDATE privilege on the review request queue; the trigger
+inserts requests with pinned owner privileges. Notification insert/lifecycle and
+restricted redaction permissions remain explicit. No live migration is performed
+by a repository build or verification command.

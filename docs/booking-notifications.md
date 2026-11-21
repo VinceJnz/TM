@@ -25,3 +25,19 @@ bookings remain intact. Only recipient, subject and body are blanked; rows,
 timestamps, delivery attempts and financial history remain. Backups have separate
 retention and are not modified by this worker. Reapply runtime grants to enable
 the restricted redaction function. No deployed payload is changed until rollout.
+
+Migration 0024 adds durable account-review requests. An AFTER INSERT trigger
+records the request in the account transaction, covering admin, OTP registration,
+and OAuth account creation. Rollback removes the request. No existing accounts
+are backfilled. A worker resolves active administrators using `ADMIN_NOTIFY_GROUP`
+(comma-separated group names, default Admin and SysAdmin), then transactionally
+creates one delivery per distinct inbox and marks the request dispatched. Missing
+recipients leave the request pending for later retries. Recipient groups select
+notifications only; they do not confer API privileges.
+
+Account-review deliveries use the same lease, backoff and email-redirection
+controls as booking mail. Delivery remains at least once after provider acceptance.
+Operational status includes undispatched review count/age and alerts for stale
+requests. Deleted-account messages are skipped; eligible payloads are redacted
+without deleting delivery evidence. Active pending account messages are retained.
+Reapply runtime grants for the new queue before deploying the updated API.
