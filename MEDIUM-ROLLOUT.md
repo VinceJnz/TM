@@ -306,3 +306,12 @@ legacy one-element array when required. Generic CRUD/trip single-record response
 therefore preserve their existing JSON shape; missing records return 404. The
 persistence adapter has no HTTP dependency. Regression tests cover multi-column
 records, array responses and missing IDs against PostgreSQL.
+
+## Architecture follow-up: stable page ordering
+
+Shared resource pages now order by the named resource_page.id column rather than
+assuming the first projection column is an ID. Regression coverage executes the
+actual booking query (which starts with owner_username) for multiple bookings of
+one owner, checks consecutive pages, and excludes the other owner's records.
+Offset pagination remains supported; pages are not a cross-request snapshot when
+records are concurrently inserted/deleted.

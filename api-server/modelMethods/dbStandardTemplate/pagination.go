@@ -12,8 +12,8 @@ import (
 
 var ErrPagination = errors.New("invalid pagination")
 
-// selectPage preserves array responses and uses a next-offset header. Column one
-// is the resource ID in the shared CRUD queries, providing deterministic order.
+// selectPage preserves array responses and uses a next-offset header. The resource ID
+// is selected explicitly by name, independently of projection column order.
 func selectPage(w http.ResponseWriter, r *http.Request, db *sqlx.DB, dest any, query string, args ...any) error {
 	limit, offset := 100, 0
 	for name, target := range map[string]*int{"limit": &limit, "offset": &offset} {
@@ -29,7 +29,7 @@ func selectPage(w http.ResponseWriter, r *http.Request, db *sqlx.DB, dest any, q
 		return ErrPagination
 	}
 	query = strings.TrimSuffix(strings.TrimSpace(query), ";")
-	paged := fmt.Sprintf("SELECT * FROM (%s) AS resource_page ORDER BY 1 LIMIT $%d OFFSET $%d", query, len(args)+1, len(args)+2)
+	paged := fmt.Sprintf("SELECT * FROM (%s) AS resource_page ORDER BY resource_page.id LIMIT $%d OFFSET $%d", query, len(args)+1, len(args)+2)
 	args = append(append([]any{}, args...), limit+1, offset)
 	if err := db.SelectContext(r.Context(), dest, paged, args...); err != nil {
 		return err
