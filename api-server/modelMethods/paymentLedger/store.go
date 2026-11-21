@@ -16,6 +16,20 @@ var ErrInvalidPayment = errors.New("payment does not match the stored checkout q
 // Finalize commits the event, ledger entry and derived booking state together.
 // Row locking serializes duplicate events, including across API replicas.
 func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amountMinor int64, currency string) (bool, error) {
+	replay, err := finalize(ctx, db, eventID, sessionID, amountMinor, currency)
+	if err != nil && !errors.Is(err, ErrInvalidPayment) {
+		// The financial transaction has rolled back. Record a separate durable
+		// exception only for a matching stored quote, never untrusted payloads.
+		reviewCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		if recordErr := RecordReview(reviewCtx, db, sessionID, amountMinor, currency); recordErr != nil {
+			return replay, errors.Join(err, recordErr)
+		}
+	}
+	return replay, err
+}
+
+func finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amountMinor int64, currency string) (bool, error) {
 	if eventID == "" || sessionID == "" || amountMinor <= 0 {
 		return false, ErrInvalidPayment
 	}
@@ -41,6 +55,13 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 	if expected != amountMinor || strings.ToLower(currency) != expectedCurrency {
 		return false, ErrInvalidPayment
 	}
+	var refunded bool
+	if err := tx.GetContext(ctx, &refunded, `SELECT EXISTS(SELECT 1 FROM at_payment_reviews WHERE session_id=$1 AND resolution='external-refund-confirmed')`, sessionID); err != nil {
+		return false, err
+	}
+	if refunded {
+		return false, ErrLedgerConflict
+	}
 	var inserted string
 	err = tx.QueryRowContext(ctx, `INSERT INTO at_stripe_events(event_id,session_id) VALUES ($1,$2) ON CONFLICT(event_id) DO NOTHING RETURNING event_id`, eventID, sessionID).Scan(&inserted)
 	if err == sql.ErrNoRows {
@@ -65,6 +86,9 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 		return false, err
 	}
 	if err := Sync(ctx, tx, bookingID); err != nil {
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE at_payment_reviews SET resolved_at=CURRENT_TIMESTAMP,resolution='admitted',actor='finalization' WHERE session_id=$1 AND resolved_at IS NULL`, sessionID); err != nil {
 		return false, err
 	}
 	return false, tx.Commit()

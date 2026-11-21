@@ -10,6 +10,7 @@ CREATE UNIQUE INDEX ON at_payments(stripe_session_id) WHERE stripe_session_id IS
 CREATE TABLE at_refunds (id serial PRIMARY KEY,payment_id integer,amount numeric);
 CREATE TABLE at_checkout_attempts(id text PRIMARY KEY,booking_id integer,amount_minor bigint,email text,title text,description text,domain text,expires_at timestamptz,session_id text,checkout_url text,state text DEFAULT 'pending');
 CREATE TABLE at_checkout_quotes (session_id text PRIMARY KEY,booking_id integer REFERENCES at_bookings(id),amount_minor bigint,currency text);
+CREATE TABLE at_payment_reviews(session_id text PRIMARY KEY,booking_id integer,amount_minor bigint,currency text,reason text,first_seen timestamptz DEFAULT CURRENT_TIMESTAMP,last_seen timestamptz DEFAULT CURRENT_TIMESTAMP,failures integer DEFAULT 1,resolved_at timestamptz,resolution text,actor text,evidence text);
 CREATE TABLE at_stripe_events (event_id text PRIMARY KEY,session_id text REFERENCES at_checkout_quotes(session_id),processed_at timestamptz DEFAULT CURRENT_TIMESTAMP);
 UPDATE at_bookings SET stripe_session_id='checkout',booking_price=10 WHERE id=11;
 INSERT INTO at_checkout_quotes VALUES ('checkout',11,1000,'nzd');
