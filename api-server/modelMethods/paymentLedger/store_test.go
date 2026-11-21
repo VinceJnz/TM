@@ -132,3 +132,34 @@ func TestManualLedgerUsesExactStatusAndRejectsExcessRefund(t *testing.T) {
 		t.Fatal("invalid refund persisted", err)
 	}
 }
+
+func TestWebhookReplayAfterRefundDoesNotRequireFreshCapacity(t *testing.T) {
+	db := testdb.Open(t, ledgerFixture+`UPDATE at_trips SET max_participants=1;`)
+	ctx := context.Background()
+	if _, err := Finalize(ctx, db, "first-event", "checkout", 1000, "nzd"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO at_refunds(payment_id,amount) SELECT id,10 FROM at_payments;UPDATE at_bookings SET booking_status_id=3 WHERE id=22"); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := Begin(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if err = Sync(ctx, tx, 11); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []string{"first-event", "another-delivery"} {
+		if _, err = Finalize(ctx, db, event, "checkout", 1000, "nzd"); err != nil {
+			t.Fatal("refunded replay attempted fresh admission", err)
+		}
+	}
+	var status int
+	if err = db.Get(&status, "SELECT booking_status_id FROM at_bookings WHERE id=11"); err != nil || status != 1 {
+		t.Fatal(status, err)
+	}
+}

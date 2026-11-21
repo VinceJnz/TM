@@ -116,3 +116,28 @@ func TestPaidRecoveryAndUncertainAbsence(t *testing.T) {
 		t.Fatal(outcome, err)
 	}
 }
+
+func TestProviderSuccessThenPersistenceFailureCanRecover(t *testing.T) {
+	db := recoveryDB(t)
+	provider := &fakeProvider{db: db}
+	service := New(db, provider)
+	ctx := context.Background()
+	if _, err := db.Exec(`CREATE FUNCTION fail_quote() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic persistence failure';END $$;CREATE TRIGGER fail_quote BEFORE INSERT ON at_checkout_quotes FOR EACH ROW EXECUTE FUNCTION fail_quote()`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Start(ctx, 11, 1, "member@example.test", "https://app.test"); err == nil {
+		t.Fatal("persistence failure was swallowed")
+	}
+	if _, err := db.Exec("DROP TRIGGER fail_quote ON at_checkout_quotes"); err != nil {
+		t.Fatal(err)
+	}
+	provider.sessions[0].State = "complete"
+	provider.sessions[0].Paid = true
+	if outcome, err := service.Reconcile(ctx, 11, 1); err != nil || outcome != "paid" {
+		t.Fatal(outcome, err)
+	}
+	var count int
+	if err := db.Get(&count, "SELECT count(*) FROM at_payments"); err != nil || count != 1 {
+		t.Fatal(count, err)
+	}
+}

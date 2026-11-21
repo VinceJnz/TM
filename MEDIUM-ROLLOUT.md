@@ -356,3 +356,15 @@ runtime prefix; the localhost popup fallback is removed. A failed ensure request
 leaves the UI logged out rather than reporting success. WASM tests execute session
 restoration, OAuth restoration, and failed ensure under /custom/v9; TinyGo builds
 the updated flow. These tests use synthetic provider responses, not Google accounts.
+
+## Architecture follow-up: failure-path verification
+
+Provider contract tests use a local HTTP server to check immutable amounts,
+idempotency headers, metadata, bounded recovery listing, cancellation and provider
+errors. Service tests inject failure after provider success but before quote
+persistence, then recover and finalize once. Refunded webhook replays no longer
+request fresh capacity: admission is enforced only by the resulting ledger state,
+so duplicate delivery cannot resurrect refunded money or fail merely because a
+different booking has occupied the released places. These tests run in the normal
+API suite. OAuth WASM restoration and actual browser paging/single-record reads
+are also covered. No real Google login, email delivery or Stripe charge is made.
