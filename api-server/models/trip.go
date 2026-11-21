@@ -77,7 +77,7 @@ type TripCost struct {
 	UserAgeGroup    zero.String `db:"user_age_group" json:"user_age_group"`
 	SeasonID        int         `db:"season_id" json:"season_id"`
 	Season          zero.String `db:"season" json:"season"`
-	Amount          float64     `db:"amount" json:"amount"`
+	Amount          Money       `db:"amount" json:"amount"`
 	Created         time.Time   `db:"created" json:"created"`
 	Modified        time.Time   `db:"modified" json:"modified"`
 }

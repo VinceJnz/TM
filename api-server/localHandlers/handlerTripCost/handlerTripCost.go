@@ -2,93 +2,111 @@ package handlerTripCost
 
 import (
 	"api-server/v2/app/appCore"
+	service "api-server/v2/app/services/pricing"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	store "api-server/v2/modelMethods/pricing"
 	"api-server/v2/models"
-	"log"
-	"net/http"
-
+	"errors"
 	"github.com/gorilla/mux"
-)
-
-const debugTag = "handlerTripCost."
-
-const (
-	qryGetAll = `SELECT attc.id, attc.trip_cost_group_id, attc.description, attc.member_status_id, etms.status as member_status, attc.user_age_group_id, etuag.age_group as user_age_group, attc.season_id, ets.season, attc.amount, attc.created, attc.modified
-					FROM public.at_trip_costs attc
-					LEFT JOIN et_member_status etms on etms.id = attc.member_status_id
-					JOIN et_user_age_groups etuag on etuag.id = attc.user_age_group_id
-					JOIN et_seasons ets on ets.id = attc.season_id`
-	qryGet    = `SELECT * FROM at_trip_costs WHERE id = $1`
-	qryCreate = `INSERT INTO at_trip_costs (trip_cost_group_id, member_status_id, user_age_group_id, season_id, amount) 
-			        VALUES ($1, $2, $3, $4, $5) 
-					RETURNING id`
-	qryUpdate = `UPDATE at_trip_costs 
-					SET trip_cost_group_id = $1, member_status_id = $2, user_age_group_id = $3, season_id = $4, amount = $5
-					WHERE id = $6`
-	qryDelete = `DELETE FROM at_trip_costs WHERE id = $1`
+	"net/http"
+	"strings"
 )
 
 type Handler struct {
-	appConf *appCore.Config
+	app   *appCore.Config
+	store store.Store
 }
 
-func New(appConf *appCore.Config) *Handler {
-	return &Handler{appConf: appConf}
+func New(app *appCore.Config) *Handler { return &Handler{app, store.Store{DB: app.Db}} }
+func (h *Handler) RegisterRoutes(r *mux.Router, path string) {
+	helpers.AddRouteGroup(r, path, h, "tripCosts")
 }
-
-// RegisterRoutes registers handler routes on the provided router.
-func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h, "tripCosts")
+func (h *Handler) allowed(w http.ResponseWriter, r *http.Request) bool {
+	s := helpers.RequiredSession(w, r, h.app.SessionIDKey)
+	if s == nil {
+		return false
+	}
+	if !strings.EqualFold(s.AccessScope, "any") {
+		helpers.WriteError(w, 403, "forbidden", "Pricing requires any scope")
+		return false
+	}
+	return true
 }
-
-// GetAll: retrieves all trip costs
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	dbStandardTemplate.GetAll(w, r, debugTag, h.appConf.Db, &[]models.TripCost{}, qryGetAll)
+	if !h.allowed(w, r) {
+		return
+	}
+	p, ok := helpers.ReadResourcePage(w, r)
+	if !ok {
+		return
+	}
+	items, info, err := h.store.Costs(r.Context(), p)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteResourcePage(w, items, info)
 }
-
-// Get: retrieves a single trip cost by ID
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
+	if !h.allowed(w, r) {
 		return
 	}
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.TripCost{}, qryGet, id)
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	v, err := h.store.Cost(r.Context(), id)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, []models.TripCost{v})
 }
-
-// Create: adds a new trip cost record
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.TripCost
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Create err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.save(w, r, false) }
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.save(w, r, true) }
+func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
+	if !h.allowed(w, r) {
 		return
 	}
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.TripCostGroupID, record.MemberStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount)
+	id := 0
+	if update {
+		id = helpers.RouteID(w, r)
+		if id == 0 {
+			return
+		}
+	}
+	var input models.TripCostWrite
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid pricing payload")
+		return
+	}
+	v, err := (service.Service{Store: h.store}).SaveCost(r.Context(), id, input)
+	if err != nil {
+		if errors.Is(err, service.ErrValidation) {
+			helpers.WriteError(w, 400, "invalid_request", "Invalid pricing values")
+		} else {
+			helpers.WriteDataError(w, err)
+		}
+		return
+	}
+	if !update {
+		helpers.WriteJSON(w, 201, v.ID)
+		return
+	}
+	helpers.WriteJSON(w, 200, v)
 }
-
-// Update: modifies the existing trip cost by ID
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var record models.TripCost
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Update err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	record.ID = id
-
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.TripCostGroupID, record.MemberStatusID, record.UserAgeGroupID, record.SeasonID, record.Amount, id)
-}
-
-// Delete: removes a trip cost by ID
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
+	if !h.allowed(w, r) {
 		return
 	}
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	if err := h.store.DeleteCost(r.Context(), id); err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, nil)
 }
