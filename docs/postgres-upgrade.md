@@ -11,7 +11,10 @@ an existing database or authorize a live cutover.
 Run `./scripts/verify-postgres-upgrade.ps1`. It creates isolated PostgreSQL 13
 and 17 containers, migrates and seeds only synthetic records, dumps using the
 17 client, restores with errors fatal, compares booking/payment/audit counts and
-amounts, reapplies the restricted runtime policy and verifies token insertion.
+amounts, preserves role attributes and password verifiers, reapplies the restricted
+runtime policy and verifies token insertion using a real TCP password login.
+The source owner, runtime login and temporary target bootstrap identity are
+distinct. The test also rejects the bootstrap password for the runtime login.
 Its unique containers and archive volume are removed afterwards. Full API,
 migration, financial and browser release checks also run against PostgreSQL 17.
 
@@ -29,9 +32,27 @@ migration, financial and browser release checks also run against PostgreSQL 17.
    Use error-fatal restore; do not ignore failures or restore obsolete broad ACLs.
    Apply pending application migrations and run `tm-migrate -grant-role` with
    a separate migration identity. Resolve rejected inherited grants explicitly.
+   Export roles separately with `pg_dumpall --roles-only` using an administrative
+   source connection. This file contains password verifiers: protect it like a
+   credential, encrypt it at rest, and never print or commit it. Initialize the
+   target with a distinct temporary bootstrap administrator, restore reviewed
+   roles before data, and preserve existing login attributes, validity, role
+   settings and password verifiers. Account for existing target roles explicitly;
+   do not suppress restore errors. A bootstrap `POSTGRES_PASSWORD` initializes
+   only a new cluster and is not permission to change existing users' passwords.
+   Compare the protected role inventories without displaying verifiers. Restore
+   database/schema/object ownership to the intended migration owner, then apply
+   the current runtime grant policy rather than obsolete broad ACLs.
+   Review `pg_hba.conf`: a preserved MD5 verifier cannot authenticate against a
+   SCRAM-only rule. The synthetic rehearsal uses MD5-compatible host rules to
+   exercise both forms. A production move to SCRAM requires an explicitly
+   approved credential rotation; preserving the old hash cannot produce a SCRAM
+   verifier. Do not substitute an environment/bootstrap password silently.
 5. Compare row counts, financial totals, audit evidence, sequence/default
    dependencies and migration checksums. Run ANALYZE, application readiness and
    restricted-role login/booking/payment checks before reopening traffic.
+   Use TCP/password authentication with each intended login's existing credential;
+   `SET ROLE`, local socket trust and readiness checks do not verify passwords.
 6. Switch to the approved application image and new database only after review.
    Watch queue ages, provider reconciliation and notification delivery.
 
