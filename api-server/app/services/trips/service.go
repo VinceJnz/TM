@@ -1,0 +1,56 @@
+package trips
+
+import (
+	store "api-server/v2/modelMethods/trips"
+	"api-server/v2/models"
+	"context"
+	"errors"
+	"time"
+)
+
+var ErrValidation = errors.New("invalid trip")
+
+type Service struct{ Store store.Store }
+
+func (s Service) Save(ctx context.Context, actor int, any bool, operation string, input models.Trip) (models.Trip, error) {
+	if actor <= 0 {
+		return input, ErrValidation
+	}
+	if operation != "delete" && (input.Name == "" || input.FromDate.IsZero() || input.ToDate.IsZero() || input.ToDate.Before(input.FromDate) || input.MaxParticipants.Int64 < 0) {
+		return input, ErrValidation
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	tx, err := s.Store.DB.BeginTxx(ctx, nil)
+	if err != nil {
+		return input, err
+	}
+	defer tx.Rollback()
+	if operation != "create" {
+		if err = s.Store.Lock(ctx, tx, input.ID, actor, any); err != nil {
+			return input, err
+		}
+	}
+	switch operation {
+	case "create":
+		input.ID, err = s.Store.Create(ctx, tx, actor, input)
+		input.OwnerID = actor
+	case "update":
+		var fit bool
+		fit, err = s.Store.BookingsFit(ctx, tx, input)
+		if err == nil && !fit {
+			return input, ErrValidation
+		}
+		if err == nil {
+			err = s.Store.Update(ctx, tx, actor, any, input)
+		}
+	case "delete":
+		err = s.Store.Delete(ctx, tx, actor, any, input.ID)
+	default:
+		return input, ErrValidation
+	}
+	if err != nil {
+		return input, err
+	}
+	return input, tx.Commit()
+}

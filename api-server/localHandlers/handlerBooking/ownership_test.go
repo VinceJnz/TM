@@ -2,13 +2,18 @@ package handlerBooking
 
 import (
 	"api-server/v2/app/appCore"
+	service "api-server/v2/app/services/bookings"
 	"api-server/v2/internal/testdb"
+	store "api-server/v2/modelMethods/bookings"
 	"api-server/v2/models"
 	"context"
+	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -44,7 +49,9 @@ func TestOwnershipReads(t *testing.T) {
 func TestBookingWritesCannotChangePaymentState(t *testing.T) {
 	db := testdb.Open(t, testdb.Bookings)
 	// Member edits affect dates/notes, never a server price or paid state.
-	if _, err := db.Exec(qryUpdate, 11, 1, "own", "updated", "2026-01-01", "2026-01-02"); err != nil {
+	command := service.Service{Store: store.Store{DB: db}}
+	input := models.Booking{ID: 11, Notes: "updated", FromDate: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), ToDate: time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)}
+	if _, err := command.Save(context.Background(), 1, false, "update", input); err != nil {
 		t.Fatal(err)
 	}
 	var status int
@@ -63,20 +70,12 @@ func TestBookingWritesCannotChangePaymentState(t *testing.T) {
 		if _, err := db.Exec(lock); err != nil {
 			t.Fatal(err)
 		}
-		result, err := db.Exec(qryUpdate, 11, 1, "own", "forged", "2026-01-01", "2026-01-02")
-		if err != nil {
-			t.Fatal(err)
-		}
-		rows, _ := result.RowsAffected()
-		if rows != 0 {
+		_, err := command.Save(context.Background(), 1, false, "update", input)
+		if !errors.Is(err, sql.ErrNoRows) {
 			t.Fatal("financially locked booking was editable")
 		}
-		result, err = db.Exec(qryDelete, 11, 1, "any")
-		if err != nil {
-			t.Fatal(err)
-		}
-		rows, _ = result.RowsAffected()
-		if rows != 0 {
+		_, err = command.Save(context.Background(), 1, true, "delete", input)
+		if !errors.Is(err, sql.ErrNoRows) {
 			t.Fatal("financially locked booking was deletable")
 		}
 	}
