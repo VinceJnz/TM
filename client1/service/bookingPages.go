@@ -3,6 +3,7 @@ package service
 import (
 	"client1/v2/app/api"
 	"client1/v2/app/httpProcessor"
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -12,6 +13,10 @@ var ErrStale = errors.New("booking request superseded")
 
 type pageAPI interface {
 	GetPage(*httpProcessor.Page, string, *[]api.BookingDTO) error
+}
+
+type contextPageAPI interface {
+	GetPageContext(context.Context, *httpProcessor.Page, string, *[]api.BookingDTO) error
 }
 
 // FetchPage owns load/error state. Transport writes to a private page copy so
@@ -29,13 +34,24 @@ func (s *BookingService) FetchPage(page *httpProcessor.Page, path string) ([]Boo
 		return rows, nil
 	}
 	s.generation++
+	if s.pageCancel != nil {
+		s.pageCancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	s.pageCancel = cancel
+	defer cancel()
 	generation := s.generation
 	pending := *page
 	s.state.Loading = true
 	s.state.Err = nil
 	s.mu.Unlock()
 	var rows []Booking
-	err := adapter.GetPage(&pending, path, &rows)
+	var err error
+	if contextual, ok := s.api.(contextPageAPI); ok {
+		err = contextual.GetPageContext(ctx, &pending, path, &rows)
+	} else {
+		err = adapter.GetPage(&pending, path, &rows)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if generation != s.generation {

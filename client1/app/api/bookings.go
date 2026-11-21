@@ -2,6 +2,7 @@ package api
 
 import (
 	"client1/v2/app/httpProcessor"
+	"context"
 
 	"fmt"
 	"net/http"
@@ -42,6 +43,10 @@ func NewBooking(client *httpProcessor.Client) *Booking {
 // GetPage preserves the view's explicit pagination contract.
 func (a *Booking) GetPage(page *httpProcessor.Page, path string, records *[]BookingDTO) error {
 	return a.client.PageRequest(page, http.MethodGet, path, records, nil)
+}
+
+func (a *Booking) GetPageContext(ctx context.Context, page *httpProcessor.Page, path string, records *[]BookingDTO) error {
+	return a.client.PageRequestContext(ctx, page, http.MethodGet, path, records, nil)
 }
 
 func (a *Booking) CreateBooking(req BookingRequest, onSuccess func(BookingDTO), onError func(error)) {

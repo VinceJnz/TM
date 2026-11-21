@@ -2,6 +2,7 @@ package httpProcessor
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,7 +19,9 @@ const debugTag = "httpProcessor."
 
 // Client provides the connection to the rest interface (is used by a store to read/write/update data????)
 type Client struct {
-	headers map[string]string
+	ctx       context.Context
+	lifecycle *requestLifecycle
+	headers   map[string]string
 	//Ctx     context.Context
 	BaseURL string
 	//apiKey    string
@@ -59,7 +62,8 @@ func New(baseURL string) *Client {
 	}
 
 	return &Client{
-		BaseURL: baseURL,
+		BaseURL:   baseURL,
+		lifecycle: newLifecycle(),
 		//CookieJar:  jar,
 		HTTPClient: httpClient,
 	}
@@ -132,13 +136,13 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 			err = fmt.Errorf(debugTag+"NewRequest().MethodDelete.2 failed to marshal item data: %w", err)
 			return err
 		}
-		req, err = http.NewRequest(http.MethodDelete, url, bytes.NewReader(itemJSON))
+		req, err = http.NewRequestWithContext(c.requestContext(), http.MethodDelete, url, bytes.NewReader(itemJSON))
 		if err != nil {
 			err = fmt.Errorf(debugTag+"NewRequest().MethodDelete.3 failed to create request: %w", err)
 			return err
 		}
 	case http.MethodGet:
-		req, err = http.NewRequest(http.MethodGet, url, nil)
+		req, err = http.NewRequestWithContext(c.requestContext(), http.MethodGet, url, nil)
 		if err != nil {
 			err = fmt.Errorf(debugTag+"NewRequest().MethodGet.1 failed to create request: %w", err)
 			return err
@@ -149,7 +153,7 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 			err = fmt.Errorf(debugTag+"NewRequest().MethodPut.1 failed to marshal item data: %w", err)
 			return err
 		}
-		req, err = http.NewRequest(http.MethodPut, url, bytes.NewBuffer(itemJSON))
+		req, err = http.NewRequestWithContext(c.requestContext(), http.MethodPut, url, bytes.NewBuffer(itemJSON))
 		if err != nil {
 			err = fmt.Errorf(debugTag+"NewRequest().MethodPut.3 failed to create request: %w", err)
 			return err
@@ -161,7 +165,7 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 			err = fmt.Errorf(debugTag+"NewRequest().MethodPost.1 failed to marshal item data: %w", err)
 			return err
 		}
-		req, err = http.NewRequest(http.MethodPost, url, bytes.NewBuffer(itemJSON))
+		req, err = http.NewRequestWithContext(c.requestContext(), http.MethodPost, url, bytes.NewBuffer(itemJSON))
 		if err != nil {
 			err = fmt.Errorf(debugTag+"NewRequest().MethodPost.3 failed to create request: %w", err)
 			return err
@@ -300,162 +304,6 @@ func decodeJSON(res *http.Response, rxDataStru any) error {
 	return nil
 }
 
-// Replace the problematic Do() call with this function
-func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
-	// Create fetch options
-	fetchOptions := map[string]any{
-		"method":      req.Method,
-		"headers":     make(map[string]any),
-		"mode":        "cors",    // allow CORS
-		"credentials": "include", // ensure cookies are sent
-	}
-
-	// Copy headers (but do not attempt to set Origin or other forbidden headers)
-	headers := fetchOptions["headers"].(map[string]any)
-	for key, values := range req.Header {
-		if len(values) > 0 {
-			headers[key] = values[0] // Take first value
-		}
-	}
-
-	// Add body for POST/PUT/DELETE
-	if req.Body != nil {
-		// Read body safely (do not rely on ContentLength)
-		bodyBytes, _ := io.ReadAll(req.Body)
-		fetchOptions["body"] = string(bodyBytes)
-	}
-
-	// Use AbortController to support timeouts and cancellation when available
-	var controller js.Value
-	var timer *time.Timer
-	if !js.Global().Get("AbortController").IsUndefined() {
-		controller = js.Global().Get("AbortController").New()
-		fetchOptions["signal"] = controller.Get("signal")
-		if c != nil && c.HTTPClient != nil && c.HTTPClient.Timeout > 0 {
-			d := c.HTTPClient.Timeout
-			// start a timer that aborts the fetch when timeout expires
-			timer = time.AfterFunc(d, func() {
-				controller.Call("abort")
-			})
-		}
-	}
-
-	// Call JavaScript fetch
-	promise := js.Global().Call("fetch", req.URL.String(), fetchOptions)
-
-	// Create a channel to wait for the promise
-	done := make(chan *http.Response, 1)
-	errChan := make(chan error, 1)
-
-	// Prepare handlers so we can Release them after use
-	var thenHandler js.Func
-	var catchHandler js.Func
-	var textHandler js.Func
-	var textHandlerSet bool
-	var thenHandlerSet bool
-	var catchHandlerSet bool
-
-	// Handle promise resolution
-	thenHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
-		response := args[0]
-
-		// Create Go http.Response
-		resp := &http.Response{
-			StatusCode: response.Get("status").Int(),
-			Status:     response.Get("statusText").String(),
-			Header:     make(http.Header),
-		}
-
-		// Copy response headers
-		headersJS := response.Get("headers")
-		if !headersJS.IsUndefined() && !headersJS.IsNull() {
-			headersHandler := js.FuncOf(func(this js.Value, a []js.Value) any {
-				// headers.forEach callback signature: (value, key)
-				value := a[0].String()
-				key := a[1].String()
-				resp.Header.Set(key, value)
-				return nil
-			})
-			// Run forEach and release handler immediately
-			headersJS.Call("forEach", headersHandler)
-			headersHandler.Release()
-		}
-
-		// Get response text
-		textPromise := response.Call("text")
-		textHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
-			// Stop abort timer if running
-			if timer != nil {
-				timer.Stop()
-			}
-			if len(args) > 0 {
-				text := args[0].String()
-				resp.Body = &stringReadCloser{strings.NewReader(text)}
-			}
-			if catchHandlerSet {
-				catchHandler.Release()
-				catchHandlerSet = false
-			}
-			done <- resp
-			// Release handlers
-			textHandler.Release()
-			textHandlerSet = false
-			if thenHandlerSet {
-				thenHandler.Release()
-				thenHandlerSet = false
-			}
-			return nil
-		})
-		textHandlerSet = true
-		return textPromise.Call("then", textHandler)
-	})
-
-	// Handle promise rejection
-	catchHandler = js.FuncOf(func(this js.Value, args []js.Value) any {
-		// Stop abort timer if running
-		if timer != nil {
-			timer.Stop()
-		}
-		// Release thenHandler if set
-		if thenHandlerSet {
-			thenHandler.Release()
-			thenHandlerSet = false
-		}
-		if textHandlerSet {
-			textHandler.Release()
-			textHandlerSet = false
-		}
-		// Attempt to read message
-		msg := "fetch failed"
-		if len(args) > 0 {
-			m := args[0]
-			if !m.IsUndefined() && !m.IsNull() {
-				if m.Get("message").Truthy() {
-					msg = m.Get("message").String()
-				}
-			}
-		}
-		errChan <- fmt.Errorf("fetch failed: %v", msg)
-		if catchHandlerSet {
-			catchHandler.Release()
-			catchHandlerSet = false
-		}
-		return nil
-	})
-
-	thenHandlerSet = true
-	catchHandlerSet = true
-	promise.Call("then", thenHandler).Call("catch", catchHandler)
-
-	// Wait for completion
-	select {
-	case resp := <-done:
-		return resp, nil
-	case err := <-errChan:
-		return nil, err
-	}
-}
-
 // OpenPopup opens a new browser window/tab pointing to path (relative to Client.BaseURL) with the given name and window features.
 // If an absolute URL is provided (starts with http/https), it will be used as-is.
 // Security notes:
@@ -495,13 +343,8 @@ func (c *Client) OpenPopup(path, name, features string) {
 // Destroy releases resources associated with the Client (closes idle connections and clears HTTP client).
 // Call this when the application is shutting down or the client is no longer needed.
 func (c *Client) Destroy() {
-	if c == nil {
-		return
-	}
-	if c.HTTPClient != nil {
-		// Not all platforms implement CloseIdleConnections; simply clear the client reference.
-		c.HTTPClient = nil
-		log.Printf(debugTag + "Destroy() cleared HTTP client")
+	if c != nil && c.lifecycle != nil {
+		c.lifecycle.stop()
 	}
 }
 

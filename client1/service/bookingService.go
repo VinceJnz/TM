@@ -2,6 +2,7 @@ package service
 
 import (
 	"client1/v2/app/api"
+	"context"
 	"sync"
 	"time"
 )
@@ -16,6 +17,7 @@ type BookingService struct {
 	api        api.BookingAPI
 	generation uint64
 	pageKey    string
+	pageCancel context.CancelFunc
 }
 
 func NewBookingService(adapter api.BookingAPI) *BookingService {
@@ -33,6 +35,10 @@ func (s *BookingService) Invalidate() {
 	defer s.mu.Unlock()
 	s.state.LastFetched = time.Time{}
 	s.generation++
+	if s.pageCancel != nil {
+		s.pageCancel()
+		s.pageCancel = nil
+	}
 	s.state.Loading = false
 }
 func (s *BookingService) LoadIfNeeded() {
