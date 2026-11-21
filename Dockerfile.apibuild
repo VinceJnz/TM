@@ -7,7 +7,7 @@ WORKDIR /app
 COPY api-server/go.mod api-server/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY api-server/ ./
-RUN --mount=type=cache,target=/go/pkg/mod go build -o /app/apiserver . && go build -o /app/tm-migrate ./cmd/migrate
+RUN --mount=type=cache,target=/go/pkg/mod go build -o /app/apiserver . && go build -o /app/tm-migrate ./cmd/migrate && go build -o /app/tm-healthcheck ./cmd/healthcheck
 
 FROM alpine:latest@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 RUN apk add --no-cache ca-certificates && \
@@ -21,10 +21,12 @@ COPY --from=apibuilder /app/static/ ./static/
 COPY --from=client1-artifact /out/main.wasm /out/wasm_exec.js ./static/
 COPY --from=apibuilder /app/apiserver ./apiserver
 COPY --from=apibuilder /app/tm-migrate ./tm-migrate
+COPY --from=apibuilder /app/tm-healthcheck ./tm-healthcheck
 USER 10001:10001
 EXPOSE 8085 8086
 
 FROM runtime AS final
+HEALTHCHECK --interval=30s --timeout=4s --start-period=15s --retries=3 CMD ["/app/tm-healthcheck"]
 CMD ["./apiserver"]
 
 FROM runtime AS interactive

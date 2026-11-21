@@ -368,3 +368,45 @@ so duplicate delivery cannot resurrect refunded money or fail merely because a
 different booking has occupied the released places. These tests run in the normal
 API suite. OAuth WASM restoration and actual browser paging/single-record reads
 are also covered. No real Google login, email delivery or Stripe charge is made.
+
+## Architecture follow-up: deployment and recovery operations
+
+The final API image includes /app/tm-healthcheck and probes loopback /readyz with
+a three-second bound. Production Compose restarts an exited API unless explicitly
+stopped and allows 15 seconds for shutdown. Unhealthy-but-running containers need
+monitoring/orchestrator action; Docker's restart policy alone does not restart them.
+Interactive/debug targets do not inherit the final image's health command.
+
+For immutable releases, use scripts/build-release.ps1 with a registry client-image
+digest, a 40-character source revision and the intended API image tag. ValidateOnly
+checks input format without building. The script builds locally and prints the
+image identity; it never publishes or deploys. Publish through the approved
+registry process, record the resulting API digest, then set TM_RELEASE_API_IMAGE
+and use docker-compose.release.yml together with docker-compose.yml. The release
+override removes local builds and selects that approved image. Workstation tags
+are development conveniences. APK repositories remain mutable build inputs; the
+published final-image digest freezes the tested filesystem for deployment.
+
+Certificate renewal is an operator task: provision the replacement key and full
+chain outside source control, verify that they match, retain read access for UID
+10001, update the read-only mount, and recreate the API during an approved window.
+TLS certificates are loaded at startup; merely replacing a file does not reload
+them. Verify the presented certificate plus /livez and /readyz after recreation.
+Keep the previous image digest/config/certificate pair available for rollback.
+
+Backups must be encrypted, access-controlled, retained outside the repository and
+paired with tested restore procedures. For PostgreSQL custom-format dumps, write
+the binary inside the database container with pg_dump -Fc -f /tmp/tm-backup.dump,
+then use docker compose cp to copy it to approved backup storage. Do not redirect
+binary dumps through Windows PowerShell's text pipeline. Supply the actual database
+name and administrative user; do not put passwords in command arguments or logs.
+
+Restore drills use a separate isolated PostgreSQL instance and an empty database.
+Use pg_restore --exit-on-error --single-transaction --no-owner with an explicitly
+selected restore target. Do not use --clean against a live database. Verify schema,
+constraints, migration history and counts; provision runtime roles/grants separately.
+Restore approval and any production cutover remain operator decisions. Never send
+restored real data to automated test fixtures, external integrations or source control.
+A disposable synthetic drill in this change preserved 2 users, 107 bookings and all
+9 migration records, and the restored database passed the migration-history check.
+No live database or real backup was accessed.

@@ -59,6 +59,8 @@ services:
     networks: [mynetwork]
 
   apiserver:
+    restart: unless-stopped
+    stop_grace_period: 15s
     <<: *api
     profiles: ["prod"]
 

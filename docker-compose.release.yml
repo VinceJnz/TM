@@ -1,0 +1,6 @@
+# Production override: publish/approve the image separately, then deploy its digest.
+# Use together with docker-compose.yml; this file never builds or publishes images.
+services:
+  apiserver:
+    image: ${TM_RELEASE_API_IMAGE:?Set TM_RELEASE_API_IMAGE to the approved registry image digest}
+    build: !reset null
