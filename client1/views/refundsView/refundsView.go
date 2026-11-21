@@ -1,6 +1,7 @@
 package refundsView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -43,16 +44,7 @@ const (
 
 const ApiURL = "/refunds"
 
-type TableData struct {
-	ID          int       `json:"id"`
-	PaymentID   int       `json:"payment_id"`
-	RefundDate  time.Time `json:"refund_date"`
-	Amount      float64   `json:"amount"`
-	Reason      string    `json:"reason"`
-	ExternalRef string    `json:"external_ref"`
-	Created     time.Time `json:"created"`
-	Modified    time.Time `json:"modified"`
-}
+type TableData = api.Refund
 
 type UI struct {
 	PaymentID   js.Value
@@ -429,7 +421,11 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+	if err := api.NewFinance(editor.client).SaveRefund(item.ID, api.RefundWrite{PaymentID: item.PaymentID, RefundDate: item.RefundDate, Amount: item.Amount, Reason: item.Reason, ExternalRef: item.ExternalRef}); err != nil {
+		editor.updateStateDisplay(ItemStateNone)
+		editor.onCompletionMsg("Refund update failed; record was not saved")
+		return
+	}
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems()
 	editor.updateStateDisplay(ItemStateNone)
@@ -439,7 +435,11 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-		editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
+		if err := api.NewFinance(editor.client).SaveRefund(0, api.RefundWrite{PaymentID: item.PaymentID, RefundDate: item.RefundDate, Amount: item.Amount, Reason: item.Reason, ExternalRef: item.ExternalRef}); err != nil {
+			editor.updateStateDisplay(ItemStateNone)
+			editor.onCompletionMsg("Refund creation failed; record was not saved")
+			return
+		}
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
@@ -501,7 +501,10 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		if err := api.NewFinance(editor.client).DeleteRefund(itemID); err != nil {
+			editor.onCompletionMsg("Refund deletion failed; record was retained")
+			return
+		}
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)

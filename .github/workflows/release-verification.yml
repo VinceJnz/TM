@@ -35,6 +35,12 @@ jobs:
             -t tm-client1-wasm:tinygo \
             .
 
+      - name: Reject generated contract drift
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo:ro" -w /repo/api-server \
+            golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab \
+            go run ./cmd/contracts -check
+
       - name: Run API tests in Linux Go 1.26
         run: |
           docker run --rm --network host \

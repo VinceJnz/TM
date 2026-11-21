@@ -1,0 +1,416 @@
+{
+  "components": {
+    "schemas": {
+      "Payment": {
+        "properties": {
+          "amount": {
+            "description": "Exact decimal on the server; NZD major units. Browser values are display/input only.",
+            "type": "number"
+          },
+          "booking_id": {
+            "type": "integer"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "payment_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stripe_session_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "PaymentWrite": {
+        "properties": {
+          "amount": {
+            "description": "Exact decimal on the server; NZD major units. Browser values are display/input only.",
+            "type": "number"
+          },
+          "booking_id": {
+            "type": "integer"
+          },
+          "payment_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "Refund": {
+        "properties": {
+          "amount": {
+            "description": "Exact decimal on the server; NZD major units. Browser values are display/input only.",
+            "type": "number"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "external_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "payment_id": {
+            "type": "integer"
+          },
+          "provider_refund_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "refund_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "RefundWrite": {
+        "properties": {
+          "amount": {
+            "description": "Exact decimal on the server; NZD major units. Browser values are display/input only.",
+            "type": "number"
+          },
+          "external_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_id": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "refund_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "session": {
+        "in": "cookie",
+        "name": "session",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "Paths are relative to configured API prefix. Manual writes never issue provider charges or refunds. Additional legacy fields are ignored by write DTOs.",
+    "title": "Trip Manager financial API",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/payments": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Payment"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability with any scope required"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Created ID"
+          }
+        }
+      }
+    },
+    "/payments/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Deleted manual record"
+          },
+          "409": {
+            "description": "Provider records are immutable"
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Payment"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability with any scope required"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            },
+            "description": "Updated record"
+          },
+          "409": {
+            "description": "Ledger conflict; provider records are immutable"
+          }
+        }
+      }
+    },
+    "/refunds": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Refund"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability with any scope required"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Created ID"
+          }
+        }
+      }
+    },
+    "/refunds/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Deleted manual record"
+          },
+          "409": {
+            "description": "Provider records are immutable"
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Refund"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability with any scope required"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Refund"
+                }
+              }
+            },
+            "description": "Updated record"
+          },
+          "409": {
+            "description": "Ledger conflict; provider records are immutable"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "session": []
+    }
+  ]
+}

@@ -84,6 +84,11 @@ func (c *Client) NewRequest(method, url string, rxDataStru, txDataStru any, call
 	}
 }
 
+// Request returns transport, encoding and HTTP failures to typed API adapters.
+func (c *Client) Request(method, path string, rx, tx any) error {
+	return c.newRequest(method, path, rx, tx, nil, func(error) {})
+}
+
 func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDataStru any, callBacks ...func(error)) error {
 	var err error
 	var req *http.Request

@@ -15,6 +15,8 @@ function Invoke-Docker {
 	}
 }
 
+Write-Host "Checking generated API contracts..."
+Invoke-Docker @("run","--rm","-v","${repositoryRoot}:/repo:ro","-w","/repo/api-server","golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab","go","run","./cmd/contracts","-check")
 Write-Host "Building the TinyGo release client (TinyGo 0.40.0)..."
 Invoke-Docker @(
 	"build",

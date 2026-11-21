@@ -1,6 +1,7 @@
 package paymentsView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -43,15 +44,7 @@ const (
 
 const ApiURL = "/payments"
 
-type TableData struct {
-	ID            int       `json:"id"`
-	BookingID     int       `json:"booking_id"`
-	PaymentDate   time.Time `json:"payment_date"`
-	Amount        float64   `json:"amount"`
-	PaymentMethod string    `json:"payment_method"`
-	Created       time.Time `json:"created"`
-	Modified      time.Time `json:"modified"`
-}
+type TableData = api.Payment
 
 type UI struct {
 	BookingID     js.Value
@@ -437,7 +430,11 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+	if err := api.NewFinance(editor.client).SavePayment(item.ID, api.PaymentWrite{BookingID: item.BookingID, PaymentDate: item.PaymentDate, Amount: item.Amount, PaymentMethod: item.PaymentMethod}); err != nil {
+		editor.updateStateDisplay(ItemStateNone)
+		editor.onCompletionMsg("Payment update failed; record was not saved")
+		return
+	}
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems()
 	editor.updateStateDisplay(ItemStateNone)
@@ -447,7 +444,11 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-		editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
+		if err := api.NewFinance(editor.client).SavePayment(0, api.PaymentWrite{BookingID: item.BookingID, PaymentDate: item.PaymentDate, Amount: item.Amount, PaymentMethod: item.PaymentMethod}); err != nil {
+			editor.updateStateDisplay(ItemStateNone)
+			editor.onCompletionMsg("Payment creation failed; record was not saved")
+			return
+		}
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
@@ -501,7 +502,10 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		if err := api.NewFinance(editor.client).DeletePayment(itemID); err != nil {
+			editor.onCompletionMsg("Payment deletion failed; record was retained")
+			return
+		}
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)
