@@ -25,3 +25,13 @@ func (s Store) Complete(ctx context.Context, id int64, success bool) error {
 	_, err := s.DB.ExecContext(ctx, `UPDATE at_notification_outbox SET sent_at=CASE WHEN $2 THEN CURRENT_TIMESTAMP ELSE NULL END,available_at=CURRENT_TIMESTAMP+make_interval(secs=>LEAST(3600,60*power(2,LEAST(attempts,6)))::integer) WHERE id=$1 AND sent_at IS NULL`, id, success)
 	return err
 }
+
+// Redact retains delivery evidence and never touches active pending messages.
+func (s Store) Redact(ctx context.Context, deliveredDays, orphanDays, limit int) (int64, error) {
+	if deliveredDays < 1 || orphanDays < 1 || limit < 1 || limit > 500 {
+		return 0, fmt.Errorf("invalid notification retention bounds")
+	}
+	var count int64
+	err := s.DB.GetContext(ctx, &count, "SELECT redact_notification_payloads($1,$2,$3)", deliveredDays, orphanDays, limit)
+	return count, err
+}

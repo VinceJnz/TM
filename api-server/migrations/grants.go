@@ -111,6 +111,9 @@ WHERE s.relkind='S' AND (
 			}
 		}
 	}
+	if _, err = tx.ExecContext(ctx, "GRANT EXECUTE ON FUNCTION "+namespace+".redact_notification_payloads(integer,integer,integer) TO "+name); err != nil {
+		return err
+	}
 	if err = verifyRuntimePrivileges(ctx, tx, role, tables, expectedSequences); err != nil {
 		return err
 	}

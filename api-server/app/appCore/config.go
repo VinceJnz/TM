@@ -93,7 +93,7 @@ func (c *Config) Run(ctx context.Context) error {
 	c.notificationDone = make(chan struct{})
 	go func() {
 		defer close(c.notificationDone)
-		(notifications.Service{Store: notificationStore.Store{DB: c.Db}, Mailer: func() notifications.Mailer { return c.EmailService() }}).Run(notificationCtx)
+		(notifications.Service{DeliveredRetentionDays: c.Settings.NotificationDeliveredRetentionDays, OrphanRetentionDays: c.Settings.NotificationOrphanRetentionDays, Store: notificationStore.Store{DB: c.Db}, Mailer: func() notifications.Mailer { return c.EmailService() }}).Run(notificationCtx)
 	}()
 	// Start the payment service
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix

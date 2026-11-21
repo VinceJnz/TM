@@ -14,8 +14,10 @@ type Mailer interface {
 	SendMail(string, string, string) (bool, error)
 }
 type Service struct {
-	Store  store.Store
-	Mailer func() Mailer
+	Store                  store.Store
+	Mailer                 func() Mailer
+	DeliveredRetentionDays int
+	OrphanRetentionDays    int
 }
 
 func (s Service) Batch(ctx context.Context, limit int) error {
@@ -63,6 +65,16 @@ func (s Service) Run(ctx context.Context) {
 		}
 		if err := s.Batch(ctx, 10); err != nil && ctx.Err() == nil {
 			log.Print("notification delivery deferred")
+		}
+		delivered, orphan := s.DeliveredRetentionDays, s.OrphanRetentionDays
+		if delivered == 0 {
+			delivered = 90
+		}
+		if orphan == 0 {
+			orphan = 30
+		}
+		if _, err := s.Store.Redact(ctx, delivered, orphan, 500); err != nil && ctx.Err() == nil {
+			log.Print("notification retention deferred")
 		}
 		select {
 		case <-ctx.Done():

@@ -12,34 +12,36 @@ import (
 )
 
 type settings struct {
-	AppTitle            string `json:"AppTitle"`
-	Host                string `json:"Host"`
-	PortHttp            string `json:"PortHttp"`
-	PortHttps           string `json:"PortHttps"`
-	CoreOrigins         string `json:"CoreOrigins"`
-	DataSource          string `json:"DataSource"`
-	APIprefix           string `json:"APIprefix"`
-	ServerCaCert        string `json:"ServerCaCert"`
-	ClientCaCert        string `json:"ClientCaCert"`
-	ServerKey           string `json:"ServerKey"`
-	ServerCert          string `json:"ServerCert"`
-	CertOpt             int    `json:"CertOpt"`
-	LogFile             string `json:"LogFile"`
-	EmailAddr           string `json:"EmailAddr"`
-	EmailToken          string `json:"EmailToken"`
-	EmailSecret         string `json:"EmailSecret"`
-	PaymentKey          string `json:"PaymentKey"`
-	StripeWebhookSecret string `json:"StripeWebhookSecret"`
-	GoogleClientID      string `json:"GoogleClientID"`
-	GoogleClientSecret  string `json:"GoogleClientSecret"`
-	GoogleRedirectURL   string `json:"GoogleRedirectURL"`
-	SessionKey          string `json:"SessionKey"`
-	ClientRedirectURL   string `json:"ClientRedirectURL"`
-	GmailRenewRedirect  string `json:"GmailRenewRedirect"`
-	GmailAuthCode       string `json:"GmailAuthCode"`
-	EmailDebugAddr      string `json:"EmailDebugAddr"`
-	AdminNotifyGroup    string `json:"AdminNotifyGroup"`
-	DevMode             bool   `json:"DevMode"`
+	NotificationDeliveredRetentionDays int
+	NotificationOrphanRetentionDays    int
+	AppTitle                           string `json:"AppTitle"`
+	Host                               string `json:"Host"`
+	PortHttp                           string `json:"PortHttp"`
+	PortHttps                          string `json:"PortHttps"`
+	CoreOrigins                        string `json:"CoreOrigins"`
+	DataSource                         string `json:"DataSource"`
+	APIprefix                          string `json:"APIprefix"`
+	ServerCaCert                       string `json:"ServerCaCert"`
+	ClientCaCert                       string `json:"ClientCaCert"`
+	ServerKey                          string `json:"ServerKey"`
+	ServerCert                         string `json:"ServerCert"`
+	CertOpt                            int    `json:"CertOpt"`
+	LogFile                            string `json:"LogFile"`
+	EmailAddr                          string `json:"EmailAddr"`
+	EmailToken                         string `json:"EmailToken"`
+	EmailSecret                        string `json:"EmailSecret"`
+	PaymentKey                         string `json:"PaymentKey"`
+	StripeWebhookSecret                string `json:"StripeWebhookSecret"`
+	GoogleClientID                     string `json:"GoogleClientID"`
+	GoogleClientSecret                 string `json:"GoogleClientSecret"`
+	GoogleRedirectURL                  string `json:"GoogleRedirectURL"`
+	SessionKey                         string `json:"SessionKey"`
+	ClientRedirectURL                  string `json:"ClientRedirectURL"`
+	GmailRenewRedirect                 string `json:"GmailRenewRedirect"`
+	GmailAuthCode                      string `json:"GmailAuthCode"`
+	EmailDebugAddr                     string `json:"EmailDebugAddr"`
+	AdminNotifyGroup                   string `json:"AdminNotifyGroup"`
+	DevMode                            bool   `json:"DevMode"`
 
 	PasswordResetTestEmail string `json:"-"`
 }
@@ -133,6 +135,14 @@ func (s *settings) LoadEnv() error {
 	s.AdminNotifyGroup = os.Getenv("ADMIN_NOTIFY_GROUP")
 	s.DevMode = os.Getenv("DEV_MODE") == "true"
 	s.AppTitle = os.Getenv("APP_TITLE")
+	s.NotificationDeliveredRetentionDays, err = retentionDays("NOTIFICATION_DELIVERED_RETENTION_DAYS", 90)
+	if err != nil {
+		return err
+	}
+	s.NotificationOrphanRetentionDays, err = retentionDays("NOTIFICATION_ORPHAN_RETENTION_DAYS", 30)
+	if err != nil {
+		return err
+	}
 	if err := s.ValidateEnv(); err != nil {
 		return err
 	}
