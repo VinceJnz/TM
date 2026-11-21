@@ -1,6 +1,7 @@
 package myProfileView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
@@ -30,24 +31,9 @@ const (
 	RecordStateCurrent
 )
 
-type TableData struct {
-	ID            int       `json:"id"`
-	Name          string    `json:"name"`
-	Username      string    `json:"username"`
-	Email         string    `json:"email"`
-	Address       string    `json:"user_address"`
-	MemberCode    string    `json:"member_code"`
-	BirthDate     time.Time `json:"user_birth_date"`
-	AccountHidden bool      `json:"user_account_hidden"`
-}
+type TableData = api.ProfileDTO
 
-type UpdateRequest struct {
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	Address       string `json:"user_address"`
-	BirthDate     string `json:"user_birth_date"`
-	AccountHidden bool   `json:"user_account_hidden"`
-}
+type UpdateRequest = api.ProfileWrite
 
 type UI struct {
 	Name          js.Value

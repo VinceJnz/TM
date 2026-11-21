@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"api-server/v2/internal/fieldrules"
 	store "api-server/v2/modelMethods/profiles"
 	"api-server/v2/models"
 	"context"
@@ -39,7 +40,7 @@ func CanonicalEmail(value string) (string, error) {
 }
 func (s Service) Save(ctx context.Context, id int, v models.ProfileWrite) error {
 	v.Name = strings.TrimSpace(v.Name)
-	if id <= 0 || v.Name == "" || len([]rune(v.Name)) > 255 || len(v.Address) > 4000 {
+	if id <= 0 || fieldrules.Validate(v) != nil {
 		return ErrValidation
 	}
 	dob, err := time.Parse(time.RFC3339, v.BirthDate)
@@ -150,7 +151,7 @@ func (s Service) RequestEmail(ctx context.Context, id int, address string) error
 	return nil
 }
 func (s Service) ConfirmEmail(ctx context.Context, id int, proof models.EmailChangeProof) error {
-	if id <= 0 || len(proof.OldCode) > 128 || len(proof.NewCode) > 128 {
+	if id <= 0 || fieldrules.Validate(proof) != nil {
 		return ErrProof
 	}
 	tx, err := s.Store.Begin(ctx, id)

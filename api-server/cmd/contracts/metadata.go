@@ -2,35 +2,36 @@ package main
 
 import (
 	"api-server/v2/app/authorization"
+	"api-server/v2/internal/fieldrules"
+	"api-server/v2/models"
+	"encoding/json"
+	"reflect"
 	"strings"
 )
 
-func applyWriteRules(name string, schema, properties map[string]any) {
-	required := map[string][]string{
-		"GroupResourceWrite": {"group_id", "resource_id", "access_level_id", "access_scope_id"},
-		"UserGroupWrite":     {"user_id", "group_id"},
-		"TripCostWrite":      {"trip_cost_group_id", "member_status_id", "user_age_group_id", "season_id"},
-		"TripCostGroupWrite": {"description"},
-	}
-	if fields := required[name]; len(fields) > 0 {
-		schema["required"] = fields
-	}
-	for _, field := range required[name] {
-		p := properties[field].(map[string]any)
-		if strings.HasSuffix(field, "_id") {
-			p["minimum"] = 1
+func applyWriteRules(t reflect.Type, schema, properties map[string]any) {
+	required := []string{}
+	for _, rule := range fieldrules.Fields(t) {
+		if rule.Required {
+			required = append(required, rule.Name)
+		}
+		property := properties[rule.Name].(map[string]any)
+		for name, value := range rule.Constraints {
+			property[name] = value
 		}
 	}
-	if name == "TripCostGroupWrite" {
-		p := properties["description"].(map[string]any)
-		p["minLength"] = 1
-		p["maxLength"] = 50
-		p["description"] = "Trimmed, nonempty description"
+	if len(required) > 0 {
+		schema["required"] = required
 	}
-	if p, ok := properties["amount"].(map[string]any); ok {
-		p["minimum"] = 0
-		p["maximum"] = 99999999.99
-		p["multipleOf"] = 0.01
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if field.Type != reflect.TypeOf(models.Money{}) {
+			continue
+		}
+		property := properties[strings.Split(field.Tag.Get("json"), ",")[0]].(map[string]any)
+		property["minimum"] = 0
+		property["maximum"] = json.Number(models.MoneyMaximum)
+		property["multipleOf"] = json.Number("0.01")
 	}
 }
 func decorateOperations(paths map[string]any) {

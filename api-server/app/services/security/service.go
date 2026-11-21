@@ -2,6 +2,7 @@ package security
 
 import (
 	"api-server/v2/app/authorization"
+	"api-server/v2/internal/fieldrules"
 	store "api-server/v2/modelMethods/security"
 	"api-server/v2/models"
 	"context"
@@ -14,7 +15,7 @@ var ErrValidation = errors.New("invalid security change")
 type Service struct{ Store store.Store }
 
 func (s Service) SaveGrant(ctx context.Context, actor, id int, v models.GroupResourceWrite) (models.GroupResource, error) {
-	if actor <= 0 || id < 0 || v.GroupID <= 0 || v.ResourceID <= 0 || v.AccessLevelID <= 0 || v.AccessScopeID <= 0 {
+	if actor <= 0 || id < 0 || fieldrules.Validate(v) != nil {
 		return models.GroupResource{}, ErrValidation
 	}
 	tx, err := s.Store.Begin(ctx, actor)
@@ -37,7 +38,7 @@ func (s Service) SaveGrant(ctx context.Context, actor, id int, v models.GroupRes
 	return result, tx.Commit()
 }
 func (s Service) SaveMember(ctx context.Context, actor, id int, v models.UserGroupWrite) (models.UserGroup, error) {
-	if actor <= 0 || id < 0 || v.UserID <= 0 || v.GroupID <= 0 {
+	if actor <= 0 || id < 0 || fieldrules.Validate(v) != nil {
 		return models.UserGroup{}, ErrValidation
 	}
 	tx, err := s.Store.Begin(ctx, actor)

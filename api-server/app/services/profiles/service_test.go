@@ -135,7 +135,7 @@ func TestExpiredExhaustedAndConflictingChangesPreserveAccount(t *testing.T) {
 			}
 			if scenario == "exhausted" {
 				for i := 0; i < 5; i++ {
-					if err := s.ConfirmEmail(ctx, 1, models.EmailChangeProof{}); !errors.Is(err, ErrProof) {
+					if err := s.ConfirmEmail(ctx, 1, models.EmailChangeProof{OldCode: "wrong", NewCode: "wrong"}); !errors.Is(err, ErrProof) {
 						t.Fatal(err)
 					}
 				}

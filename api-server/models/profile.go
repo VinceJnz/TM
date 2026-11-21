@@ -13,16 +13,16 @@ type ProfileDTO struct {
 	AccountHidden bool      `json:"user_account_hidden" db:"user_account_hidden"`
 }
 type ProfileWrite struct {
-	Name          string `json:"name"`
+	Name          string `json:"name" rule:"required,minLength=1,maxLength=255"`
 	Email         string `json:"email"`
-	Address       string `json:"user_address"`
-	BirthDate     string `json:"user_birth_date"`
+	Address       string `json:"user_address" rule:"maxLength=4000"`
+	BirthDate     string `json:"user_birth_date" rule:"required"`
 	AccountHidden bool   `json:"user_account_hidden"`
 }
 type EmailChangeRequest struct {
-	Email string `json:"email"`
+	Email string `json:"email" rule:"required,maxLength=254"`
 }
 type EmailChangeProof struct {
-	OldCode string `json:"old_code"`
-	NewCode string `json:"new_code"`
+	OldCode string `json:"old_code" rule:"required,maxLength=128"`
+	NewCode string `json:"new_code" rule:"required,maxLength=128"`
 }

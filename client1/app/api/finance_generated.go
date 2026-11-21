@@ -205,3 +205,38 @@ type UserGroupWrite struct {
 	UserID  int `json:"user_id"`
 	GroupID int `json:"group_id"`
 }
+type GroupDTO struct {
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Created     time.Time `json:"created"`
+	Modified    time.Time `json:"modified"`
+}
+type GroupWrite struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+type ProfileDTO struct {
+	ID            int       `json:"id"`
+	Name          string    `json:"name"`
+	Username      string    `json:"username"`
+	Email         string    `json:"email"`
+	Address       string    `json:"user_address"`
+	MemberCode    string    `json:"member_code"`
+	BirthDate     time.Time `json:"user_birth_date"`
+	AccountHidden bool      `json:"user_account_hidden"`
+}
+type ProfileWrite struct {
+	Name          string `json:"name"`
+	Email         string `json:"email"`
+	Address       string `json:"user_address"`
+	BirthDate     string `json:"user_birth_date"`
+	AccountHidden bool   `json:"user_account_hidden"`
+}
+type EmailChangeRequest struct {
+	Email string `json:"email"`
+}
+type EmailChangeProof struct {
+	OldCode string `json:"old_code"`
+	NewCode string `json:"new_code"`
+}

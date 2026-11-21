@@ -9,6 +9,19 @@ import (
 // Money keeps the existing JSON number contract while avoiding float conversion.
 type Money struct{ decimal.Decimal }
 
+const MoneyMaximum = "99999999.99"
+const MoneyScale = 2
+
+func (m Money) Validate() error {
+	if m.Exponent() < -32 || m.Exponent() > 8 {
+		return errors.New("amount exponent out of range")
+	}
+	if m.IsNegative() || !m.Equal(m.Round(MoneyScale)) || m.GreaterThan(decimal.RequireFromString(MoneyMaximum)) {
+		return errors.New("amount must be nonnegative with at most two decimal places")
+	}
+	return nil
+}
+
 func (m Money) MarshalJSON() ([]byte, error) { return []byte(m.String()), nil }
 func (m *Money) UnmarshalJSON(data []byte) error {
 	if len(data) > 128 {
@@ -23,11 +36,8 @@ func (m *Money) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	// Bound the exponent before Round/comparison can allocate huge integers.
-	if value.Exponent() < -32 || value.Exponent() > 8 {
-		return errors.New("amount exponent out of range")
-	}
-	if value.IsNegative() || !value.Equal(value.Round(2)) || value.GreaterThan(decimal.RequireFromString("99999999.99")) {
-		return errors.New("amount must be nonnegative with at most two decimal places")
+	if err := (Money{value}).Validate(); err != nil {
+		return err
 	}
 	m.Decimal = value
 	return nil

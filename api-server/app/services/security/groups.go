@@ -1,16 +1,16 @@
 package security
 
 import (
+	"api-server/v2/internal/fieldrules"
 	"api-server/v2/models"
 	"context"
 	"strings"
-	"unicode/utf8"
 )
 
 func (s Service) SaveGroup(ctx context.Context, actor, id int, v models.GroupWrite) (models.Group, error) {
 	v.Name = strings.TrimSpace(v.Name)
 	v.Description = strings.TrimSpace(v.Description)
-	if actor <= 0 || id < 0 || v.Name == "" || utf8.RuneCountInString(v.Name) > 45 || utf8.RuneCountInString(v.Description) > 45 {
+	if actor <= 0 || id < 0 || fieldrules.Validate(v) != nil {
 		return models.Group{}, ErrValidation
 	}
 	tx, err := s.Store.Begin(ctx, actor)
