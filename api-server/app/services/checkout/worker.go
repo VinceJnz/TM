@@ -67,6 +67,11 @@ func (s *Service) RunRecovery(ctx context.Context) {
 		if err := s.RecoverBatch(ctx, 10); err != nil && ctx.Err() == nil {
 			log.Print("checkout recovery batch failed")
 		}
+		if provider, ok := s.Provider.(RefundProvider); ok {
+			if err := RecoverRefundBatch(ctx, s.DB, provider, 10); err != nil && ctx.Err() == nil {
+				log.Print("refund recovery batch failed")
+			}
+		}
 		select {
 		case <-ctx.Done():
 			return

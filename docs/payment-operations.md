@@ -58,10 +58,19 @@ DATA_SOURCE and PAYMENT_KEY injected:
 The tool reads Stripe, verifies that the refund belongs to the payment's checkout
 session, and persists pending, failed, or succeeded status. Only succeeded
 refunds enter the booking ledger. Repeat the command after a pending refund
-changes status; provider errors retain the pending observation for follow-up.
+changes status to force immediate verification; provider errors retain the pending observation for follow-up.
 Manual refund CRUD rejects provider-backed payments. Provider refund ledger
 entries are immutable, and repeated confirmations cannot duplicate them. This
 command observes existing refunds and never requests a charge or refund.
+
+Migration 0014 adds leases and durable backoff for pending/requires-action refund
+observations. The checkout recovery worker verifies up to ten due refunds per
+cycle when a payment key is configured. Successful refunds post atomically and
+idempotently; failed/canceled/succeeded observations leave the retry queue.
+Provider outages back off up to one hour. Alert on old pending observations,
+especially those requiring provider-side customer action. Verification never
+issues a new refund. Refund query/queue access lives in the refund store; ledger
+mutations live in paymentLedger, and the checkout service orchestrates them.
 
 When a historical manual refund already has the exact provider reference and
 amount, confirmation binds that existing entry instead of crediting it twice.
