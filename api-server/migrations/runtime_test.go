@@ -26,6 +26,13 @@ func TestRuntimeRoleCannotRewriteEvidenceOrCreateShadowObjects(t *testing.T) {
 	if _, err := db.Exec(`CREATE TABLE at_future_sensitive(id serial PRIMARY KEY)`); err != nil {
 		t.Fatal(err)
 	}
+	// Match the workstation dump: nextval default with no sequence ownership.
+	if _, err := db.Exec(`ALTER TABLE st_token ALTER COLUMN id DROP IDENTITY;
+CREATE SEQUENCE st_token_id_seq;
+ALTER TABLE st_token ALTER COLUMN id SET DEFAULT nextval('st_token_id_seq'::regclass);
+CREATE SEQUENCE unrelated_private_seq;`); err != nil {
+		t.Fatal(err)
+	}
 	if err := GrantRuntimeAccess(ctx, db, role); err != nil {
 		t.Fatal(err)
 	}
@@ -62,6 +69,14 @@ func TestRuntimeRoleCannotRewriteEvidenceOrCreateShadowObjects(t *testing.T) {
 	defer tx.Rollback()
 	if _, err = tx.Exec("SET LOCAL ROLE " + pq.QuoteIdentifier(role)); err != nil {
 		t.Fatal(err)
+	}
+	var tokenID int
+	if err = tx.Get(&tokenID, `INSERT INTO st_token(user_id,name,token) VALUES(0,'oauth-state','synthetic-state') RETURNING id`); err != nil || tokenID <= 0 {
+		t.Fatal("restricted legacy token insertion failed", tokenID, err)
+	}
+	var unrelated bool
+	if err = tx.Get(&unrelated, `SELECT has_sequence_privilege(current_user,'unrelated_private_seq','USAGE')`); err != nil || unrelated {
+		t.Fatal("unrelated sequence access granted", unrelated, err)
 	}
 	if _, err = tx.Exec(`SELECT set_config('tm.actor','user:1',true),set_config('tm.reason','cash received',true);INSERT INTO at_payments(booking_id,payment_date,amount) VALUES(1,CURRENT_DATE,10);`); err != nil {
 		t.Fatal("restricted financial write failed", err)

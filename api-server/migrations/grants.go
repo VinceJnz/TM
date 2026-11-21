@@ -86,12 +86,22 @@ func GrantRuntimeAccess(ctx context.Context, db *sqlx.DB, role string) error {
 			return err
 		}
 		if strings.Contains(privileges, "INSERT") {
-			var sequence *string
-			if err = tx.GetContext(ctx, &sequence, `SELECT CASE WHEN EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=$1::text::regclass AND attname='id' AND NOT attisdropped) THEN pg_get_serial_sequence($1::text,'id') END`, qualified); err != nil {
+			var sequences []string
+			// Legacy dumps can reference nextval() without an OWNED BY link.
+			// Include default-expression dependencies as well as serial/identity
+			// ownership, without granting unrelated sequences in the schema.
+			if err = tx.SelectContext(ctx, &sequences, `SELECT DISTINCT quote_ident(n.nspname)||'.'||quote_ident(s.relname)
+FROM pg_class s JOIN pg_namespace n ON n.oid=s.relnamespace
+WHERE s.relkind='S' AND (
+ EXISTS(SELECT 1 FROM pg_depend d JOIN pg_attrdef a ON d.classid='pg_attrdef'::regclass AND d.objid=a.oid
+        WHERE a.adrelid=$1::text::regclass AND d.refclassid='pg_class'::regclass AND d.refobjid=s.oid)
+ OR EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass AND d.objid=s.oid
+        AND d.refclassid='pg_class'::regclass AND d.refobjid=$1::text::regclass AND d.deptype IN ('a','i'))
+)`, qualified); err != nil {
 				return err
 			}
-			if sequence != nil {
-				if _, err = tx.ExecContext(ctx, "GRANT USAGE,SELECT ON SEQUENCE "+*sequence+" TO "+name); err != nil {
+			for _, sequence := range sequences {
+				if _, err = tx.ExecContext(ctx, "GRANT USAGE,SELECT ON SEQUENCE "+sequence+" TO "+name); err != nil {
 					return err
 				}
 			}
