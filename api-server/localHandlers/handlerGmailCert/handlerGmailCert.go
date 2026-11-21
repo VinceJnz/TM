@@ -283,10 +283,7 @@ func writeUpdate(w http.ResponseWriter, kind, message string) {
 
 func (h *Handler) installToken(config *oauth2.Config, token *oauth2.Token) error {
 	settings := h.appConf.Settings
-	debugEmail := ""
-	if settings.DevMode {
-		debugEmail = settings.EmailDebugAddr
-	}
+	debugEmail := settings.EmailRecipientOverride()
 	service, err := gmail.NewWithToken(config, token, settings.EmailAddr, debugEmail)
 	if err != nil {
 		return err

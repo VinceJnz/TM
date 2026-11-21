@@ -354,6 +354,10 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.appConf.Settings.StripeTestMode && event.Livemode {
+		http.Error(w, "Live Stripe events are disabled by test mode", http.StatusBadRequest)
+		return
+	}
 	eventAgeSec := int64(0)
 	if signatureTimestamp > 0 {
 		eventAgeSec = time.Now().Unix() - signatureTimestamp
@@ -388,6 +392,10 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.appConf.Settings.StripeTestMode && checkoutSession.Livemode {
+		http.Error(w, "Live checkout sessions are disabled by test mode", http.StatusBadRequest)
+		return
+	}
 	if checkoutSession.ID == "" {
 		logWebhookEvent("invalid_session", map[string]interface{}{
 			"event_id":   event.ID,

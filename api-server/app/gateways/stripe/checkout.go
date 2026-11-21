@@ -15,28 +15,46 @@ func checkoutResult(a *stripe.CheckoutSession) checkout.Session {
 	return checkout.Session{ID: a.ID, URL: a.URL, AttemptID: a.Metadata["tm_attempt"], State: string(a.Status), Amount: a.AmountTotal, Currency: string(a.Currency), Mode: string(a.Mode), Paid: a.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid}
 }
 func (g *Gateway) Create(ctx context.Context, a paymentLedger.Attempt) (checkout.Session, error) {
+	if g == nil || g.Client == nil {
+		return checkout.Session{}, errors.New("Stripe gateway unavailable")
+	}
+	client := session.Client{B: g.backend, Key: g.apiKey}
 	params := &stripe.CheckoutSessionParams{
 		LineItems: []*stripe.CheckoutSessionLineItemParams{{PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{Currency: stripe.String("nzd"), UnitAmount: stripe.Int64(a.Amount), ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{Name: stripe.String(a.Title), Description: stripe.String(a.Description)}}, Quantity: stripe.Int64(1)}},
 		Mode:      stripe.String("payment"), ExpiresAt: stripe.Int64(a.Expires.Unix()), SuccessURL: stripe.String(a.Domain + "/bookings/checkout/success/" + strconv.Itoa(a.BookingID)), CancelURL: stripe.String(a.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(a.BookingID)), InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{Enabled: stripe.Bool(true)}}
 	if a.Email != "" {
-		params.CustomerEmail = stripe.String(a.Email)
+		email := a.Email
+		if g.RecipientOverride != "" {
+			email = g.RecipientOverride
+		}
+		params.CustomerEmail = stripe.String(email)
 	}
 	params.Context = ctx
 	params.SetIdempotencyKey("tm-checkout-" + a.ID)
 	params.AddMetadata("tm_attempt", a.ID)
-	result, err := session.New(params)
+	result, err := client.New(params)
 	if err != nil {
 		return checkout.Session{}, err
+	}
+	if g.testMode && result.Livemode {
+		return checkout.Session{}, errors.New("live Stripe response rejected in test mode")
 	}
 	return checkoutResult(result), nil
 }
 func (g *Gateway) Lookup(ctx context.Context, a paymentLedger.Attempt) ([]checkout.Session, error) {
+	if g == nil || g.Client == nil {
+		return nil, errors.New("Stripe gateway unavailable")
+	}
+	client := session.Client{B: g.backend, Key: g.apiKey}
 	if a.SessionID.Valid {
 		params := &stripe.CheckoutSessionParams{}
 		params.Context = ctx
-		result, err := session.Get(a.SessionID.String, params)
+		result, err := client.Get(a.SessionID.String, params)
 		if err != nil {
 			return nil, err
+		}
+		if g.testMode && result.Livemode {
+			return nil, errors.New("live Stripe response rejected in test mode")
 		}
 		return []checkout.Session{checkoutResult(result)}, nil
 	}
@@ -44,7 +62,7 @@ func (g *Gateway) Lookup(ctx context.Context, a paymentLedger.Attempt) ([]checko
 	params.Context = ctx
 	params.Limit = stripe.Int64(100)
 	results := []checkout.Session{}
-	iter := session.List(params)
+	iter := client.List(params)
 	count := 0
 	for iter.Next() {
 		count++
@@ -53,6 +71,9 @@ func (g *Gateway) Lookup(ctx context.Context, a paymentLedger.Attempt) ([]checko
 		}
 		result := iter.CheckoutSession()
 		if result.Metadata["tm_attempt"] == a.ID {
+			if g.testMode && result.Livemode {
+				return nil, errors.New("live Stripe response rejected in test mode")
+			}
 			results = append(results, checkoutResult(result))
 		}
 	}

@@ -11,6 +11,9 @@ x-api: &api
     DATA_SOURCE: ${TM_API_DATA_SOURCE:-}
     DEV_MODE: "false"
     EMAIL_DEBUG_ADDR: ""
+    EMAIL_REDIRECT_ALL: ${TM_EMAIL_REDIRECT_ALL:-false}
+    EMAIL_REDIRECT_TO: ${TM_EMAIL_REDIRECT_TO:-}
+    STRIPE_TEST_MODE: ${TM_STRIPE_TEST_MODE:-false}
     DB_HOST: dbserver
     DB_PORT: "5432"
     DB_USER: ${TM_API_DB_USER:-api_user}

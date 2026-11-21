@@ -193,7 +193,7 @@ func (s *Gateway) SendMail(to string, title string, message string) (bool, error
 func (s *Gateway) SendMailContext(ctx context.Context, to string, title string, message string) (bool, error) {
 	// Create the message
 	if s.debugEmailAddress != "" {
-		log.Printf(debugTag+"Handler.SendMail ... Debug email address configured, overriding recipient. Original to: %s, title: %s", to, title)
+		log.Print(debugTag + "SendMail recipient redirected by test policy")
 		to = s.debugEmailAddress
 	}
 	msgStr := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s", s.from, to, title, message)

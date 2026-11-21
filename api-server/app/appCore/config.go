@@ -77,10 +77,7 @@ func (c *Config) Run(ctx context.Context) error {
 	}
 	c.startTokenCleanupJob(ctx)
 	// Start the email service
-	debugEmail := ""
-	if c.Settings.DevMode {
-		debugEmail = c.Settings.EmailDebugAddr
-	}
+	debugEmail := c.Settings.EmailRecipientOverride()
 	log.Printf("%sRun() DEV_MODE=%t, email_debug_override_active=%t", debugTag, c.Settings.DevMode, debugEmail != "")
 	c.EmailSvc, err = gmail.New(c.Settings.EmailSecret, c.Settings.EmailToken, c.Settings.EmailAddr, debugEmail, c.Settings.GmailAuthCode)
 	if err != nil {
@@ -97,7 +94,8 @@ func (c *Config) Run(ctx context.Context) error {
 	}()
 	// Start the payment service
 	domain := "https://" + c.Settings.Host + ":" + c.Settings.PortHttps + c.Settings.APIprefix
-	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain, c.TestMode)
+	c.PaymentSvc = stripe.NewFromKey(c.Settings.PaymentKey, domain, c.Settings.StripeTestMode)
+	c.PaymentSvc.RecipientOverride = c.Settings.EmailRecipientOverride()
 	if c.Settings.PaymentKey != "" {
 		paymentCtx, cancel := context.WithCancel(ctx)
 		c.paymentStop = cancel
@@ -129,6 +127,12 @@ func (c *Config) Run(ctx context.Context) error {
 func (c *Config) EmailService() EmailService {
 	c.emailMu.RLock()
 	defer c.emailMu.RUnlock()
+	if c.EmailSvc == nil {
+		return nil
+	}
+	if recipient := c.Settings.EmailRecipientOverride(); recipient != "" {
+		return redirectedMailer{base: c.EmailSvc, recipient: recipient}
+	}
 	return c.EmailSvc
 }
 

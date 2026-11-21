@@ -34,10 +34,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mailer := h.appConf.EmailService()
-	debugRecipient := ""
-	if h.appConf.Settings.DevMode {
-		debugRecipient = h.appConf.Settings.EmailDebugAddr
-	}
+	debugRecipient := h.appConf.Settings.EmailRecipientOverride()
 	// Only the debug inbox itself and the explicitly configured test account
 	// may use the debug inbox for password resets.
 	if mailer == nil || (debugRecipient != "" && !strings.EqualFold(debugRecipient, email) &&

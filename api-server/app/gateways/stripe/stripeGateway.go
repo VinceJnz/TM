@@ -30,6 +30,10 @@ type Charge struct {
 }
 
 type Gateway struct {
+	RecipientOverride string
+	testMode          bool
+	apiKey            string
+	backend           stripe.Backend
 	//appConf    *appCore.Config
 	//Client *client.API
 	Client *stripe.Client
@@ -57,11 +61,12 @@ func New(keyFile, domain string, testMode bool) *Gateway {
 
 	// DON'T add sk_test_ prefix - the key already has it!
 	// Set the global Stripe key
-	stripe.Key = apiKey
+	// Keys are held by each gateway, never in the process-global SDK key.
 
 	return &Gateway{
 		//appConf:    appConf,
 		Client: stripe.NewClient(apiKey),
+		apiKey: apiKey, backend: stripe.GetBackend(stripe.APIBackend), testMode: testMode,
 		Domain: domain,
 	}
 }
@@ -86,11 +91,12 @@ func NewFromKey(apiKey, domain string, testMode bool) *Gateway {
 
 	// DON'T add sk_test_ prefix - the key already has it!
 	// Set the global Stripe key
-	stripe.Key = apiKey
+	// Keys are held by each gateway, never in the process-global SDK key.
 
 	return &Gateway{
 		//appConf:    appConf,
 		Client: stripe.NewClient(apiKey),
+		apiKey: apiKey, backend: stripe.GetBackend(stripe.APIBackend), testMode: testMode,
 		Domain: domain,
 	}
 }
@@ -120,5 +126,5 @@ func KeyFromFile(file string) string {
 }
 
 func isStripeTestKey(apiKey string) bool {
-	return strings.HasPrefix(strings.TrimSpace(apiKey), "sk_test_")
+	return strings.HasPrefix(strings.TrimSpace(apiKey), "sk_test_") || strings.HasPrefix(strings.TrimSpace(apiKey), "rk_test_")
 }

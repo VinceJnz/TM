@@ -8,6 +8,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -27,7 +28,15 @@ func main() {
 	if key == "" {
 		log.Fatal("PAYMENT_KEY is required")
 	}
-	if err = checkout.ConfirmRefund(ctx, db, stripe.NewFromKey(key, "", false), *payment, *refund, *actor); err != nil {
+	testMode := false
+	if raw := os.Getenv("STRIPE_TEST_MODE"); raw != "" {
+		var parseErr error
+		testMode, parseErr = strconv.ParseBool(raw)
+		if parseErr != nil {
+			log.Fatal("STRIPE_TEST_MODE must be true or false")
+		}
+	}
+	if err = checkout.ConfirmRefund(ctx, db, stripe.NewFromKey(key, "", testMode), *payment, *refund, *actor); err != nil {
 		log.Fatal("refund verification failed; inspect pending record and provider status")
 	}
 	log.Print("provider refund status recorded; only succeeded refunds affect booking balance")

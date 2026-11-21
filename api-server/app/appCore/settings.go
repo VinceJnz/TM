@@ -12,6 +12,10 @@ import (
 )
 
 type settings struct {
+	EmailRedirectAll                   bool
+	EmailRedirectTo                    string
+	StripeTestMode                     bool
+	emailRedirectConfigured            bool
 	NotificationDeliveredRetentionDays int
 	NotificationOrphanRetentionDays    int
 	AppTitle                           string `json:"AppTitle"`
@@ -143,6 +147,9 @@ func (s *settings) LoadEnv() error {
 	if err != nil {
 		return err
 	}
+	if err = s.loadTestSafety(); err != nil {
+		return err
+	}
 	if err := s.ValidateEnv(); err != nil {
 		return err
 	}
@@ -179,13 +186,5 @@ func (s *settings) ValidateEnv() error {
 		log.Printf("%sValidateEnv() Warning: APP_TITLE is not set (required)\n", debugTag)
 		return errors.New("empty setting: APP_TITLE missing")
 	}
-	if s.DevMode && s.EmailDebugAddr == "" {
-		log.Printf("%sValidateEnv() Warning: DEV_MODE is true but EMAIL_DEBUG_ADDR is empty\n", debugTag)
-		return errors.New("empty setting: EMAIL_DEBUG_ADDR required when DEV_MODE=true")
-	}
-	if !s.DevMode && s.EmailDebugAddr != "" {
-		log.Printf("%sValidateEnv() Warning: EMAIL_DEBUG_ADDR is set while DEV_MODE is false\n", debugTag)
-		return errors.New("nonempty setting: EMAIL_DEBUG_ADDR should be empty when DEV_MODE=false")
-	}
-	return nil
+	return s.validateTestSafety()
 }
