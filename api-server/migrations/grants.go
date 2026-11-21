@@ -73,6 +73,7 @@ func GrantRuntimeAccess(ctx context.Context, db *sqlx.DB, role string) error {
 		return err
 	}
 	policy := runtimePolicy()
+	expectedSequences := map[string]bool{}
 	for _, table := range tables {
 		qualified := namespace + "." + pq.QuoteIdentifier(table)
 		if _, err = tx.ExecContext(ctx, "REVOKE ALL PRIVILEGES ON "+qualified+" FROM "+name); err != nil {
@@ -101,11 +102,15 @@ WHERE s.relkind='S' AND (
 				return err
 			}
 			for _, sequence := range sequences {
+				expectedSequences[sequence] = true
 				if _, err = tx.ExecContext(ctx, "GRANT USAGE,SELECT ON SEQUENCE "+sequence+" TO "+name); err != nil {
 					return err
 				}
 			}
 		}
+	}
+	if err = verifyRuntimePrivileges(ctx, tx, role, tables, expectedSequences); err != nil {
+		return err
 	}
 	return tx.Commit()
 }
