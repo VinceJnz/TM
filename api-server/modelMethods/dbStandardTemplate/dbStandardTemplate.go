@@ -82,7 +82,7 @@ func Create(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	err = tx.QueryRowContext(r.Context(), query, args...).Scan(dest)
 	if err != nil {
 		tx.Rollback() // Rollback on error
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		helpers.WriteDataError(w, err)
 		return
 	}
 
@@ -109,7 +109,7 @@ func Update(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 	if err != nil {
 		tx.Rollback() // Rollback on error
 		log.Printf(debugTag+debugStr+"Update err=%+v, result=%+v", err, result)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		helpers.WriteDataError(w, err)
 		return
 	}
 
@@ -156,7 +156,7 @@ func Delete(w http.ResponseWriter, r *http.Request, debugStr string, Db *sqlx.DB
 			return
 		}
 
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		helpers.WriteDataError(w, err)
 		return
 	}
 
@@ -198,7 +198,7 @@ func DeleteWithChildCheck(w http.ResponseWriter, r *http.Request, debugStr strin
 		err := Db.GetContext(r.Context(), &count, check.Query, args...)
 		if err != nil {
 			log.Printf("%sDeleteWithChildCheck: Error checking %s: %v", debugTag+debugStr, check.TableName, err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			helpers.WriteDataError(w, err)
 			return
 		}
 		if count > 0 {
@@ -231,7 +231,7 @@ func DeleteWithChildCheck(w http.ResponseWriter, r *http.Request, debugStr strin
 			return
 		}
 
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		helpers.WriteDataError(w, err)
 		return
 	}
 
@@ -240,7 +240,7 @@ func DeleteWithChildCheck(w http.ResponseWriter, r *http.Request, debugStr strin
 	if err != nil {
 		tx.Rollback()
 		log.Printf("%sDeleteWithChildCheck: Could not get rows affected: %v", debugTag+debugStr, err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		helpers.WriteDataError(w, err)
 		return
 	}
 

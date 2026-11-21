@@ -41,6 +41,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -100,6 +101,7 @@ func run() error {
 }
 func buildRouter(app *appCore.Config) *mux.Router {
 	r := mux.NewRouter()
+	r.Use(helpers.RequestDeadline(30 * time.Second))
 	r.HandleFunc("/livez", app.Liveness).Methods("GET")
 	r.HandleFunc("/readyz", app.Readiness).Methods("GET")
 	r.HandleFunc("/client-config.js", httpserver.ClientConfig(app.Settings.APIprefix)).Methods("GET")

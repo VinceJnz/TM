@@ -6,8 +6,7 @@ import (
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/models"
-	"database/sql"
-	"log"
+
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -95,154 +94,40 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	h.crud.Get(w, r)
 }
 
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.write(w, r, "create") }
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.write(w, r, "update") }
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) { h.write(w, r, "delete") }
+func (h *Handler) write(w http.ResponseWriter, r *http.Request, operation string) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	var record models.UserPayments
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Create err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if err = paymentLedger.LockBookings(r.Context(), tx, record.BookingID); err != nil {
-		tx.Rollback()
-		http.Error(w, "booking unavailable", 409)
-		return
-	}
-	if err := tx.QueryRowContext(r.Context(), qryCreate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod).Scan(&record.ID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := paymentLedger.Sync(r.Context(), tx, record.BookingID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	helpers.WriteJSON(w, http.StatusCreated, record.ID)
-}
-
-// Update: modifies the existing record identified by id and returns the updated record
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
-		return
-	}
-	var record models.UserPayments
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Update err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	record.ID = id
-
-	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	oldBookingID, err := paymentLedger.LockPayment(r.Context(), tx, id, record.BookingID)
-	if err != nil {
-		tx.Rollback()
-		if err == sql.ErrNoRows {
-			http.Error(w, "Record not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if _, err := tx.ExecContext(r.Context(), qryUpdate, record.BookingID, record.PaymentDate, record.Amount, record.PaymentMethod, id); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := paymentLedger.Sync(r.Context(), tx, record.BookingID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	if oldBookingID != record.BookingID {
-		if err := paymentLedger.Sync(r.Context(), tx, oldBookingID); err != nil {
-			tx.Rollback()
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	id := 0
+	if operation != "create" {
+		id = dbStandardTemplate.GetID(w, r)
+		if id <= 0 {
 			return
 		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	helpers.WriteJSON(w, http.StatusOK, record)
-}
-
-// Delete: removes a record identified by id
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
-		return
-	}
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-
-	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	bookingID, err := paymentLedger.LockPayment(r.Context(), tx, id)
-	if err != nil {
-		tx.Rollback()
-		if err == sql.ErrNoRows {
-			http.Error(w, "Record not found", http.StatusNotFound)
-			return
-		}
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	var input paymentLedger.PaymentWrite
+	if operation != "delete" {
+		if err := helpers.DecodeJSONBody(r, &input); err != nil {
+			helpers.WriteError(w, 400, "invalid_request", "Invalid request payload")
 			return
 		}
 	}
-
-	if _, err := tx.ExecContext(r.Context(), qryDelete, id); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	id, err := paymentLedger.WritePayment(r.Context(), h.appConf.Db, operation, id, input)
+	if err != nil {
+		helpers.WriteDataError(w, err)
 		return
 	}
-
-	if err := paymentLedger.Sync(r.Context(), tx, bookingID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if operation == "delete" {
+		w.WriteHeader(200)
 		return
 	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if operation == "create" {
+		helpers.WriteJSON(w, 201, id)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
+	response := models.UserPayments{ID: id, BookingID: input.BookingID, PaymentDate: input.PaymentDate, Amount: input.Amount, PaymentMethod: input.PaymentMethod}
+	helpers.WriteJSON(w, 200, response)
 }

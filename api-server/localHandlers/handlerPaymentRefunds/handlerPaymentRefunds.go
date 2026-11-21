@@ -6,8 +6,7 @@ import (
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/models"
-	"database/sql"
-	"log"
+
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -91,165 +90,40 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	h.crud.Get(w, r)
 }
 
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.write(w, r, "create") }
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.write(w, r, "update") }
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) { h.write(w, r, "delete") }
+func (h *Handler) write(w http.ResponseWriter, r *http.Request, operation string) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	var record models.PaymentRefund
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Create err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	lockedBooking, lockErr := paymentLedger.LockPayment(r.Context(), tx, record.PaymentID)
-	_ = lockedBooking
-	if lockErr != nil {
-		tx.Rollback()
-		http.Error(w, "payment unavailable", 409)
-		return
-	}
-	if err := tx.QueryRowContext(r.Context(), qryCreate, record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef).Scan(&record.ID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	bookingID, err := paymentLedger.GetBookingIDByPaymentIDTx(r.Context(), tx, record.PaymentID)
-	if err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	if err := paymentLedger.Sync(r.Context(), tx, bookingID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	helpers.WriteJSON(w, http.StatusCreated, record.ID)
-}
-
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
-		return
-	}
-	var record models.PaymentRefund
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Update err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	record.ID = id
-
-	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	oldBookingID, err := paymentLedger.LockRefund(r.Context(), tx, id, record.PaymentID)
-	if err != nil {
-		tx.Rollback()
-		if err == sql.ErrNoRows {
-			http.Error(w, "Record not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if _, err := tx.ExecContext(r.Context(), qryUpdate, record.PaymentID, record.RefundDate, record.Amount, record.Reason, record.ExternalRef, id); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	newBookingID, err := paymentLedger.GetBookingIDByPaymentIDTx(r.Context(), tx, record.PaymentID)
-	if err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	if err := paymentLedger.Sync(r.Context(), tx, newBookingID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	if oldBookingID != newBookingID {
-		if err := paymentLedger.Sync(r.Context(), tx, oldBookingID); err != nil {
-			tx.Rollback()
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	id := 0
+	if operation != "create" {
+		id = dbStandardTemplate.GetID(w, r)
+		if id <= 0 {
 			return
 		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	helpers.WriteJSON(w, http.StatusOK, record)
-}
-
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
-		return
-	}
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-
-	tx, err := paymentLedger.Begin(r.Context(), h.appConf.Db)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	bookingID, err := paymentLedger.LockRefund(r.Context(), tx, id, 0)
-	if err != nil {
-		tx.Rollback()
-		if err == sql.ErrNoRows {
-			http.Error(w, "Record not found", http.StatusNotFound)
+	var input paymentLedger.RefundWrite
+	if operation != "delete" {
+		if err := helpers.DecodeJSONBody(r, &input); err != nil {
+			helpers.WriteError(w, 400, "invalid_request", "Invalid request payload")
 			return
 		}
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+	id, err := paymentLedger.WriteRefund(r.Context(), h.appConf.Db, operation, id, input)
+	if err != nil {
+		helpers.WriteDataError(w, err)
 		return
 	}
-
-	if _, err := tx.ExecContext(r.Context(), qryDelete, id); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if operation == "delete" {
+		w.WriteHeader(200)
 		return
 	}
-
-	if err := paymentLedger.Sync(r.Context(), tx, bookingID); err != nil {
-		tx.Rollback()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if operation == "create" {
+		helpers.WriteJSON(w, 201, id)
 		return
 	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	response := models.PaymentRefund{ID: id, PaymentID: input.PaymentID, RefundDate: input.RefundDate, Amount: input.Amount, Reason: input.Reason, ExternalRef: input.ExternalRef}
+	helpers.WriteJSON(w, 200, response)
 }

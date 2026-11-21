@@ -335,3 +335,15 @@ collection endpoints now use the bounded shared query path. Chromium verificatio
 uses 106 synthetic bookings and clicks Next and Previous, in addition to checking
 ownership and single-record trip reads. Node/WASM tests verify that one page does
 not trigger automatic subsequent downloads; the TinyGo build also passes.
+
+## Architecture follow-up: HTTP/business separation
+
+Payment/refund writes now decode explicit mutable-field DTOs and call SQL-only
+ledger commands. Those commands own validation, bounded transactions, parent locks,
+mutations and derived booking status. HTTP handlers retain authentication and
+response contracts, and translate typed not-found/conflict/validation/cancellation
+errors without exposing SQL details. Checkout provider orchestration already lives
+in a service. Existing dictionary/read helpers remain compatibility adapters rather
+than being rewritten wholesale. Router requests now carry a 30-second deadline;
+ledger mutation transactions have a tighter 10-second bound. Tests exercise refund
+overflow rollback, concurrent refunds, cross-booking transfers and error mappings.

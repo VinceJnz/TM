@@ -3,7 +3,7 @@ package paymentLedger
 import (
 	"context"
 	"database/sql"
-	"errors"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/shopspring/decimal"
 	"time"
@@ -105,7 +105,7 @@ func Sync(ctx context.Context, tx *sqlx.Tx, bookingID int) error {
 		return err
 	}
 	if invalid {
-		return errors.New("refund exceeds payment or ledger amount is negative")
+		return ErrLedgerConflict
 	}
 	var summary bookingPaymentSummary
 	if err := tx.GetContext(ctx, &summary, qryBookingPaymentSummary, bookingID); err != nil {
