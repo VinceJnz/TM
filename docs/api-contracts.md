@@ -37,3 +37,12 @@ Service/handler regressions validate rejected amounts, references, any-scope
 access and deletion conflicts; client tests verify nullable display fields and
 the actual mutable-field projection. Legacy resources outside this migration
 remain outside the generated contract coverage.
+
+Security grant and membership views now also share generated read/write DTOs.
+Their schemas specify required positive IDs, supported scopes and permission
+resources. Pricing metadata includes description lengths and currency bounds.
+Generated operations include validation/conflict/dependency responses; legacy
+plain-text errors remain represented alongside structured errors. Behavioral
+tests compare security handler validation and read-array contracts with generated
+metadata. The generator does not replace database/reference or multi-step domain
+validation. Extend metadata and behavioral tests with each resource migration.

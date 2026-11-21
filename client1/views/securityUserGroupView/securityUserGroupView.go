@@ -1,6 +1,7 @@
 package securityUserGroupView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -12,7 +13,6 @@ import (
 	"net/http"
 	"strconv"
 	"syscall/js"
-	"time"
 )
 
 const debugTag = "securityUserGroupView."
@@ -45,15 +45,7 @@ const (
 
 const ApiURL = "/securityUserGroup"
 
-type TableData struct {
-	ID       int       `json:"id"`
-	UserID   int       `json:"user_id"`
-	User     string    `json:"user_name"`
-	GroupID  int       `json:"group_id"`
-	Group    string    `json:"group_name"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
-}
+type TableData = api.UserGroupDTO
 
 type UI struct {
 	UserID  js.Value
@@ -277,7 +269,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.MembershipPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
@@ -293,7 +285,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPost, ApiURL, nil, api.MembershipPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateAdding)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return

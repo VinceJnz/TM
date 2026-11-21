@@ -1,6 +1,7 @@
 package securityGroupResourceView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -14,7 +15,6 @@ import (
 	"sort"
 	"strconv"
 	"syscall/js"
-	"time"
 )
 
 const debugTag = "securityGroupResourceView."
@@ -54,19 +54,7 @@ type GroupRecord struct {
 	Name string `json:"name"`
 }
 
-type TableData struct {
-	ID            int       `json:"id"`
-	GroupID       int       `json:"group_id"`
-	Group         string    `json:"group_name"`
-	ResourceID    int       `json:"resource_id"`
-	Resource      string    `json:"resource"`
-	AccessLevelID int       `json:"access_level_id"`
-	AccessLevel   string    `json:"access_level"`
-	AccessScopeID int       `json:"access_scope_id"`
-	AccessScope   string    `json:"access_scope"`
-	Created       time.Time `json:"created"`
-	Modified      time.Time `json:"modified"`
-}
+type TableData = api.GroupResourceDTO
 
 type UI struct {
 	GroupID       js.Value
@@ -335,7 +323,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.SecurityGrantPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
@@ -351,7 +339,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPost, ApiURL, nil, api.SecurityGrantPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateAdding)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
