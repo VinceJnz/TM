@@ -1,10 +1,10 @@
 {
-    //"gopls": {
-    //  "build.env": {
-    //    "GOOS": "js",
-    //    "GOARCH": "wasm"
-    //  }
-    //},
+    "gopls": {
+      "build.env": {
+        "GOOS": "js",
+        "GOARCH": "wasm"
+      }
+    },
    
     "go.toolsEnvVars": {
         "GOOS": "js",
