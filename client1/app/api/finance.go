@@ -12,7 +12,7 @@ import (
 type Finance struct{ client *httpProcessor.Client }
 
 func NewFinance(client *httpProcessor.Client) *Finance { return &Finance{client: client} }
-func (f *Finance) write(resource string, id int, input any) error {
+func (f *Finance) write(resource string, id int, input any, reason []string) error {
 	if id < 0 {
 		return fmt.Errorf("invalid record ID")
 	}
@@ -21,17 +21,31 @@ func (f *Finance) write(resource string, id int, input any) error {
 		method = http.MethodPut
 		path += "/" + strconv.Itoa(id)
 	}
-	return f.client.Request(method, path, nil, input)
+	why := ""
+	if len(reason) > 0 {
+		why = reason[0]
+	}
+	return f.client.RequestWithHeaders(method, path, nil, input, map[string]string{"X-Change-Reason": why})
 }
-func (f *Finance) SavePayment(id int, input PaymentWrite) error {
-	return f.write("payments", id, input)
+func (f *Finance) SavePayment(id int, input PaymentWrite, reason ...string) error {
+	return f.write("payments", id, input, reason)
 }
-func (f *Finance) SaveRefund(id int, input RefundWrite) error { return f.write("refunds", id, input) }
-func (f *Finance) remove(resource string, id int) error {
+func (f *Finance) SaveRefund(id int, input RefundWrite, reason ...string) error {
+	return f.write("refunds", id, input, reason)
+}
+func (f *Finance) remove(resource string, id int, reason []string) error {
 	if id <= 0 {
 		return fmt.Errorf("invalid record ID")
 	}
-	return f.client.Request(http.MethodDelete, "/"+resource+"/"+strconv.Itoa(id), nil, nil)
+	why := ""
+	if len(reason) > 0 {
+		why = reason[0]
+	}
+	return f.client.RequestWithHeaders(http.MethodDelete, "/"+resource+"/"+strconv.Itoa(id), nil, nil, map[string]string{"X-Change-Reason": why})
 }
-func (f *Finance) DeletePayment(id int) error { return f.remove("payments", id) }
-func (f *Finance) DeleteRefund(id int) error  { return f.remove("refunds", id) }
+func (f *Finance) DeletePayment(id int, reason ...string) error {
+	return f.remove("payments", id, reason)
+}
+func (f *Finance) DeleteRefund(id int, reason ...string) error {
+	return f.remove("refunds", id, reason)
+}

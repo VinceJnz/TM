@@ -51,7 +51,7 @@ func ConfirmRefund(ctx context.Context, db *sqlx.DB, provider RefundProvider, pa
 	default:
 		return errors.New("unsupported provider refund status")
 	}
-	tx, err := db.BeginTxx(ctx, nil)
+	tx, err := paymentLedger.Begin(paymentLedger.WithAudit(ctx, "operator:"+actor, "provider refund "+refundID), db)
 	if err != nil {
 		return err
 	}

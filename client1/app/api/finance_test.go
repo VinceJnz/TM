@@ -15,11 +15,12 @@ func TestFinanceUsesMutableContractAndPropagatesFailure(t *testing.T) {
 	defer js.Global().Set("fetch", old)
 	js.Global().Set("fetch", js.Global().Get("Function").New("url", "options", `
  const data=JSON.parse(options.body);if('id' in data||'stripe_session_id' in data||'created' in data)throw Error('read-only fields transmitted');
+ if(options.headers['X-Change-Reason']!=='correct receipt')throw Error('missing audit reason');
  if(data.booking_id!==11||data.amount!==12.5)throw Error('contract changed');
  return Promise.resolve(new Response('conflict',{status:409}));`))
 	finance := NewFinance(httpProcessor.New("https://example.test/custom/v9"))
 	done := make(chan error, 1)
-	go func() { done <- finance.SavePayment(1, PaymentWrite{BookingID: 11, Amount: 12.5}) }()
+	go func() { done <- finance.SavePayment(1, PaymentWrite{BookingID: 11, Amount: 12.5}, "correct receipt") }()
 	select {
 	case err := <-done:
 		if err == nil {

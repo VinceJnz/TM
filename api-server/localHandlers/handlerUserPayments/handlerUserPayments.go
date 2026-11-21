@@ -2,6 +2,7 @@ package handlerUserPayments
 
 import (
 	"api-server/v2/app/appCore"
+	"api-server/v2/app/services/finance"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
@@ -133,7 +134,8 @@ func (h *Handler) write(w http.ResponseWriter, r *http.Request, operation string
 			return
 		}
 	}
-	id, err := paymentLedger.WritePayment(r.Context(), h.appConf.Db, operation, id, input)
+	session := r.Context().Value(h.appConf.SessionIDKey).(*models.Session)
+	id, err := (finance.Service{DB: h.appConf.Db}).Payment(r.Context(), session.UserID, r.Header.Get("X-Change-Reason"), operation, id, input)
 	if err != nil {
 		helpers.WriteDataError(w, err)
 		return

@@ -420,8 +420,12 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 }
 
 func (editor *ItemEditor) UpdateItem(item TableData) {
+	reason, ok := viewHelpers.FinancialChangeReason()
+	if !ok {
+		return
+	}
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := api.NewFinance(editor.client).SaveRefund(item.ID, api.RefundWrite{PaymentID: item.PaymentID, RefundDate: item.RefundDate, Amount: item.Amount, Reason: item.Reason, ExternalRef: item.ExternalRef}); err != nil {
+	if err := api.NewFinance(editor.client).SaveRefund(item.ID, api.RefundWrite{PaymentID: item.PaymentID, RefundDate: item.RefundDate, Amount: item.Amount, Reason: item.Reason, ExternalRef: item.ExternalRef}, reason); err != nil {
 		editor.updateStateDisplay(ItemStateNone)
 		editor.onCompletionMsg("Refund update failed; record was not saved")
 		return
@@ -501,7 +505,11 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(ItemStateDeleting)
-		if err := api.NewFinance(editor.client).DeleteRefund(itemID); err != nil {
+		reason, ok := viewHelpers.FinancialChangeReason()
+		if !ok {
+			return
+		}
+		if err := api.NewFinance(editor.client).DeleteRefund(itemID, reason); err != nil {
 			editor.onCompletionMsg("Refund deletion failed; record was retained")
 			return
 		}

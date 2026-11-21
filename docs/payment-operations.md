@@ -1,5 +1,14 @@
 # Payment exception operations
 
+Migration 0013 adds immutable before/after audit history for payment and refund
+changes. It does not backfill or alter historical ledger rows. Re-run runtime
+grants after migration; the audit table is read-only to the API role and is
+populated by transaction-local triggers. The finance service supplies the
+authenticated user identity. Updates and deletions require `X-Change-Reason`
+(1–500 bytes); browser finance views prompt for it. Provider commands are marked
+as system/operator transitions. Direct SQL is attributed to the database login.
+Never put secrets in change reasons. Audit events roll back with failed changes.
+
 Apply migrations 0010 through 0012 in order after 0009 before starting the new API. Migration 0010 adds the review
 table and index without rewriting existing data. Re-run the explicit runtime
 role grant after applying migrations. Never run migrations against live data as

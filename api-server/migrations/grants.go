@@ -35,6 +35,15 @@ func GrantRuntimeAccess(ctx context.Context, db *sqlx.DB, role string) error {
 		return err
 	}
 	for _, table := range tables {
+		if table == "at_financial_audit" {
+			if _, err := tx.ExecContext(ctx, "REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON "+pq.QuoteIdentifier(table)+" FROM "+name); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, "GRANT SELECT ON "+pq.QuoteIdentifier(table)+" TO "+name); err != nil {
+				return err
+			}
+			continue
+		}
 		if _, err := tx.ExecContext(ctx, "GRANT SELECT,INSERT,UPDATE,DELETE ON "+pq.QuoteIdentifier(table)+" TO "+name); err != nil {
 			return err
 		}

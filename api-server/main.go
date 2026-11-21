@@ -84,7 +84,7 @@ func run() error {
 	corsOpts := handlers.CORS(
 		handlers.AllowedOrigins(allowedOrigins),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials", "X-Change-Reason"}),
 		handlers.ExposedHeaders([]string{"X-Next-Offset", "X-Page-Limit", "X-Pagination-Mode", "X-Next-Cursor"}),
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)

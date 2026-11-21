@@ -18,6 +18,7 @@ const debugTag = "httpProcessor."
 
 // Client provides the connection to the rest interface (is used by a store to read/write/update data????)
 type Client struct {
+	headers map[string]string
 	//Ctx     context.Context
 	BaseURL string
 	//apiKey    string
@@ -87,6 +88,14 @@ func (c *Client) NewRequest(method, url string, rxDataStru, txDataStru any, call
 // Request returns transport, encoding and HTTP failures to typed API adapters.
 func (c *Client) Request(method, path string, rx, tx any) error {
 	return c.newRequest(method, path, rx, tx, nil, func(error) {})
+}
+func (c *Client) RequestWithHeaders(method, path string, rx, tx any, headers map[string]string) error {
+	copy := *c
+	copy.headers = map[string]string{}
+	for key, value := range headers {
+		copy.headers[key] = value
+	}
+	return copy.Request(method, path, rx, tx)
 }
 
 func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDataStru any, callBacks ...func(error)) error {
@@ -165,6 +174,9 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 
 	// Do not set response-only or browser-controlled headers (e.g. Access-Control-Allow-Credentials, Origin).
 	// Use fetch credentials instead so cookies are sent: this is handled in doRequest.
+	for key, value := range c.headers {
+		req.Header.Set(key, value)
+	}
 	res, err = c.doRequest(req) // This is the call to send the https request and receive the response
 	if err != nil {
 		err = fmt.Errorf(debugTag+"newRequest()4 from calling HTTPSClient.Do: %w", err)

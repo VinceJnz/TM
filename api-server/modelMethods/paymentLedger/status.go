@@ -150,4 +150,18 @@ func Sync(ctx context.Context, tx *sqlx.Tx, bookingID int) error {
 
 // Begin leaves lock scope to the affected-trip/booking locking helpers. Provider
 // operations do not hold these transactions; unrelated trips remain independent.
-func Begin(ctx context.Context, db *sqlx.DB) (*sqlx.Tx, error) { return db.BeginTxx(ctx, nil) }
+func Begin(ctx context.Context, db *sqlx.DB) (*sqlx.Tx, error) {
+	tx, err := db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	identity := auditIdentity{"system:ledger", "system financial transition"}
+	if supplied, ok := ctx.Value(auditKey{}).(auditIdentity); ok {
+		identity = supplied
+	}
+	if _, err = tx.ExecContext(ctx, `SELECT set_config('tm.actor',$1,true),set_config('tm.reason',$2,true)`, identity.actor, identity.reason); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return tx, nil
+}
