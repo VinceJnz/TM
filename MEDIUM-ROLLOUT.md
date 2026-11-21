@@ -290,3 +290,11 @@ Partially paid bookings retain occupancy after temporary holds expire. Cancelled
 bookings do not occupy places; full refunds release holds unless a provider checkout
 is still pending/attached. All checkout and financial admission paths use the same
 occupancy rule. Apply the migration before deploying the matching API.
+
+## Architecture follow-up: quote price immutability
+
+Migration 0009 freezes price-only changes as well as booking dates/trip/ownership
+while a checkout is unresolved. The only permitted snapshot price write is exact
+attachment of that attempt's stored quote/session. Confirmed expiration makes the
+old attempt inactive before clearing the snapshot for repricing. Tests cover a
+price-only edit during the pending interval, attachment, and expiration recovery.

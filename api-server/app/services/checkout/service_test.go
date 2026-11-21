@@ -46,7 +46,7 @@ func (f *fakeProvider) Lookup(ctx context.Context, a paymentLedger.Attempt) ([]S
 func recoveryDB(t *testing.T) *sqlx.DB {
 	t.Helper()
 	schema := testdb.Ledger + `ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL WHERE id=11;DELETE FROM at_checkout_quotes;`
-	for _, name := range []string{"0006_checkout_attempts.sql", "0007_checkout_lifecycle.sql"} {
+	for _, name := range []string{"0006_checkout_attempts.sql", "0007_checkout_lifecycle.sql", "0009_checkout_price_guard.sql"} {
 		data, err := os.ReadFile("../../../migrations/" + name)
 		if err != nil {
 			t.Fatal(err)

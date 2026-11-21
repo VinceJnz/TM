@@ -22,10 +22,20 @@ func TestDurableAttemptRetriesAndWebhookRecovery(t *testing.T) {
 	if _, err = db.Exec(string(lifecycle)); err != nil {
 		t.Fatal(err)
 	}
+	priceGuard, err := os.ReadFile("../../migrations/0009_checkout_price_guard.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(string(priceGuard)); err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	first, err := Prepare(ctx, db, 11, 1, "one@example.test", "https://example.test/api/v1")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, err = db.Exec("UPDATE at_bookings SET booking_price=11 WHERE id=11"); err == nil {
+		t.Fatal("pending checkout price was mutable")
 	}
 	retry, err := Prepare(ctx, db, 11, 1, "changed@example.test", "https://changed.test")
 	if err != nil {
@@ -68,6 +78,13 @@ func TestConcurrentConflictingAttachmentsHaveOneWinner(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = db.Exec(string(lifecycle)); err != nil {
+		t.Fatal(err)
+	}
+	priceGuard, err := os.ReadFile("../../migrations/0009_checkout_price_guard.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(string(priceGuard)); err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
