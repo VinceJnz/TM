@@ -20,6 +20,11 @@ with provider orchestration in the checkout service. Shared route-ID parsing
 does not perform database access. This separation preserves existing routes,
 JSON fields, array responses, and offset/cursor navigation.
 
-This is an incremental contract boundary for finance. Other existing views keep
-their current DTOs until their features are changed; add them to the generator
-when migrating them rather than maintaining another handwritten schema.
+Generated contracts now also cover bookings, My Bookings, trips and the Trip List
+participant report. Those views share generated read DTOs; booking/trip write
+projections include only fields accepted by explicit server write DTOs. Decimal
+JSON strings and nullable fields keep their existing wire representations. The
+legacy finance-named output files now contain these resource contracts as well.
+The schema describes pagination, nested trip-booking reads, report reads and
+required finance correction headers. Extend this generator when migrating other
+resources rather than maintaining another handwritten schema.

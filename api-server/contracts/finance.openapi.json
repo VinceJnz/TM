@@ -1,6 +1,276 @@
 {
   "components": {
     "schemas": {
+      "BookingDTO": {
+        "properties": {
+          "amount_paid": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "booking_cost": {
+            "description": "Exact decimal encoded as a JSON string",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "booking_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "booking_price": {
+            "description": "Exact decimal encoded as a JSON string",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "booking_status": {
+            "type": "string"
+          },
+          "booking_status_id": {
+            "type": "integer"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "group_booking": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group_booking_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "integer"
+          },
+          "owner_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "participants": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "payment_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stripe_session_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "trip_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "trip_name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "BookingWrite": {
+        "properties": {
+          "booking_price": {
+            "description": "Exact decimal encoded as a JSON string",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "integer"
+          },
+          "to_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "trip_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "MyBookingDTO": {
+        "properties": {
+          "amount_paid": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "booking_cost": {
+            "description": "Exact decimal encoded as a JSON string",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "booking_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "booking_price": {
+            "description": "Exact decimal encoded as a JSON string",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "booking_status": {
+            "type": "string"
+          },
+          "booking_status_id": {
+            "type": "integer"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "group_booking": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group_booking_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "integer"
+          },
+          "owner_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "participants": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "payment_date": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stripe_session_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "trip_from_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "trip_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "trip_name": {
+            "type": "string"
+          },
+          "trip_to_date": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Payment": {
         "properties": {
           "amount": {
@@ -146,6 +416,218 @@
           }
         },
         "type": "object"
+      },
+      "TripDTO": {
+        "properties": {
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "difficulty_level": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "difficulty_level_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "from_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_participants": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "integer"
+          },
+          "participants": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "to_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "trip_cost_group": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trip_cost_group_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "trip_name": {
+            "type": "string"
+          },
+          "trip_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trip_status_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "trip_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trip_type_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TripReportDTO": {
+        "properties": {
+          "booking_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "booking_position": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "booking_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "max_participants": {
+            "type": "integer"
+          },
+          "participant_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "person_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "person_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "trip_id": {
+            "type": "integer"
+          },
+          "trip_name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TripWrite": {
+        "properties": {
+          "difficulty_level_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "from_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_participants": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "to_date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "trip_cost_group_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "trip_name": {
+            "type": "string"
+          },
+          "trip_status_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "trip_type_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -158,13 +640,377 @@
   },
   "info": {
     "description": "Paths are relative to configured API prefix. Manual writes never issue provider charges or refunds. Additional legacy fields are ignored by write DTOs.",
-    "title": "Trip Manager financial API",
+    "title": "Trip Manager resource API",
     "version": "1"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/bookings": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookingDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability required; own scope is enforced in SQL"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Created ID"
+          }
+        }
+      }
+    },
+    "/bookings/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Deleted manual record"
+          },
+          "409": {
+            "description": "Provider records are immutable"
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookingDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability required; own scope is enforced in SQL"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDTO"
+                }
+              }
+            },
+            "description": "Updated record"
+          },
+          "409": {
+            "description": "Ledger conflict; provider records are immutable"
+          }
+        }
+      }
+    },
+    "/myBookings": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyBookingDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability required; own scope is enforced in SQL"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Created ID"
+          }
+        }
+      }
+    },
+    "/myBookings/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Deleted manual record"
+          },
+          "409": {
+            "description": "Provider records are immutable"
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyBookingDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability required; own scope is enforced in SQL"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyBookingDTO"
+                }
+              }
+            },
+            "description": "Updated record"
+          },
+          "409": {
+            "description": "Ledger conflict; provider records are immutable"
+          }
+        }
+      }
+    },
     "/payments": {
       "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -183,7 +1029,7 @@
             "description": "Session required"
           },
           "403": {
-            "description": "Resource capability with any scope required"
+            "description": "Resource capability and supported scope required"
           }
         }
       },
@@ -214,6 +1060,18 @@
     },
     "/payments/{id}": {
       "delete": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Change-Reason",
+            "required": true,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Deleted manual record"
@@ -242,7 +1100,7 @@
             "description": "Session required"
           },
           "403": {
-            "description": "Resource capability with any scope required"
+            "description": "Resource capability and supported scope required"
           }
         }
       },
@@ -258,6 +1116,18 @@
         }
       ],
       "put": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Change-Reason",
+            "required": true,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -287,6 +1157,46 @@
     },
     "/refunds": {
       "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -305,7 +1215,7 @@
             "description": "Session required"
           },
           "403": {
-            "description": "Resource capability with any scope required"
+            "description": "Resource capability and supported scope required"
           }
         }
       },
@@ -336,6 +1246,18 @@
     },
     "/refunds/{id}": {
       "delete": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Change-Reason",
+            "required": true,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Deleted manual record"
@@ -364,7 +1286,7 @@
             "description": "Session required"
           },
           "403": {
-            "description": "Resource capability with any scope required"
+            "description": "Resource capability and supported scope required"
           }
         }
       },
@@ -380,6 +1302,18 @@
         }
       ],
       "put": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Change-Reason",
+            "required": true,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -403,6 +1337,290 @@
           },
           "409": {
             "description": "Ledger conflict; provider records are immutable"
+          }
+        }
+      }
+    },
+    "/trips": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability and supported scope required"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Created ID"
+          }
+        }
+      }
+    },
+    "/trips/{id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Deleted manual record"
+          },
+          "409": {
+            "description": "Provider records are immutable"
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability and supported scope required"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripDTO"
+                }
+              }
+            },
+            "description": "Updated record"
+          },
+          "409": {
+            "description": "Ledger conflict; provider records are immutable"
+          }
+        }
+      }
+    },
+    "/trips/{id}/bookings": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagination",
+            "schema": {
+              "enum": [
+                "offset",
+                "cursor"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookingDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability required; own scope is enforced in SQL"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "/tripsReport": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripReportDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bounded array; single-record GET also returns an array"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Resource capability and supported scope required"
           }
         }
       }

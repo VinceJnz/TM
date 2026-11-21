@@ -1,6 +1,7 @@
 package tripParticipantStatusReport
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -11,7 +12,6 @@ import (
 	"net/http"
 	"strconv"
 	"syscall/js"
-	"time"
 )
 
 const debugTag = "tripParticipantStatusReport."
@@ -44,19 +44,7 @@ const (
 
 const ApiURL = "/tripsReport"
 
-type TableData struct {
-	TripID          int       `json:"trip_id"`
-	TripName        string    `json:"trip_name"`
-	FromDate        time.Time `json:"from_date"`
-	ToDate          time.Time `json:"to_date"`
-	MaxParticipants int       `json:"max_participants"`
-	BookingID       int       `json:"booking_id"`
-	ParticipantID   int       `json:"participant_id"`
-	PersonID        int       `json:"person_id"`
-	Name            string    `json:"person_name"`
-	BookingPosition int       `json:"booking_position"`
-	BookingStatus   string    `json:"booking_status"`
-}
+type TableData = api.TripReportDTO
 
 type UI struct {
 	Status js.Value
@@ -196,7 +184,7 @@ func (editor *ItemEditor) populateItemList() {
 		if record.BookingID > 0 {
 			bookingSeen[record.BookingID] = true
 		}
-		if record.Name != "" {
+		if record.PersonName != "" {
 			totalParticipants++
 		}
 	}
@@ -245,7 +233,7 @@ func (editor *ItemEditor) populateItemList() {
 			headerDiv.Get("style").Call("setProperty", "gap", "8px")
 
 			toggleIndicator := editor.document.Call("createElement", "span")
-			toggleIndicator.Set("innerHTML", "â–¶")
+			toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶")
 			viewHelpers.SetStyles(toggleIndicator, map[string]string{
 				"font-size": "0.8em",
 				"color":     "#4f647a",
@@ -256,7 +244,7 @@ func (editor *ItemEditor) populateItemList() {
 			title := editor.document.Call("createElement", "div")
 			tripName := editor.document.Call("createElement", "strong")
 			tripName.Set("textContent", record.TripName)
-			title.Call("append", tripName, " - "+record.FromDate.Format(viewHelpers.Layout)+" to "+record.ToDate.Format(viewHelpers.Layout)+" | Capacity: "+strconv.Itoa(record.MaxParticipants))
+			title.Call("append", tripName, " - "+record.TripFrom.Format(viewHelpers.Layout)+" to "+record.TripTo.Format(viewHelpers.Layout)+" | Capacity: "+strconv.Itoa(record.MaxParticipants))
 			viewHelpers.SetStyles(title, map[string]string{
 				"font-size": "0.98em",
 				"color":     "#1d2f45",
@@ -283,8 +271,8 @@ func (editor *ItemEditor) populateItemList() {
 
 			bookingEditor := bookingView.New(editor.document, editor.events, editor.appCore, bookingView.ParentData{
 				ID:       record.TripID,
-				FromDate: record.FromDate,
-				ToDate:   record.ToDate,
+				FromDate: record.TripFrom,
+				ToDate:   record.TripTo,
 			})
 			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
 			bookingsContainer.Call("appendChild", bookingEditor.Div)
@@ -298,9 +286,9 @@ func (editor *ItemEditor) populateItemList() {
 			editor.ListDiv.Call("appendChild", tripCard)
 		}
 
-		if currentBookingID != record.BookingID || record.Name == "" {
+		if currentBookingID != record.BookingID || record.PersonName == "" {
 			currentBookingID = record.BookingID
-			if record.Name != "" {
+			if record.PersonName != "" {
 				bookingCount++
 			}
 
@@ -315,7 +303,7 @@ func (editor *ItemEditor) populateItemList() {
 			})
 
 			heading := editor.document.Call("createElement", "div")
-			if record.Name != "" {
+			if record.PersonName != "" {
 				heading.Set("innerHTML", "<strong>Booking "+strconv.Itoa(bookingCount)+"</strong>")
 			} else {
 				heading.Set("innerHTML", "<strong>No bookings to display</strong>")
@@ -330,7 +318,7 @@ func (editor *ItemEditor) populateItemList() {
 			bookingsContainer.Call("appendChild", bookingCard)
 		}
 
-		if record.Name == "" {
+		if record.PersonName == "" {
 			continue
 		}
 
@@ -346,7 +334,7 @@ func (editor *ItemEditor) populateItemList() {
 			"font-size":     "0.88em",
 		})
 		name := editor.document.Call("createElement", "strong")
-		name.Set("textContent", record.Name)
+		name.Set("textContent", record.PersonName)
 		participantRow.Call("appendChild", name)
 		if record.BookingPosition > 0 {
 			participantRow.Call("append", " | Status: "+participantStatusLabel(record.BookingStatus)+" | Position: "+strconv.Itoa(record.BookingPosition))
@@ -364,11 +352,11 @@ func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer 
 		if !isExpanded {
 			// Show bookings
 			bookingsContainer.Get("style").Call("setProperty", "display", "block")
-			toggleIndicator.Set("innerHTML", "â–¼")
+			toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¼")
 		} else {
 			// Hide bookings and close the booking form
 			bookingsContainer.Get("style").Call("setProperty", "display", "none")
-			toggleIndicator.Set("innerHTML", "â–¶")
+			toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶")
 			// Close the booking form
 			bookingEditor.EditDiv.Set("innerHTML", "")
 			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
@@ -385,7 +373,7 @@ func (editor *ItemEditor) createMakeBookingHandler(tripID int, bookingsContainer
 
 		editor.tripExpanded[tripID] = true
 		bookingsContainer.Get("style").Call("setProperty", "display", "block")
-		toggleIndicator.Set("innerHTML", "â–¼")
+		toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¼")
 
 		bookingEditor.NewItemData(js.Null(), nil)
 		bookingEditor.Div.Get("style").Call("setProperty", "display", "block")

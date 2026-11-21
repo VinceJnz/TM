@@ -1,6 +1,7 @@
 package tripView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
@@ -36,26 +37,7 @@ const (
 
 const ApiURL = "/trips"
 
-type TableData struct {
-	ID              int       `json:"id"`
-	OwnerID         int       `json:"owner_id"`
-	Name            string    `json:"trip_name"`
-	Location        string    `json:"location"`
-	DifficultyID    int       `json:"difficulty_level_id"`
-	Difficulty      string    `json:"difficulty_level"`
-	FromDate        time.Time `json:"from_date"`
-	ToDate          time.Time `json:"to_date"`
-	MaxParticipants int       `json:"max_participants"`
-	Participants    int       `json:"participants"`
-	TripStatusID    int       `json:"trip_status_id"`
-	TripStatus      string    `json:"trip_status"`
-	TripTypeID      int       `json:"trip_type_id"`
-	TripType        string    `json:"trip_type"`
-	TripCostGroupID int       `json:"trip_cost_group_id"`
-	TripCostGroup   string    `json:"trip_cost_group"`
-	Created         time.Time `json:"created"`
-	Modified        time.Time `json:"modified"`
-}
+type TableData = api.TripDTO
 
 type UI struct {
 	Name            js.Value
@@ -400,7 +382,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-		if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+		if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.TripPayload(item)); err != nil {
 			editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 			editor.onCompletionMsg("Change failed; please retry.")
 			return
@@ -418,7 +400,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-		if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+		if err := editor.client.Request(http.MethodPost, ApiURL, nil, api.TripPayload(item)); err != nil {
 			editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 			editor.onCompletionMsg("Change failed; please retry.")
 			return

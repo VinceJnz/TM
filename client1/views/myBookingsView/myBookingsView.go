@@ -1,6 +1,7 @@
 package myBookingsView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
@@ -46,29 +47,7 @@ const ApiURL = "/myBookings"
 const ApiURLBookings = "/bookings"
 const ApiURLVouchers = "/bookingVouchers"
 
-type TableData struct {
-	ID              int             `json:"id"`
-	OwnerID         int             `json:"owner_id"`
-	Owner           string          `json:"owner_name"`
-	TripID          int             `json:"trip_id"`
-	Notes           string          `json:"notes"`
-	FromDate        time.Time       `json:"from_date"`
-	ToDate          time.Time       `json:"to_date"`
-	Participants    int             `json:"participants"` // Report generated field
-	GroupBookingID  int             `json:"group_booking_id"`
-	GroupBooking    string          `json:"group_booking"`
-	BookingStatusID int             `json:"booking_status_id"`
-	BookingStatus   string          `json:"booking_status"`
-	BookingDate     time.Time       `json:"booking_date"`
-	PaymentDate     time.Time       `json:"payment_date"`
-	BookingPrice    decimal.Decimal `json:"booking_price"`
-	TripName        string          `json:"trip_name"`
-	TripFromDate    time.Time       `json:"trip_from_date"`
-	TripToDate      time.Time       `json:"trip_to_date"`
-	BookingCost     decimal.Decimal `json:"booking_cost"` // Report generated field
-	Created         time.Time       `json:"created"`
-	Modified        time.Time       `json:"modified"`
-}
+type TableData = api.MyBookingDTO
 
 type UI struct {
 	TripID          js.Value
@@ -567,7 +546,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.MyBookingPayload(item)); err != nil {
 		editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
@@ -583,7 +562,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	var id int
 	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-	if err := editor.client.Request(http.MethodPost, ApiURL, &id, &item); err != nil {
+	if err := editor.client.Request(http.MethodPost, ApiURL, &id, api.MyBookingPayload(item)); err != nil {
 		editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 		editor.onCompletionMsg("Change failed; please retry.")
 		return

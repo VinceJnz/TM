@@ -58,10 +58,12 @@ func (h *Handler) write(w http.ResponseWriter, r *http.Request, operation string
 	}
 	var input models.Trip
 	if operation != "delete" {
-		if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		var payload models.TripWrite
+		if err := helpers.DecodeJSONBody(r, &payload); err != nil {
 			helpers.WriteError(w, 400, "invalid_request", "Invalid request payload")
 			return
 		}
+		input = payload.Trip()
 	}
 	if operation != "create" {
 		input.ID = helpers.RouteID(w, r)
