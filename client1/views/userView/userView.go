@@ -535,7 +535,7 @@ func (editor *ItemEditor) populateItemList() {
 		headerDiv.Get("style").Call("setProperty", "gap", "8px")
 
 		toggleIndicator := editor.document.Call("createElement", "span")
-		toggleIndicator.Set("innerHTML", "Ã¢â€“Â¶")
+		toggleIndicator.Set("textContent", "\u25b6")
 		viewHelpers.SetStyles(toggleIndicator, map[string]string{
 			"font-size": "0.8em",
 			"color":     "#4f647a",
@@ -608,7 +608,7 @@ func (editor *ItemEditor) populateItemList() {
 			// Edit should never auto-show group list.
 			editor.userExpanded[userID] = false
 			groupEditor.Hide()
-			toggleIndicator.Set("innerHTML", "Ã¢â€“Â¶")
+			toggleIndicator.Set("textContent", "\u25b6")
 			childContainer.Get("style").Call("setProperty", "display", "block")
 
 			isVisible := editContainer.Get("style").Get("display").String() == "block"
@@ -652,11 +652,11 @@ func (editor *ItemEditor) createUserToggleHandler(userID int, childContainer js.
 			groupEditor.FetchItems()
 			groupEditor.Display()
 			childContainer.Get("style").Call("setProperty", "display", "block")
-			toggleIndicator.Set("innerHTML", "Ã¢â€“Â¼")
+			toggleIndicator.Set("textContent", "\u25bc")
 		} else {
 			groupEditor.Hide()
 			childContainer.Get("style").Call("setProperty", "display", "none")
-			toggleIndicator.Set("innerHTML", "Ã¢â€“Â¶")
+			toggleIndicator.Set("textContent", "\u25b6")
 		}
 		return nil
 	}

@@ -158,6 +158,8 @@ try {
     if(result.result?.value===true){reportRendered=true;break;}await delay(100);
   }
   assert(reportRendered,'Trip List participant report did not render in the browser');
+  const disclosureIcon=await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent span')).some(span=>span.textContent===String.fromCharCode(0x25b6))",returnByValue:true});
+  assert.equal(disclosureIcon.result?.value,true,'disclosure arrow rendered as corrupted text');
   await send('Runtime.evaluate',{expression:"window.fetch=window.__tmFetch;delete window.__tmFetch"});
   await send('Runtime.evaluate', {expression: "location.hash='/mybookings'"});
   await waitForPage('Items 1–100');

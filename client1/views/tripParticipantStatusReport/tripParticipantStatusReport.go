@@ -233,7 +233,7 @@ func (editor *ItemEditor) populateItemList() {
 			headerDiv.Get("style").Call("setProperty", "gap", "8px")
 
 			toggleIndicator := editor.document.Call("createElement", "span")
-			toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶")
+			toggleIndicator.Set("textContent", "\u25b6")
 			viewHelpers.SetStyles(toggleIndicator, map[string]string{
 				"font-size": "0.8em",
 				"color":     "#4f647a",
@@ -352,11 +352,11 @@ func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer 
 		if !isExpanded {
 			// Show bookings
 			bookingsContainer.Get("style").Call("setProperty", "display", "block")
-			toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¼")
+			toggleIndicator.Set("textContent", "\u25bc")
 		} else {
 			// Hide bookings and close the booking form
 			bookingsContainer.Get("style").Call("setProperty", "display", "none")
-			toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶")
+			toggleIndicator.Set("textContent", "\u25b6")
 			// Close the booking form
 			bookingEditor.EditDiv.Set("innerHTML", "")
 			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
@@ -373,7 +373,7 @@ func (editor *ItemEditor) createMakeBookingHandler(tripID int, bookingsContainer
 
 		editor.tripExpanded[tripID] = true
 		bookingsContainer.Get("style").Call("setProperty", "display", "block")
-		toggleIndicator.Set("innerHTML", "ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¼")
+		toggleIndicator.Set("textContent", "\u25bc")
 
 		bookingEditor.NewItemData(js.Null(), nil)
 		bookingEditor.Div.Get("style").Call("setProperty", "display", "block")

@@ -369,7 +369,7 @@ func (editor *ItemEditor) populateItemList() {
 		headerDiv.Get("style").Call("setProperty", "gap", "8px")
 
 		toggleIndicator := editor.document.Call("createElement", "span")
-		toggleIndicator.Set("innerHTML", "Ã¢â€“Â¶")
+		toggleIndicator.Set("textContent", "\u25b6")
 		viewHelpers.SetStyles(toggleIndicator, map[string]string{
 			"font-size": "0.8em",
 			"color":     "#4f647a",
@@ -465,12 +465,12 @@ func (editor *ItemEditor) createGroupToggleHandler(groupID int, resourcesContain
 			resourceEditor.FetchItems()
 			resourceEditor.Display()
 			resourcesContainer.Get("style").Call("setProperty", "display", "block")
-			toggleIndicator.Set("innerHTML", "Ã¢â€“Â¼")
+			toggleIndicator.Set("textContent", "\u25bc")
 		} else {
 			// Hide resources
 			resourceEditor.Hide()
 			resourcesContainer.Get("style").Call("setProperty", "display", "none")
-			toggleIndicator.Set("innerHTML", "Ã¢â€“Â¶")
+			toggleIndicator.Set("textContent", "\u25b6")
 		}
 		return nil
 	}
