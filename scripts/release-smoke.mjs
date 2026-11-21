@@ -170,6 +170,13 @@ try {
   assert(requests.some(url => url.startsWith(`${origin}${prefix}/auth/menuUser`)), 'frontend did not use its current origin/prefix');
   assert(!requests.some(url => url.includes('localhost:8086')), 'frontend retained a compiled localhost URL');
   assert.equal(exceptions.length, 0, 'browser runtime exception');
+  const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie);
+  assert.equal(legacyLogout.status,405,'GET logout still mutates session state');
+  assert.equal((await request(`${prefix}/bookings`,'GET',undefined,cookie)).status,200,'GET logout revoked the session');
+  const logout=await request(`${prefix}/auth/logout/`,'POST',undefined,cookie);
+  assert.equal(logout.status,202,'session-owned POST logout failed');
+  assert(logout.headers['set-cookie']?.some(value=>value.startsWith('session=;')&&value.includes('Max-Age=0')),'logout did not expire browser cookie');
+  assert.equal((await request(`${prefix}/bookings`,'GET',undefined,cookie)).status,401,'revoked session remained valid');
   console.log('Real-browser WASM loading and authenticated UI checks passed');
 } finally {
   socket?.close();browser.kill('SIGTERM');
