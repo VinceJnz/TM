@@ -1,6 +1,6 @@
 # Payment exception operations
 
-Apply migration 0010 after 0009 before starting the new API. It adds the review
+Apply migrations 0010 through 0012 in order after 0009 before starting the new API. Migration 0010 adds the review
 table and index without rewriting existing data. Re-run the explicit runtime
 role grant after applying migrations. Never run migrations against live data as
 part of verification.

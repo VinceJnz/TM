@@ -27,6 +27,12 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Verify release identity and health policy
+        shell: pwsh
+        run: |
+          ./scripts/test-release-policy.ps1
+          ./scripts/test-release-health.ps1
+
       - name: Build TinyGo client
         run: |
           docker build \
