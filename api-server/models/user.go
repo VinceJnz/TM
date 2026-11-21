@@ -72,14 +72,15 @@ type UserPayments struct {
 }
 
 type PaymentRefund struct {
-	ID          int         `json:"id" db:"id"`
-	PaymentID   int         `json:"payment_id" db:"payment_id"`
-	RefundDate  zero.Time   `json:"refund_date" db:"refund_date"`
-	Amount      Money       `json:"amount" db:"amount"`
-	Reason      zero.String `json:"reason" db:"reason"`
-	ExternalRef zero.String `json:"external_ref" db:"external_ref"`
-	Created     time.Time   `json:"created" db:"created"`
-	Modified    time.Time   `json:"modified" db:"modified"`
+	ProviderRefundID zero.String `json:"provider_refund_id,omitempty" db:"provider_refund_id"`
+	ID               int         `json:"id" db:"id"`
+	PaymentID        int         `json:"payment_id" db:"payment_id"`
+	RefundDate       zero.Time   `json:"refund_date" db:"refund_date"`
+	Amount           Money       `json:"amount" db:"amount"`
+	Reason           zero.String `json:"reason" db:"reason"`
+	ExternalRef      zero.String `json:"external_ref" db:"external_ref"`
+	Created          time.Time   `json:"created" db:"created"`
+	Modified         time.Time   `json:"modified" db:"modified"`
 }
 
 var ErrWebAuthnCredentialExists = errors.New("WebAuthn credential already exists for this user")

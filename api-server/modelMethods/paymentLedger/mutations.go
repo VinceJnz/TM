@@ -131,6 +131,26 @@ func WriteRefund(ctx context.Context, db *sqlx.DB, operation string, id int, inp
 			return 0, err
 		}
 	}
+	var providerBacked bool
+	if operation == "create" {
+		err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL FROM at_payments WHERE id=$1`, input.PaymentID)
+	} else {
+		err = tx.GetContext(ctx, &providerBacked, `SELECT provider_refund_id IS NOT NULL FROM at_refunds WHERE id=$1`, id)
+	}
+	if err != nil {
+		return 0, err
+	}
+	if providerBacked {
+		return 0, ErrLedgerConflict
+	}
+	if operation == "update" {
+		if err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL FROM at_payments WHERE id=$1`, input.PaymentID); err != nil {
+			return 0, err
+		}
+		if providerBacked {
+			return 0, ErrLedgerConflict
+		}
+	}
 	switch operation {
 	case "create":
 		err = tx.QueryRowContext(ctx, `INSERT INTO at_refunds(payment_id,refund_date,amount,reason,external_ref) VALUES($1,$2,$3,$4,$5) RETURNING id`, input.PaymentID, input.RefundDate, input.Amount, input.Reason, input.ExternalRef).Scan(&id)

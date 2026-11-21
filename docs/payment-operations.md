@@ -33,3 +33,18 @@ Claims expire after two minutes and retries back off up to an hour. Monitor
 `reconcile_failures`, oldest due attempt, and unresolved payment reviews. The
 worker never releases a hold based only on a local timeout and never issues a
 refund. Shutdown cancels the worker before closing the database.
+
+Migration 0012 separates provider refund observations from manual refund ledger
+entries. Existing refunds remain manual historical entries. After requesting a
+refund in the approved Stripe workflow, verify it from api-server with runtime
+DATA_SOURCE and PAYMENT_KEY injected:
+
+    go run ./cmd/confirm-refund -payment 123 -refund re_example -actor operator@example.test
+
+The tool reads Stripe, verifies that the refund belongs to the payment's checkout
+session, and persists pending, failed, or succeeded status. Only succeeded
+refunds enter the booking ledger. Repeat the command after a pending refund
+changes status; provider errors retain the pending observation for follow-up.
+Manual refund CRUD rejects provider-backed payments. Provider refund ledger
+entries are immutable, and repeated confirmations cannot duplicate them. This
+command observes existing refunds and never requests a charge or refund.
