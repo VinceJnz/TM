@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/modelMethods/dbStandardTemplate"
+	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
@@ -37,6 +39,39 @@ func New(appConf *appCore.Config) *Handler {
 func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
 	helpers.AddRouteGroup(r, baseURL, h, "users")
 	helpers.CapabilityRoute(r, baseURL+"/set-username", "users", h.SetUsername).Methods("POST")
+	helpers.CapabilityRoute(r, baseURL+"/lookup", "users", h.Lookup).Methods("GET")
+}
+
+func (h *Handler) Lookup(w http.ResponseWriter, r *http.Request) {
+	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	if session == nil || session.UserID <= 0 {
+		helpers.WriteError(w, 401, "unauthorized", "Authentication required")
+		return
+	}
+	if session.AccessScope != "any" {
+		helpers.WriteError(w, 403, "forbidden", "User lookup requires any scope")
+		return
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	id := 0
+	if raw := r.URL.Query().Get("id"); raw != "" {
+		var err error
+		id, err = strconv.Atoi(raw)
+		if err != nil || id < 1 {
+			helpers.WriteError(w, 400, "invalid_id", "Invalid user ID")
+			return
+		}
+	}
+	if len(query) > 100 {
+		helpers.WriteError(w, 400, "invalid_search", "Search must be at most 100 bytes")
+		return
+	}
+	items, err := resourcequery.UserOptions(r.Context(), h.appConf.Db, query, id)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, items)
 }
 
 // GetAll: retrieves and returns all records

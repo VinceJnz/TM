@@ -13,7 +13,9 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"syscall/js"
 	"time"
 )
@@ -211,6 +213,61 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	fieldset.Call("appendChild", label)
 
 	fieldset.Call("appendChild", StateDropDown)
+	search := editor.document.Call("createElement", "input")
+	search.Set("type", "search")
+	search.Set("placeholder", "Search people (at least 2 characters)")
+	search.Call("setAttribute", "aria-label", "Search "+labelText)
+	button := editor.document.Call("createElement", "button")
+	button.Set("type", "button")
+	button.Set("textContent", "Search")
+	status := editor.document.Call("createElement", "span")
+	status.Call("setAttribute", "role", "status")
+	fieldset.Call("appendChild", search)
+	fieldset.Call("appendChild", button)
+	fieldset.Call("appendChild", status)
+	var generation int
+	load := func(path string) {
+		generation++
+		requestGeneration := generation
+		go func() {
+			var options []struct {
+				ID       int    `json:"id"`
+				Name     string `json:"name"`
+				Username string `json:"username"`
+			}
+			editor.client.NewRequest("GET", path, &options, nil, func(error) {
+				if generation != requestGeneration {
+					return
+				}
+				selected := StateDropDown.Get("value").String()
+				StateDropDown.Set("innerHTML", "")
+				for _, item := range options {
+					option := editor.document.Call("createElement", "option")
+					option.Set("value", item.ID)
+					option.Set("textContent", item.Name+" ("+item.Username+")")
+					option.Set("selected", strconv.Itoa(item.ID) == selected || item.ID == value)
+					StateDropDown.Call("appendChild", option)
+				}
+				status.Set("textContent", strconv.Itoa(len(options))+" matches (maximum 25)")
+			}, func(error) {
+				if generation == requestGeneration {
+					status.Set("textContent", "Search failed; retry")
+				}
+			})
+		}()
+	}
+	domEvents.Listen(button, "click", func(js.Value, []js.Value) any {
+		query := strings.TrimSpace(search.Get("value").String())
+		if len(query) < 2 {
+			status.Set("textContent", "Enter at least 2 characters")
+			return nil
+		}
+		load(ApiURL + "/lookup?q=" + url.QueryEscape(query))
+		return nil
+	})
+	if value > 0 {
+		load(ApiURL + "/lookup?id=" + strconv.Itoa(value))
+	}
 
 	return fieldset, StateDropDown
 }

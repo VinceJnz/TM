@@ -85,6 +85,7 @@ func run() error {
 		handlers.AllowedOrigins(allowedOrigins),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Access-Control-Allow-Credentials"}),
+		handlers.ExposedHeaders([]string{"X-Next-Offset", "X-Page-Limit", "X-Pagination-Mode", "X-Next-Cursor"}),
 		handlers.AllowCredentials(), // Headers([]string{"Content-Type"}) //w.Header().Set("Access-Control-Allow-Credentials", "true")
 	)
 

@@ -294,7 +294,6 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
-		editor.Children.PeopleSelector.FetchItems()
 
 		localApiURL := ApiURL
 		if editor.ParentID != 0 {

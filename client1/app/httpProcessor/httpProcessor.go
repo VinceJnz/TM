@@ -261,6 +261,8 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 	//returnData := &ReturnData{FieldNames: fieldNames}
 	//callBackSuccess(nil, returnData)
 	if page != nil {
+		page.cursorSupported = res.Header.Get("X-Pagination-Mode") == "cursor"
+		page.nextCursor = res.Header.Get("X-Next-Cursor")
 		page.Next = -1
 		if next := res.Header.Get("X-Next-Offset"); next != "" {
 			if offset, parseErr := strconv.Atoi(next); parseErr == nil {

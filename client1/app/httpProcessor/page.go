@@ -16,6 +16,9 @@ type Page struct {
 	Loading                        bool
 	committedOffset, committedNext int
 	committedPath                  string
+	cursorSupported                bool
+	nextCursor                     string
+	cursors                        map[int]string
 }
 
 func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callbacks ...func(error)) {
@@ -36,6 +39,8 @@ func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callba
 	if pending.Path != path {
 		pending.Offset = 0
 		pending.Path = path
+		pending.cursorSupported = false
+		pending.cursors = nil
 	}
 	if pending.Limit <= 0 {
 		pending.Limit = 100
@@ -48,6 +53,18 @@ func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callba
 	query := parsed.Query()
 	query.Set("limit", strconv.Itoa(pending.Limit))
 	query.Set("offset", strconv.Itoa(pending.Offset))
+	if pending.Offset == 0 || pending.cursorSupported {
+		query.Set("pagination", "cursor")
+		after := "0"
+		if pending.Offset > 0 {
+			after = pending.cursors[pending.Offset]
+		}
+		if after != "" {
+			query.Set("after", after)
+		} else {
+			query.Del("pagination")
+		}
+	}
 	parsed.RawQuery = query.Encode()
 	page.Loading = true
 	defer func() { page.Loading = false }()
@@ -71,6 +88,16 @@ func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callba
 		reflect.ValueOf(rx).Elem().Set(reflect.ValueOf(temporary).Elem())
 	}
 	pending.committedOffset, pending.committedNext, pending.committedPath = pending.Offset, pending.Next, pending.Path
+	if pending.cursorSupported {
+		history := map[int]string{0: "0"}
+		for offset, cursor := range pending.cursors {
+			history[offset] = cursor
+		}
+		if pending.Next >= 0 {
+			history[pending.Next] = pending.nextCursor
+		}
+		pending.cursors = history
+	}
 	pending.Loading = false
 	*page = pending
 	if len(callbacks) > 0 && callbacks[0] != nil {

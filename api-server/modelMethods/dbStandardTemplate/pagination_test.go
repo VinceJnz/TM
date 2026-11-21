@@ -28,3 +28,29 @@ func TestPagesAreBoundedAndKeepOwnershipFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestCursorKeepsOwnershipAndDoesNotSkipAfterEarlierDeletion(t *testing.T) {
+	db := testdb.Open(t, `CREATE TABLE items(id integer PRIMARY KEY,owner integer);INSERT INTO items VALUES(1,1),(2,2),(3,1),(4,1),(5,1);`)
+	var ids []int
+	w := httptest.NewRecorder()
+	if err := selectPage(w, httptest.NewRequest("GET", "/?pagination=cursor&limit=2", nil), db, &ids, "SELECT id FROM items WHERE owner=$1", 1); err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 2 || ids[1] != 3 || w.Header().Get("X-Next-Cursor") != "3" {
+		t.Fatal(ids, w.Header())
+	}
+	if _, err := db.Exec(`DELETE FROM items WHERE id=1;INSERT INTO items VALUES(6,2);`); err != nil {
+		t.Fatal(err)
+	}
+	if err := selectPage(httptest.NewRecorder(), httptest.NewRequest("GET", "/?pagination=cursor&limit=2&after=3&offset=2", nil), db, &ids, "SELECT id FROM items WHERE owner=$1", 1); err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 2 || ids[0] != 4 || ids[1] != 5 {
+		t.Fatal("cursor skipped records or leaked another owner", ids)
+	}
+	for _, after := range []string{"-1", "invalid", "9223372036854775808"} {
+		if err := selectPage(httptest.NewRecorder(), httptest.NewRequest("GET", "/?pagination=cursor&after="+after, nil), db, &ids, "SELECT id FROM items"); err == nil {
+			t.Fatal("invalid cursor accepted", after)
+		}
+	}
+}

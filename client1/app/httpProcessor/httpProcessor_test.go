@@ -168,3 +168,36 @@ func TestFailedPageNavigationPreservesCommittedRecordsAndPosition(t *testing.T) 
 		t.Fatal("retry did not advance")
 	}
 }
+
+func TestPageCursorHistorySupportsNextAndPrevious(t *testing.T) {
+	old := js.Global().Get("fetch")
+	defer js.Global().Set("fetch", old)
+	js.Global().Set("fetch", js.Global().Get("Function").New("url", "options", `
+ const q=new URL(url).searchParams;if(q.get('pagination')!=='cursor')throw Error('missing cursor mode');
+ const after=Number(q.get('after'));return Promise.resolve(new Response(JSON.stringify([{id:after+10}]),{status:200,headers:{'X-Pagination-Mode':'cursor','X-Next-Cursor':String(after+10),'X-Next-Offset':String(Number(q.get('offset'))+1)}}));`))
+	client := New("https://example.test")
+	page := Page{Limit: 1}
+	var records []struct {
+		ID int `json:"id"`
+	}
+	request := func() {
+		done := make(chan struct{}, 1)
+		go func() { client.PageRequest(&page, "GET", "/bookings", &records, nil); done <- struct{}{} }()
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			t.Fatal("cursor request blocked")
+		}
+	}
+	request()
+	page.Offset = page.Next
+	request()
+	if records[0].ID != 20 {
+		t.Fatal(records, page)
+	}
+	page.Offset = 0
+	request()
+	if records[0].ID != 10 {
+		t.Fatal("previous lost cursor", records, page)
+	}
+}
