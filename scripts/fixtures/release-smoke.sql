@@ -9,6 +9,9 @@ INSERT INTO st_user_group(user_id,group_id) VALUES(1,1),(2,1);
 INSERT INTO st_group_resource(group_id,resource_id,access_level_id,access_scope_id)
 SELECT 1,r.id,a.id,s.id FROM et_resource r CROSS JOIN et_access_level a CROSS JOIN et_access_scope s
 WHERE r.name='tripsReport' AND a.name='GET' AND s.name='any';
+INSERT INTO st_group_resource(group_id,resource_id,access_level_id,access_scope_id)
+SELECT 1,r.id,a.id,s.id FROM et_resource r CROSS JOIN et_access_level a CROSS JOIN et_access_scope s
+WHERE r.name='trips' AND a.name='PUT' AND s.name='own';
 INSERT INTO at_trip_cost_groups(id,description) VALUES(1,'Synthetic prices');
 INSERT INTO at_trip_costs(trip_cost_group_id,member_status_id,user_age_group_id,season_id,amount) VALUES(1,1,1,1,10);
 INSERT INTO at_trips(id,owner_id,trip_name,from_date,to_date,trip_status_id,trip_type_id,trip_cost_group_id,max_participants)

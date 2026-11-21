@@ -1,9 +1,8 @@
 package viewHelpers
 
 import (
-	"syscall/js"
 	"client1/v2/app/domEvents"
-
+	"syscall/js"
 	// These are composite view helpers that are used to create more complex UI components.
 	// They add themselves to the DOM via the parent parameter.
 )

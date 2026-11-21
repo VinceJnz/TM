@@ -357,7 +357,7 @@ func (editor *ItemEditor) resetEditForm() {
 
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if editor.ReadOnlyMode {
-		editor.resetEditForm()
+
 		return nil
 	}
 
@@ -406,7 +406,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
-	editor.resetEditForm()
 	return nil
 }
 
@@ -426,10 +425,11 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	}
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := api.NewFinance(editor.client).SaveRefund(item.ID, api.RefundWrite{PaymentID: item.PaymentID, RefundDate: item.RefundDate, Amount: item.Amount, Reason: item.Reason, ExternalRef: item.ExternalRef}, reason); err != nil {
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg("Refund update failed; record was not saved")
 		return
 	}
+	editor.resetEditForm()
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems()
 	editor.updateStateDisplay(ItemStateNone)
@@ -440,10 +440,11 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
 		if err := api.NewFinance(editor.client).SaveRefund(0, api.RefundWrite{PaymentID: item.PaymentID, RefundDate: item.RefundDate, Amount: item.Amount, Reason: item.Reason, ExternalRef: item.ExternalRef}); err != nil {
-			editor.updateStateDisplay(ItemStateNone)
+			editor.updateStateDisplay(ItemStateAdding)
 			editor.onCompletionMsg("Refund creation failed; record was not saved")
 			return
 		}
+		editor.resetEditForm()
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)

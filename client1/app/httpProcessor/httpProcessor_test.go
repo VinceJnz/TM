@@ -201,3 +201,22 @@ func TestPageCursorHistorySupportsNextAndPrevious(t *testing.T) {
 		t.Fatal("previous lost cursor", records, page)
 	}
 }
+
+func TestPageRequestReturnsFailureForViewRecovery(t *testing.T) {
+	old := js.Global().Get("fetch")
+	defer js.Global().Set("fetch", old)
+	js.Global().Set("fetch", js.Global().Get("Function").New("url", "options", `return Promise.resolve(new Response('unavailable',{status:503}));`))
+	page := Page{}
+	client := New("https://example.test")
+	var records []int
+	done := make(chan error, 1)
+	go func() { done <- client.PageRequest(&page, "GET", "/trips", &records, nil) }()
+	select {
+	case err := <-done:
+		if err == nil || page.Loading {
+			t.Fatal("failure unavailable to view", err, page)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("failed request blocked")
+	}
+}

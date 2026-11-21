@@ -387,7 +387,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
-	editor.resetEditForm()
 	return nil
 }
 
@@ -401,7 +400,13 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-		editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+		if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+			editor.updateStateDisplay(viewHelpers.ItemStateEditing)
+			editor.onCompletionMsg("Change failed; please retry.")
+			return
+		}
+		editor.resetEditForm()
+
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems() // Refresh the item list
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -413,7 +418,13 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-		editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
+		if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+			editor.updateStateDisplay(viewHelpers.ItemStateAdding)
+			editor.onCompletionMsg("Change failed; please retry.")
+			return
+		}
+		editor.resetEditForm()
+
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -439,9 +450,15 @@ func (editor *ItemEditor) FetchItems() {
 		editor.Children.TripCostGroup.FetchItems()
 
 		go func() {
-			editor.client.PageRequest(&editor.Page,
+			if err := editor.client.PageRequest(&editor.Page,
 
-				http.MethodGet, ApiURL, &records, nil, success)
+				http.MethodGet, ApiURL, &records, nil, success); err != nil {
+				editor.RecordState = RecordStateReloadRequired
+				editor.updateStateDisplay(viewHelpers.ItemStateNone)
+				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
+				return
+			}
+
 		}()
 	}
 }
@@ -449,7 +466,12 @@ func (editor *ItemEditor) FetchItems() {
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
 		editor.updateStateDisplay(viewHelpers.ItemStateDeleting)
-		editor.client.NewRequest(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil)
+		if err := editor.client.Request(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil); err != nil {
+			editor.updateStateDisplay(viewHelpers.ItemStateNone)
+			editor.onCompletionMsg("Change failed; please retry.")
+			return
+		}
+
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
@@ -541,11 +563,9 @@ func (editor *ItemEditor) populateItemList() {
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
-	viewHelpers.PageControls(editor.
-		ListDiv, &editor.Page,
+	viewHelpers.PageControls(editor.ListDiv, &editor.Page,
 		len(editor.Records), func() {
-			editor.
-				RecordState = RecordStateReloadRequired
+			editor.RecordState = RecordStateReloadRequired
 			editor.FetchItems()
 		})
 

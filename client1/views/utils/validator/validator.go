@@ -1,9 +1,8 @@
 package validator
 
 import (
-	"syscall/js"
 	"client1/v2/app/domEvents"
-
+	"syscall/js"
 	//const debugTag = "validator."
 )
 

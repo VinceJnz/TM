@@ -367,7 +367,7 @@ func (editor *ItemEditor) resetEditForm() {
 
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	if editor.ReadOnlyMode {
-		editor.resetEditForm()
+
 		return nil
 	}
 
@@ -415,7 +415,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
-	editor.resetEditForm()
 	return nil
 }
 
@@ -435,10 +434,11 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	}
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := api.NewFinance(editor.client).SavePayment(item.ID, api.PaymentWrite{BookingID: item.BookingID, PaymentDate: item.PaymentDate, Amount: item.Amount, PaymentMethod: item.PaymentMethod}, reason); err != nil {
-		editor.updateStateDisplay(ItemStateNone)
+		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg("Payment update failed; record was not saved")
 		return
 	}
+	editor.resetEditForm()
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems()
 	editor.updateStateDisplay(ItemStateNone)
@@ -449,10 +449,11 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
 		if err := api.NewFinance(editor.client).SavePayment(0, api.PaymentWrite{BookingID: item.BookingID, PaymentDate: item.PaymentDate, Amount: item.Amount, PaymentMethod: item.PaymentMethod}); err != nil {
-			editor.updateStateDisplay(ItemStateNone)
+			editor.updateStateDisplay(ItemStateAdding)
 			editor.onCompletionMsg("Payment creation failed; record was not saved")
 			return
 		}
+		editor.resetEditForm()
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(ItemStateNone)

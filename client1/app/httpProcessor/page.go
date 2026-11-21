@@ -21,12 +21,13 @@ type Page struct {
 	cursors                        map[int]string
 }
 
-func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callbacks ...func(error)) {
+func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callbacks ...func(error)) (requestErr error) {
 	if page.Loading {
 		return
 	}
 	pending := *page
 	fail := func(err error) {
+		requestErr = err
 		page.Offset, page.Next, page.Path = page.committedOffset, page.committedNext, page.committedPath
 		if page.Path == "" {
 			page.Next = -1
@@ -103,6 +104,7 @@ func (c *Client) PageRequest(page *Page, method, path string, rx, tx any, callba
 	if len(callbacks) > 0 && callbacks[0] != nil {
 		callbacks[0](nil)
 	}
+	return nil
 }
 
 // Keep the established callback API for non-paged callers.

@@ -298,7 +298,6 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		editor.onCompletionMsg("Invalid item state for submission")
 	}
 
-	editor.resetEditForm()
 	return nil
 }
 
@@ -311,7 +310,13 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item)
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+		editor.updateStateDisplay(ItemStateEditing)
+		editor.onCompletionMsg("Change failed; please retry.")
+		return
+	}
+	editor.resetEditForm()
+
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
@@ -321,7 +326,13 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	editor.client.NewRequest(http.MethodPost, ApiURL, nil, &item)
+	if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+		editor.updateStateDisplay(ItemStateAdding)
+		editor.onCompletionMsg("Change failed; please retry.")
+		return
+	}
+	editor.resetEditForm()
+
 	editor.RecordState = RecordStateReloadRequired
 	editor.FetchItems() // Refresh the item list
 	editor.updateStateDisplay(ItemStateNone)
@@ -335,7 +346,13 @@ func (editor *ItemEditor) FetchItems() {
 		go func() {
 			var records []TableData
 			editor.updateStateDisplay(ItemStateFetching)
-			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil)
+			if err := editor.client.Request(http.MethodGet, ApiURL, &records, nil); err != nil {
+				editor.RecordState = RecordStateReloadRequired
+				editor.updateStateDisplay(ItemStateNone)
+				editor.onCompletionMsg("Unable to load records; please retry.")
+				return
+			}
+
 			editor.Records = records
 			editor.populateItemList()
 			editor.updateStateDisplay(ItemStateNone)

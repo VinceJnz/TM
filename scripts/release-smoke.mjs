@@ -117,17 +117,46 @@ try {
   await send('Runtime.evaluate', {expression: "location.hash='/trips'"});
   let tripsRendered=false;
   for(let i=0;i<120;i++){
-    const result=await send('Runtime.evaluate',{expression:"document.querySelector('#mainContent')?.textContent.includes('Synthetic trip')",returnByValue:true});
+    const result=await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('[id=\"tripView.itemDiv\"]')).some(el=>el.getClientRects().length>0&&el.textContent.includes('Synthetic trip'))",returnByValue:true});
     if(result.result?.value===true){tripsRendered=true;break;}await delay(100);
   }
   assert(tripsRendered,'trip list did not render in the browser');
+  const visibleName="Array.from(document.querySelectorAll('#itemName')).find(el=>el.getClientRects().length>0)";
+  await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('[id=\"tripView.itemDiv\"] button')).find(button=>button.textContent==='Edit'&&button.getClientRects().length>0).click()"});
+  let formReady=false;
+  for(let i=0;i<120;i++){
+    const result=await send('Runtime.evaluate',{expression:`!!(${visibleName}) && Array.from(document.querySelectorAll('#itemTripCostGroupID')).some(el=>el.getClientRects().length>0&&el.options.length>0)`,returnByValue:true});
+    if(result.result?.value===true){formReady=true;break;}await delay(100);
+  }
+  assert(formReady,'trip edit form did not load');
+  await send('Runtime.evaluate',{expression:`window.__tmWriteFetch=window.fetch;window.__tmWriteFailures=0;window.fetch=(url,options)=>{if(String(url).includes('/trips/1')&&options?.method==='PUT'){window.__tmWriteFailures++;return Promise.resolve(new Response('synthetic conflict',{status:409}));}return window.__tmWriteFetch(url,options);};(${visibleName}).value='Preserve unsaved trip';(${visibleName}).closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));`});
+  let writeFailed=false;
+  for(let i=0;i<120;i++){
+    const result=await send('Runtime.evaluate',{expression:`window.__tmWriteFailures===1&&document.body.textContent.includes('Change failed; please retry.')&&(${visibleName})?.value==='Preserve unsaved trip'`,returnByValue:true});
+    if(result.result?.value===true){writeFailed=true;break;}await delay(100);
+  }
+  assert(writeFailed,'failed trip write lost the edit form or reported success');
+  await send('Runtime.evaluate',{expression:`(${visibleName}).closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));`});
+  for(let i=0;i<60;i++){const result=await send('Runtime.evaluate',{expression:'window.__tmWriteFailures',returnByValue:true});if(result.result?.value===2)break;await delay(100);}
+  const retries=await send('Runtime.evaluate',{expression:'window.__tmWriteFailures',returnByValue:true});assert.equal(retries.result.value,2,'failed edit was not retryable');
+  await send('Runtime.evaluate',{expression:"window.fetch=window.__tmWriteFetch;delete window.__tmWriteFetch"});
+  // A failed list request must expose a working Retry action.
+  await send('Runtime.evaluate',{expression:`window.__tmFetch=window.fetch;let failReport=true;window.fetch=(url,options)=>{if(String(url).includes('/tripsReport')&&failReport){failReport=false;return Promise.resolve(new Response('synthetic unavailable',{status:503}));}return window.__tmFetch(url,options);};`});
   await send('Runtime.evaluate', {expression: "location.hash='/tripsreport'"});
+  let retryShown=false;
+  for(let i=0;i<120;i++){
+    const result=await send('Runtime.evaluate',{expression:"!!document.querySelector('#mainContent .tm-load-error button')",returnByValue:true});
+    if(result.result?.value===true){retryShown=true;break;}await delay(100);
+  }
+  assert(retryShown,'failed report did not offer Retry');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#mainContent .tm-load-error button').click()"});
   let reportRendered=false;
   for(let i=0;i<120;i++){
     const result=await send('Runtime.evaluate',{expression:"document.querySelector('#mainContent')?.textContent.includes('Trip Participant Status Report')",returnByValue:true});
     if(result.result?.value===true){reportRendered=true;break;}await delay(100);
   }
   assert(reportRendered,'Trip List participant report did not render in the browser');
+  await send('Runtime.evaluate',{expression:"window.fetch=window.__tmFetch;delete window.__tmFetch"});
   await send('Runtime.evaluate', {expression: "location.hash='/mybookings'"});
   await waitForPage('Items 1–100');
   await send('Runtime.evaluate', {expression:`Array.from((${pager}).querySelectorAll('button')).find(button=>button.textContent==='Next').click()`});
