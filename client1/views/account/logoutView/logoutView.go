@@ -246,7 +246,7 @@ func (editor *ItemEditor) FetchItems() {
 
 	go func() {
 		editor.updateStateDisplay(ItemStateFetching)
-		editor.client.NewRequest(http.MethodGet, ApiURL+"/logout/", nil, nil, success)
+		editor.client.NewRequest(http.MethodPost, ApiURL+"/logout/", nil, nil, success)
 		editor.updateStateDisplay(ItemStateNone)
 	}()
 }

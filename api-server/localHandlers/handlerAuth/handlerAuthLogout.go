@@ -3,57 +3,51 @@ package handlerAuth
 import (
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
-	"log"
+	"context"
 	"net/http"
+	"net/url"
+	"time"
 )
 
-// AuthLogout ends the user's session by removing the session token.
-// IMPORTANT: This does NOT disconnect OAuth providers - that requires a separate explicit action.
-// OAuth provider linkage (provider, provider_id) remains intact for future logins.
-// Users can log back in using the same OAuth provider without re-authorization.
 func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
-	session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session) // Used to retrieve the userID from the context so that access level can be assessed.
-
-	if ok {
-		sessionToken, err := r.Cookie("session")
-		if err != nil {
-			log.Printf(debugTag+"AuthLogout session not open. userID=%v\n", session.UserID)
-			http.Error(w, "session not open", http.StatusUnauthorized)
-			return
-		}
-		log.Printf(debugTag+"Handler.AuthLogout session open. userID=%v", session.UserID)
-		err = h.removeSessionToken(sessionToken.Value, session.UserID)
-		if err != nil {
-			log.Printf(debugTag+"Handler.AuthLogout failed to remove session token. userID=%v err=%v", session.UserID, err)
-			http.Error(w, "failed to close session", http.StatusForbidden)
-			return
-		}
-	} else {
-		log.Print(debugTag + "AuthLogout UserID not available in request context")
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "Use POST to log out", 405)
 		return
 	}
-
-	w.WriteHeader(http.StatusAccepted)
-	if _, err := w.Write([]byte("User logged out.")); err != nil {
-		log.Printf(debugTag+"AuthLogout failed to write response: %v", err)
+	if origin := r.Header.Get("Origin"); origin != "" {
+		parsed, err := url.Parse(origin)
+		if err != nil || parsed.Scheme != "https" || parsed.Host != r.Host || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+			http.Error(w, "Origin not allowed", 403)
+			return
+		}
 	}
-}
-
-func (h *Handler) removeSessionToken(tokenStr string, expectedUserID int) error {
-	tokenItem, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, tokenStr)
+	session, ok := r.Context().Value(h.appConf.SessionIDKey).(*models.Session)
+	if !ok || session == nil {
+		http.Error(w, "Authentication required", 401)
+		return
+	}
+	cookie, err := r.Cookie("session")
 	if err != nil {
-		log.Print(debugTag + "removeSessionToken token not found")
+		http.Error(w, "Authentication required", 401)
+		return
+	}
+	if err = h.removeSessionToken(r.Context(), cookie.Value, session.UserID); err != nil {
+		http.Error(w, "Unable to close session", 503)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: "session", Value: "", Path: "/", Domain: h.appConf.Settings.Host, MaxAge: -1, Expires: time.Unix(1, 0), Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = w.Write([]byte("User logged out."))
+}
+func (h *Handler) removeSessionToken(ctx context.Context, value string, user int) error {
+	token, err := dbAuthTemplate.FindSessionTokenContext(ctx, debugTag, h.appConf.Db, value)
+	if err != nil {
 		return err
 	}
-	if tokenItem.UserID != expectedUserID {
-		log.Printf("%v token user mismatch: expected=%d got=%d", debugTag+"Handler.removeSessionToken", expectedUserID, tokenItem.UserID)
+	if token.UserID != user {
 		return http.ErrNoCookie
 	}
-	err = dbAuthTemplate.TokenDeleteQry(debugTag+"Handler.removeSessionToken ", h.appConf.Db, tokenItem.ID)
-	if err != nil {
-		log.Print(debugTag + "removeSessionToken failed to remove token")
-		return err
-	}
-	return nil
+	_, err = h.appConf.Db.ExecContext(ctx, "DELETE FROM st_token WHERE id=$1 AND user_id=$2", token.ID, user)
+	return err
 }
