@@ -134,8 +134,13 @@ func Sync(ctx context.Context, tx *sqlx.Tx, bookingID int) error {
 	if summary.BookingStatusID == 2 {
 		status = 2
 	}
-	if status == 3 {
+	if status == 3 || status == 4 {
 		if err := Reserve(ctx, tx, bookingID, time.Now().Add(45*time.Minute)); err != nil {
+			return err
+		}
+	}
+	if status == 2 || status == 1 {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM at_checkout_reservations r WHERE r.booking_id=$1 AND ($2=2 OR NOT EXISTS(SELECT 1 FROM at_checkout_attempts a WHERE a.booking_id=$1 AND a.state IN ('pending','attached')))`, bookingID, status); err != nil {
 			return err
 		}
 	}

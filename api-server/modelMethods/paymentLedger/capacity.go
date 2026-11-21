@@ -23,7 +23,7 @@ func Reserve(ctx context.Context, tx *sqlx.Tx, bookingID int, expires time.Time)
 	var seats, available int
 	err := tx.QueryRowContext(ctx, `SELECT
  (SELECT count(*) FROM at_booking_people WHERE booking_id=b.id),
- t.max_participants-COALESCE((SELECT sum(CASE WHEN other.booking_status_id=3 THEN
+ t.max_participants-COALESCE((SELECT sum(CASE WHEN other.booking_status_id IN (3,4) THEN
  (SELECT count(*) FROM at_booking_people p WHERE p.booking_id=other.id)
  ELSE COALESCE((SELECT r.seats FROM at_checkout_reservations r WHERE r.booking_id=other.id AND r.expires_at>CURRENT_TIMESTAMP),0) END)
  FROM at_bookings other WHERE other.trip_id=t.id AND other.id<>b.id AND other.booking_status_id<>2),0)

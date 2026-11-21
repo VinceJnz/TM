@@ -3,6 +3,7 @@ package paymentLedger
 import (
 	"api-server/v2/internal/testdb"
 	"context"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -81,5 +82,40 @@ func TestConcurrentReservationsAndExpiry(t *testing.T) {
 	}
 	if err = Reserve(ctx, tx, held, time.Now().Add(time.Hour)); err != ErrCapacity {
 		t.Fatal("late payment could oversell", err)
+	}
+}
+
+func TestCapacityReductionAndPartialPaymentOccupancy(t *testing.T) {
+	migration, err := os.ReadFile("../../migrations/0008_trip_capacity_guard.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := testdb.Open(t, ledgerFixture+string(migration)+`UPDATE at_trips SET max_participants=2;UPDATE at_bookings SET booking_status_id=4 WHERE id=11;INSERT INTO at_checkout_reservations VALUES(22,1,NOW()+INTERVAL '1 hour');`)
+	if _, err = db.Exec("UPDATE at_trips SET max_participants=1"); err == nil {
+		t.Fatal("capacity reduced below partial payment plus hold")
+	}
+	if _, err = db.Exec("UPDATE at_trips SET max_participants=NULL"); err == nil {
+		t.Fatal("null capacity bypassed occupancy")
+	}
+	if _, err = db.Exec("UPDATE at_checkout_reservations SET expires_at=NOW()-INTERVAL '1 minute'"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("UPDATE at_trips SET max_participants=1"); err != nil {
+		t.Fatal("expired hold counted", err)
+	}
+	tx, err := db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if err = LockTrip(context.Background(), tx, 22); err != nil {
+		t.Fatal(err)
+	}
+	if err = Reserve(context.Background(), tx, 22, time.Now().Add(time.Hour)); err != ErrCapacity {
+		t.Fatal("partial booking lost its place", err)
+	}
+	tx.Rollback()
+	if _, err = db.Exec("UPDATE at_bookings SET booking_status_id=2 WHERE id=11;UPDATE at_trips SET max_participants=0"); err != nil {
+		t.Fatal("cancelled booking retained occupancy", err)
 	}
 }

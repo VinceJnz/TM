@@ -281,3 +281,12 @@ Lookup errors, ambiguous results, open sessions and unconfirmed outcomes never
 release capacity. Late paid sessions without capacity still require a financial
 operator to reconcile/refund; they are not silently admitted or auto-refunded.
 The new checkout service separates provider orchestration from HTTP and SQL.
+
+## Architecture follow-up: occupancy invariants
+
+Migration 0008 rejects trip-capacity reductions below fully/partially paid bookings
+plus live holds, including attempts to replace an occupied capacity with NULL.
+Partially paid bookings retain occupancy after temporary holds expire. Cancelled
+bookings do not occupy places; full refunds release holds unless a provider checkout
+is still pending/attached. All checkout and financial admission paths use the same
+occupancy rule. Apply the migration before deploying the matching API.
