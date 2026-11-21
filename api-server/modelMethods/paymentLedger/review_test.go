@@ -58,7 +58,26 @@ func TestReviewRejectsUnmatchedQuotesAndRequiresRefundEvidence(t *testing.T) {
 	if err := ResolveReview(ctx, db, "checkout", "other", "overwrite"); err == nil {
 		t.Fatal("resolution was overwritten")
 	}
-	if _, err := Finalize(ctx, db, "late-event", "checkout", 1000, "nzd"); err == nil {
-		t.Fatal("refunded exception admitted a late event")
+	if _, err := Finalize(ctx, db, "late-event", "checkout", 1000, "nzd"); err != nil {
+		t.Fatal("refunded exception was not acknowledged", err)
+	}
+	db.Get(&count, `SELECT count(*) FROM at_payments`)
+	if count != 0 {
+		t.Fatal("refunded exception admitted late payment")
+	}
+}
+
+func TestDelayedFailureReportCannotReopenSuccessfulPayment(t *testing.T) {
+	db := testdb.Open(t, ledgerFixture)
+	ctx := context.Background()
+	if _, err := Finalize(ctx, db, "successful-retry", "checkout", 1000, "nzd"); err != nil {
+		t.Fatal(err)
+	}
+	if err := RecordReview(ctx, db, "checkout", 1000, "nzd"); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := db.Get(&count, `SELECT count(*) FROM at_payment_reviews WHERE resolved_at IS NULL`); err != nil || count != 0 {
+		t.Fatal("successful payment reopened", count, err)
 	}
 }

@@ -2,6 +2,7 @@ package paymentLedger
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/jmoiron/sqlx"
 	"strings"
@@ -9,12 +10,34 @@ import (
 
 // RecordReview stores no provider secrets or internal SQL error messages.
 func RecordReview(ctx context.Context, db *sqlx.DB, session string, amount int64, currency string) error {
-	_, err := db.ExecContext(ctx, `INSERT INTO at_payment_reviews(session_id,booking_id,amount_minor,currency,reason)
+	tx, err := Begin(ctx, db)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var booking int
+	err = tx.GetContext(ctx, &booking, `SELECT booking_id FROM at_checkout_quotes WHERE session_id=$1 AND amount_minor=$2 AND currency=$3`, session, amount, strings.ToLower(currency))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	// Serialize exception creation with successful finalization. A delayed
+	// failure report must not reopen a payment that another retry committed.
+	if err = LockBookings(ctx, tx, booking); err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO at_payment_reviews(session_id,booking_id,amount_minor,currency,reason)
  SELECT session_id,booking_id,amount_minor,currency,'finalization_failed' FROM at_checkout_quotes
  WHERE session_id=$1 AND amount_minor=$2 AND currency=$3
+ AND NOT EXISTS(SELECT 1 FROM at_payments WHERE stripe_session_id=$1)
  ON CONFLICT(session_id) DO UPDATE SET last_seen=CURRENT_TIMESTAMP,failures=at_payment_reviews.failures+1
  WHERE at_payment_reviews.resolved_at IS NULL`, session, amount, strings.ToLower(currency))
-	return err
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ResolveReview records an operator-confirmed external refund. It never claims

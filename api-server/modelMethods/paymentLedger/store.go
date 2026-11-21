@@ -59,9 +59,6 @@ func finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 	if err := tx.GetContext(ctx, &refunded, `SELECT EXISTS(SELECT 1 FROM at_payment_reviews WHERE session_id=$1 AND resolution='external-refund-confirmed')`, sessionID); err != nil {
 		return false, err
 	}
-	if refunded {
-		return false, ErrLedgerConflict
-	}
 	var inserted string
 	err = tx.QueryRowContext(ctx, `INSERT INTO at_stripe_events(event_id,session_id) VALUES ($1,$2) ON CONFLICT(event_id) DO NOTHING RETURNING event_id`, eventID, sessionID).Scan(&inserted)
 	if err == sql.ErrNoRows {
@@ -78,6 +75,11 @@ func finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 		return false, err
 	}
 	amount := decimal.NewFromInt(amountMinor).Shift(-2)
+	if refunded {
+		// The operator confirmed a full external refund. Acknowledge delivery
+		// durably without admitting the booking or recreating refunded money.
+		return true, tx.Commit()
+	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO at_payments(booking_id,payment_date,amount,payment_method,stripe_session_id) VALUES($1,$2,$3,'stripe_checkout',$4) ON CONFLICT(stripe_session_id) WHERE stripe_session_id IS NOT NULL DO NOTHING`, bookingID, time.Now(), amount, sessionID)
 	if err != nil {
 		return false, err

@@ -26,6 +26,11 @@ and oldest age; any database failure preventing case persistence still requires
 webhook retry and an alert from application errors. Existing resolved cases
 cannot be overwritten by this tool.
 
+After an exception is resolved with confirmed external refund evidence, later
+valid webhook deliveries are acknowledged and retained in event history without
+admission or a new payment entry. A delayed failure report cannot reopen a
+payment that a concurrent retry has already finalized successfully.
+
 Migration 0011 adds a durable retry schedule to active checkout attempts. When
 a payment key is configured, each API process runs a minute-based worker with
 at most ten attempts per batch and a twenty-second timeout per provider lookup.
