@@ -81,7 +81,26 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request, payment int) {
 		helpers.WriteError(w, 400, "invalid_page", "Invalid pagination")
 		return
 	}
-	items, more, err := h.store.List(r.Context(), payment, limit, offset)
+	var items []models.PaymentRefund
+	var more bool
+	var err error
+	if r.URL.Query().Get("pagination") == "cursor" {
+		after := int64(0)
+		if raw := r.URL.Query().Get("after"); raw != "" {
+			after, err = strconv.ParseInt(raw, 10, 64)
+			if err != nil || after < 0 {
+				helpers.WriteError(w, 400, "invalid_cursor", "Invalid cursor")
+				return
+			}
+		}
+		items, more, err = h.store.ListAfter(r.Context(), payment, limit, after)
+		w.Header().Set("X-Pagination-Mode", "cursor")
+		if more && len(items) > 0 {
+			w.Header().Set("X-Next-Cursor", strconv.Itoa(items[len(items)-1].ID))
+		}
+	} else {
+		items, more, err = h.store.List(r.Context(), payment, limit, offset)
+	}
 	if err != nil {
 		helpers.WriteDataError(w, err)
 		return

@@ -35,4 +35,11 @@ func TestRefundReadIsolationPaginationAndCancellation(t *testing.T) {
 	if _, _, err = store.List(ctx, 0, 501, 0); err == nil {
 		t.Fatal("unbounded page")
 	}
+	if _, err = db.Exec(`DELETE FROM at_refunds WHERE id=1`); err != nil {
+		t.Fatal(err)
+	}
+	items, more, err = store.ListAfter(ctx, 1, 1, 1)
+	if err != nil || more || len(items) != 1 || items[0].ID != 9 {
+		t.Fatal("refund cursor skipped a record or lost payment filter", items, more, err)
+	}
 }
