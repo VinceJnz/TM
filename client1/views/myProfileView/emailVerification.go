@@ -21,8 +21,13 @@ func (editor *ItemEditor) renderEmailVerification() {
 			args[0].Call("preventDefault")
 		}
 		proof := map[string]string{"old_code": oldCode.Get("value").String(), "new_code": newCode.Get("value").String()}
+		ticket := editor.command.Start()
 		go func() {
-			if err := editor.client.Request(http.MethodPost, ApiURL+"/email-change/confirm", nil, proof); err != nil {
+			err := editor.client.RequestContext(ticket.Context, http.MethodPost, ApiURL+"/email-change/confirm", nil, proof)
+			if !ticket.Finish(err) {
+				return
+			}
+			if err != nil {
 				editor.onCompletionMsg("Email unchanged: " + err.Error())
 				return
 			}

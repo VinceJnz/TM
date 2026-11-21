@@ -7,7 +7,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	safehtml "html"
-	"log"
+
 	"net/http"
 	"syscall/js"
 	"time"
@@ -44,6 +44,8 @@ type UI struct {
 }
 
 type ItemEditor struct {
+	load     httpProcessor.LoadScope
+	command  httpProcessor.LoadScope
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -77,6 +79,9 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.load.Cancel()
+	editor.command.Cancel()
+	editor.RecordState = RecordStateReloadRequired
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
 }
@@ -86,6 +91,9 @@ func (editor *ItemEditor) GetDiv() js.Value {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.load.Cancel()
+	editor.command.Cancel()
+	editor.RecordState = RecordStateReloadRequired
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -99,28 +107,22 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateCurrent {
 		return
 	}
-
+	ticket := editor.load.Start()
+	editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 	go func() {
-		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		var record TableData
-
-		success := func(err error) {
-			if err != nil {
-				log.Printf("%sFetchItems success callback err: %v", debugTag, err)
-			}
-			editor.CurrentRecord = record
-			editor.RecordState = RecordStateCurrent
-			editor.populateEditForm()
-			editor.updateStateDisplay(viewHelpers.ItemStateNone)
+		err := editor.client.RequestContext(ticket.Context, http.MethodGet, ApiURL, &record, nil)
+		if !ticket.Finish(err) {
+			return
 		}
-
-		fail := func(err error) {
-			log.Printf("%sFetchItems failed: %v", debugTag, err)
-			editor.updateStateDisplay(viewHelpers.ItemStateNone)
+		editor.updateStateDisplay(viewHelpers.ItemStateNone)
+		if err != nil {
 			editor.onCompletionMsg("Unable to load profile data from server")
+			return
 		}
-
-		editor.client.NewRequest(http.MethodGet, ApiURL, &record, nil, success, fail)
+		editor.CurrentRecord = record
+		editor.RecordState = RecordStateCurrent
+		editor.populateEditForm()
 	}()
 }
 
@@ -223,20 +225,36 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		AccountHidden: hidden,
 	}
 
+	editor.load.Cancel()
+	ticket := editor.command.Start()
 	go func() {
 		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-		defer editor.updateStateDisplay(viewHelpers.ItemStateNone)
-		if err := editor.client.Request(http.MethodPut, ApiURL, nil, &payload); err != nil {
-			editor.onCompletionMsg("Unable to update profile: " + err.Error())
+		defer func() {
+			if ticket.Finish(nil) {
+				editor.updateStateDisplay(viewHelpers.ItemStateNone)
+			}
+		}()
+		if err := editor.client.RequestContext(ticket.Context, http.MethodPut, ApiURL, nil, &payload); err != nil {
+			if ticket.Current() {
+				editor.onCompletionMsg("Unable to update profile: " + err.Error())
+			}
 			return
 		}
 		if email != editor.CurrentRecord.Email {
-			if err := editor.client.Request(http.MethodPost, ApiURL+"/email-change", nil, map[string]string{"email": email}); err != nil {
-				editor.onCompletionMsg("Details saved; email unchanged. " + err.Error())
+			if err := editor.client.RequestContext(ticket.Context, http.MethodPost, ApiURL+"/email-change", nil, map[string]string{"email": email}); err != nil {
+				if ticket.Current() {
+					editor.onCompletionMsg("Details saved; email unchanged. " + err.Error())
+				}
+				return
+			}
+			if !ticket.Current() {
 				return
 			}
 			editor.renderEmailVerification()
 			editor.onCompletionMsg("Details saved. Enter the approval codes sent to your current and new email addresses.")
+			return
+		}
+		if !ticket.Current() {
 			return
 		}
 		editor.onCompletionMsg("Profile updated successfully")

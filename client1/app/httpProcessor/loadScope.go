@@ -20,6 +20,13 @@ type LoadTicket struct {
 	Context    context.Context
 }
 
+func (t LoadTicket) Current() bool {
+	s := t.scope
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return t.generation == s.generation && t.Context.Err() == nil
+}
+
 func (s *LoadScope) Start() LoadTicket {
 	s.mu.Lock()
 	defer s.mu.Unlock()
