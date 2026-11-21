@@ -1,5 +1,12 @@
 # Operational visibility and ownership
 
+Notification coverage includes pending count, oldest age and retry count, excluding
+messages whose booking was deleted. The checker alerts after fifteen minutes
+by default (`-max-notification-age` overrides this). The protected API also reports
+whether the API process has an initialized email service. This is an availability
+signal, not proof that a provider will accept the next message; queue age/retries
+detect delivery failures. The CLI checks queue health without initializing mail.
+
 Migration 0016 adds stable `first_seen` timestamps for refund observations and
 request IDs on new financial audit events. Existing refunds use their last known
 check time as a conservative initial age; historical audit events retain NULL

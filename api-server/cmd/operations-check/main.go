@@ -17,8 +17,9 @@ func main() {
 	review := flag.Duration("max-review-age", 5*time.Minute, "maximum unresolved paid-review age")
 	refund := flag.Duration("max-refund-age", 24*time.Hour, "maximum pending provider-refund age")
 	checkout := flag.Duration("max-checkout-overdue", 15*time.Minute, "maximum checkout age after expiry grace")
+	notification := flag.Duration("max-notification-age", 15*time.Minute, "maximum pending notification age")
 	flag.Parse()
-	if *review <= 0 || *refund <= 0 || *checkout <= 0 {
+	if *review <= 0 || *refund <= 0 || *checkout <= 0 || *notification <= 0 {
 		log.Fatal("positive thresholds are required")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -32,7 +33,7 @@ func main() {
 	if err != nil {
 		log.Fatal("operations snapshot unavailable")
 	}
-	alerts := service.Alerts(snapshot, *review, *refund, *checkout)
+	alerts := append(service.Alerts(snapshot, *review, *refund, *checkout), service.NotificationAlerts(snapshot, *notification)...)
 	if err = json.NewEncoder(os.Stdout).Encode(struct {
 		store.Snapshot
 		Alerts []string `json:"alerts"`

@@ -28,6 +28,7 @@ func Read(app *appCore.Config) http.HandlerFunc {
 			helpers.WriteDataError(w, err)
 			return
 		}
+		status.NotificationDeliveryAvailable = app.EmailService() != nil
 		helpers.WriteJSON(w, 200, status)
 	}
 }

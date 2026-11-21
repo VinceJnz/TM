@@ -41,6 +41,13 @@ func TestSnapshotTracksOldQueuesAndCorrelatesAuditEvents(t *testing.T) {
 	if err = db.Get(&id, `SELECT request_id FROM at_financial_audit WHERE record_id=2 AND resource='at_payments'`); err != nil || id != observability.RequestID(ctx) {
 		t.Fatal(id, err)
 	}
+	if _, err = db.Exec(`INSERT INTO at_notification_outbox(booking_id,kind,recipient,subject,body,created,attempts) VALUES(1,'synthetic','synthetic@example.test','test','test',CURRENT_TIMESTAMP-interval '30 minutes',3),(NULL,'orphan','synthetic@example.test','test','test',CURRENT_TIMESTAMP-interval '2 days',3)`); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err = (Store{DB: db}).Snapshot(ctx)
+	if err != nil || snapshot.PendingNotifications != 1 || snapshot.NotificationsWithRetries != 1 || snapshot.OldestNotificationSeconds < 1799 {
+		t.Fatal(snapshot, err)
+	}
 	canceled, cancel := context.WithCancel(ctx)
 	cancel()
 	if _, err = (Store{DB: db}).Snapshot(canceled); err == nil {

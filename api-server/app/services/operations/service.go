@@ -16,8 +16,17 @@ type Pool struct {
 }
 type Status struct {
 	operations.Snapshot
-	Pool Pool `json:"database_pool"`
+	Pool                          Pool `json:"database_pool"`
+	NotificationDeliveryAvailable bool `json:"notification_delivery_available"`
 }
+
+func NotificationAlerts(snapshot operations.Snapshot, maxAge time.Duration) []string {
+	if snapshot.PendingNotifications > 0 && snapshot.OldestNotificationSeconds > int64(maxAge.Seconds()) {
+		return []string{"notification_queue_age"}
+	}
+	return []string{}
+}
+
 type Service struct{ Store operations.Store }
 
 func (s Service) Status(ctx context.Context) (Status, error) {
