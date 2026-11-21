@@ -30,6 +30,25 @@ type Service struct {
 	Mailer Mailer
 }
 
+func (s Service) SetUsername(ctx context.Context, id int, username string) (string, error) {
+	username = strings.TrimSpace(username)
+	if id <= 0 || len(username) < 3 || len(username) > 20 {
+		return "", ErrValidation
+	}
+	tx, err := s.Store.Begin(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+	if _, err = s.Store.Lock(ctx, tx, id); err != nil {
+		return "", err
+	}
+	if err = s.Store.SetUsername(ctx, tx, id, username); err != nil {
+		return "", err
+	}
+	return username, tx.Commit()
+}
+
 func CanonicalEmail(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	a, err := mail.ParseAddress(value)

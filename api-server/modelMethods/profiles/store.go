@@ -40,6 +40,10 @@ func (s Store) Save(ctx context.Context, tx *sqlx.Tx, id int, v models.ProfileWr
 	_, err := tx.ExecContext(ctx, "UPDATE st_users SET name=$2,user_address=$3,user_birth_date=$4,user_account_hidden=$5 WHERE id=$1", id, v.Name, v.Address, dob, v.AccountHidden)
 	return err
 }
+func (s Store) SetUsername(ctx context.Context, tx *sqlx.Tx, id int, username string) error {
+	_, err := tx.ExecContext(ctx, "UPDATE st_users SET username=$2 WHERE id=$1", id, username)
+	return err
+}
 func (s Store) AgeGroup(ctx context.Context, tx *sqlx.Tx, id int) (string, error) {
 	var label string
 	err := tx.GetContext(ctx, &label, "SELECT COALESCE(a.age_group,'') FROM st_users u LEFT JOIN et_user_age_groups a ON a.id=u.user_age_group_id WHERE u.id=$1", id)

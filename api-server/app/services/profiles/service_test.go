@@ -35,6 +35,19 @@ func TestProfileEmailChangesRequireBothProofsAndRevokeSessions(t *testing.T) {
 	}
 	m := &testMailer{codes: map[string]string{}}
 	s := Service{Store: store.Store{DB: db}, Mailer: m}
+	if _, err := db.Exec("UPDATE st_users SET user_password='synthetic-hash-placeholder',user_account_status_id=2 WHERE id=1"); err != nil {
+		t.Fatal(err)
+	}
+	if username, err := s.SetUsername(ctx, 1, " renamed "); err != nil || username != "renamed" {
+		t.Fatal(username, err)
+	}
+	if _, err := s.SetUsername(ctx, 1, "other"); err == nil {
+		t.Fatal("duplicate username accepted")
+	}
+	var hash string
+	if err := db.Get(&hash, "SELECT user_password FROM st_users WHERE id=1"); err != nil || hash != "synthetic-hash-placeholder" {
+		t.Fatal("username write changed credentials", err)
+	}
 	input := models.ProfileWrite{Name: "New name", Email: "new@example.test", BirthDate: "1990-01-01"}
 	if err := s.Save(ctx, 1, input); !errors.Is(err, ErrEmailChange) {
 		t.Fatal("email bypassed verification", err)

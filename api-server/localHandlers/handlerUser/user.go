@@ -1,16 +1,17 @@
 package handlerUser
 
 import (
-	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"api-server/v2/app/appCore"
+	service "api-server/v2/app/services/profiles"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/modelMethods/dbStandardTemplate"
+	store "api-server/v2/modelMethods/profiles"
 	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/models"
 
@@ -179,54 +180,25 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // SetUsername allows the authenticated user to set their username (unique).
 func (h *Handler) SetUsername(w http.ResponseWriter, r *http.Request) {
-	// Require a session (set by RequireOAuthOrSessionAuth middleware)
-	sessI := r.Context().Value(h.appConf.SessionIDKey)
-	if sessI == nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	session := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
+	if session == nil {
 		return
 	}
-	sess, ok := sessI.(*models.Session)
-	if !ok || sess == nil || sess.UserID == 0 {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	// Parse request body
-	var req struct {
+	var input struct {
 		Username string `json:"username"`
 	}
-	if err := helpers.DecodeJSONBody(r, &req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid username request")
 		return
 	}
-	uname := strings.TrimSpace(req.Username)
-	if uname == "" || len(uname) < 3 || len(uname) > 20 {
-		http.Error(w, "invalid username", http.StatusBadRequest)
-		return
-	}
-	// Check uniqueness
-	existing, err := dbAuthTemplate.UserNameReadQry(debugTag+"SetUsername:check ", h.appConf.Db, uname)
-	if err == nil {
-		if existing.ID != sess.UserID {
-			http.Error(w, "username taken", http.StatusConflict)
-			return
+	username, err := (service.Service{Store: store.Store{DB: h.appConf.Db}}).SetUsername(r.Context(), session.UserID, input.Username)
+	if err != nil {
+		if errors.Is(err, service.ErrValidation) {
+			helpers.WriteError(w, 400, "invalid_username", "Username must contain 3 to 20 bytes")
+		} else {
+			helpers.WriteDataError(w, err)
 		}
-		// If it is the same user, continue (no-op)
-	}
-	// Load user and update
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"SetUsername ", h.appConf.Db, sess.UserID)
-	if err != nil {
-		http.Error(w, "failed to load user", http.StatusInternalServerError)
 		return
 	}
-	user.Username = uname
-	_, err = dbAuthTemplate.UserWriteQry(debugTag+"SetUsername ", h.appConf.Db, user)
-	if err != nil {
-		log.Printf("%v failed to set username: %v", debugTag, err)
-		http.Error(w, "failed to update username", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok", "username": uname}); err != nil {
-		log.Printf("%sSetUsername() failed to encode response: %v", debugTag, err)
-	}
+	helpers.WriteJSON(w, 200, map[string]string{"status": "ok", "username": username})
 }
