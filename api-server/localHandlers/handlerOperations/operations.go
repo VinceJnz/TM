@@ -29,6 +29,10 @@ func Read(app *appCore.Config) http.HandlerFunc {
 			return
 		}
 		status.NotificationDeliveryAvailable = app.EmailService() != nil
-		helpers.WriteJSON(w, 200, status)
+		helpers.WriteJSON(w, 200, struct {
+			service.Status
+			Integrations      map[string]appCore.IntegrationHealth `json:"integrations"`
+			IntegrationAlerts []string                             `json:"integration_alerts"`
+		}{status, app.IntegrationStatus(), app.IntegrationAlerts()})
 	}
 }

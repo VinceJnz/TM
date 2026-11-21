@@ -15,5 +15,9 @@ func (c *Config) Readiness(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database unavailable", 503)
 		return
 	}
+	if len(c.IntegrationAlerts()) > 0 {
+		http.Error(w, "required integration unavailable", 503)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }
