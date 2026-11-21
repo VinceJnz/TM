@@ -7,6 +7,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/securityGroupResourceView"
 	"client1/v2/views/utils/viewHelpers"
+	safehtml "html"
 	"log"
 	"net/http"
 	"strconv"
@@ -378,7 +379,7 @@ func (editor *ItemEditor) populateItemList() {
 		headerDiv.Call("appendChild", toggleIndicator)
 
 		groupName := editor.document.Call("createElement", "div")
-		groupName.Set("innerHTML", "<strong>"+record.Name+"</strong>")
+		groupName.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Name)+"</strong>")
 		viewHelpers.SetStyles(groupName, map[string]string{
 			"font-size": "0.98em",
 			"color":     "#1d2f45",

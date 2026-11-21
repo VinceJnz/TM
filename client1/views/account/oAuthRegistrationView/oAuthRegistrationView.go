@@ -580,7 +580,7 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value, sele
 
 				opt := editor.document.Call("createElement", "option")
 				opt.Set("value", id)
-				opt.Set("innerHTML", name)
+				opt.Set("textContent", name)
 				if selectedValue > 0 && int64(id) == selectedValue {
 					opt.Set("selected", true)
 				}

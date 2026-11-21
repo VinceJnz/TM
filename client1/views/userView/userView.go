@@ -10,6 +10,7 @@ import (
 	"client1/v2/views/userMemberStatusView"
 	"client1/v2/views/userSecurityGroupView"
 	"client1/v2/views/utils/viewHelpers"
+	safehtml "html"
 	"log"
 	"math/big"
 	"net/http"
@@ -544,7 +545,7 @@ func (editor *ItemEditor) populateItemList() {
 		headerDiv.Call("appendChild", toggleIndicator)
 
 		userName := editor.document.Call("createElement", "div")
-		userName.Set("innerHTML", "<strong>"+record.Name+"</strong> ("+record.Email+")")
+		userName.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Name)+"</strong> ("+safehtml.EscapeString(record.Email)+")")
 		viewHelpers.SetStyles(userName, map[string]string{
 			"font-size": "0.98em",
 			"color":     "#1d2f45",

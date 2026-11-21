@@ -35,7 +35,7 @@ func (editor *View) getMenuUser() {
 		}
 		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
 		editor.setTopAuthAction(menuUser.UserID > 0)
-		editor.elements.userDisplay.Set("innerHTML", editor.appCore.User.Name)
+		editor.elements.userDisplay.Set("textContent", editor.appCore.User.Name)
 		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		if menuUser.UserID > 0 {
 			editor.getMenuList()

@@ -142,7 +142,7 @@ func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn fu
 	itemDiv := document.Call("createElement", "div")
 	itemDiv.Set("id", debugTag+"itemDiv")
 
-	itemDiv.Set("innerHTML", itemTitle)
+	itemDiv.Set("textContent", itemTitle)
 	itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 	// Create an edit button

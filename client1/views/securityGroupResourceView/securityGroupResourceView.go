@@ -10,6 +10,7 @@ import (
 	"client1/v2/views/accessScopeView"
 	"client1/v2/views/resourceView"
 	"client1/v2/views/utils/viewHelpers"
+	safehtml "html"
 	"log"
 	"net/http"
 	"sort"
@@ -445,7 +446,7 @@ func (editor *ItemEditor) populateItemList() {
 		})
 
 		headerDiv := editor.document.Call("createElement", "div")
-		headerDiv.Set("innerHTML", "<strong>"+resourceName+"</strong>")
+		headerDiv.Set("innerHTML", "<strong>"+safehtml.EscapeString(resourceName)+"</strong>")
 		viewHelpers.SetStyles(headerDiv, map[string]string{
 			"margin-bottom": "4px",
 			"color":         "#1d2f45",
@@ -475,7 +476,7 @@ func (editor *ItemEditor) populateItemList() {
 			})
 
 			detailDiv := editor.document.Call("createElement", "div")
-			detailDiv.Set("innerHTML", "Level: "+record.AccessLevel+" | Scope: "+record.AccessScope)
+			detailDiv.Set("textContent", "Level: "+record.AccessLevel+" | Scope: "+record.AccessScope)
 			permissionRow.Call("appendChild", detailDiv)
 
 			actionDiv := editor.document.Call("createElement", "div")

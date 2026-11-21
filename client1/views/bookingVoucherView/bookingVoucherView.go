@@ -416,7 +416,7 @@ func (editor *ItemEditor) populateItemList() {
 		if record.ExpiryDate != nil {
 			expiryText = "Expires: " + record.ExpiryDate.Format(viewHelpers.Layout)
 		}
-		itemDiv.Set("innerHTML", "Code: "+record.Code+" ("+pricingText+", "+expiryText+", "+activeText+")")
+		itemDiv.Set("textContent", "Code: "+record.Code+" ("+pricingText+", "+expiryText+", "+activeText+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		editButton := editor.document.Call("createElement", "button")

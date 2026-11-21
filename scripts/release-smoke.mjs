@@ -105,6 +105,8 @@ try {
     await delay(100);
   }
   assert(rendered, 'WASM did not render the authenticated UI with the runtime API prefix');
+  const safeUserText=await send('Runtime.evaluate',{expression:"window.__tmXss!==true && !document.querySelector('#userDisplay img') && document.querySelector('#userDisplay').textContent.includes('<img')",returnByValue:true});
+  assert.equal(safeUserText.result?.value,true,'stored profile markup executed or was interpreted as HTML');
   await send('Runtime.evaluate', {expression: "location.hash='/mybookings'"});
   const pager = "Array.from(document.querySelectorAll('.tm-pagination')).find(el=>el.getClientRects().length>0)";
   async function waitForPage(label) {

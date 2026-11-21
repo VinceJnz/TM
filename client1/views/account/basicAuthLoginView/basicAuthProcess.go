@@ -389,7 +389,7 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value) {
 				// Create option element
 				opt := editor.document.Call("createElement", "option")
 				opt.Set("value", id)
-				opt.Set("innerHTML", name)
+				opt.Set("textContent", name)
 				selectElement.Call("appendChild", opt)
 			}
 			return nil

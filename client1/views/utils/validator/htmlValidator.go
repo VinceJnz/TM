@@ -50,15 +50,15 @@ func ShowErrors(document js.Value) {
 	password := document.Call("getElementById", "password")
 
 	if !username.Get("validity").Get("valid").Bool() {
-		document.Call("getElementById", "username-error").Set("innerHTML", GetValidationMessage(username))
+		document.Call("getElementById", "username-error").Set("textContent", GetValidationMessage(username))
 	}
 
 	if !email.Get("validity").Get("valid").Bool() {
-		document.Call("getElementById", "email-error").Set("innerHTML", GetValidationMessage(email))
+		document.Call("getElementById", "email-error").Set("textContent", GetValidationMessage(email))
 	}
 
 	if !password.Get("validity").Get("valid").Bool() {
-		document.Call("getElementById", "password-error").Set("innerHTML", GetValidationMessage(password))
+		document.Call("getElementById", "password-error").Set("textContent", GetValidationMessage(password))
 	}
 }
 

@@ -54,7 +54,7 @@ func (v *Validator) Validate() bool {
 func (v *Validator) showError(field js.Value, errorMsg string) {
 	// Assuming there's a way to show the error for the field (e.g., error message element stored in UI)
 	errorElement := field.Get("nextElementSibling") // Or wherever your error message is stored
-	errorElement.Set("innerHTML", errorMsg)
+	errorElement.Set("textContent", errorMsg)
 
 	// Highlight the field
 	field.Get("classList").Call("add", "error-highlight")

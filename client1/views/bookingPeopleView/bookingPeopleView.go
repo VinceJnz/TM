@@ -359,7 +359,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create and add child views to Item
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("innerHTML", record.Person+" (Notes: "+record.Notes+")")
+		itemDiv.Set("textContent", record.Person+" (Notes: "+record.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookingPeople") {

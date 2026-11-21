@@ -559,7 +559,7 @@ func (editor *ItemEditor) populateItemList() {
 			" | Amount " + strconv.FormatFloat(record.Amount, 'f', 2, 64) +
 			" | Date " + record.RefundDate.Format(viewHelpers.Layout) +
 			" | Reason " + record.Reason
-		itemDiv.Set("innerHTML", desc)
+		itemDiv.Set("textContent", desc)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 		inlineFormHost := editor.document.Call("createElement", "div")
 		inlineFormHost.Set("className", "inline-record-form")

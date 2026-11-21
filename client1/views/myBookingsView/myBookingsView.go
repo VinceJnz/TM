@@ -692,7 +692,7 @@ func (editor *ItemEditor) refreshBookingRow(bookingID int) {
 		}
 
 		if summaryDiv, ok := editor.RowSummaryDiv[bookingID]; ok && !summaryDiv.IsUndefined() && !summaryDiv.IsNull() {
-			summaryDiv.Set("innerHTML", editor.bookingSummaryText(updated))
+			summaryDiv.Set("textContent", editor.bookingSummaryText(updated))
 			return
 		}
 
@@ -739,7 +739,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		summaryDiv := editor.document.Call("createElement", "div")
-		summaryDiv.Set("innerHTML", editor.bookingSummaryText(record))
+		summaryDiv.Set("textContent", editor.bookingSummaryText(record))
 		editor.RowSummaryDiv[record.ID] = summaryDiv
 		itemDiv.Call("appendChild", summaryDiv)
 

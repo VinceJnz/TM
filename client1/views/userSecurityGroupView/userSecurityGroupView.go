@@ -8,6 +8,7 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/securityGroupView"
 	"client1/v2/views/utils/viewHelpers"
+	safehtml "html"
 	"log"
 	"net/http"
 	"strconv"
@@ -412,7 +413,7 @@ func (editor *ItemEditor) populateItemList() {
 		})
 
 		groupNameDiv := editor.document.Call("createElement", "div")
-		groupNameDiv.Set("innerHTML", "<strong>"+record.Group+"</strong>")
+		groupNameDiv.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Group)+"</strong>")
 		viewHelpers.SetStyles(groupNameDiv, map[string]string{
 			"flex-grow": "1",
 			"color":     "#1d2f45",

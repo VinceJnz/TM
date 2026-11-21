@@ -603,8 +603,8 @@ func (v *View) navigateTo(PageTitle string, menuAction bool, element editorEleme
 	if menuAction {   // Some menu items do nothing else
 		// Defensive hide to avoid stale views being visible after auth/menu transitions.
 		v.hideAllChildViews()
-		v.activeMenuTitle = PageTitle                    // Set new menu choice
-		v.elements.pageTitle.Set("innerHTML", PageTitle) // set the title for the element when it is displayed
+		v.activeMenuTitle = PageTitle                      // Set new menu choice
+		v.elements.pageTitle.Set("textContent", PageTitle) // set the title for the element when it is displayed
 		v.setActiveMenuTitle(PageTitle)
 		if element != nil { // Some menu choices do not display an element
 			element.Display() // Display new editor

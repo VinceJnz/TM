@@ -1,7 +1,7 @@
 -- Synthetic fixtures for a disposable release-verification database only.
 CREATE ROLE tm_smoke_api LOGIN PASSWORD 'synthetic-api';
 INSERT INTO st_users(id,name,username,email,member_status_id,user_age_group_id,user_account_status_id,user_birth_date)
-VALUES(1,'Smoke Member','smoke-member','member@example.test',1,1,2,'1990-01-01'),
+VALUES(1,'Smoke Member <img src=x onerror="window.__tmXss=true">','smoke-member','member@example.test',1,1,2,'1990-01-01'),
       (2,'Other Member','other-member','other@example.test',1,1,2,'1990-01-01');
 SELECT setval(pg_get_serial_sequence('st_users','id'),2,true);
 INSERT INTO st_user_group(user_id,group_id) VALUES(1,1),(2,1);

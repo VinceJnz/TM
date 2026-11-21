@@ -107,7 +107,7 @@ func (i *ItemStateView) DisplayMessage(message string) {
 
 func (i *ItemStateView) addMessage(message string) {
 	msgDiv := i.document.Call("createElement", "div")
-	msgDiv.Set("innerHTML", message)
+	msgDiv.Set("textContent", message)
 	i.messagesDiv.Call("appendChild", msgDiv)
 	go func() {
 		time.Sleep(30 * time.Second) // Wait for the specified duration

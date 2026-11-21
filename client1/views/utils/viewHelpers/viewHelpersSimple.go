@@ -26,7 +26,7 @@ func newButtonElement(doc js.Value, buttonType, className, displayText, htmlID s
 	button.Set("id", htmlID)
 	button.Set("type", buttonType)
 	button.Set("className", className)
-	button.Set("innerHTML", displayText)
+	button.Set("textContent", displayText)
 	return button
 }
 
@@ -125,7 +125,7 @@ func Div(doc js.Value, className string, htmlID string) js.Value {
 func HRef(onClick func(), doc js.Value, displayText, htmlID string) js.Value {
 	link := doc.Call("createElement", "a")
 	link.Set("href", "#")
-	link.Set("innerHTML", displayText)
+	link.Set("textContent", displayText)
 	link.Set("id", htmlID)
 	f := func(this js.Value, args []js.Value) any {
 		if len(args) > 0 {

@@ -352,7 +352,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("innerHTML", record.User+" - "+record.Group)
+		itemDiv.Set("textContent", record.User+" - "+record.Group)
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
 		// Create an edit button

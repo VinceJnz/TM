@@ -107,7 +107,7 @@ func (v *View) loginComplete(event eventProcessor.Event) {
 		v.logInvalidEventData("loginComplete()1", event)
 		return
 	}
-	v.elements.userDisplay.Set("innerHTML", username)
+	v.elements.userDisplay.Set("textContent", username)
 	v.setTopAuthAction(true)
 	v.MenuProcess()
 	v.menuOnClick(homeMenuTitle, true, nil)()
