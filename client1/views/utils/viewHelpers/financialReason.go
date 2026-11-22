@@ -1,15 +1,18 @@
 package viewHelpers
 
 import (
-	"strings"
 	"syscall/js"
 )
 
 func FinancialChangeReason() (string, bool) {
-	value := js.Global().Call("prompt", "Reason for this financial correction (required):", "")
-	if value.IsNull() || value.IsUndefined() {
-		return "", false
+	doc := js.Global().Get("document")
+	root := doc.Get("body")
+	active := doc.Get("activeElement")
+	if !active.IsNull() {
+		owner := active.Call("closest", "[data-tm-resource]")
+		if !owner.IsNull() {
+			root = owner
+		}
 	}
-	reason := strings.TrimSpace(value.String())
-	return reason, len(reason) > 0 && len(reason) <= 500
+	return RequestReason(root, "Reason for this financial correction")
 }

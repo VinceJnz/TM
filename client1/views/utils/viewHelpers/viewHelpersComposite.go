@@ -23,6 +23,20 @@ func StringEdit(value string, document js.Value, labelText string, inputType str
 
 	// Create an span element of error messages
 	span := Span(document, htmlID+"-error")
+	input.Call("setAttribute", "aria-describedby", htmlID+"-error")
+	span.Call("setAttribute", "role", "alert")
+	domEvents.Listen(input, "invalid", func(js.Value, []js.Value) any {
+		input.Call("setAttribute", "aria-invalid", "true")
+		span.Set("textContent", input.Get("validationMessage").String())
+		return nil
+	})
+	domEvents.Listen(input, "input", func(js.Value, []js.Value) any {
+		if input.Get("validity").Get("valid").Bool() {
+			input.Call("removeAttribute", "aria-invalid")
+			span.Set("textContent", "")
+		}
+		return nil
+	})
 	fieldset.Call("appendChild", span)
 
 	return fieldset, input
