@@ -5,7 +5,7 @@ import "time"
 type VoucherWrite struct {
 	Code            string     `json:"code"`
 	DiscountPercent *float64   `json:"discount_percent"`
-	FixedCost       *float64   `json:"fixed_cost"`
+	FixedCost       *Money     `json:"fixed_cost"`
 	ExpiryDate      *time.Time `json:"expiry_date"`
 	IsActive        bool       `json:"is_active"`
 }

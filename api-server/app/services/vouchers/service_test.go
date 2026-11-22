@@ -6,7 +6,9 @@ import (
 	store "api-server/v2/modelMethods/vouchers"
 	"api-server/v2/models"
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/shopspring/decimal"
 	"testing"
 )
 
@@ -17,20 +19,33 @@ func TestVoucherValidationAndExplicitWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := Service{Store: store.Store{DB: db}}
-	value := 12.34
+	value := models.Money{Decimal: decimal.RequireFromString("12.34")}
 	v, err := s.Save(ctx, 0, models.VoucherWrite{Code: " synthetic ", FixedCost: &value, IsActive: true})
 	if err != nil || v.Code != "SYNTHETIC" {
 		t.Fatal(v, err)
 	}
-	invalid := -1.0
+	invalid := models.Money{Decimal: decimal.RequireFromString("-1")}
 	if _, err = s.Save(ctx, v.ID, models.VoucherWrite{Code: "bad", FixedCost: &invalid}); !errors.Is(err, ErrValidation) {
 		t.Fatal("negative price accepted", err)
 	}
-	if _, err = s.Save(ctx, v.ID, models.VoucherWrite{Code: "bad", FixedCost: &value, DiscountPercent: &value}); !errors.Is(err, ErrValidation) {
+	if _, err = s.Save(ctx, v.ID, models.VoucherWrite{Code: "bad", FixedCost: &value, DiscountPercent: func() *float64 { p := 12.34; return &p }()}); !errors.Is(err, ErrValidation) {
 		t.Fatal("ambiguous voucher accepted", err)
 	}
 	current, err := s.Store.Get(ctx, v.ID)
 	if err != nil || current.Code != "SYNTHETIC" {
 		t.Fatal("invalid update changed voucher", err)
+	}
+}
+
+func TestVoucherFixedPriceRejectsPrecisionBeforeFloatRounding(t *testing.T) {
+	for _, raw := range []string{`{"fixed_cost":12.340000000000000001}`, `{"fixed_cost":1e100}`, `{"fixed_cost":-1}`} {
+		var v models.VoucherWrite
+		if err := json.Unmarshal([]byte(raw), &v); err == nil {
+			t.Fatal("inexact voucher accepted", raw)
+		}
+	}
+	var v models.VoucherWrite
+	if err := json.Unmarshal([]byte(`{"fixed_cost":12.34}`), &v); err != nil || v.FixedCost.String() != "12.34" {
+		t.Fatal(v, err)
 	}
 }

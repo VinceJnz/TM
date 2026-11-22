@@ -5,7 +5,7 @@ import (
 	"api-server/v2/models"
 	"context"
 	"errors"
-	"github.com/shopspring/decimal"
+
 	"math"
 	"strings"
 )
@@ -25,14 +25,8 @@ func (s Service) Save(ctx context.Context, id int, v models.VoucherWrite) (model
 			return result, ErrValidation
 		}
 	}
-	if p := v.FixedCost; p != nil {
-		if math.IsNaN(*p) || math.IsInf(*p, 0) {
-			return result, ErrValidation
-		}
-		if (models.Money{Decimal: decimal.NewFromFloat(*p)}).Validate() != nil {
-			return result, ErrValidation
-		}
+	if p := v.FixedCost; p != nil && p.Validate() != nil {
+		return result, ErrValidation
 	}
-	result = models.BookingVoucher{Code: v.Code, DiscountPercent: v.DiscountPercent, FixedCost: v.FixedCost, ExpiryDate: v.ExpiryDate, IsActive: v.IsActive}
-	return s.Store.Save(ctx, id, result)
+	return s.Store.Save(ctx, id, v)
 }
