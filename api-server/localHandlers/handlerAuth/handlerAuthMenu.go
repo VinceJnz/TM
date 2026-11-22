@@ -53,7 +53,7 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if session is valid
-	dbToken, err := dbAuthTemplate.FindSessionToken(debugTag+"MenuUserGet", h.appConf.Db, sc.Value)
+	dbToken, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag+"MenuUserGet", h.appConf.Db, sc.Value)
 	if err != nil {
 		// Session cookie exists but is invalid/expired
 		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
@@ -61,7 +61,7 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load user info
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"MenuUserGet:user", h.appConf.Db, dbToken.UserID)
+	user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"MenuUserGet:user", h.appConf.Db, dbToken.UserID)
 	if err != nil || !user.UserActive() {
 		// User not found or not active
 		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
@@ -124,7 +124,7 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if session is valid
-	dbToken, err := dbAuthTemplate.FindSessionToken(debugTag+"AuthStatus", h.appConf.Db, sc.Value)
+	dbToken, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag+"AuthStatus", h.appConf.Db, sc.Value)
 	if err != nil {
 		// Session cookie exists but is invalid/expired
 		writeJSONResponse(w, http.StatusOK, map[string]any{
@@ -135,7 +135,7 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load user info
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"AuthStatus:user", h.appConf.Db, dbToken.UserID)
+	user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"AuthStatus:user", h.appConf.Db, dbToken.UserID)
 	if err != nil || !user.UserActive() {
 		// User not found or not active
 		writeJSONResponse(w, http.StatusOK, map[string]any{

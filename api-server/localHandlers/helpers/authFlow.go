@@ -27,13 +27,13 @@ var (
 	ErrAuthUserInactive = errors.New("auth user inactive")
 )
 
-func FindUserByUsernameOrEmail(debugStr string, db *sqlx.DB, username, email string) (models.User, error) {
+func FindUserByUsernameOrEmail(ctx context.Context, debugStr string, db *sqlx.DB, username, email string) (models.User, error) {
 	username = strings.TrimSpace(username)
 	email = strings.TrimSpace(email)
 	preferEmail := email != "" && IsValidEmail(email) && (username == "" || username == email)
 
 	if preferEmail {
-		user, err := dbAuthTemplate.UserEmailReadQry(debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
+		user, err := dbAuthTemplate.UserEmailReadQryContext(ctx, debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
 		if err == nil {
 			return user, nil
 		}
@@ -43,7 +43,7 @@ func FindUserByUsernameOrEmail(debugStr string, db *sqlx.DB, username, email str
 	}
 
 	if username != "" {
-		user, err := dbAuthTemplate.UserNameReadQry(debugStr+"FindUserByUsernameOrEmail:byName ", db, username)
+		user, err := dbAuthTemplate.UserNameReadQryContext(ctx, debugStr+"FindUserByUsernameOrEmail:byName ", db, username)
 		if err == nil {
 			return user, nil
 		}
@@ -54,14 +54,14 @@ func FindUserByUsernameOrEmail(debugStr string, db *sqlx.DB, username, email str
 	}
 
 	if email != "" {
-		return dbAuthTemplate.UserEmailReadQry(debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
+		return dbAuthTemplate.UserEmailReadQryContext(ctx, debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
 	}
 
 	return models.User{}, errors.New("username or email required")
 }
 
-func CreateAndSetSessionCookie(debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
-	sessionToken, err := dbAuthTemplate.CreateSessionToken(debugStr+"CreateAndSetSessionCookie", db, userID, host, expiration)
+func CreateAndSetSessionCookie(ctx context.Context, debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
+	sessionToken, err := dbAuthTemplate.CreateNamedTokenContext(ctx, debugStr+"CreateAndSetSessionCookie", db, true, userID, host, "session", expiration)
 	if err != nil {
 		log.Printf("%vCreateAndSetSessionCookie() failed to create session token: %v", debugStr, err)
 		return err
@@ -71,6 +71,7 @@ func CreateAndSetSessionCookie(debugStr string, w http.ResponseWriter, db *sqlx.
 }
 
 func CreateNamedTokenAndSendEmail(
+	ctx context.Context,
 	debugStr string,
 	db *sqlx.DB,
 	emailSvc MailSender,
@@ -83,7 +84,7 @@ func CreateNamedTokenAndSendEmail(
 	buildBody func(token string) string,
 	deleteOnSendFailure bool,
 ) (string, bool, error) {
-	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugStr+"CreateNamedTokenAndSendEmail", db, true, userID, host, tokenName, expiration)
+	tokenCookie, err := dbAuthTemplate.CreateNamedTokenContext(ctx, debugStr+"CreateNamedTokenAndSendEmail", db, true, userID, host, tokenName, expiration)
 	if err != nil {
 		return "", false, err
 	}
@@ -98,7 +99,15 @@ func CreateNamedTokenAndSendEmail(
 		return tokenValue, false, nil
 	}
 
-	if _, err := emailSvc.SendMail(recipient, subject, body); err != nil {
+	var sendErr error
+	if contextual, ok := emailSvc.(interface {
+		SendMailContext(context.Context, string, string, string) (bool, error)
+	}); ok {
+		_, sendErr = contextual.SendMailContext(ctx, recipient, subject, body)
+	} else {
+		_, sendErr = emailSvc.SendMail(recipient, subject, body)
+	}
+	if err := sendErr; err != nil {
 		if deleteOnSendFailure {
 			if tok, findErr := dbAuthTemplate.FindToken(debugStr+"CreateNamedTokenAndSendEmail:findTokenForDeletion", db, tokenName, tokenValue); findErr == nil {
 				_ = dbAuthTemplate.TokenDeleteQry(debugStr+"CreateNamedTokenAndSendEmail:delOnSendFailure", db, tok.ID)
@@ -180,7 +189,7 @@ func ResolveUserIDFromSessionOrOAuthState(debugStr string, r *http.Request, db *
 	// Try 1: DB-backed session cookie
 	if sc, err := r.Cookie("session"); err == nil {
 		log.Printf("%vResolveUserIDFromSessionOrOAuthState() found session cookie", debugStr)
-		if dbToken, tokenErr := dbAuthTemplate.FindSessionToken(debugStr+"ResolveUserIDFromSessionOrOAuthState:session", db, sc.Value); tokenErr == nil {
+		if dbToken, tokenErr := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugStr+"ResolveUserIDFromSessionOrOAuthState:session", db, sc.Value); tokenErr == nil {
 			log.Printf("%vResolveUserIDFromSessionOrOAuthState() using session for user %d", debugStr, dbToken.UserID)
 			return dbToken.UserID
 		}
@@ -200,7 +209,7 @@ func VerifyOTPTokenAndLoadUser(ctx context.Context, debugStr string, db *sqlx.DB
 		return 0, models.User{}, ErrAuthTokenInvalid
 	}
 
-	user, err := dbAuthTemplate.UserReadQry(debugStr+"VerifyOTPTokenAndLoadUser:read", db, userID)
+	user, err := dbAuthTemplate.UserReadQryContext(ctx, debugStr+"VerifyOTPTokenAndLoadUser:read", db, userID)
 	if err != nil {
 		return 0, models.User{}, fmt.Errorf("%w: %v", ErrAuthUserNotFound, err)
 	}

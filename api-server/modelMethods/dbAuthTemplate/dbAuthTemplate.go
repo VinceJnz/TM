@@ -1,6 +1,8 @@
 package dbAuthTemplate
 
 import (
+	authService "api-server/v2/app/services/authentication"
+	authStore "api-server/v2/modelMethods/authentication"
 	"api-server/v2/models"
 	"context"
 	"database/sql"
@@ -246,9 +248,9 @@ func FindTokenContext(ctx context.Context, debugStr string, Db *sqlx.DB, name, c
 
 const (
 	sqlUserFind         = `SELECT id FROM st_users WHERE id = $1`
-	sqlUserRead         = `SELECT id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE id = $1`
-	sqlUserNameRead     = `SELECT id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE username = $1`
-	sqlUserEmailRead    = `SELECT id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE email = $1`
+	sqlUserRead         = `SELECT version,id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE id = $1`
+	sqlUserNameRead     = `SELECT version,id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE username = $1`
+	sqlUserEmailRead    = `SELECT version,id, name, username, email, user_address, user_birth_date, user_age_group_id, user_account_status_id, user_password, user_account_hidden, provider, provider_id FROM st_users WHERE email = $1`
 	sqlUserEmailsByRole = `SELECT DISTINCT stu.email
 	FROM st_users stu
 		JOIN st_user_group stug ON stug.user_id = stu.id
@@ -268,12 +270,7 @@ func UserReadQry(debugStr string, Db *sqlx.DB, id int) (models.User, error) {
 	return UserReadQryContext(ctx, debugStr, Db, id)
 }
 func UserReadQryContext(ctx context.Context, debugStr string, Db *sqlx.DB, id int) (models.User, error) {
-	record := models.User{}
-	err := Db.GetContext(ctx, &record, sqlUserRead, id)
-	if err != nil {
-		return models.User{}, err
-	}
-	return record, nil
+	return (authStore.Store{DB: Db}).User(ctx, id)
 }
 
 func UserNameReadQry(debugStr string, Db *sqlx.DB, username string) (models.User, error) {
@@ -282,12 +279,7 @@ func UserNameReadQry(debugStr string, Db *sqlx.DB, username string) (models.User
 	return UserNameReadQryContext(ctx, debugStr, Db, username)
 }
 func UserNameReadQryContext(ctx context.Context, debugStr string, Db *sqlx.DB, username string) (models.User, error) {
-	record := models.User{}
-	err := Db.GetContext(ctx, &record, sqlUserNameRead, username)
-	if err != nil {
-		return models.User{}, err
-	}
-	return record, nil
+	return (authStore.Store{DB: Db}).Username(ctx, username)
 }
 
 func UserEmailReadQry(debugStr string, Db *sqlx.DB, email string) (models.User, error) {
@@ -296,12 +288,7 @@ func UserEmailReadQry(debugStr string, Db *sqlx.DB, email string) (models.User, 
 	return UserEmailReadQryContext(ctx, debugStr, Db, email)
 }
 func UserEmailReadQryContext(ctx context.Context, debugStr string, Db *sqlx.DB, email string) (models.User, error) {
-	record := models.User{}
-	err := Db.GetContext(ctx, &record, sqlUserEmailRead, email)
-	if err != nil {
-		return models.User{}, err
-	}
-	return record, nil
+	return (authStore.Store{DB: Db}).Email(ctx, email)
 }
 
 func UserEmailsByRole(debugStr string, Db *sqlx.DB, role string) ([]string, error) {
@@ -394,6 +381,11 @@ func CreateSessionToken(debugStr string, Db *sqlx.DB, userID int, host string, e
 // CreateNamedToken and return *http.Token, and store it in the DB if storeToken is true
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies
 func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int, host, name string, expiration time.Time, sessionData ...string) (*http.Cookie, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return CreateNamedTokenContext(ctx, debugStr, Db, storeToken, userID, host, name, expiration, sessionData...)
+}
+func CreateNamedTokenContext(ctx context.Context, debugStr string, Db *sqlx.DB, storeToken bool, userID int, host, name string, expiration time.Time, sessionData ...string) (*http.Cookie, error) {
 	var err error
 	if name == "" {
 		name = "temp_session_token"
@@ -417,46 +409,15 @@ func CreateNamedToken(debugStr string, Db *sqlx.DB, storeToken bool, userID int,
 		//Raw:        "",
 		//Unparsed:   []string{},
 	}
-
-	tokenItem := models.Token{}
 	if storeToken {
-		// Store the session cookie for the user in the database
-		tokenItem.UserID = userID
-		tokenItem.Name.SetValid(sessionToken.Name)
-		tokenItem.Host.SetValid(host)
-		tokenItem.TokenStr.SetValid(sessionToken.Value)
+		data := ""
 		if len(sessionData) > 0 {
-			tokenItem.SessionData.SetValid(sessionData[0])
+			data = sessionData[0]
 		}
-		//tokenItem.SessionData.SetValid("") // Not yet implemented. This can be used to store session data in JSON format.
-		tokenItem.Valid.SetValid(true)
-		tokenItem.ValidFrom.SetValid(time.Now())
-		validTo := expiration
-		if validTo.IsZero() {
-			validTo = time.Now().Add(1 * time.Hour)
-		}
-		tokenItem.ValidTo.SetValid(validTo)
-
-		tokenItem.ID, err = TokenWriteQry(debugStr, Db, tokenItem)
+		sessionToken.Value, err = (authService.Service{Store: authStore.Store{DB: Db}}).Issue(ctx, userID, host, name, expiration, data)
 		if err != nil {
-			log.Printf("%sCreateNamedToken failed (sensitive details omitted)", debugTag)
-		} else {
-			// Unauthenticated registration/OAuth tokens belong to different browsers;
-			// user_id=0 must never invalidate another browser's pending flow.
-			if userID > 0 {
-				err = TokenCleanOld(debugStr, Db, tokenItem.ID)
-			}
-			if err != nil {
-				log.Printf("%sCreateNamedToken failed (sensitive details omitted)", debugTag)
-			}
-			err = TokenCleanExpired(debugTag+"CreateNamedToken ", Db) // Clean expired tokens for the user
-			if err != nil {
-				log.Printf("%v %v %v %v %v", debugTag+"CreateNamedToken: Token CleanExpired fail", "err =", err, "UserID =", userID)
-				// SECURITY: tokenItem not logged as it contains sensitive token data
-			}
+			return nil, err
 		}
 	}
-	log.Printf("%v %v %v %v %v", debugTag+"CreateNamedToken: Success, can advise client", "err =", err, "UserID =", userID)
-	// SECURITY: sessionToken and tokenItem not logged as they contain sensitive data
-	return sessionToken, err
+	return sessionToken, nil
 }

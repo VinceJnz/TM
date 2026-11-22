@@ -2,6 +2,7 @@ package authentication
 
 import (
 	store "api-server/v2/modelMethods/authentication"
+	"api-server/v2/models"
 	"context"
 	"errors"
 	"strings"
@@ -17,4 +18,8 @@ func (s Service) LinkIdentity(ctx context.Context, id int, provider, subject, em
 		return 0, ErrIdentity
 	}
 	return s.Store.LinkIdentity(ctx, id, provider, subject, email)
+}
+
+func (s Service) Session(ctx context.Context, raw string) (models.User, error) {
+	return s.Store.Principal(ctx, raw)
 }

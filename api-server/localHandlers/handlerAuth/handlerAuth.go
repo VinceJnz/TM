@@ -79,7 +79,7 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handlerHelpers.FindUserByUsernameOrEmail(debugTag+"RequestLoginToken:", h.appConf.Db, payload.Username, payload.Email)
+	user, err := handlerHelpers.FindUserByUsernameOrEmail(r.Context(), debugTag+"RequestLoginToken:", h.appConf.Db, payload.Username, payload.Email)
 	if err != nil {
 		log.Printf("%v failed to find user: %v", debugTag, err)
 		if payload.Username == "" && payload.Email == "" {
@@ -96,7 +96,7 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create one-time email token valid for 1 hour
-	tokenCookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"RequestLoginToken:CreateNamedToken", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, "_temp_email_token", time.Now().Add(1*time.Hour))
+	tokenCookie, err := dbAuthTemplate.CreateNamedTokenContext(r.Context(), debugTag+"RequestLoginToken:CreateNamedToken", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, "_temp_email_token", time.Now().Add(1*time.Hour))
 	if err != nil {
 		log.Printf("%vRequestLoginToken failed to create email token: %v", debugTag, err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -186,7 +186,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if username already exists
-	_, err = dbAuthTemplate.UserNameReadQry(debugTag+"Register:checkUsername ", h.appConf.Db, payload.Username)
+	_, err = dbAuthTemplate.UserNameReadQryContext(r.Context(), debugTag+"Register:checkUsername ", h.appConf.Db, payload.Username)
 	if err == nil {
 		// Username exists
 		http.Error(w, "this username is already taken", http.StatusConflict)
@@ -194,7 +194,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if email already exists
-	_, err = dbAuthTemplate.UserEmailReadQry(debugTag+"Register:checkEmail ", h.appConf.Db, payload.Email.String)
+	_, err = dbAuthTemplate.UserEmailReadQryContext(r.Context(), debugTag+"Register:checkEmail ", h.appConf.Db, payload.Email.String)
 	if err == nil {
 		// Email exists
 		http.Error(w, "an account with this email address already exists", http.StatusConflict)
@@ -209,7 +209,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenCookie, err := dbAuthTemplate.CreateNamedToken(
+	tokenCookie, err := dbAuthTemplate.CreateNamedTokenContext(r.Context(),
 		debugTag+"Register:CreateNamedToken",
 		h.appConf.Db,
 		true,
@@ -321,7 +321,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handlerHelpers.FindUserByUsernameOrEmail(debugTag+"LoginSendOTP:", h.appConf.Db, payload.Username, payload.Email)
+	user, err := handlerHelpers.FindUserByUsernameOrEmail(r.Context(), debugTag+"LoginSendOTP:", h.appConf.Db, payload.Username, payload.Email)
 	if err != nil && payload.Username == "" && payload.Email == "" {
 		http.Error(w, "username or email required", http.StatusBadRequest)
 		return
@@ -344,7 +344,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Create OTP token valid for 15 minutes and send email
 	subject := "Your one-time password (OTP)"
-	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
+	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(r.Context(),
 		debugTag+"LoginSendOTP:",
 		h.appConf.Db,
 		h.appConf.EmailService(),
@@ -417,7 +417,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	} else { // If there is a session cookie try to find it in the repository
 		//token, err = h.FindSessionToken(sessionToken.Value) //This succeeds if the cookie is in the DB and the user is current
-		token, err := dbAuthTemplate.FindSessionToken(debugTag, h.appConf.Db, sessionToken.Value)
+		token, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag, h.appConf.Db, sessionToken.Value)
 		//user.User.ID = user.Session.UserID
 		if err != nil { // could not find user sessionToken so user is not authorised
 			log.Print(debugTag + "SessionCheck invalid session")
@@ -426,7 +426,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 			return
 		} else { //Session cookie found, get user details and return to client
 			//user, err = h.UserReadQry(token.UserID)
-			user, err = dbAuthTemplate.UserReadQry(debugTag+"Handler.AccountValidate ", h.appConf.Db, token.UserID)
+			user, err = dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"Handler.AccountValidate ", h.appConf.Db, token.UserID)
 			if err != nil {
 				log.Print(debugTag + "SessionCheck user lookup failed")
 				w.WriteHeader(http.StatusInternalServerError)
@@ -458,7 +458,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Look up user by username or email
-	user, err := handlerHelpers.FindUserByUsernameOrEmail(debugTag+"LoginWithPassword:", h.appConf.Db, payload.Username, payload.Email)
+	user, err := handlerHelpers.FindUserByUsernameOrEmail(r.Context(), debugTag+"LoginWithPassword:", h.appConf.Db, payload.Username, payload.Email)
 	if err != nil {
 		// Don't reveal whether user exists - send generic response for security
 		log.Printf("%vLoginWithPassword user not found for password login: %v", debugTag, err)
@@ -490,7 +490,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Password is valid; now create and send OTP token
 	subject := "Your one-time password (OTP)"
-	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(
+	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(r.Context(),
 		debugTag+"LoginWithPassword:",
 		h.appConf.Db,
 		h.appConf.EmailService(),

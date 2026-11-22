@@ -1,6 +1,8 @@
 package handlerAuth
 
 import (
+	authService "api-server/v2/app/services/authentication"
+	authStore "api-server/v2/modelMethods/authentication"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"context"
@@ -17,18 +19,13 @@ func (h *Handler) RequireSessionAuth(next http.Handler) http.Handler {
 			writeJSONResponse(w, 401, map[string]string{"error": "unauthorized", "message": "authentication required"}, "auth")
 			return
 		}
-		token, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag, h.appConf.Db, cookie.Value)
+		user, err := (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).Session(r.Context(), cookie.Value)
 		if err != nil {
 			code := 503
 			if errors.Is(err, sql.ErrNoRows) {
 				code = 401
 			}
 			writeJSONResponse(w, code, map[string]string{"error": "unauthorized", "message": "session unavailable or invalid"}, "auth")
-			return
-		}
-		user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag, h.appConf.Db, token.UserID)
-		if err != nil {
-			writeJSONResponse(w, 503, map[string]string{"error": "unavailable", "message": "account lookup unavailable"}, "auth")
 			return
 		}
 		if !user.UserActive() {

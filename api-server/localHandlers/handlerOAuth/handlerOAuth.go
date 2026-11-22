@@ -68,7 +68,7 @@ func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
 func (h *Handler) loginHandler(w http.ResponseWriter, r *http.Request) {
 	verifier := oauth2.GenerateVerifier()
 	stateData, _ := json.Marshal(map[string]string{"verifier": verifier})
-	cookie, err := dbAuthTemplate.CreateNamedToken(debugTag+"login", h.appConf.Db, true, 0, h.appConf.Settings.Host, "oauth-state", time.Now().Add(10*time.Minute), string(stateData))
+	cookie, err := dbAuthTemplate.CreateNamedTokenContext(r.Context(), debugTag+"login", h.appConf.Db, true, 0, h.appConf.Settings.Host, "oauth-state", time.Now().Add(10*time.Minute), string(stateData))
 	if err != nil {
 		handlerHelpers.WriteInternalServerError(w, "failed to start login")
 		return
@@ -148,7 +148,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 			handlerHelpers.WriteInternalServerError(w, "failed to link account")
 			return
 		}
-		if err := handlerHelpers.CreateAndSetSessionCookie(debugTag, w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
+		if err := handlerHelpers.CreateAndSetSessionCookie(r.Context(), debugTag, w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
 			handlerHelpers.WriteInternalServerError(w, "failed to create session")
 			return
 		}
@@ -168,7 +168,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	if found {
 		userID = existing.ID
 	}
-	continuation, err := dbAuthTemplate.CreateNamedToken(debugTag+"registration", h.appConf.Db, true, userID, h.appConf.Settings.Host, "oauth-registration", time.Now().Add(10*time.Minute), string(pending))
+	continuation, err := dbAuthTemplate.CreateNamedTokenContext(r.Context(), debugTag+"registration", h.appConf.Db, true, userID, h.appConf.Settings.Host, "oauth-registration", time.Now().Add(10*time.Minute), string(pending))
 	if err != nil {
 		handlerHelpers.WriteInternalServerError(w, "failed to prepare registration")
 		return
@@ -183,12 +183,12 @@ func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
 		handlerHelpers.WriteUnauthorizedText(w, "unauthorized")
 		return
 	}
-	dbTok, err := dbAuthTemplate.FindSessionToken(debugTag+"meHandler:find_session", h.appConf.Db, sc.Value)
+	dbTok, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag+"meHandler:find_session", h.appConf.Db, sc.Value)
 	if err != nil {
 		handlerHelpers.WriteUnauthorizedText(w, "unauthorized")
 		return
 	}
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"meHandler:user", h.appConf.Db, dbTok.UserID)
+	user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"meHandler:user", h.appConf.Db, dbTok.UserID)
 	if err != nil {
 		handlerHelpers.WriteInternalServerError(w, "failed to load user")
 		return
@@ -246,7 +246,7 @@ func (h *Handler) OAuthEnsure(w http.ResponseWriter, r *http.Request) {
 		handlerHelpers.WriteUnauthorizedText(w, "unauthorized")
 		return
 	}
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"OAuthEnsure ", h.appConf.Db, sess.UserID)
+	user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"OAuthEnsure ", h.appConf.Db, sess.UserID)
 	if err != nil {
 		handlerHelpers.WriteInternalServerError(w, "failed to load user")
 		return
@@ -273,49 +273,15 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find the email-verification token
-	tok, err := dbAuthTemplate.ConsumeToken(r.Context(), h.appConf.Db, "email-verification", tokenStr)
+	user, err := (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).VerifyEmail(r.Context(), tokenStr)
 	if err != nil {
-		log.Printf("%v verification token not found or invalid: %v", debugTag, err)
 		handlerHelpers.WriteForbidden(w, "invalid or expired verification token")
 		return
 	}
-
-	userID := tok.UserID
-	if userID == 0 {
-		log.Printf("%v verification token has no associated user", debugTag)
-		handlerHelpers.WriteForbidden(w, "invalid verification token")
-		return
-	}
-
-	// Update user to AccountActive (verified)
-	user, err := dbAuthTemplate.UserReadQry(debugTag+"VerifyEmail:read", h.appConf.Db, userID)
-	if err != nil {
-		log.Printf("%v failed to read user: %v", debugTag, err)
-		handlerHelpers.WriteInternalServerError(w, "user not found")
-		return
-	}
-
-	if user.AccountStatusID.Int64 == int64(models.AccountNew) {
-		user.AccountStatusID.SetValid(int64(models.AccountVerified))
-	}
-	if !user.UserActive() && user.AccountStatusID.Int64 != int64(models.AccountVerified) {
-		handlerHelpers.WriteForbidden(w, "account is not active")
-		return
-	}
-	_, err = dbAuthTemplate.UserWriteQry(debugTag+"VerifyEmail:write", h.appConf.Db, user)
-	if err != nil {
-		log.Printf("%v failed to update user: %v", debugTag, err)
-		handlerHelpers.WriteInternalServerError(w, "internal server error")
-		return
-	}
-
-	// Delete the verification token (one-time use)
-	// Verification token was consumed atomically.
-
+	userID := user.ID
 	// Create session cookie
 	if user.UserActive() {
-		if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"VerifyEmail:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
+		if err := handlerHelpers.CreateAndSetSessionCookie(r.Context(), debugTag+"VerifyEmail:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
 			log.Printf("%v failed to create session token: %v", debugTag, err)
 			handlerHelpers.WriteInternalServerError(w, "failed to create session")
 			return
@@ -356,7 +322,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid username", http.StatusBadRequest)
 			return
 		}
-		existing, err := dbAuthTemplate.UserNameReadQry(debugTag+"CompleteRegistration:check ", h.appConf.Db, requestedUsername)
+		existing, err := dbAuthTemplate.UserNameReadQryContext(r.Context(), debugTag+"CompleteRegistration:check ", h.appConf.Db, requestedUsername)
 		if err == nil && existing.ID != userID {
 			http.Error(w, "username taken", http.StatusConflict)
 			return
@@ -366,7 +332,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	var oauthStateToken models.Token
 	var err error
 	if userID != 0 {
-		user, err = dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration ", h.appConf.Db, userID)
+		user, err = dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"CompleteRegistration ", h.appConf.Db, userID)
 		if err != nil {
 			http.Error(w, "failed to load user", http.StatusInternalServerError)
 			return
@@ -388,7 +354,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if oauthStateToken.UserID > 0 {
-			user, err = dbAuthTemplate.UserReadQry(debugTag, h.appConf.Db, oauthStateToken.UserID)
+			user, err = dbAuthTemplate.UserReadQryContext(r.Context(), debugTag, h.appConf.Db, oauthStateToken.UserID)
 			if err != nil {
 				handlerHelpers.WriteForbidden(w, "invalid registration")
 				return
@@ -450,31 +416,24 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	if req.AccountHidden != nil {
 		user.AccountHidden.SetValid(*req.AccountHidden)
 	}
+	proof := ""
 	if oauthStateToken.ID != 0 {
-		c, cookieErr := r.Cookie("oauth-registration")
-		if cookieErr != nil {
+		c, e := r.Cookie("oauth-registration")
+		if e != nil {
 			handlerHelpers.WriteForbidden(w, "registration expired")
 			return
 		}
-		if _, err := dbAuthTemplate.ConsumeToken(r.Context(), h.appConf.Db, "oauth-registration", c.Value); err != nil {
-			handlerHelpers.WriteForbidden(w, "registration expired or already used")
-			return
-		}
-		http.SetCookie(w, &http.Cookie{Name: "oauth-registration", Path: "/", Domain: h.appConf.Settings.Host, MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+		proof = c.Value
 	}
-
-	if userID == 0 {
-		userID, _, err = dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"CompleteRegistration:create ", h.appConf.Db, user)
-	} else {
-		_, err = dbAuthTemplate.UserWriteQry(debugTag+"CompleteRegistration:write ", h.appConf.Db, user)
-	}
+	userID, err = (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).CompleteOAuthRegistration(r.Context(), userID, user, proof)
 	if err != nil {
-		log.Printf("%v CompleteRegistration failed: %v", debugTag, err)
-		http.Error(w, "failed to update user", http.StatusInternalServerError)
+		handlerHelpers.WriteDataError(w, err)
 		return
 	}
-
-	user, err = dbAuthTemplate.UserReadQry(debugTag+"CompleteRegistration:read_back ", h.appConf.Db, userID)
+	if proof != "" {
+		http.SetCookie(w, &http.Cookie{Name: "oauth-registration", Path: "/", Domain: h.appConf.Settings.Host, MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	}
+	user, err = dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"CompleteRegistration:read_back ", h.appConf.Db, userID)
 	if err != nil {
 		log.Printf("%v CompleteRegistration failed to reload user: %v", debugTag, err)
 		http.Error(w, "failed to load user", http.StatusInternalServerError)
