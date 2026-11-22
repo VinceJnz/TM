@@ -3,7 +3,7 @@ package handlerAuth
 import (
 	"api-server/v2/internal/testdb"
 	"api-server/v2/migrations"
-	"api-server/v2/models"
+	authStore "api-server/v2/modelMethods/authentication"
 	"context"
 	"strings"
 	"testing"
@@ -18,8 +18,8 @@ func TestStandardMemberMenuIncludesTripList(t *testing.T) {
  INSERT INTO st_user_group(user_id,group_id) SELECT 100,id FROM st_group WHERE name='User'`); err != nil {
 		t.Fatal(err)
 	}
-	var rows []models.MenuItem
-	if err := db.Select(&rows, sqlMenuList, 100, models.AccountActive); err != nil {
+	rows, err := (authStore.Store{DB: db}).MenuCapabilities(context.Background(), 100)
+	if err != nil {
 		t.Fatal(err)
 	}
 	for _, item := range supportedMenuItems(rows) {

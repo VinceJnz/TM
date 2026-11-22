@@ -1,42 +1,12 @@
 package handlerAuth
 
 import (
-	"api-server/v2/modelMethods/dbAuthTemplate"
+	authService "api-server/v2/app/services/authentication"
+	authStore "api-server/v2/modelMethods/authentication"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 	"log"
 	"net/http"
-)
-
-const (
-	sqlMenuUser = `SELECT stu.ID AS user_id, stu.name, COALESCE(stg.name::text, '') AS "group"
-		FROM st_users stu
-			LEFT JOIN st_user_group stug ON stug.User_ID=stu.ID
-			LEFT JOIN st_group stg ON stg.ID=stug.Group_ID
-		WHERE stu.ID=$1
-			AND stu.user_account_status_id=$2
-		ORDER BY
-			CASE LOWER(stg.name::text)
-				WHEN 'sysadmin' THEN 4
-				WHEN 'admin' THEN 3
-				WHEN 'trustedusers' THEN 2
-				WHEN 'user' THEN 1
-				ELSE 0
-			END DESC,
-			stg.ID DESC
-		LIMIT 1`
-
-	sqlMenuList = `SELECT stu.ID AS user_id, etr.Name AS resource, etal.name AS access_level, etas.name AS access_scope
-		FROM st_users stu
-			JOIN st_user_group stug ON stug.User_ID=stu.ID
-			JOIN st_group stg ON stg.ID=stug.Group_ID
-			JOIN st_group_resource stgr ON stgr.Group_ID=stg.ID
-			JOIN et_resource etr ON etr.ID=stgr.Resource_ID
-			JOIN et_access_level etal ON etal.id=stgr.access_level_id
-			JOIN et_access_scope etas ON etas.id=stgr.access_scope_id
-		WHERE stu.ID=$1
-			AND stu.user_account_status_id=$2
-		GROUP BY stu.ID, etr.Name, etal.name, etas.name`
 )
 
 // MenuUserGet is a public endpoint that returns menu user data if authenticated, or empty data if not
@@ -52,25 +22,16 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if session is valid
-	dbToken, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag+"MenuUserGet", h.appConf.Db, sc.Value)
+	auth := authService.Service{Store: authStore.Store{DB: h.appConf.Db}}
+	user, err := auth.Session(r.Context(), sc.Value)
 	if err != nil {
-		// Session cookie exists but is invalid/expired
-		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
-		return
-	}
-
-	// Load user info
-	user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"MenuUserGet:user", h.appConf.Db, dbToken.UserID)
-	if err != nil || !user.UserActive() {
 		// User not found or not active
 		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
 		return
 	}
 
 	// User is authenticated and active - return menuUser info
-	var menuUser models.MenuUser
-	err = h.appConf.Db.Get(&menuUser, sqlMenuUser, dbToken.UserID, models.AccountActive)
+	menuUser, err := auth.Store.MenuUser(r.Context(), user.ID)
 	if err != nil {
 		// Failed to get menu user.
 		writeJSONResponse(w, http.StatusOK, models.MenuUser{}, "MenuUserGet()")
@@ -88,8 +49,8 @@ func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	items := []models.MenuItem{}
-	if err := h.appConf.Db.SelectContext(r.Context(), &items, sqlMenuList, session.UserID, models.AccountActive); err != nil {
+	items, err := (authStore.Store{DB: h.appConf.Db}).MenuCapabilities(r.Context(), session.UserID)
+	if err != nil {
 		log.Print("menu capability lookup failed")
 		writeJSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Internal server error"}, "MenuListGet()")
 		return
@@ -123,20 +84,9 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if session is valid
-	dbToken, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag+"AuthStatus", h.appConf.Db, sc.Value)
+	auth := authService.Service{Store: authStore.Store{DB: h.appConf.Db}}
+	user, err := auth.Session(r.Context(), sc.Value)
 	if err != nil {
-		// Session cookie exists but is invalid/expired
-		writeJSONResponse(w, http.StatusOK, map[string]any{
-			"authenticated": false,
-			"user":          nil,
-		}, "AuthStatus()")
-		return
-	}
-
-	// Load user info
-	user, err := dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"AuthStatus:user", h.appConf.Db, dbToken.UserID)
-	if err != nil || !user.UserActive() {
 		// User not found or not active
 		writeJSONResponse(w, http.StatusOK, map[string]any{
 			"authenticated": false,
@@ -146,8 +96,7 @@ func (h *Handler) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// User is authenticated - return menuUser info
-	var menuUser models.MenuUser
-	err = h.appConf.Db.Get(&menuUser, sqlMenuUser, dbToken.UserID, models.AccountActive)
+	menuUser, err := auth.Store.MenuUser(r.Context(), user.ID)
 	if err != nil {
 		// Failed to get menu user (maybe no group assigned)
 		writeJSONResponse(w, http.StatusOK, map[string]any{
