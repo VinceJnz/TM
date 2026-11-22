@@ -170,7 +170,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Fetch the age group to validate it exists and get its name
-	ageGroupName, err := handlerHelpers.GetAgeGroupByID(h.appConf.Db, payload.UserAgeGroupID.Int64)
+	ageGroupName, err := handlerHelpers.GetAgeGroupByIDContext(r.Context(), h.appConf.Db, payload.UserAgeGroupID.Int64)
 	if err != nil {
 		log.Printf("%vRegister failed to fetch age group %d: %v", debugTag, payload.UserAgeGroupID.Int64, err)
 		http.Error(w, "invalid age group", http.StatusBadRequest)

@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	store "api-server/v2/modelMethods/authentication"
+	"context"
 	"fmt"
 	"log"
 
@@ -12,21 +14,13 @@ import (
 const regDebugTag = "registrationHelpers."
 
 // GetAgeGroupByID fetches the age group record by its ID
-func GetAgeGroupByID(db *sqlx.DB, ageGroupID int64) (string, error) {
-	query := `
-		SELECT age_group 
-		FROM et_user_age_groups 
-		WHERE id = $1
-	`
-	var ageGroup string
-	err := db.QueryRow(query, ageGroupID).Scan(&ageGroup)
-	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
-			return "", fmt.Errorf("age group not found")
-		}
-		return "", err
-	}
-	return ageGroup, nil
+func GetAgeGroupByID(db *sqlx.DB, id int64) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return GetAgeGroupByIDContext(ctx, db, id)
+}
+func GetAgeGroupByIDContext(ctx context.Context, db *sqlx.DB, id int64) (string, error) {
+	return (store.Store{DB: db}).AgeGroup(ctx, nil, id)
 }
 
 // ValidateAgeGroupForBirthDate validates that the given birthdate falls within the expected age range for the given age group.

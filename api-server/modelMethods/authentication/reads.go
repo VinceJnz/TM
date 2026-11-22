@@ -3,7 +3,29 @@ package authentication
 import (
 	"api-server/v2/models"
 	"context"
+	"database/sql"
+	"errors"
 )
+
+func (s Store) Identity(ctx context.Context, provider, subject, email string) (models.User, bool, error) {
+	var id int
+	err := s.DB.GetContext(ctx, &id, `SELECT id FROM st_users WHERE provider=$1 AND provider_id=$2`, provider, subject)
+	if err == nil {
+		u, e := s.User(ctx, id)
+		return u, e == nil, e
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return models.User{}, false, err
+	}
+	if email == "" {
+		return models.User{}, false, nil
+	}
+	u, err := s.Email(ctx, email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.User{}, false, nil
+	}
+	return u, err == nil, err
+}
 
 const userColumns = `version,id,name,username,email,user_address,user_birth_date,user_age_group_id,user_account_status_id,user_password,user_account_hidden,provider,provider_id`
 

@@ -77,3 +77,16 @@ func TestOAuthProfileCompletionCannotOverwritePasswordOrActivation(t *testing.T)
 		t.Fatal("token issuance ignored cancellation", err)
 	}
 }
+
+func TestRegistrationLookupsHonorCancellation(t *testing.T) {
+	db := testdb.Open(t, testdb.Auth)
+	s := store.Store{DB: db}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, _, err := s.Identity(ctx, "google", "synthetic-subject", "member@example.test"); !errors.Is(err, context.Canceled) {
+		t.Fatal("identity lookup ignored cancellation", err)
+	}
+	if _, err := s.AgeGroup(ctx, nil, 1); !errors.Is(err, context.Canceled) {
+		t.Fatal("age lookup ignored cancellation", err)
+	}
+}

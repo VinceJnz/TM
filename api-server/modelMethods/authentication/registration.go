@@ -25,6 +25,10 @@ func (s Store) InsertUser(ctx context.Context, tx *sqlx.Tx, u models.User) (int,
 }
 func (s Store) AgeGroup(ctx context.Context, tx *sqlx.Tx, id int64) (string, error) {
 	var label string
-	err := tx.GetContext(ctx, &label, `SELECT age_group FROM et_user_age_groups WHERE id=$1`, id)
+	var query sqlx.QueryerContext = s.DB
+	if tx != nil {
+		query = tx
+	}
+	err := sqlx.GetContext(ctx, query, &label, `SELECT age_group FROM et_user_age_groups WHERE id=$1`, id)
 	return label, err
 }

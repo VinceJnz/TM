@@ -136,7 +136,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	incoming.Email.SetValid(identity.Email)
 	incoming.Provider.SetValid("google")
 	incoming.ProviderID.SetValid(identity.Sub)
-	existing, found, err := dbAuthTemplate.FindUserByProviderOrEmail(debugTag+"callback", h.appConf.Db, incoming)
+	existing, found, err := (authStore.Store{DB: h.appConf.Db}).Identity(r.Context(), incoming.Provider.String, incoming.ProviderID.String, incoming.Email.String)
 	if err != nil {
 		handlerHelpers.WriteInternalServerError(w, "failed to load account")
 		return
@@ -401,7 +401,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	user.BirthDate = zero.NewTime(parsed, true)
 	user.UserAgeGroupID.SetValid(req.UserAgeGroupID)
 
-	ageGroupName, err := handlerHelpers.GetAgeGroupByID(h.appConf.Db, req.UserAgeGroupID)
+	ageGroupName, err := handlerHelpers.GetAgeGroupByIDContext(r.Context(), h.appConf.Db, req.UserAgeGroupID)
 	if err != nil {
 		log.Printf("%v CompleteRegistration - invalid age group %d: %v", debugTag, req.UserAgeGroupID, err)
 		http.Error(w, "invalid age group", http.StatusBadRequest)
