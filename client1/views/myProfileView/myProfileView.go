@@ -79,6 +79,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.load.Cancel()
 	editor.command.Cancel()
 	editor.RecordState = RecordStateReloadRequired
@@ -91,6 +92,7 @@ func (editor *ItemEditor) GetDiv() js.Value {
 }
 
 func (editor *ItemEditor) Hide() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.load.Cancel()
 	editor.command.Cancel()
 	editor.RecordState = RecordStateReloadRequired
@@ -127,10 +129,12 @@ func (editor *ItemEditor) FetchItems() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
+	viewHelpers.Pending(editor.Div, newState == viewHelpers.ItemStateSaving || newState == viewHelpers.ItemStateFetching)
 	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeUpdateStatus, DebugTag: debugTag, Data: newState})
 }
 
 func (editor *ItemEditor) onCompletionMsg(msg string) {
+	viewHelpers.Feedback(editor.Div, msg)
 	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: msg})
 }
 
@@ -208,13 +212,13 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	hidden := editor.UiComponents.AccountHidden.Get("checked").Bool()
 
 	if name == "" || email == "" || birthDateRaw == "" {
-		js.Global().Call("alert", "name, email and birth date are required")
+		viewHelpers.Feedback(editor.Div, "name, email and birth date are required")
 		return nil
 	}
 
 	birthDate, err := time.Parse(viewHelpers.Layout, birthDateRaw)
 	if err != nil {
-		js.Global().Call("alert", "invalid birth date")
+		viewHelpers.Feedback(editor.Div, "invalid birth date")
 		return nil
 	}
 

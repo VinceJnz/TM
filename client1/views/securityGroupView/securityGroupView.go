@@ -120,6 +120,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	viewHelpers.CancelDialogs(editor.Div)
 	for _, child := range editor.nestedLoads {
 		child.Hide()
 	}
@@ -147,6 +148,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	viewHelpers.CancelDialogs(editor.Div)
 	for _, child := range editor.nestedLoads {
 		child.Hide()
 	}
@@ -209,6 +211,11 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	method := "POST"
+	if editor.CurrentRecord.ID > 0 {
+		method = "PUT"
+	}
+	defer viewHelpers.ResourceActions(editor.EditDiv, editor.appCore, ApiURL, method)
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
@@ -347,6 +354,9 @@ func (editor *ItemEditor) FetchItems() {
 }
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
+		if !viewHelpers.Confirm(editor.Div, "Delete this record?") {
+			return
+		}
 		editor.updateStateDisplay(ItemStateDeleting)
 		if err := editor.client.Request(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil); err != nil {
 			editor.updateStateDisplay(ItemStateNone)
@@ -362,6 +372,8 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
+	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	for _, child := range editor.nestedLoads {
 		child.Hide()
 	}
@@ -378,13 +390,7 @@ func (editor *ItemEditor) populateItemList() {
 		// Create main group card
 		groupCard := editor.document.Call("createElement", "div")
 		groupCard.Set("id", debugTag+"groupCard")
-		viewHelpers.SetStyles(groupCard, map[string]string{
-			"border":        "1px solid #cfd9e6",
-			"border-radius": "8px",
-			"padding":       "8px",
-			"margin-bottom": "8px",
-			"background":    "#ffffff",
-		})
+		groupCard.Set("className", "tm-card")
 
 		// Header with toggle and group name
 		headerDiv := editor.document.Call("createElement", "div")
@@ -394,6 +400,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		toggleIndicator := editor.document.Call("createElement", "span")
 		toggleIndicator.Set("textContent", "\u25b6")
+		toggleIndicator.Call("setAttribute", "aria-hidden", "true")
 		viewHelpers.SetStyles(toggleIndicator, map[string]string{
 			"font-size": "0.8em",
 			"color":     "#4f647a",
@@ -401,7 +408,10 @@ func (editor *ItemEditor) populateItemList() {
 		})
 		headerDiv.Call("appendChild", toggleIndicator)
 
-		groupName := editor.document.Call("createElement", "div")
+		groupName := editor.document.Call("createElement", "button")
+		groupName.Set("type", "button")
+		groupName.Set("className", "tm-disclosure")
+		groupName.Call("setAttribute", "aria-expanded", "false")
 		groupName.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Name)+"</strong>")
 		viewHelpers.SetStyles(groupName, map[string]string{
 			"font-size": "0.98em",
@@ -450,6 +460,8 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Resources container (initially hidden)
 		resourcesContainer := editor.document.Call("createElement", "div")
+		resourcesContainer.Set("id", "securityGroupView-details-"+strconv.Itoa(record.ID))
+		groupName.Call("setAttribute", "aria-controls", resourcesContainer.Get("id"))
 		resourcesContainer.Get("style").Call("setProperty", "display", "none")
 		resourcesContainer.Get("style").Call("setProperty", "margin-top", "8px")
 		viewHelpers.SetStyles(resourcesContainer, map[string]string{
@@ -473,7 +485,14 @@ func (editor *ItemEditor) populateItemList() {
 		resourcesContainer.Call("appendChild", resourceEditor.Div)
 
 		// Set up toggle handler
-		domEvents.Listen(groupCard, "click", editor.createGroupToggleHandler(groupID, resourcesContainer, toggleIndicator, resourceEditor))
+		domEvents.Listen(groupName, "click", func(this js.Value, args []js.Value) any {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
+			result := editor.createGroupToggleHandler(groupID, resourcesContainer, toggleIndicator, resourceEditor)(this, args)
+			groupName.Call("setAttribute", "aria-expanded", editor.groupExpanded[groupID])
+			return result
+		})
 
 		editor.ListDiv.Call("appendChild", groupCard)
 	}
@@ -500,11 +519,13 @@ func (editor *ItemEditor) createGroupToggleHandler(groupID int, resourcesContain
 			resourceEditor.Hide()
 			resourcesContainer.Get("style").Call("setProperty", "display", "none")
 			toggleIndicator.Set("textContent", "\u25b6")
+			toggleIndicator.Call("setAttribute", "aria-hidden", "true")
 		}
 		return nil
 	}
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+	viewHelpers.Pending(editor.Div, int(newState) == 1 || int(newState) == 4 || int(newState) == 5)
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }

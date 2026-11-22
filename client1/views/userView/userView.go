@@ -55,6 +55,7 @@ const ApiURL = "/users"
 type TableData = api.AccountDTO
 
 type UI struct {
+	ChangeReason    js.Value
 	Name            js.Value
 	Username        js.Value
 	Email           js.Value
@@ -141,6 +142,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	viewHelpers.CancelDialogs(editor.Div)
 	for _, child := range editor.nestedLoads {
 		child.Hide()
 	}
@@ -168,6 +170,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	viewHelpers.CancelDialogs(editor.Div)
 	for _, child := range editor.nestedLoads {
 		child.Hide()
 	}
@@ -280,6 +283,11 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	method := "POST"
+	if editor.CurrentRecord.ID > 0 {
+		method = "PUT"
+	}
+	defer viewHelpers.ResourceActions(editor.EditDiv, editor.appCore, ApiURL, method)
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
@@ -295,7 +303,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
 	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "itemAddress")
-	editor.UiComponents.Address.Call("setAttribute", "required", "true")
+	editor.UiComponents.Address.Set("maxLength", 255)
 
 	localObjs.MemberCode, editor.UiComponents.MemberCode = viewHelpers.StringEdit(editor.CurrentRecord.MemberCode, editor.document, "MemberCode", "text", "itemMemberCode")
 	editor.UiComponents.MemberCode.Call("setAttribute", "required", "true")
@@ -348,6 +356,13 @@ func (editor *ItemEditor) populateEditForm() {
 		form.Call("appendChild", editor.Children.userSecurityGroup.GetDiv())
 	}
 
+	if editor.CurrentRecord.ID > 0 {
+		reasonRow, reason := viewHelpers.StringEdit("", editor.document, "Reason for account change", "text", "accountChangeReason")
+		reason.Set("required", true)
+		reason.Set("maxLength", 500)
+		editor.UiComponents.ChangeReason = reason
+		form.Call("appendChild", reasonRow)
+	}
 	// Create submit button
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
@@ -419,7 +434,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
 	case ItemStateEditing:
-		go editor.UpdateItem(editor.CurrentRecord)
+		go editor.UpdateItem(editor.CurrentRecord, editor.UiComponents.ChangeReason.Get("value").String())
 	case ItemStateAdding:
 		go editor.AddItem(editor.CurrentRecord)
 	default:
@@ -436,15 +451,11 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 }
 
 // UpdateItem updates an existing item record in the item list
-func (editor *ItemEditor) UpdateItem(item TableData) {
-	reason := js.Global().Call("prompt", "Reason for this account change")
-	if reason.IsNull() || strings.TrimSpace(reason.String()) == "" {
-		return
-	}
+func (editor *ItemEditor) UpdateItem(item TableData, reason string) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.RequestWithHeaders(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.AccountPayload(item), map[string]string{"X-Change-Reason": reason.String()}); err != nil {
+	if err := editor.client.RequestWithHeaders(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.AccountPayload(item), map[string]string{"X-Change-Reason": reason}); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.onCompletionMsg("Change failed; please retry. " + err.Error())
 		return
 	}
 	editor.resetEditForm()
@@ -460,7 +471,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := editor.client.Request(http.MethodPost, ApiURL, nil, api.AccountPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateAdding)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.onCompletionMsg("Change failed; please retry. " + err.Error())
 		return
 	}
 	editor.resetEditForm()
@@ -503,15 +514,15 @@ func (editor *ItemEditor) FetchItems() {
 	}()
 }
 func (editor *ItemEditor) deleteItem(itemID int) {
-	reason := js.Global().Call("prompt", "Reason for deleting this account")
-	if reason.IsNull() || strings.TrimSpace(reason.String()) == "" {
-		return
-	}
 	go func() {
+		reason, ok := viewHelpers.RequestReason(editor.Div, "Delete this account?")
+		if !ok {
+			return
+		}
 		editor.updateStateDisplay(ItemStateDeleting)
-		if err := editor.client.RequestWithHeaders(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil, map[string]string{"X-Change-Reason": reason.String()}); err != nil {
+		if err := editor.client.RequestWithHeaders(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil, map[string]string{"X-Change-Reason": reason}); err != nil {
 			editor.updateStateDisplay(ItemStateNone)
-			editor.onCompletionMsg("Change failed; please retry.")
+			editor.onCompletionMsg("Change failed; please retry. " + err.Error())
 			return
 		}
 
@@ -523,6 +534,8 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
+	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	for _, child := range editor.nestedLoads {
 		child.Hide()
 	}
@@ -538,13 +551,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		userCard := editor.document.Call("createElement", "div")
 		userCard.Set("id", debugTag+"userCard")
-		viewHelpers.SetStyles(userCard, map[string]string{
-			"border":        "1px solid #cfd9e6",
-			"border-radius": "8px",
-			"padding":       "8px",
-			"margin-bottom": "8px",
-			"background":    "#ffffff",
-		})
+		userCard.Set("className", "tm-card")
 
 		headerDiv := editor.document.Call("createElement", "div")
 		headerDiv.Get("style").Call("setProperty", "display", "flex")
@@ -553,6 +560,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		toggleIndicator := editor.document.Call("createElement", "span")
 		toggleIndicator.Set("textContent", "\u25b6")
+		toggleIndicator.Call("setAttribute", "aria-hidden", "true")
 		viewHelpers.SetStyles(toggleIndicator, map[string]string{
 			"font-size": "0.8em",
 			"color":     "#4f647a",
@@ -560,7 +568,10 @@ func (editor *ItemEditor) populateItemList() {
 		})
 		headerDiv.Call("appendChild", toggleIndicator)
 
-		userName := editor.document.Call("createElement", "div")
+		userName := editor.document.Call("createElement", "button")
+		userName.Set("type", "button")
+		userName.Set("className", "tm-disclosure")
+		userName.Call("setAttribute", "aria-expanded", "false")
 		userName.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Name)+"</strong> ("+safehtml.EscapeString(record.Email)+")")
 		viewHelpers.SetStyles(userName, map[string]string{
 			"font-size": "0.98em",
@@ -591,6 +602,8 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Child area under row: edit form + group list
 		childContainer := editor.document.Call("createElement", "div")
+		childContainer.Set("id", "userView-details-"+strconv.Itoa(record.ID))
+		userName.Call("setAttribute", "aria-controls", childContainer.Get("id"))
 		childContainer.Get("style").Call("setProperty", "display", "none")
 		childContainer.Get("style").Call("setProperty", "margin-top", "8px")
 		viewHelpers.SetStyles(childContainer, map[string]string{
@@ -617,7 +630,14 @@ func (editor *ItemEditor) populateItemList() {
 		childContainer.Call("appendChild", groupEditor.GetDiv())
 
 		userID := record.ID
-		domEvents.Listen(userCard, "click", editor.createUserToggleHandler(userID, childContainer, toggleIndicator, groupEditor))
+		domEvents.Listen(userName, "click", func(this js.Value, args []js.Value) any {
+			if len(args) > 0 {
+				args[0].Call("stopPropagation")
+			}
+			result := editor.createUserToggleHandler(userID, childContainer, toggleIndicator, groupEditor)(this, args)
+			userName.Call("setAttribute", "aria-expanded", editor.userExpanded[userID])
+			return result
+		})
 		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
@@ -627,6 +647,7 @@ func (editor *ItemEditor) populateItemList() {
 			editor.userExpanded[userID] = false
 			groupEditor.Hide()
 			toggleIndicator.Set("textContent", "\u25b6")
+			toggleIndicator.Call("setAttribute", "aria-hidden", "true")
 			childContainer.Get("style").Call("setProperty", "display", "block")
 
 			isVisible := editContainer.Get("style").Get("display").String() == "block"
@@ -675,6 +696,7 @@ func (editor *ItemEditor) createUserToggleHandler(userID int, childContainer js.
 			groupEditor.Hide()
 			childContainer.Get("style").Call("setProperty", "display", "none")
 			toggleIndicator.Set("textContent", "\u25b6")
+			toggleIndicator.Call("setAttribute", "aria-hidden", "true")
 		}
 		return nil
 	}
@@ -706,7 +728,7 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
 	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "itemAddress")
-	editor.UiComponents.Address.Call("setAttribute", "required", "true")
+	editor.UiComponents.Address.Set("maxLength", 255)
 
 	localObjs.MemberCode, editor.UiComponents.MemberCode = viewHelpers.StringEdit(editor.CurrentRecord.MemberCode, editor.document, "MemberCode", "text", "itemMemberCode")
 	editor.UiComponents.MemberCode.Call("setAttribute", "required", "true")
@@ -733,6 +755,12 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 	form.Call("appendChild", localObjs.AccountStatusID)
 	form.Call("appendChild", localObjs.AccountHidden)
 
+	reasonRow, reason := viewHelpers.StringEdit("", editor.document, "Reason for account change", "text", "inlineChangeReason")
+	reason.Set("required", true)
+	reason.Set("maxLength", 500)
+	editor.UiComponents.ChangeReason = reason
+	form.Call("appendChild", reasonRow)
+	defer viewHelpers.ResourceActions(container, editor.appCore, ApiURL, "PUT")
 	// Create submit and cancel buttons
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(func(this js.Value, p []js.Value) interface{} {
@@ -753,5 +781,6 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+	viewHelpers.Pending(editor.Div, int(newState) == 1 || int(newState) == 4 || int(newState) == 5)
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }

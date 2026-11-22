@@ -103,6 +103,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
 	editor.ListDiv.Set("innerHTML", "")
@@ -123,6 +124,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -174,6 +176,7 @@ func (editor *ItemEditor) parseHashContext() {
 }
 
 func (editor *ItemEditor) onCompletionMsg(msg string) {
+	viewHelpers.Feedback(editor.Div, msg)
 	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeDisplayMessage, DebugTag: debugTag, Data: msg})
 }
 
@@ -264,6 +267,11 @@ func (editor *ItemEditor) autoFillAmountFromBookingSelection() {
 }
 
 func (editor *ItemEditor) populateEditForm() {
+	method := "POST"
+	if editor.CurrentRecord.ID > 0 {
+		method = "PUT"
+	}
+	defer viewHelpers.ResourceActions(editor.EditDiv, editor.appCore, ApiURL, method)
 	host := editor.FormHost
 	if host.IsUndefined() || host.IsNull() {
 		host = editor.EditDiv
@@ -506,11 +514,12 @@ func (editor *ItemEditor) FetchItems() {
 
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
-		editor.updateStateDisplay(ItemStateDeleting)
 		reason, ok := viewHelpers.FinancialChangeReason()
 		if !ok {
 			return
 		}
+		editor.updateStateDisplay(ItemStateDeleting)
+		defer editor.updateStateDisplay(ItemStateNone)
 		if err := api.NewFinance(editor.client).DeletePayment(itemID, reason); err != nil {
 			editor.onCompletionMsg("Payment deletion failed; record was retained")
 			return
@@ -523,6 +532,8 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
+	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.clearActiveRowHighlight()
 	editor.ListDiv.Set("innerHTML", "")
 
@@ -634,5 +645,6 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+	viewHelpers.Pending(editor.Div, int(newState) == 1 || int(newState) == 4 || int(newState) == 5)
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }
