@@ -2,161 +2,122 @@ package handlerBookingVoucher
 
 import (
 	"api-server/v2/app/appCore"
+	service "api-server/v2/app/services/vouchers"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	store "api-server/v2/modelMethods/vouchers"
 	"api-server/v2/models"
-	"fmt"
+	"errors"
+	"github.com/gorilla/mux"
 	"net/http"
 	"strings"
-
-	"github.com/gorilla/mux"
-)
-
-const debugTag = "handlerBookingVoucher."
-
-const (
-	qryGetAllActive = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified
-					FROM at_booking_vouchers
-					WHERE is_active = true
-					AND (expiry_date IS NULL OR expiry_date >= CURRENT_DATE)
-					ORDER BY code`
-
-	qryGetAllAdmin = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified
-					FROM at_booking_vouchers
-					ORDER BY code`
-
-	qryGet = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified
-				FROM at_booking_vouchers
-				WHERE id = $1`
-
-	qryCreate = `INSERT INTO at_booking_vouchers (code, discount_percent, fixed_cost, expiry_date, is_active)
-				VALUES ($1, $2, $3, $4, $5)
-				RETURNING id`
-
-	qryUpdate = `UPDATE at_booking_vouchers
-				SET code = $1, discount_percent = $2, fixed_cost = $3, expiry_date = $4, is_active = $5
-				WHERE id = $6`
-
-	qryDelete = `DELETE FROM at_booking_vouchers WHERE id = $1`
 )
 
 type Handler struct {
-	appConf *appCore.Config
+	app   *appCore.Config
+	store store.Store
 }
 
-func New(appConf *appCore.Config) *Handler {
-	return &Handler{appConf: appConf}
+func New(app *appCore.Config) *Handler { return &Handler{app, store.Store{DB: app.Db}} }
+func (h *Handler) RegisterRoutesAdmin(r *mux.Router, path string) {
+	helpers.CapabilityRoute(r, path+"/{id:[0-9]+}", "bookingVouchers", h.Get).Methods("GET")
+	helpers.CapabilityRoute(r, path, "bookingVouchers", h.Create).Methods("POST")
+	helpers.CapabilityRoute(r, path+"/{id:[0-9]+}", "bookingVouchers", h.Update).Methods("PUT")
+	helpers.CapabilityRoute(r, path+"/{id:[0-9]+}", "bookingVouchers", h.Delete).Methods("DELETE")
 }
-
-func (h *Handler) RegisterRoutesProtected(r *mux.Router, baseURL string) {
-	helpers.CapabilityRoute(r, baseURL, "bookingVouchers", h.GetAll).Methods("GET")
-}
-
-func (h *Handler) RegisterRoutesAdmin(r *mux.Router, baseURL string) {
-	helpers.CapabilityRoute(r, baseURL+"/{id:[0-9]+}", "bookingVouchers", h.Get).Methods("GET")
-	helpers.CapabilityRoute(r, baseURL, "bookingVouchers", h.Create).Methods("POST")
-	helpers.CapabilityRoute(r, baseURL+"/{id:[0-9]+}", "bookingVouchers", h.Update).Methods("PUT")
-	helpers.CapabilityRoute(r, baseURL+"/{id:[0-9]+}", "bookingVouchers", h.Delete).Methods("DELETE")
-}
-
-func normalizeVoucher(v *models.BookingVoucher) {
-	v.Code = strings.ToUpper(strings.TrimSpace(v.Code))
-	if v.DiscountPercent != nil {
-		discountPercent := *v.DiscountPercent
-		if discountPercent < 0 {
-			discountPercent = 0
-		}
-		if discountPercent > 100 {
-			discountPercent = 100
-		}
-		v.DiscountPercent = &discountPercent
+func (h *Handler) actor(w http.ResponseWriter, r *http.Request) int {
+	s := helpers.RequiredSession(w, r, h.app.SessionIDKey)
+	if s == nil {
+		return 0
 	}
-	if v.FixedCost != nil {
-		fixedCost := *v.FixedCost
-		if fixedCost < 0 {
-			fixedCost = 0
-		}
-		v.FixedCost = &fixedCost
+	if !strings.EqualFold(s.AccessScope, "any") {
+		helpers.WriteError(w, 403, "forbidden", "Security administration requires any scope")
+		return 0
 	}
+	return s.UserID
 }
-
-func validateVoucher(v *models.BookingVoucher) error {
-	hasDiscount := v.DiscountPercent != nil
-	hasFixed := v.FixedCost != nil
-
-	if hasDiscount == hasFixed {
-		return fmt.Errorf("exactly one of discount_percent or fixed_cost is required")
-	}
-
-	return nil
+func (h *Handler) RegisterRoutesProtected(r *mux.Router, path string) {
+	helpers.CapabilityRoute(r, path, "bookingVouchers", h.GetAll).Methods("GET")
 }
-
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if dbStandardTemplate.CanAccessAny(session) {
-		dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingVoucher{}, qryGetAllAdmin)
+	session := helpers.RequiredSession(w, r, h.app.SessionIDKey)
+	if session == nil {
 		return
 	}
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingVoucher{}, qryGetAllActive)
+	p, ok := helpers.ReadResourcePage(w, r)
+	if !ok {
+		return
+	}
+	rows, info, err := h.store.List(r.Context(), strings.EqualFold(session.AccessScope, "any"), p)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteResourcePage(w, rows, info)
 }
-
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
+	if h.actor(w, r) == 0 {
 		return
 	}
-	dbStandardTemplate.Get(w, r, debugTag, h.appConf.Db, &[]models.BookingVoucher{}, qryGet, id)
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	v, err := h.store.Get(r.Context(), id)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, []models.BookingVoucher{v})
 }
-
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.BookingVoucher
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.save(w, r, false) }
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.save(w, r, true) }
+func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
+	actor := h.actor(w, r)
+	if actor == 0 {
 		return
 	}
-
-	normalizeVoucher(&record)
-	if record.Code == "" {
-		http.Error(w, "Voucher code is required", http.StatusUnprocessableEntity)
+	id := 0
+	if update {
+		id = helpers.RouteID(w, r)
+		if id == 0 {
+			return
+		}
+	}
+	var input models.VoucherWrite
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid security payload")
 		return
 	}
-	if err := validateVoucher(&record); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+	result, err := (service.Service{Store: h.store}).Save(r.Context(), id, input)
+	if err != nil {
+		h.failure(w, err)
 		return
 	}
-
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, record.Code, record.DiscountPercent, record.FixedCost, record.ExpiryDate, record.IsActive)
+	if !update {
+		helpers.WriteJSON(w, 201, result.ID)
+		return
+	}
+	helpers.WriteJSON(w, 200, result)
 }
-
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
+func (h *Handler) failure(w http.ResponseWriter, err error) {
+	if errors.Is(err, service.ErrValidation) {
+		helpers.WriteError(w, 422, "invalid_security_change", "Enter a code and exactly one valid discount or fixed price")
+	} else {
+		helpers.WriteDataError(w, err)
 	}
-	var record models.BookingVoucher
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	normalizeVoucher(&record)
-	if record.Code == "" {
-		http.Error(w, "Voucher code is required", http.StatusUnprocessableEntity)
-		return
-	}
-	if err := validateVoucher(&record); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-	record.ID = id
-
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, record.Code, record.DiscountPercent, record.FixedCost, record.ExpiryDate, record.IsActive, id)
 }
-
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
+	actor := h.actor(w, r)
+	if actor == 0 {
 		return
 	}
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id)
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	if err := h.store.Delete(r.Context(), id); err != nil {
+		h.failure(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, nil)
 }
