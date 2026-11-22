@@ -46,6 +46,9 @@ func (s Service) Save(ctx context.Context, actor, id int, v models.AccountWrite,
 		if e != nil {
 			return models.AccountDTO{}, e
 		}
+		if v.Version <= 0 || current.Version != v.Version {
+			return models.AccountDTO{}, models.ErrStaleRecord
+		}
 		sensitive = !strings.EqualFold(current.Email, email) || current.Username != v.Username || current.AccountStatusID != v.AccountStatusID
 		if sensitive && reason == "" {
 			return models.AccountDTO{}, ErrReason

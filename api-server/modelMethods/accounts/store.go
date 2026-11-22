@@ -18,7 +18,7 @@ func (s Store) Lookup(ctx context.Context, query string, id int) ([]resourcequer
 
 var ErrReferenced = errors.New("account has dependent records")
 
-const columns = `id,name,username,COALESCE(email,'') AS email,COALESCE(user_address,'') AS user_address,COALESCE(member_code,'') AS member_code,COALESCE(user_birth_date,'0001-01-01'::date) AS user_birth_date,COALESCE(user_age_group_id,0) AS user_age_group_id,COALESCE(member_status_id,0) AS member_status_id,COALESCE(user_account_status_id,0) AS user_account_status_id,COALESCE(user_account_hidden,false) AS user_account_hidden,created,modified`
+const columns = `version,id,name,username,COALESCE(email,'') AS email,COALESCE(user_address,'') AS user_address,COALESCE(member_code,'') AS member_code,COALESCE(user_birth_date,'0001-01-01'::date) AS user_birth_date,COALESCE(user_age_group_id,0) AS user_age_group_id,COALESCE(member_status_id,0) AS member_status_id,COALESCE(user_account_status_id,0) AS user_account_status_id,COALESCE(user_account_hidden,false) AS user_account_hidden,created,modified`
 
 func (s Store) List(ctx context.Context, p resourcequery.Page) ([]models.AccountDTO, resourcequery.PageInfo, error) {
 	return resourcequery.SelectPage[models.AccountDTO](ctx, s.DB, p, "SELECT "+columns+" FROM st_users")

@@ -32,6 +32,8 @@ func TestAccountChangesAreAuditedRevokeTokensAndPreserveHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 	input.Email = "new@example.test"
+	currentVersion, _ := s.Store.Get(ctx, created.ID)
+	input.Version = currentVersion.Version
 	if _, err = s.Save(ctx, 10, created.ID, input, ""); !errors.Is(err, ErrReason) {
 		t.Fatal("reason bypass", err)
 	}
@@ -76,6 +78,7 @@ func TestAccountChangesAreAuditedRevokeTokensAndPreserveHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 	input.Email = "new@example.test"
+	input.Version = other.Version
 	if _, err = s.Save(ctx, 10, other.ID, input, "recovery"); err == nil {
 		t.Fatal("duplicate accepted")
 	}

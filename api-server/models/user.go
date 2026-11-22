@@ -20,6 +20,7 @@ const (
 )
 
 type User struct {
+	Version         int64       `json:"-" db:"version"`
 	ID              int         `json:"id" db:"id"`
 	Name            string      `json:"name" db:"name"`
 	Username        string      `json:"username" db:"username"` //WebAuthn json:"displayName"

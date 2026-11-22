@@ -78,6 +78,9 @@ func (s Service) Save(ctx context.Context, id int, v models.ProfileWrite) error 
 	if err != nil {
 		return err
 	}
+	if current.Version != v.Version {
+		return models.ErrStaleRecord
+	}
 	if v.Email != "" && !strings.EqualFold(strings.TrimSpace(v.Email), current.Email) {
 		return ErrEmailChange
 	}

@@ -3,6 +3,7 @@ package models
 import "time"
 
 type ProfileDTO struct {
+	Version       int64     `json:"version" db:"version"`
 	ID            int       `json:"id" db:"id"`
 	Name          string    `json:"name" db:"name"`
 	Username      string    `json:"username" db:"username"`
@@ -13,6 +14,7 @@ type ProfileDTO struct {
 	AccountHidden bool      `json:"user_account_hidden" db:"user_account_hidden"`
 }
 type ProfileWrite struct {
+	Version       int64  `json:"version" rule:"required,minimum=1"`
 	Name          string `json:"name" rule:"required,minLength=1,maxLength=255"`
 	Email         string `json:"email"`
 	Address       string `json:"user_address" rule:"maxLength=255"`

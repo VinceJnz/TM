@@ -75,8 +75,11 @@ func generate() (map[string][]byte, error) {
 				goType = "time.Time"
 				schema["type"] = "string"
 				schema["format"] = "date-time"
-			case field.Type.Kind() == reflect.Int:
+			case field.Type.Kind() == reflect.Int || field.Type.Kind() == reflect.Int64:
 				goType = "int"
+				if field.Type.Kind() == reflect.Int64 {
+					goType = "int64"
+				}
 				schema["type"] = "integer"
 			case field.Type.Kind() == reflect.Bool:
 				goType = "bool"

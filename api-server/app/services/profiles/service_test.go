@@ -48,7 +48,8 @@ func TestProfileEmailChangesRequireBothProofsAndRevokeSessions(t *testing.T) {
 	if err := db.Get(&hash, "SELECT user_password FROM st_users WHERE id=1"); err != nil || hash != "synthetic-hash-placeholder" {
 		t.Fatal("username write changed credentials", err)
 	}
-	input := models.ProfileWrite{Name: "New name", Email: "new@example.test", BirthDate: "1990-01-01"}
+	currentVersion, _ := s.Store.Get(ctx, 1)
+	input := models.ProfileWrite{Version: currentVersion.Version, Name: "New name", Email: "new@example.test", BirthDate: "1990-01-01"}
 	if err := s.Save(ctx, 1, input); !errors.Is(err, ErrEmailChange) {
 		t.Fatal("email bypassed verification", err)
 	}
@@ -64,6 +65,10 @@ func TestProfileEmailChangesRequireBothProofsAndRevokeSessions(t *testing.T) {
 	saved, err := s.Store.Get(ctx, 1)
 	if err != nil || len(saved.Address) != 255 {
 		t.Fatal("failed update changed address", err)
+	}
+	input.Address = "stale edit"
+	if err := s.Save(ctx, 1, input); !errors.Is(err, models.ErrStaleRecord) {
+		t.Fatal("stale profile accepted", err)
 	}
 	if err := s.RequestEmail(ctx, 1, "new@example.test"); err != nil {
 		t.Fatal(err)

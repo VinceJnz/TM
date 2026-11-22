@@ -18,13 +18,13 @@ import (
 
 func TestOwnProfileAccessRequiresGroupGrants(t *testing.T) {
 	db := testdb.Open(t, testdb.Auth+`
-CREATE TABLE st_group(id integer, name text);
+ALTER TABLE st_users ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 1;CREATE TABLE st_group(id integer, name text);
 CREATE TABLE et_user_age_groups(id integer,age_group text);
 CREATE TABLE st_user_group(user_id integer, group_id integer);
 CREATE TABLE et_resource(id integer, name text);
 CREATE TABLE et_access_level(id integer, name text);
 CREATE TABLE et_access_scope(id integer, name text);
-CREATE TABLE st_group_resource(group_id integer, resource_id integer, access_level_id integer, access_scope_id integer);
+ALTER TABLE st_users ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 1;CREATE TABLE st_group_resource(group_id integer, resource_id integer, access_level_id integer, access_scope_id integer);
 INSERT INTO st_users(id, name, username, email, user_account_status_id) VALUES
 	(1, 'Member', 'member', 'member@example.test', 2),
 	(2, 'Other', 'other', 'other@example.test', 2);
@@ -81,7 +81,7 @@ INSERT INTO st_group_resource VALUES (1, 1, 1, 1);
 	if get := call(http.MethodGet, "/myProfile", "", cookie); get.Code != http.StatusOK {
 		t.Fatalf("profile GET returned %d", get.Code)
 	}
-	const update = `{"id":2,"name":"Updated","email":"member@example.test","user_birth_date":"2000-01-01","user_account_hidden":true}`
+	const update = `{"version":1,"id":2,"name":"Updated","email":"member@example.test","user_birth_date":"2000-01-01","user_account_hidden":true}`
 	if put := call(http.MethodPut, "/myProfile", update, nil); put.Code != http.StatusUnauthorized {
 		t.Fatalf("anonymous profile PUT returned %d", put.Code)
 	}

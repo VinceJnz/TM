@@ -4,6 +4,7 @@ import "time"
 
 // Account DTOs deliberately exclude password hashes and provider credentials.
 type AccountWrite struct {
+	Version         int64     `json:"version"`
 	Name            string    `json:"name" rule:"required,maxLength=255"`
 	Username        string    `json:"username" rule:"required,minLength=3,maxLength=20"`
 	Email           string    `json:"email" rule:"required,maxLength=254"`
@@ -16,6 +17,7 @@ type AccountWrite struct {
 	AccountHidden   bool      `json:"user_account_hidden"`
 }
 type AccountDTO struct {
+	Version         int64     `json:"version" db:"version"`
 	ID              int       `json:"id" db:"id"`
 	Name            string    `json:"name" db:"name"`
 	Username        string    `json:"username" db:"username"`

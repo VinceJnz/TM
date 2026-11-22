@@ -217,6 +217,7 @@ type GroupWrite struct {
 	Description string `json:"description"`
 }
 type ProfileDTO struct {
+	Version       int64     `json:"version"`
 	ID            int       `json:"id"`
 	Name          string    `json:"name"`
 	Username      string    `json:"username"`
@@ -227,6 +228,7 @@ type ProfileDTO struct {
 	AccountHidden bool      `json:"user_account_hidden"`
 }
 type ProfileWrite struct {
+	Version       int64  `json:"version"`
 	Name          string `json:"name"`
 	Email         string `json:"email"`
 	Address       string `json:"user_address"`
@@ -241,6 +243,7 @@ type EmailChangeProof struct {
 	NewCode string `json:"new_code"`
 }
 type AccountDTO struct {
+	Version         int64     `json:"version"`
 	ID              int       `json:"id"`
 	Name            string    `json:"name"`
 	Username        string    `json:"username"`
@@ -256,6 +259,7 @@ type AccountDTO struct {
 	Modified        time.Time `json:"modified"`
 }
 type AccountWrite struct {
+	Version         int64     `json:"version"`
 	Name            string    `json:"name"`
 	Username        string    `json:"username"`
 	Email           string    `json:"email"`

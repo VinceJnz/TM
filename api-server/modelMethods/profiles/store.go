@@ -24,7 +24,7 @@ func (s Store) Begin(ctx context.Context, actor int) (*sqlx.Tx, error) {
 	return tx, nil
 }
 
-const profileRead = `SELECT id,name,username,COALESCE(email,'') AS email,COALESCE(user_address,'') AS user_address,COALESCE(member_code,'') AS member_code,COALESCE(user_birth_date,'0001-01-01'::date) AS user_birth_date,COALESCE(user_account_hidden,false) AS user_account_hidden FROM st_users WHERE id=$1`
+const profileRead = `SELECT version,id,name,username,COALESCE(email,'') AS email,COALESCE(user_address,'') AS user_address,COALESCE(member_code,'') AS member_code,COALESCE(user_birth_date,'0001-01-01'::date) AS user_birth_date,COALESCE(user_account_hidden,false) AS user_account_hidden FROM st_users WHERE id=$1`
 
 func (s Store) Get(ctx context.Context, id int) (models.ProfileDTO, error) {
 	var v models.ProfileDTO

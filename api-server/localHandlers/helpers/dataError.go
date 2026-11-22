@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"api-server/v2/modelMethods/paymentLedger"
+	"api-server/v2/models"
 	"context"
 	"database/sql"
 	"errors"
@@ -13,6 +14,8 @@ func WriteDataError(w http.ResponseWriter, err error) {
 	code, kind, message := 500, "internal_error", "Internal server error"
 	var databaseError *pq.Error
 	switch {
+	case errors.Is(err, models.ErrStaleRecord):
+		code, kind, message = 409, "stale_record", "This record changed. Reload it before saving your edits."
 	case errors.Is(err, sql.ErrNoRows):
 		code, kind, message = 404, "not_found", "Record not found"
 	case errors.Is(err, paymentLedger.ErrValidation):

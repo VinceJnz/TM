@@ -33,7 +33,7 @@ func TestAccountHTTPRequiresGlobalScopeAndReasonAndIgnoresSecretFields(t *testin
 		router.ServeHTTP(w, r)
 		return w
 	}
-	body := `{"name":"Synthetic","username":"synthetic","email":"synthetic@example.test","user_password":"injected","provider_id":"injected","user_account_status_id":2}`
+	body := `{"version":1,"name":"Synthetic","username":"synthetic","email":"synthetic@example.test","user_password":"injected","provider_id":"injected","user_account_status_id":2}`
 	if w := call("POST", "/users", body, "", ""); w.Code != 401 {
 		t.Fatal(w.Code)
 	}

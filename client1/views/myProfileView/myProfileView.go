@@ -159,7 +159,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
 	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "profileAddress")
-	editor.UiComponents.Address.Set("maxLength",255)
+	editor.UiComponents.Address.Set("maxLength", 255)
 
 	birthDateValue := ""
 	if !editor.CurrentRecord.BirthDate.IsZero() {
@@ -219,6 +219,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 
 	payload := UpdateRequest{
+		Version:       editor.CurrentRecord.Version,
 		Name:          name,
 		Email:         editor.CurrentRecord.Email,
 		Address:       address,
@@ -241,6 +242,15 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 			}
 			return
 		}
+		var saved TableData
+		if err := editor.client.RequestContext(ticket.Context, http.MethodGet, ApiURL, &saved, nil); err != nil {
+			return
+		}
+		if !ticket.Current() {
+			return
+		}
+		editor.CurrentRecord = saved
+		editor.populateEditForm()
 		if email != editor.CurrentRecord.Email {
 			if err := editor.client.RequestContext(ticket.Context, http.MethodPost, ApiURL+"/email-change", nil, map[string]string{"email": email}); err != nil {
 				if ticket.Current() {
