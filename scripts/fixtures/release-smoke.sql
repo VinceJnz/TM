@@ -5,10 +5,6 @@ VALUES(1,'Smoke Member <img src=x onerror="window.__tmXss=true">','smoke-member'
       (2,'Other Member','other-member','other@example.test',1,1,2,'1990-01-01');
 SELECT setval(pg_get_serial_sequence('st_users','id'),2,true);
 INSERT INTO st_user_group(user_id,group_id) VALUES(1,1),(2,1);
--- Exercise the Trip List report without granting broader administrative access.
-INSERT INTO st_group_resource(group_id,resource_id,access_level_id,access_scope_id)
-SELECT 1,r.id,a.id,s.id FROM et_resource r CROSS JOIN et_access_level a CROSS JOIN et_access_scope s
-WHERE r.name='tripsReport' AND a.name='GET' AND s.name='any';
 INSERT INTO st_group_resource(group_id,resource_id,access_level_id,access_scope_id)
 SELECT 1,r.id,a.id,s.id FROM et_resource r CROSS JOIN et_access_level a CROSS JOIN et_access_scope s
 WHERE r.name='trips' AND a.name='PUT' AND s.name='own';

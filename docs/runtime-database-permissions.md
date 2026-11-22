@@ -61,3 +61,11 @@ lock; schedule the migration appropriately for the database size. These changes
 add no tables and do not rotate passwords or alter payment/refund history.
 They have been verified with disposable databases; they have not been applied to
 the running deployment as part of this work.
+Migration 0028 restores the standard User group's Trip List menu item. The owner
+approved access to all trips and participant names, with hidden-profile redaction
+preserved. It grants only `GET tripsReport any` and removes the unsupported
+`GET tripsReport own` grant for that group. It leaves other groups, other methods,
+booking ownership and financial permissions unchanged. Reapplying the SQL is safe.
+Apply with the migration owner before restarting the matching API. Refresh the
+browser afterwards so its capability list is fetched again. This migration does
+not rewrite bookings or participant records.
