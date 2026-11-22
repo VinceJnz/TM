@@ -29,7 +29,7 @@ func (s Store) BookingsFit(ctx context.Context, tx *sqlx.Tx, input models.Trip) 
 }
 func (s Store) Create(ctx context.Context, tx *sqlx.Tx, actor int, input models.Trip) (int, error) {
 	var id int
-	err := tx.QueryRowContext(ctx, qryCreate, actor, input.Name, input.Location, input.DifficultyID, input.FromDate, input.ToDate, input.MaxParticipants, input.TripStatusID, input.TripTypeID, input.TripCostGroupID).Scan(&id)
+	err := tx.QueryRowContext(ctx, qryCreate, actor, input.Name, input.Location, input.DifficultyID, input.FromDate, input.ToDate, input.MaxParticipants, input.TripStatusID, input.TripTypeID, input.TripCostGroupID, descriptionValue(input)).Scan(&id)
 	return id, err
 }
 func changed(result sql.Result, err error) error {
@@ -45,12 +45,19 @@ func changed(result sql.Result, err error) error {
 	}
 	return nil
 }
-func (s Store) Update(ctx context.Context, tx *sqlx.Tx, actor int, any bool, input models.Trip) error {
+func descriptionValue(input models.Trip) interface{} {
+	if !input.Description.Valid {
+		return nil
+	}
+	return input.Description.String
+}
+
+func (s Store) Update(ctx context.Context, tx *sqlx.Tx, actor int, any bool, input *models.Trip) error {
 	scope := "own"
 	if any {
 		scope = "any"
 	}
-	return changed(tx.ExecContext(ctx, qryUpdate, input.ID, actor, scope, input.Name, input.Location, input.DifficultyID, input.FromDate, input.ToDate, input.MaxParticipants, input.TripStatusID, input.TripTypeID, input.TripCostGroupID))
+	return tx.QueryRowContext(ctx, qryUpdate, input.ID, actor, scope, input.Name, input.Location, input.DifficultyID, input.FromDate, input.ToDate, input.MaxParticipants, input.TripStatusID, input.TripTypeID, input.TripCostGroupID, descriptionValue(*input)).Scan(&input.Description)
 }
 func (s Store) Delete(ctx context.Context, tx *sqlx.Tx, actor int, any bool, id int) error {
 	scope := "own"

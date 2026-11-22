@@ -137,6 +137,7 @@ type BookingWrite struct {
 	BookingPrice decimal.Decimal `json:"booking_price"`
 }
 type TripWrite struct {
+	Description     *string   `json:"description,omitempty"`
 	Version         int64     `json:"version"`
 	Name            string    `json:"trip_name"`
 	Location        string    `json:"location"`

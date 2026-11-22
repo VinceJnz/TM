@@ -16,6 +16,7 @@ type BookingWrite struct {
 	BookingPrice decimal.NullDecimal `json:"booking_price"`
 }
 type TripWrite struct {
+	Description     *string     `json:"description,omitempty"`
 	Version         int64       `json:"version"`
 	Name            string      `json:"trip_name"`
 	Location        zero.String `json:"location"`
@@ -29,5 +30,9 @@ type TripWrite struct {
 }
 
 func (input TripWrite) Trip() Trip {
-	return Trip{Version: input.Version, Name: input.Name, Location: input.Location, DifficultyID: input.DifficultyID, FromDate: input.FromDate, ToDate: input.ToDate, MaxParticipants: input.MaxParticipants, TripStatusID: input.TripStatusID, TripTypeID: input.TripTypeID, TripCostGroupID: input.TripCostGroupID}
+	var description zero.String
+	if input.Description != nil {
+		description = zero.NewString(*input.Description, true)
+	}
+	return Trip{Description: description, Version: input.Version, Name: input.Name, Location: input.Location, DifficultyID: input.DifficultyID, FromDate: input.FromDate, ToDate: input.ToDate, MaxParticipants: input.MaxParticipants, TripStatusID: input.TripStatusID, TripTypeID: input.TripTypeID, TripCostGroupID: input.TripCostGroupID}
 }

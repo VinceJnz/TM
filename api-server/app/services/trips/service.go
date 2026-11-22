@@ -58,7 +58,7 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 			return input, ErrValidation
 		}
 		if err == nil {
-			err = s.Store.Update(ctx, tx, actor, any, input)
+			err = s.Store.Update(ctx, tx, actor, any, &input)
 		}
 	case "delete":
 		err = s.Store.Delete(ctx, tx, actor, any, input.ID)

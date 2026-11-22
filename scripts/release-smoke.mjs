@@ -151,10 +151,11 @@ try {
     if(result.result?.value===true){formReady=true;break;}await delay(100);
   }
   assert(formReady,'trip edit form did not load');
-  await send('Runtime.evaluate',{expression:`window.__tmWriteFetch=window.fetch;window.__tmWriteFailures=0;window.fetch=(url,options)=>{if(String(url).includes('/trips/1')&&options?.method==='PUT'){window.__tmWriteFailures++;return Promise.resolve(new Response('synthetic conflict',{status:409}));}return window.__tmWriteFetch(url,options);};(${visibleName}).value='Preserve unsaved trip';(${visibleName}).closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));`});
+  await waitUI("document.querySelector('label[for=tripDescription]')?.textContent === 'Description' && !!document.querySelector('textarea#tripDescription')", 'trip editor has no labelled Description field');
+  await send('Runtime.evaluate',{expression:`window.__tmWriteFetch=window.fetch;window.__tmWriteFailures=0;window.fetch=(url,options)=>{if(String(url).includes('/trips/1')&&options?.method==='PUT'){window.__tmWriteFailures++;window.__tmTripDescription=JSON.parse(options.body).description;return Promise.resolve(new Response('synthetic conflict',{status:409}));}return window.__tmWriteFetch(url,options);};(${visibleName}).value='Preserve unsaved trip';document.querySelector('#tripDescription').value='Keep trip description';(${visibleName}).closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));`});
   let writeFailed=false;
   for(let i=0;i<120;i++){
-    const result=await send('Runtime.evaluate',{expression:`window.__tmWriteFailures===1&&document.body.textContent.includes('Change failed; please retry.')&&(${visibleName})?.value==='Preserve unsaved trip'`,returnByValue:true});
+    const result=await send('Runtime.evaluate',{expression:`window.__tmWriteFailures===1&&document.body.textContent.includes('Change failed; please retry.')&&(${visibleName})?.value==='Preserve unsaved trip'&&window.__tmTripDescription==='Keep trip description'&&document.querySelector('#tripDescription')?.value==='Keep trip description'`,returnByValue:true});
     if(result.result?.value===true){writeFailed=true;break;}await delay(100);
   }
   assert(writeFailed,'failed trip write lost the edit form or reported success');

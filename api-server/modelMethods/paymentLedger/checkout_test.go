@@ -14,7 +14,7 @@ func TestDurableAttemptRetriesAndWebhookRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL WHERE id=11;DELETE FROM at_checkout_quotes;`+string(migration))
+	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL, from_date='2026-01-02', to_date='2026-01-04' WHERE id=11;DELETE FROM at_checkout_quotes;`+string(migration))
 	lifecycle, err := os.ReadFile("../../migrations/0007_checkout_lifecycle.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -34,6 +34,9 @@ func TestDurableAttemptRetriesAndWebhookRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if first.Description != "Booking dates: 2026-01-02 to 2026-01-04" {
+		t.Fatalf("expected booked dates in checkout description, got %q", first.Description)
+	}
 	if _, err = db.Exec("UPDATE at_bookings SET booking_price=11 WHERE id=11"); err == nil {
 		t.Fatal("pending checkout price was mutable")
 	}
@@ -41,7 +44,7 @@ func TestDurableAttemptRetriesAndWebhookRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.ID != retry.ID || first.Email != retry.Email || first.Domain != retry.Domain {
+	if first.ID != retry.ID || first.Email != retry.Email || first.Domain != retry.Domain || first.Description != retry.Description {
 		t.Fatal("retry changed provider inputs")
 	}
 	if _, err = Prepare(ctx, db, 11, 2, "", "domain"); err == nil {
@@ -72,7 +75,7 @@ func TestConcurrentConflictingAttachmentsHaveOneWinner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL WHERE id=11;DELETE FROM at_checkout_quotes;`+string(migration))
+	db := testdb.Open(t, ledgerFixture+`ALTER TABLE at_trips ADD COLUMN description text;UPDATE at_bookings SET stripe_session_id=NULL, from_date='2026-01-02', to_date='2026-01-04' WHERE id=11;DELETE FROM at_checkout_quotes;`+string(migration))
 	lifecycle, err := os.ReadFile("../../migrations/0007_checkout_lifecycle.sql")
 	if err != nil {
 		t.Fatal(err)

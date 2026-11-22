@@ -8,6 +8,7 @@ import (
 	stripe "github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/checkout/session"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,8 +29,12 @@ func (g *Gateway) Create(ctx context.Context, a paymentLedger.Attempt) (checkout
 		return checkout.Session{}, errors.New("Stripe gateway unavailable")
 	}
 	client := session.Client{B: g.backend, Key: g.apiKey}
+	product := &stripe.CheckoutSessionLineItemPriceDataProductDataParams{Name: stripe.String(a.Title)}
+	if strings.TrimSpace(a.Description) != "" {
+		product.Description = stripe.String(a.Description)
+	}
 	params := &stripe.CheckoutSessionParams{
-		LineItems: []*stripe.CheckoutSessionLineItemParams{{PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{Currency: stripe.String("nzd"), UnitAmount: stripe.Int64(a.Amount), ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{Name: stripe.String(a.Title), Description: stripe.String(a.Description)}}, Quantity: stripe.Int64(1)}},
+		LineItems: []*stripe.CheckoutSessionLineItemParams{{PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{Currency: stripe.String("nzd"), UnitAmount: stripe.Int64(a.Amount), ProductData: product}, Quantity: stripe.Int64(1)}},
 		Mode:      stripe.String("payment"), ExpiresAt: stripe.Int64(a.Expires.Unix()), SuccessURL: stripe.String(a.Domain + "/bookings/checkout/success/" + strconv.Itoa(a.BookingID)), CancelURL: stripe.String(a.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(a.BookingID)), InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{Enabled: stripe.Bool(true)}}
 	if a.Email != "" {
 		email := a.Email

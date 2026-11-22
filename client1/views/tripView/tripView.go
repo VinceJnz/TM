@@ -40,6 +40,7 @@ const ApiURL = "/trips"
 type TableData = api.TripDTO
 
 type UI struct {
+	Description     js.Value
 	Name            js.Value
 	FromDate        js.Value
 	ToDate          js.Value
@@ -225,6 +226,15 @@ func (editor *ItemEditor) populateEditForm() {
 	uiObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
+	uiObjs.Description = editor.document.Call("createElement", "fieldset")
+	uiObjs.Description.Set("className", "input-group")
+	uiObjs.Description.Call("appendChild", viewHelpers.Label(editor.document, "Description", "tripDescription"))
+	editor.UiComponents.Description = editor.document.Call("createElement", "textarea")
+	editor.UiComponents.Description.Set("id", "tripDescription")
+	editor.UiComponents.Description.Set("rows", 4)
+	editor.UiComponents.Description.Set("value", editor.CurrentRecord.Description)
+	uiObjs.Description.Call("appendChild", editor.UiComponents.Description)
+
 	uiObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	domEvents.
 		//editor.UiComponents.FromDate.Set("min", time.Now().Format(viewHelpers.Layout))
@@ -258,6 +268,7 @@ func (editor *ItemEditor) populateEditForm() {
 	//editor.UiComponents.TripStatusID.Call("setAttribute", "required", "true")
 
 	form.Call("appendChild", uiObjs.Name)
+	form.Call("appendChild", uiObjs.Description)
 	form.Call("appendChild", uiObjs.FromDate)
 	form.Call("appendChild", uiObjs.ToDate)
 	form.Call("appendChild", uiObjs.Location)
@@ -324,6 +335,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 	var err error
 
 	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
+	editor.CurrentRecord.Description = editor.UiComponents.Description.Get("value").String()
 	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
 	if err != nil {
 		log.Println("Error parsing from_date:", err)

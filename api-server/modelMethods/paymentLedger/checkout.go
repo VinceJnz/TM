@@ -104,7 +104,9 @@ func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, doma
 		}
 		a.Expires = cutoff.Time
 	}
-	if err = tx.QueryRowContext(ctx, `SELECT trip_name,COALESCE(description,'') FROM at_trips WHERE id=(SELECT trip_id FROM at_bookings WHERE id=$1)`, bookingID).Scan(&a.Title, &a.Description); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT t.trip_name,
+		concat_ws(E'\n', 'Booking dates: ' || to_char(b.from_date,'YYYY-MM-DD') || ' to ' || to_char(b.to_date,'YYYY-MM-DD'), NULLIF(btrim(t.description),''))
+		FROM at_bookings b JOIN at_trips t ON t.id=b.trip_id WHERE b.id=$1`, bookingID).Scan(&a.Title, &a.Description); err != nil {
 		return a, err
 	}
 	if err = Reserve(ctx, tx, bookingID, a.Expires.Add(15*time.Minute)); err != nil {

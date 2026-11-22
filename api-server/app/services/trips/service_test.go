@@ -34,10 +34,28 @@ func TestTripServicePreservesOwnershipAndExistingBookingDates(t *testing.T) {
 		t.Fatal("existing booking invalidated", err)
 	}
 	trip.ToDate = time.Date(2026, 1, 11, 0, 0, 0, 0, time.UTC)
-	if _, err = service.Save(ctx, 1, false, "update", trip); err != nil {
-		t.Fatal(err)
+	description := "Meet at the trailhead\nBring lunch"
+	trip.Description = (models.TripWrite{Description: &description}).Trip().Description
+	updated, err := service.Save(ctx, 1, false, "update", trip)
+	if err != nil || updated.Description.String != description {
+		t.Fatalf("description update: %q, %v", updated.Description.String, err)
 	}
 	if _, err = service.Save(ctx, 1, false, "update", trip); !errors.Is(err, models.ErrStaleRecord) {
 		t.Fatal("stale trip overwrite accepted", err)
+	}
+	omitted := updated
+	omitted.Description = models.Trip{}.Description
+	updated, err = service.Save(ctx, 1, false, "update", omitted)
+	if err != nil || updated.Description.String != description {
+		t.Fatalf("omitting description should preserve it: %q, %v", updated.Description.String, err)
+	}
+	empty := ""
+	updated.Description = (models.TripWrite{Description: &empty}).Trip().Description
+	if _, err := service.Save(ctx, 1, false, "update", updated); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := service.Store.Get(ctx, trip.ID)
+	if err != nil || stored.Description.String != "" {
+		t.Fatalf("description was not cleared: %q, %v", stored.Description.String, err)
 	}
 }

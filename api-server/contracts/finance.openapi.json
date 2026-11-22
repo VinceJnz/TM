@@ -1063,6 +1063,12 @@
       },
       "TripWrite": {
         "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "difficulty_level_id": {
             "type": [
               "integer",
