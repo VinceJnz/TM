@@ -31,6 +31,7 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/test-release-policy.ps1
+          ./scripts/test-build-policy.ps1
           ./scripts/test-release-health.ps1
           ./scripts/test-provider-sandbox-policy.ps1
           ./scripts/test-production-config.ps1

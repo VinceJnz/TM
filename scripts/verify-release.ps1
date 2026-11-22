@@ -17,6 +17,7 @@ function Invoke-Docker {
 
 Write-Host "Checking release identity and health policy..."
 & (Join-Path $PSScriptRoot "test-release-policy.ps1")
+& (Join-Path $PSScriptRoot "test-build-policy.ps1")
 & (Join-Path $PSScriptRoot "test-release-health.ps1")
 & (Join-Path $PSScriptRoot "test-provider-sandbox-policy.ps1")
 & (Join-Path $PSScriptRoot "test-production-config.ps1")
