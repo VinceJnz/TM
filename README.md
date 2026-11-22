@@ -13,6 +13,9 @@ An app to allow people to create trips for club members (for a club such as a hi
 * WASM client
 * Docker config for the build and running of the app
 
+Start with [ARCHITECTURE.md](ARCHITECTURE.md) for the current architecture, decisions,
+completed improvements, remaining weaknesses and future-session guidance.
+
 Deployment prerequisites, security migrations, runtime credentials and compatibility
 changes are documented in [SECURITY-ROLLOUT.md](SECURITY-ROLLOUT.md).
 Current migration, server lifecycle, frontend and full release verification

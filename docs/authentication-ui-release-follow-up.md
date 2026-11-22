@@ -1,5 +1,7 @@
 # Architecture follow-up: authentication, editing and releases
 
+> Implementation checkpoint, 22 November 2026. The maintained architecture and decision guide is [ARCHITECTURE.md](../ARCHITECTURE.md). Deployment and verification observations below are dated records, not assurance of the current environment.
+
 This follow-up addresses the remaining review findings incrementally.
 
 - Account inline forms capture their own record and fields, and use account-specific

@@ -2,6 +2,10 @@
 
 Status: proposed for owner review.
 
+## Architecture context for future sessions
+
+Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records the current boundaries, accepted decisions, completed migrations, remaining weaknesses and verification/rollout guidance. Read only the relevant linked runbooks after that; treat deployment observations as dated checkpoints and recheck the current environment.
+
 ## Scope and working approach
 
 - These instructions apply throughout this repository. Follow more specific instructions in nested `AGENTS.md` files when present.
@@ -16,7 +20,7 @@ Status: proposed for owner review.
 - `api-server/app/appCore/`: startup, environment settings, database connection, and shared dependencies.
 - `api-server/localHandlers/`: Gorilla mux routes, HTTP handlers, and request helpers.
 - `api-server/modelMethods/`: SQL helpers and resource stores.
-- `api-server/app/services/`: booking/trip workflows, authenticated finance commands, checkout/refund orchestration and operational visibility. Keep SQL in resource stores or transactional ledger commands.
+- `api-server/app/services/`: authentication, booking/trip workflows, authenticated finance commands, checkout/refund orchestration and operational visibility. Keep SQL in resource stores or transactional ledger commands.
 - `api-server/models/`: database/domain structs; these are not automatically safe public response types.
 - `api-server/app/gateways/`: PostgreSQL and external integrations, including Stripe, Gmail, and Google OAuth.
 - `api-server/static/`: browser bootstrap HTML, CSS, and other static assets served by the API.
@@ -24,8 +28,9 @@ Status: proposed for owner review.
 - `client1/app/`: Core app utilitites
 - `client1/service/` and `client1/app/api/`: booking cache and API adapter; API DTOs sit below the service to avoid import cycles.
 - `client1/views/`: DOM-based views; `client1/app/`: application state, events, and HTTP processing.
-- `db-server/sql/postgreSQL/`: PostgreSQL schema and migration scripts; historical dumps and alternative schemas also exist.
-- `Dockerfile.client1`: builds a frontend artifact image. `Dockerfile.apibuild`: combines that artifact with the API.
+- `api-server/migrations/`: authoritative embedded, ordered PostgreSQL migrations with checksum tracking.
+- `db-server/sql/postgreSQL/`: historical schema/dumps and alternative schemas; do not use these as the current migration mechanism.
+- `Dockerfile.client1`: builds a frontend artifact image. `Dockerfile.apibuild`: builds the client from source by default, or consumes an explicitly selected artifact, and packages it with the API.
 - `scripts/verify-release.ps1` and `.github/workflows/release-verification.yml`: current release checks.
 
 ## API and business logic
@@ -73,7 +78,7 @@ Status: proposed for owner review.
 ## Docker and configuration
 
 - Read the module files and Dockerfiles for current toolchain versions; do not upgrade dependencies or base images incidentally.
-- `CLIENT_BUILDER` selects `go-builder` or `tinygo-builder`. `CLIENT_IMAGE` selects the prebuilt artifact consumed by the API image. Build and select matching artifacts explicitly.
+- `CLIENT_BUILDER` selects `go-builder` or `tinygo-builder`. `CLIENT_IMAGE` can override the default source-built client with a prebuilt artifact consumed by the API image. Build and select matching artifacts explicitly when using that override.
 - Runtime database settings are `DATA_SOURCE` or the supported `DB_*` fallback. Compose uses its DB_* settings unless TM_API_DATA_SOURCE is explicitly supplied; forwarding headers require TRUSTED_PROXY_CIDRS.
 - Do not add secrets, private keys, credentials, tokens, or real user data to source control, image layers, logs, or test fixtures. Prefer runtime secret injection for deployment changes.
 - Keep database/Adminer/debugger exposure limited to the intended environment. Do not enable development authentication behavior in production.

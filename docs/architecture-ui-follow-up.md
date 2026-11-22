@@ -1,5 +1,7 @@
 # Architecture and UI follow-up, 22 November 2026
 
+> Historical implementation checkpoint. Read [ARCHITECTURE.md](../ARCHITECTURE.md) for the current architecture and remaining work; subsequent authentication and build changes supersede parts of this note.
+
 Ordinary resource handlers now delegate SQL to stores. This follow-up migrated
 nine catalog resources, group bookings, participants and vouchers. Catalogs share
 a typed store and validation service; parent-dependent workflows have dedicated

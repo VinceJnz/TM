@@ -1,5 +1,7 @@
 # Runtime database permissions
 
+> This runbook records successive migration changes. The source checkpoint reviewed on 22 November 2026 includes migrations through 0029; apply all pending migrations in order with the current migration tool and refresh runtime grants. Check the deployed migration history rather than inferring it from these historical notes. See [ARCHITECTURE.md](../ARCHITECTURE.md) and [release operations](release-operations.md).
+
 Apply migration 0015 after 0014 using the migration owner, then re-run
 `tm-migrate -grant-role <runtime-role>` before starting the new API. No financial
 rows are rewritten. Provider-backed payment/refund updates and deletes are now
@@ -35,7 +37,7 @@ inserts requests with pinned owner privileges. Notification insert/lifecycle and
 restricted redaction permissions remain explicit. No live migration is performed
 by a repository build or verification command.
 
-The next application build requires migrations 0025, 0026 and 0027 in order.
+The account/member-code changes introduced in migrations 0025, 0026 and 0027 require those migrations in order. Later builds also require subsequent migrations.
 0025 adds account versions and an update trigger. Account/profile writes must send
 back the version read from the server; a stale write receives HTTP 409 and must be
 reloaded before retrying. Creating an account does not require a supplied version.
