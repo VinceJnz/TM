@@ -105,3 +105,22 @@ func assertError(t *testing.T, recorder *httptest.ResponseRecorder, status int, 
 		t.Fatalf("error code = %q, want %q", response.Error.Code, code)
 	}
 }
+
+func TestDifficultyWriteAcceptsLegacyMetadataButDoesNotPersistIt(t *testing.T) {
+	handler := &Handler{}
+	request := httptest.NewRequest(http.MethodPut, "/tripDifficulty/7", strings.NewReader(`{"id":99,"created":"2026-01-01T00:00:00Z","modified":"2026-01-01T00:00:00Z","level":" Easy ","level_short":" E ","description":" Suitable for beginners "}`))
+	response := httptest.NewRecorder()
+	record, ok := handler.decodeAndValidate(response, request)
+	want := models.TripDifficulty{Level: "Easy", LevelShort: "E", Description: "Suitable for beginners"}
+	if !ok || record != want {
+		t.Fatalf("decoded record = %+v, response = %s", record, response.Body)
+	}
+}
+
+func TestDifficultyWriteRejectsOversizedBody(t *testing.T) {
+	handler := &Handler{store: fakeStore{}}
+	response := httptest.NewRecorder()
+	body := `{"level":"Easy","level_short":"E","description":"Suitable for beginners"}` + strings.Repeat(" ", 64<<10)
+	handler.Create(response, httptest.NewRequest(http.MethodPost, "/tripDifficulty", strings.NewReader(body)))
+	assertError(t, response, http.StatusBadRequest, "invalid_request")
+}

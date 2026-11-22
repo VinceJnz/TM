@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -25,6 +26,17 @@ type store interface {
 	Create(context.Context, models.TripDifficulty) (models.TripDifficulty, error)
 	Update(context.Context, int, models.TripDifficulty) (models.TripDifficulty, error)
 	Delete(context.Context, int) error
+}
+
+// Older clients include record metadata in write requests. Only the three
+// editable fields are passed to persistence.
+type tripDifficultyWrite struct {
+	ID          int       `json:"id"`
+	Level       string    `json:"level"`
+	LevelShort  string    `json:"level_short"`
+	Description string    `json:"description"`
+	Created     time.Time `json:"created"`
+	Modified    time.Time `json:"modified"`
 }
 
 type Handler struct {
@@ -110,8 +122,8 @@ func (h *Handler) idFromRequest(w http.ResponseWriter, r *http.Request) (int, bo
 }
 
 func (h *Handler) decodeAndValidate(w http.ResponseWriter, r *http.Request) (models.TripDifficulty, bool) {
-	var input models.TripDifficulty
-	decoder := json.NewDecoder(r.Body)
+	var input tripDifficultyWrite
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&input); err != nil {
 		helpers.WriteError(w, http.StatusBadRequest, "invalid_request", "Invalid request payload")
@@ -121,26 +133,25 @@ func (h *Handler) decodeAndValidate(w http.ResponseWriter, r *http.Request) (mod
 		helpers.WriteError(w, http.StatusBadRequest, "invalid_request", "Invalid request payload")
 		return models.TripDifficulty{}, false
 	}
-	if err := validate(input); err != nil {
+	record := models.TripDifficulty{
+		Level:       strings.TrimSpace(input.Level),
+		LevelShort:  strings.TrimSpace(input.LevelShort),
+		Description: strings.TrimSpace(input.Description),
+	}
+	if err := validate(record); err != nil {
 		helpers.WriteError(w, http.StatusUnprocessableEntity, "validation_failed", err.Error())
 		return models.TripDifficulty{}, false
 	}
-	input.Level = strings.TrimSpace(input.Level)
-	input.LevelShort = strings.TrimSpace(input.LevelShort)
-	input.Description = strings.TrimSpace(input.Description)
-	return input, true
+	return record, true
 }
 
 func validate(input models.TripDifficulty) error {
-	level := strings.TrimSpace(input.Level)
-	short := strings.TrimSpace(input.LevelShort)
-	description := strings.TrimSpace(input.Description)
 	switch {
-	case level == "" || len(level) > 50:
+	case input.Level == "" || len(input.Level) > 50:
 		return fmt.Errorf("level must be between 1 and 50 characters")
-	case short == "" || len(short) > 3:
+	case input.LevelShort == "" || len(input.LevelShort) > 3:
 		return fmt.Errorf("level_short must be between 1 and 3 characters")
-	case description == "" || len(description) > 255:
+	case input.Description == "" || len(input.Description) > 255:
 		return fmt.Errorf("description must be between 1 and 255 characters")
 	default:
 		return nil
