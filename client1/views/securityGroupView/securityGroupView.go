@@ -382,6 +382,7 @@ func (editor *ItemEditor) populateItemList() {
 
 	// Add New Item button
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
@@ -424,6 +425,7 @@ func (editor *ItemEditor) populateItemList() {
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
+		viewHelpers.Action(editButton, "PUT")
 		viewHelpers.SetStyles(editButton, map[string]string{
 			"padding":   "4px 8px",
 			"font-size": "0.82em",
@@ -443,6 +445,7 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
+		viewHelpers.Action(deleteButton, "DELETE")
 		viewHelpers.SetStyles(deleteButton, map[string]string{
 			"padding":   "4px 8px",
 			"font-size": "0.82em",

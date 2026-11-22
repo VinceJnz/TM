@@ -537,6 +537,8 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "")
 
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add Refund Record", "addNewItemButton")
+
+	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	if editor.LastFetchError != "" {
@@ -592,6 +594,7 @@ func (editor *ItemEditor) populateItemList() {
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
+		viewHelpers.Action(editButton, "PUT")
 		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.openRecord(record, false, inlineFormHost)
@@ -601,6 +604,7 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
+		viewHelpers.Action(deleteButton, "DELETE")
 		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.deleteItem(record.ID)

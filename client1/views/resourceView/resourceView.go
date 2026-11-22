@@ -356,6 +356,7 @@ func (editor *ItemEditor) populateItemList() {
 
 	// Add New Item button
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {

@@ -433,6 +433,7 @@ func (editor *ItemEditor) populateItemList() {
 	// Add New Item button (only if ParentID is set)
 	if editor.ParentID > 0 {
 		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Resource", "addNewItemButton")
+		viewHelpers.Action(addNewItemButton, "POST")
 		editor.ListDiv.Call("appendChild", addNewItemButton)
 	}
 
@@ -507,6 +508,7 @@ func (editor *ItemEditor) populateItemList() {
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
 			editButton.Set("className", "btn btn-secondary")
+			viewHelpers.Action(editButton, "PUT")
 			viewHelpers.SetStyles(editButton, map[string]string{
 				"padding":   "2px 6px",
 				"font-size": "0.8em",
@@ -524,6 +526,7 @@ func (editor *ItemEditor) populateItemList() {
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
 			deleteButton.Set("className", "btn btn-danger")
+			viewHelpers.Action(deleteButton, "DELETE")
 			viewHelpers.SetStyles(deleteButton, map[string]string{
 				"padding":   "2px 6px",
 				"font-size": "0.8em",

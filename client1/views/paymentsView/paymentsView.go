@@ -538,6 +538,8 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "")
 
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add Payment Record", "addNewItemButton")
+
+	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	if editor.LastFetchError != "" {
@@ -593,6 +595,7 @@ func (editor *ItemEditor) populateItemList() {
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
+		viewHelpers.Action(editButton, "PUT")
 		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.openRecord(record, false, inlineFormHost)
@@ -602,6 +605,7 @@ func (editor *ItemEditor) populateItemList() {
 		deleteButton := editor.document.Call("createElement", "button")
 		deleteButton.Set("innerHTML", "Delete")
 		deleteButton.Set("className", "btn btn-danger")
+		viewHelpers.Action(deleteButton, "DELETE")
 		domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			editor.deleteItem(record.ID)
@@ -611,6 +615,7 @@ func (editor *ItemEditor) populateItemList() {
 		openRefundsBtn := editor.document.Call("createElement", "button")
 		openRefundsBtn.Set("innerHTML", "Open Refunds")
 		openRefundsBtn.Set("className", "btn btn-secondary")
+		viewHelpers.ActionFor(openRefundsBtn, "refunds", "GET")
 		domEvents.Listen(openRefundsBtn, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			js.Global().Get("location").Set("hash", fmt.Sprintf("#/refunds?paymentId=%d&bookingId=%d", record.ID, record.BookingID))
@@ -620,6 +625,7 @@ func (editor *ItemEditor) populateItemList() {
 		addRefundBtn := editor.document.Call("createElement", "button")
 		addRefundBtn.Set("innerHTML", "Add Refund")
 		addRefundBtn.Set("className", "btn btn-secondary")
+		viewHelpers.ActionFor(addRefundBtn, "refunds", "POST")
 		domEvents.Listen(addRefundBtn, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
 			js.Global().Get("location").Set("hash", fmt.Sprintf("#/refunds?paymentId=%d&bookingId=%d&action=new", record.ID, record.BookingID))

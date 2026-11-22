@@ -163,6 +163,7 @@ func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn fu
 	editButton := document.Call("createElement", "button")
 	editButton.Set("innerHTML", "Edit")
 	editButton.Set("className", "btn btn-secondary")
+	Action(editButton, "PUT")
 	domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
 		editFn()
 		return nil
@@ -172,6 +173,7 @@ func ItemList(document js.Value, debugTag, itemTitle string, editFn, deleteFn fu
 	deleteButton := document.Call("createElement", "button")
 	deleteButton.Set("innerHTML", "Delete")
 	deleteButton.Set("className", "btn btn-danger")
+	Action(deleteButton, "DELETE")
 	domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) interface{} {
 		deleteFn()
 		return nil

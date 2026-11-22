@@ -567,6 +567,7 @@ func (editor *ItemEditor) populateItemList() {
 
 	// Add New Item button
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
@@ -592,6 +593,7 @@ func (editor *ItemEditor) populateItemList() {
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
 			editButton.Set("className", "btn btn-secondary")
+			viewHelpers.Action(editButton, "PUT")
 			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
@@ -604,6 +606,7 @@ func (editor *ItemEditor) populateItemList() {
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")
 			deleteButton.Set("className", "btn btn-danger")
+			viewHelpers.Action(deleteButton, "DELETE")
 			domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) any {
 				editor.deleteItem(record.ID)
 				return nil

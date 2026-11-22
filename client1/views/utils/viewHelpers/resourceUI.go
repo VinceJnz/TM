@@ -56,21 +56,20 @@ func ResourceActions(root js.Value, app *appCore.AppCore, path, formMethod strin
 		if !owner.Equal(root) {
 			continue
 		}
-		text := strings.TrimSpace(button.Get("textContent").String())
 		method := ""
-		switch {
-		case text == "Edit":
-			method = "PUT"
-		case text == "Delete":
-			method = "DELETE"
-		case strings.HasPrefix(text, "Add New") || text == "Add Security Group":
-			method = "POST"
-		case button.Get("type").String() == "submit":
+		if button.Call("hasAttribute", "data-tm-action").Bool() {
+			method = button.Call("getAttribute", "data-tm-action").String()
+		}
+		if method == "" && button.Get("type").String() == "submit" {
 			method = formMethod
 		}
 		if method != "" {
 			button.Call("setAttribute", "data-tm-action", method)
-			button.Set("hidden", !allowed(method))
+			permitted := allowed(method)
+			if button.Call("hasAttribute", "data-tm-action-resource").Bool() {
+				permitted = app.HasAccess(button.Call("getAttribute", "data-tm-action-resource").String(), []string{method}, []string{"own", "any"})
+			}
+			button.Set("hidden", !permitted)
 		}
 	}
 	if formMethod != "" && !allowed(formMethod) {
@@ -80,4 +79,11 @@ func ResourceActions(root js.Value, app *appCore.AppCore, path, formMethod strin
 		}
 		Feedback(root, "Read-only access")
 	}
+}
+
+func Action(button js.Value, method string) { button.Call("setAttribute", "data-tm-action", method) }
+
+func ActionFor(button js.Value, resource, method string) {
+	Action(button, method)
+	button.Call("setAttribute", "data-tm-action-resource", resource)
 }
