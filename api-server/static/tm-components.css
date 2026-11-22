@@ -17,3 +17,5 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
  .main input,.main select,.main textarea { max-width:100%; box-sizing:border-box; }
 }
 [hidden] { display: none !important; }
+
+.tm-menu-toggle { background: transparent; border: 0; color: inherit; cursor: pointer; }

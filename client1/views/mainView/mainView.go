@@ -215,7 +215,12 @@ func (v *View) Setup() {
 	newBody.Call("appendChild", v.elements.mainContent)
 
 	// Add the menu icon to the navbar
-	menuIcon := v.document.Call("createElement", "div")
+	menuIcon := v.document.Call("createElement", "button")
+	menuIcon.Set("type", "button")
+	menuIcon.Set("className", "tm-menu-toggle")
+	menuIcon.Call("setAttribute", "aria-label", "Open menu")
+	menuIcon.Call("setAttribute", "aria-controls", "sideMenu")
+	menuIcon.Call("setAttribute", "aria-expanded", "false")
 	menuIcon.Set("id", "menuIcon")
 	menuIcon.Set("title", "Open menu")
 	menuIcon.Set("innerHTML", "&#9776;")
@@ -639,11 +644,13 @@ func (v *View) toggleSideMenu() {
 }
 
 func (v *View) closeSideMenu() {
+	v.document.Call("getElementById", "menuIcon").Call("setAttribute", "aria-expanded", "false")
 	v.elements.sidemenu.Get("style").Set("width", "0")
 	v.elements.mainContent.Get("style").Set("marginLeft", "0")
 }
 
 func (v *View) openSideMenu() {
+	v.document.Call("getElementById", "menuIcon").Call("setAttribute", "aria-expanded", "true")
 	v.elements.sidemenu.Get("style").Set("width", "250px")
 	v.elements.mainContent.Get("style").Set("marginLeft", "250px")
 }
