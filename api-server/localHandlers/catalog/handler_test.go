@@ -58,3 +58,24 @@ func TestCatalogStoresAndScopeAndTripStatusWriteShape(t *testing.T) {
 		}
 	}
 }
+
+func TestTripTypeCreateTargetsTripTypesNotSeasons(t *testing.T) {
+	db := testdb.Open(t, "")
+	ctx := context.Background()
+	if err := migrations.Apply(ctx, db, false); err != nil {
+		t.Fatal(err)
+	}
+	var before int
+	if err := db.Get(&before, `SELECT count(*) FROM et_seasons`); err != nil {
+		t.Fatal(err)
+	}
+	s := service.Service[models.TripType]{Store: store.NewTripType(db)}
+	created, err := s.Save(ctx, 0, models.TripType{Type: "Synthetic type"})
+	if err != nil || created.Type != "Synthetic type" {
+		t.Fatal(created, err)
+	}
+	var after int
+	if err = db.Get(&after, `SELECT count(*) FROM et_seasons`); err != nil || after != before {
+		t.Fatal("trip type creation changed seasons", err)
+	}
+}
