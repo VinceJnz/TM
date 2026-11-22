@@ -2,8 +2,9 @@ package handlerUserAgeGroups
 
 import (
 	"api-server/v2/app/appCore"
+	catalogHTTP "api-server/v2/localHandlers/catalog"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	catalogStore "api-server/v2/modelMethods/catalog"
 	"api-server/v2/models"
 	"net/http"
 
@@ -12,42 +13,14 @@ import (
 
 const debugTag = "handlerUserAgeGroups."
 
-const (
-	qryGetAll = `SELECT * FROM et_user_age_groups`
-	qryGet    = `SELECT * FROM et_user_age_groups WHERE id = $1`
-	qryCreate = `INSERT INTO et_user_age_groups (age_group)
-					VALUES ($1)
-					RETURNING id`
-	qryUpdate = `UPDATE et_user_age_groups 
-					SET age_group = $1
-					WHERE id = $3`
-	qryDelete = `DELETE FROM et_user_age_groups WHERE id = $1`
-)
-
 type Handler struct {
 	appConf *appCore.Config
-	crud    *dbStandardTemplate.ResourceCRUD[models.UserAgeGroups]
+	crud    *catalogHTTP.Handler[models.UserAgeGroups]
 }
 
 func New(appConf *appCore.Config) *Handler {
 	h := &Handler{appConf: appConf}
-	h.crud = dbStandardTemplate.NewResourceCRUD(dbStandardTemplate.ResourceCRUDConfig[models.UserAgeGroups]{
-		DebugTag: debugTag,
-		Db:       h.appConf.Db,
-		Queries: dbStandardTemplate.CRUDQueries{
-			GetAll: qryGetAll,
-			Get:    qryGet,
-			Create: qryCreate,
-			Update: qryUpdate,
-			Delete: qryDelete,
-		},
-		NewListDest: func() any { return &[]models.UserAgeGroups{} },
-		NewRecord:   func() *models.UserAgeGroups { return &models.UserAgeGroups{} },
-		IDDest:      func(record *models.UserAgeGroups) any { return &record.ID },
-		SetID:       func(record *models.UserAgeGroups, id int) { record.ID = id },
-		CreateArgs:  func(record *models.UserAgeGroups) []any { return []any{record.AgeGroup} },
-		UpdateArgs:  func(id int, record *models.UserAgeGroups) []any { return []any{record.AgeGroup, id} },
-	})
+	h.crud = catalogHTTP.New(appConf, catalogStore.NewUserAgeGroups(appConf.Db), true)
 	return h
 }
 

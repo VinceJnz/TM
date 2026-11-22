@@ -2,8 +2,9 @@ package handlerSeasons
 
 import (
 	"api-server/v2/app/appCore"
+	catalogHTTP "api-server/v2/localHandlers/catalog"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	catalogStore "api-server/v2/modelMethods/catalog"
 	"api-server/v2/models"
 	"net/http"
 
@@ -12,42 +13,14 @@ import (
 
 const debugTag = "handlerSeasons."
 
-const (
-	qryGetAll = `SELECT * FROM et_seasons`
-	qryGet    = `SELECT * FROM et_seasons WHERE id = $1`
-	qryCreate = `INSERT INTO et_seasons (season)
-					VALUES ($1)
-					RETURNING id`
-	qryUpdate = `UPDATE et_seasons 
-					SET season = $1 
-					WHERE id = $2`
-	qryDelete = `DELETE FROM et_seasons WHERE id = $1`
-)
-
 type Handler struct {
 	appConf *appCore.Config
-	crud    *dbStandardTemplate.ResourceCRUD[models.Season]
+	crud    *catalogHTTP.Handler[models.Season]
 }
 
 func New(appConf *appCore.Config) *Handler {
 	h := &Handler{appConf: appConf}
-	h.crud = dbStandardTemplate.NewResourceCRUD(dbStandardTemplate.ResourceCRUDConfig[models.Season]{
-		DebugTag: debugTag,
-		Db:       h.appConf.Db,
-		Queries: dbStandardTemplate.CRUDQueries{
-			GetAll: qryGetAll,
-			Get:    qryGet,
-			Create: qryCreate,
-			Update: qryUpdate,
-			Delete: qryDelete,
-		},
-		NewListDest: func() any { return &[]models.Season{} },
-		NewRecord:   func() *models.Season { return &models.Season{} },
-		IDDest:      func(record *models.Season) any { return &record.ID },
-		SetID:       func(record *models.Season, id int) { record.ID = id },
-		CreateArgs:  func(record *models.Season) []any { return []any{record.Season} },
-		UpdateArgs:  func(id int, record *models.Season) []any { return []any{record.Season, id} },
-	})
+	h.crud = catalogHTTP.New(appConf, catalogStore.NewSeasons(appConf.Db), false)
 	return h
 }
 

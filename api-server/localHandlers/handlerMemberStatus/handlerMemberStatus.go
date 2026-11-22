@@ -4,8 +4,9 @@ import (
 	"net/http"
 
 	"api-server/v2/app/appCore"
+	catalogHTTP "api-server/v2/localHandlers/catalog"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	catalogStore "api-server/v2/modelMethods/catalog"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
@@ -13,42 +14,14 @@ import (
 
 const debugTag = "handlerMemberStatus."
 
-const (
-	qryGetAll = `SELECT * FROM et_member_status`
-	qryGet    = `SELECT * FROM et_member_status WHERE id = $1`
-	qryCreate = `INSERT INTO et_member_status (status)
-					VALUES ($1)
-					RETURNING id`
-	qryUpdate = `UPDATE et_member_status 
-					SET status = $1 
-					WHERE id = $2`
-	qryDelete = `DELETE FROM et_member_status WHERE id = $1`
-)
-
 type Handler struct {
 	appConf *appCore.Config
-	crud    *dbStandardTemplate.ResourceCRUD[models.MemberStatus]
+	crud    *catalogHTTP.Handler[models.MemberStatus]
 }
 
 func New(appConf *appCore.Config) *Handler {
 	h := &Handler{appConf: appConf}
-	h.crud = dbStandardTemplate.NewResourceCRUD(dbStandardTemplate.ResourceCRUDConfig[models.MemberStatus]{
-		DebugTag: debugTag,
-		Db:       h.appConf.Db,
-		Queries: dbStandardTemplate.CRUDQueries{
-			GetAll: qryGetAll,
-			Get:    qryGet,
-			Create: qryCreate,
-			Update: qryUpdate,
-			Delete: qryDelete,
-		},
-		NewListDest: func() any { return &[]models.MemberStatus{} },
-		NewRecord:   func() *models.MemberStatus { return &models.MemberStatus{} },
-		IDDest:      func(record *models.MemberStatus) any { return &record.ID },
-		SetID:       func(record *models.MemberStatus, id int) { record.ID = id },
-		CreateArgs:  func(record *models.MemberStatus) []any { return []any{record.Status} },
-		UpdateArgs:  func(id int, record *models.MemberStatus) []any { return []any{record.Status, id} },
-	})
+	h.crud = catalogHTTP.New(appConf, catalogStore.NewMemberStatus(appConf.Db), false)
 	return h
 }
 
