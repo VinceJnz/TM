@@ -11,6 +11,12 @@ revision, stops if either build fails, and starts no containers. Normal runtime
 Compose configuration is required. Starting/recreating the application remains
 a separate operator action. Production publishing and digest approval still use
 the release process below.
+Default `docker compose --profile prod up --build -d` now compiles the frontend
+inside the API build. It does not require an existing local WASM image. Leave
+CLIENT_IMAGE unset to use this default; that override still intentionally selects
+a prebuilt artifact. TM_CLIENT_BUILDER selects go-builder or tinygo-builder for
+the self-contained build. The paired compiler stages are checked for drift.
+Apply pending migrations before starting the matching application build.
 
 The supported deployment entry point validates immutable API references and
 checks the image's source revision before invoking Compose:

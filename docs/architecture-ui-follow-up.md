@@ -53,3 +53,6 @@ Verification completed on 22 November 2026:
   data, preserved role credentials, TCP logins, ledger evidence and runtime grants.
 - `build-application.ps1 -RequireClean` rejected the dirty development tree before
   building, as intended; the separate build-policy checks passed.
+
+Further authentication/service, editing and build changes are recorded in
+[the subsequent follow-up](authentication-ui-release-follow-up.md).

@@ -69,3 +69,11 @@ booking ownership and financial permissions unchanged. Reapplying the SQL is saf
 Apply with the migration owner before restarting the matching API. Refresh the
 browser afterwards so its capability list is fetched again. This migration does
 not rewrite bookings or participant records.
+
+Migration 0029 adds optimistic versions to trips, trip prices and trip price groups.
+Apply it after 0028 with the migration owner, then rerun the runtime grant command
+and start the matching API/WASM build. Updates must include the version returned
+by the last read; stale writes receive `409 stale_record`. Creates need no supplied
+version. Database update triggers advance versions, including writes outside the
+API. Existing financial amounts, account credentials and booking history are not
+rewritten. The application build does not apply this migration to a running DB.

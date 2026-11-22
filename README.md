@@ -171,34 +171,28 @@ wsl --status
 wsl --update
 ```
 
-This is often the most reliable fix for repeated build failures with complex Dockerfiles 
-* Disable Docker BuildKit and switche to the legacy Docker builder
+## Build and run locally
+
+Use Docker BuildKit; the Dockerfiles use BuildKit cache mounts. Default Compose
+builds compile the frontend from source and package its matching WASM runtime:
 
 ```powershell
-# Set the environment variable
-set DOCKER_BUILDKIT=0
-
-# Then run your build
-docker compose --profile prod up --build
-
-# Optional: Reset back to BuildKit when done
-set DOCKER_BUILDKIT=1
+docker compose --profile prod up --build -d
 ```
 
+Runtime configuration and outstanding database migrations must be prepared first.
+For a build that records the Git revision, or to select Go/TinyGo explicitly:
 
-Create a Build Script `build.ps1`
 ```powershell
-# Clear cache every 3rd build or so
-docker builder prune -af
-docker system prune -f
-
-# Use legacy builder for stability
-$env:DOCKER_BUILDKIT="0"
-docker compose --profile prod up --build
-
-# Reset BuildKit setting
-$env:DOCKER_BUILDKIT=$null
+./scripts/build-application.ps1 -ClientBuilder go-builder
+docker compose --profile prod up -d --no-deps --force-recreate apiserver
 ```
+
+The build script starts no containers. A `CLIENT_IMAGE` override deliberately
+selects a prebuilt frontend; omit that override for self-contained Compose builds.
+Routine builds do not require pruning images or disabling BuildKit. See
+[release operations](docs/release-operations.md) for immutable production releases
+and [database migration requirements](docs/runtime-database-permissions.md).
 
 ## Connect to a docker image
 `docker exec -it <container_name_or_id> /bin/bash`
