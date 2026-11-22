@@ -2,6 +2,7 @@ package viewHelpers
 
 import (
 	"client1/v2/app/domEvents"
+	"strconv"
 	"syscall/js"
 	"time"
 )
@@ -38,10 +39,12 @@ func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
 	toggleBtn.Set("id", "statusOutputToggle")
 	toggleBtn.Set("type", "button")
 	toggleBtn.Set("className", "btn")
-	toggleBtn.Set("innerHTML", "Show")
+	toggleBtn.Set("textContent", "Show")
 
 	messagesDiv := Document.Call("createElement", "div")
 	messagesDiv.Set("id", "statusOutputMessages")
+	toggleBtn.Call("setAttribute", "aria-controls", messagesDiv.Get("id").String())
+	toggleBtn.Call("setAttribute", "aria-expanded", "false")
 	messagesDiv.Get("style").Call("setProperty", "display", "none")
 
 	headerDiv.Call("appendChild", headerLabel)
@@ -60,12 +63,13 @@ func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
 
 	domEvents.Listen(itemState.toggleBtn, "click", func(this js.Value, args []js.Value) interface{} {
 		itemState.messagesOpen = !itemState.messagesOpen
+		itemState.toggleBtn.Call("setAttribute", "aria-expanded", strconv.FormatBool(itemState.messagesOpen))
 		if itemState.messagesOpen {
 			itemState.messagesDiv.Get("style").Call("removeProperty", "display")
-			itemState.toggleBtn.Set("innerHTML", "Hide")
+			itemState.toggleBtn.Set("textContent", "Hide")
 		} else {
 			itemState.messagesDiv.Get("style").Call("setProperty", "display", "none")
-			itemState.toggleBtn.Set("innerHTML", "Show")
+			itemState.toggleBtn.Set("textContent", "Show")
 		}
 		return nil
 	})
