@@ -109,7 +109,7 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	r.HandleFunc("/client-config.js", httpserver.ClientConfig(app.Settings.APIprefix)).Methods("GET")
 	// *****************************************************
 	// Setup your API subrouter with CORS middleware. These routes are unprotected, i.e. do not require authentication to use. This is where you would register any routes that should be accessible without authentication, such as login or registration endpoints.
-	public := r.PathPrefix(app.Settings.APIprefix).Subrouter()
+	public := r.PathPrefix(app.Settings.APIprefix).Name("public-api").Subrouter()
 	public.Use(helpers.AuthRateLimit(app.Db))
 	public.Use(func(next http.Handler) http.Handler {
 		return helpers.LogRequest(next, app.SessionIDKey, "public") // First logging
@@ -127,7 +127,7 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	// UserAgeGroups public read-only routes (for registration form dropdown)
 	handlerUserAgeGroups.New(app).RegisterRoutesPublic(public, "/userAgeGroups")
 
-	sessionRoutes := r.PathPrefix(app.Settings.APIprefix).Subrouter()
+	sessionRoutes := r.PathPrefix(app.Settings.APIprefix).Name("session-api").Subrouter()
 	sessionRoutes.Use(auth.RequireSessionAuth)
 	auth.RegisterRoutesSession(sessionRoutes, "/auth")
 
