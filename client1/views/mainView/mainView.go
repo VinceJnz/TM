@@ -268,7 +268,10 @@ func (v *View) Setup() {
 	v.AddViewItem("Login", "", true, loginTopView, false, v.elements.topmenu, menuSectionRoot)
 
 	// Add all the menu options to the sidemenu
-	v.AddViewItem("&times;", "", false, nil, true, v.elements.sidemenu, menuSectionRoot)
+	closeMenu := viewHelpers.HRef(v.closeSideMenu, v.document, "\u00d7", "sideMenuClose")
+	closeMenu.Set("className", "menu-item")
+	closeMenu.Call("setAttribute", "aria-label", "Close menu")
+	v.elements.sidemenu.Call("appendChild", closeMenu)
 	v.AddViewItem("Login / Register", "", true, basicAuthLoginView.New(v.document, v.events, v.appCore), true, v.elements.sidemenu, menuSectionRoot)
 	homeContent := contentView.New(v.document, v.appCore, "home", "Home")
 	aboutContent := contentView.New(v.document, v.appCore, "about", "About")
