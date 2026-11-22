@@ -714,35 +714,42 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 		"border":        "1px solid #e0e8f0",
 	})
 
-	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "inlineEditForm_"+strconv.Itoa(record.ID))
+	// Each form owns its record and field references, even when another row is edited.
+	var fields UI
+	form := viewHelpers.Form(func(this js.Value, args []js.Value) any {
+		editor.CurrentRecord = record
+		editor.UiComponents = fields
+		editor.ItemState = ItemStateEditing
+		return editor.SubmitItemEdit(this, args)
+	}, editor.document, "inlineEditForm_"+strconv.Itoa(record.ID))
 
 	var localObjs UI
 
-	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName")
+	localObjs.Name, editor.UiComponents.Name = viewHelpers.StringEdit(editor.CurrentRecord.Name, editor.document, "Name", "text", "itemName-"+strconv.Itoa(record.ID))
 	editor.UiComponents.Name.Call("setAttribute", "required", "true")
 
-	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername")
+	localObjs.Username, editor.UiComponents.Username = viewHelpers.StringEdit(editor.CurrentRecord.Username, editor.document, "Username", "text", "itemUsername-"+strconv.Itoa(record.ID))
 	editor.UiComponents.Username.Call("setAttribute", "required", "true")
 
-	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail")
+	localObjs.Email, editor.UiComponents.Email = viewHelpers.StringEdit(editor.CurrentRecord.Email, editor.document, "Email", "email", "itemEmail-"+strconv.Itoa(record.ID))
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
-	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "itemAddress")
+	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "itemAddress-"+strconv.Itoa(record.ID))
 	editor.UiComponents.Address.Set("maxLength", 255)
 
-	localObjs.MemberCode, editor.UiComponents.MemberCode = viewHelpers.StringEdit(editor.CurrentRecord.MemberCode, editor.document, "MemberCode", "text", "itemMemberCode")
+	localObjs.MemberCode, editor.UiComponents.MemberCode = viewHelpers.StringEdit(editor.CurrentRecord.MemberCode, editor.document, "MemberCode", "text", "itemMemberCode-"+strconv.Itoa(record.ID))
 	editor.UiComponents.MemberCode.Call("setAttribute", "required", "true")
 
-	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate")
+	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate-"+strconv.Itoa(record.ID))
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
-	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup")
+	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup-"+strconv.Itoa(record.ID))
 
-	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus")
+	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus-"+strconv.Itoa(record.ID))
 
-	localObjs.AccountStatusID, editor.UiComponents.AccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.AccountStatusID, "Account Status", "itemAccountStatus")
+	localObjs.AccountStatusID, editor.UiComponents.AccountStatusID = editor.Children.userAccountStatus.NewDropdown(editor.CurrentRecord.AccountStatusID, "Account Status", "itemAccountStatus-"+strconv.Itoa(record.ID))
 
-	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden")
+	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Hide Details", "checkbox", "itemAccountHidden-"+strconv.Itoa(record.ID))
 
 	form.Call("appendChild", localObjs.Name)
 	form.Call("appendChild", localObjs.Username)
@@ -755,25 +762,26 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 	form.Call("appendChild", localObjs.AccountStatusID)
 	form.Call("appendChild", localObjs.AccountHidden)
 
-	reasonRow, reason := viewHelpers.StringEdit("", editor.document, "Reason for account change", "text", "inlineChangeReason")
+	reasonRow, reason := viewHelpers.StringEdit("", editor.document, "Reason for account change", "text", "inlineChangeReason-"+strconv.Itoa(record.ID))
 	reason.Set("required", true)
 	reason.Set("maxLength", 500)
 	editor.UiComponents.ChangeReason = reason
 	form.Call("appendChild", reasonRow)
 	defer viewHelpers.ResourceActions(container, editor.appCore, ApiURL, "PUT")
 	// Create submit and cancel buttons
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn-"+strconv.Itoa(record.ID))
 	cancelBtn := viewHelpers.Button(func(this js.Value, p []js.Value) interface{} {
 		container.Get("style").Call("setProperty", "display", "none")
 		container.Set("innerHTML", "")
 		return nil
-	}, editor.document, "Cancel", "cancelEditBtn")
+	}, editor.document, "Cancel", "cancelEditBtn-"+strconv.Itoa(record.ID))
 
 	viewHelpers.StyleButtonPrimary(submitBtn)
 	viewHelpers.StyleButtonSecondary(cancelBtn)
 	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
 	form.Call("appendChild", buttonRow)
 
+	fields = editor.UiComponents
 	formWrapper.Call("appendChild", form)
 	container.Call("appendChild", formWrapper)
 
