@@ -150,6 +150,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -331,6 +332,9 @@ func (editor *ItemEditor) FetchItems() {
 
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
+		if !viewHelpers.Confirm(editor.Div, "Delete this record?") {
+			return
+		}
 		editor.updateStateDisplay(ItemStateDeleting)
 		if err := editor.client.Request(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil); err != nil {
 			editor.updateStateDisplay(ItemStateNone)

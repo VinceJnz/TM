@@ -139,6 +139,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.load.Cancel()
 	editor.RecordState = RecordStateReloadRequired
 
@@ -162,6 +163,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.load.Cancel()
 	editor.RecordState = RecordStateReloadRequired
 
@@ -210,6 +212,11 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	method := "POST"
+	if editor.CurrentRecord.ID > 0 {
+		method = "PUT"
+	}
+	defer viewHelpers.ResourceActions(editor.EditDiv, editor.appCore, ApiURL, method)
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
@@ -401,6 +408,9 @@ func (editor *ItemEditor) FetchItems() {
 }
 func (editor *ItemEditor) deleteItem(itemID int) {
 	go func() {
+		if !viewHelpers.Confirm(editor.Div, "Delete this record?") {
+			return
+		}
 		editor.updateStateDisplay(ItemStateDeleting)
 		if err := editor.client.Request(http.MethodDelete, ApiURL+"/"+strconv.Itoa(itemID), nil, nil); err != nil {
 			editor.updateStateDisplay(ItemStateNone)
@@ -416,6 +426,8 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
+	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button (only if ParentID is set)
@@ -542,5 +554,6 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
+	viewHelpers.Pending(editor.Div, int(newState) == 1 || int(newState) == 4 || int(newState) == 5)
 	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
 }
