@@ -159,6 +159,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.UiComponents.Email.Call("setAttribute", "required", "true")
 
 	localObjs.Address, editor.UiComponents.Address = viewHelpers.StringEdit(editor.CurrentRecord.Address, editor.document, "Address", "text", "profileAddress")
+	editor.UiComponents.Address.Set("maxLength",255)
 
 	birthDateValue := ""
 	if !editor.CurrentRecord.BirthDate.IsZero() {

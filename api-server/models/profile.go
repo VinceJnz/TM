@@ -15,7 +15,7 @@ type ProfileDTO struct {
 type ProfileWrite struct {
 	Name          string `json:"name" rule:"required,minLength=1,maxLength=255"`
 	Email         string `json:"email"`
-	Address       string `json:"user_address" rule:"maxLength=4000"`
+	Address       string `json:"user_address" rule:"maxLength=255"`
 	BirthDate     string `json:"user_birth_date" rule:"required"`
 	AccountHidden bool   `json:"user_account_hidden"`
 }

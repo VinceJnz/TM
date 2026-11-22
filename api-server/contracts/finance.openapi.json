@@ -617,7 +617,7 @@
             "type": "boolean"
           },
           "user_address": {
-            "maxLength": 4000,
+            "maxLength": 255,
             "type": "string"
           },
           "user_birth_date": {

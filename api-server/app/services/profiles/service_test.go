@@ -53,8 +53,17 @@ func TestProfileEmailChangesRequireBothProofsAndRevokeSessions(t *testing.T) {
 		t.Fatal("email bypassed verification", err)
 	}
 	input.Email = "old@example.test"
+	input.Address = strings.Repeat("a", 255)
 	if err := s.Save(ctx, 1, input); err != nil {
 		t.Fatal(err)
+	}
+	input.Address = strings.Repeat("a", 256)
+	if err := s.Save(ctx, 1, input); !errors.Is(err, ErrValidation) {
+		t.Fatal("oversized address accepted", err)
+	}
+	saved, err := s.Store.Get(ctx, 1)
+	if err != nil || len(saved.Address) != 255 {
+		t.Fatal("failed update changed address", err)
 	}
 	if err := s.RequestEmail(ctx, 1, "new@example.test"); err != nil {
 		t.Fatal(err)
