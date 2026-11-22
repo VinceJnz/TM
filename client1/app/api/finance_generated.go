@@ -267,3 +267,10 @@ type AccountWrite struct {
 	AccountStatusID int       `json:"user_account_status_id"`
 	AccountHidden   bool      `json:"user_account_hidden"`
 }
+type APIError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+type ErrorResponse struct {
+	Error APIError `json:"error"`
+}

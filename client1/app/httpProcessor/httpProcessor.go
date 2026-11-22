@@ -206,7 +206,7 @@ func (c *Client) newRequestPage(page *Page, method, url string, rxDataStru, txDa
 			err = fmt.Errorf(debugTag+"newRequest()6b server response StatusCode=%v: error=%w", res.StatusCode, err)
 			callBackFail(err)
 		}
-		err = fmt.Errorf(debugTag+"newRequest()7 server response StatusCode=%v: server message=%s", res.StatusCode, resBody)
+		err = responseError(res.StatusCode,resBody)
 		callBackFail(err)
 		return err
 	}

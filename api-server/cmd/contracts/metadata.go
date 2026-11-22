@@ -63,7 +63,7 @@ func decorateOperations(paths map[string]any) {
 			responses := op["responses"].(map[string]any)
 			for _, code := range []string{"400", "401", "403", "404", "409", "422", "503"} {
 				if responses[code] == nil {
-					responses[code] = map[string]any{"description": "Request validation, authorization, record conflict or dependency failure", "content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"type": "object", "properties": map[string]any{"error": map[string]any{"type": "string"}, "message": map[string]any{"type": "string"}}}}}}
+					responses[code] = map[string]any{"description": "Request validation, authorization, record conflict or dependency failure", "content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"oneOf": []any{map[string]any{"$ref": "#/components/schemas/ErrorResponse"}, map[string]any{"type": "object", "required": []string{"error"}, "properties": map[string]any{"error": map[string]any{"type": "string"}, "message": map[string]any{"type": "string"}}, "description": "Legacy authentication error; supported during transition"}}}}}}
 				}
 			}
 			for _, code := range []string{"400", "401", "403", "404", "409", "422", "503"} {

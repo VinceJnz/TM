@@ -1,17 +1,15 @@
 package helpers
 
-import "net/http"
+import (
+	"api-server/v2/models"
+	"net/http"
+)
 
 // ErrorResponse is the stable JSON shape returned for API errors.
 // Code is intended for clients; Message is safe to display to users.
-type ErrorResponse struct {
-	Error APIError `json:"error"`
-}
+type ErrorResponse = models.ErrorResponse
 
-type APIError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-}
+type APIError = models.APIError
 
 // WriteError writes an API error without exposing internal error details.
 func WriteError(w http.ResponseWriter, status int, code, message string) {
