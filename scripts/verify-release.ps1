@@ -53,6 +53,10 @@ Invoke-Docker @(
 )
 
 Write-Host "Checking image identity, credentials, and WASM artifacts..."
+$image = Invoke-Docker @("image", "inspect", "tm-apiserver:verify") | ConvertFrom-Json
+if ($image[0].Config.Labels.'org.tripmanager.client.image' -cne "tm-client1-wasm:tinygo") {
+	throw "API image did not record the selected client artifact."
+}
 Invoke-Docker @(
 	"run", "--rm", "--entrypoint", "sh", "tm-apiserver:verify", "-ec",
 	'id -u | grep -qx 10001; test ! -e /app/.env; test -s /app/static/main.wasm; test -s /app/static/wasm_exec.js; if find /etc/certs -type f | grep -q .; then exit 1; fi'

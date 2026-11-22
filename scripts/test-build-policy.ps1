@@ -18,3 +18,6 @@ function Normalize-Stages([string]$value){return (($value -split '\r?\n' | Where
 if((Normalize-Stages $clientStages) -cne (Normalize-Stages $apiStages)){throw 'Frontend compiler stages drifted between build entry points.'}
 if(!$api.Contains('ARG CLIENT_IMAGE=client1-built')){throw 'Default API build depends on an external stale client image.'}
 Write-Host 'Self-contained build and compiler pairing policy passed.'
+if ($api -notmatch '(?m)^LABEL org\.tripmanager\.client\.image=\$CLIENT_IMAGE\s*$') {
+    throw 'API image does not record its selected frontend artifact.'
+}

@@ -16,6 +16,20 @@ inside the API build. It does not require an existing local WASM image. Leave
 CLIENT_IMAGE unset to use this default; that override still intentionally selects
 a prebuilt artifact. TM_CLIENT_BUILDER selects go-builder or tinygo-builder for
 the self-contained build. The paired compiler stages are checked for drift.
+When overriding CLIENT_IMAGE for a published build, select the client artifact by
+registry digest and record that digest, the compiler builder, and the client
+source revision alongside the API image digest. The API image records the
+artifact reference in its org.tripmanager.client.image label. Keep the compiler-supplied
+wasm_exec.js paired with its WASM artifact through the build.
+
+For a remote PostgreSQL deployment, set the connection policy explicitly in the
+runtime DATA_SOURCE, or set DB_SSLMODE in the API runtime environment when using
+DB_* settings. The DB_* fallback uses sslmode=disable if DB_SSLMODE is unset.
+Where remote PostgreSQL uses TLS, configure certificate and hostname verification
+with sslmode=verify-full and a trusted CA. Verify readiness with the application
+runtime credentials and verify migration/grant state and required provider
+connectivity in the target environment.
+
 Apply pending migrations before starting the matching application build.
 
 The supported deployment entry point validates immutable API references and
