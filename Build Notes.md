@@ -1,5 +1,15 @@
 # Build Notes
 
+
+## After Codex AI updates
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\migrate-local.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-application.ps1
+docker compose --profile prod up -d --no-deps --force-recreate apiserver
+```
+
+
 ## Docker build
 
 Docker files can only refer to local files that are in the same folder or sub-folders of the docker file.
