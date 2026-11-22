@@ -4,7 +4,7 @@ const (
 	qryGetAllActive = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified
 					FROM at_booking_vouchers
 					WHERE is_active = true
-					AND (expiry_date IS NULL OR expiry_date >= CURRENT_DATE)
+					AND expiry_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Pacific/Auckland')::date
 					ORDER BY code`
 
 	qryGetAllAdmin = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified

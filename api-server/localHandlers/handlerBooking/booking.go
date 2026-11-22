@@ -102,7 +102,9 @@ func (h *Handler) write(w http.ResponseWriter, r *http.Request, operation string
 	}
 	result, err := command.Save(r.Context(), session.UserID, any, operation, input)
 	if err != nil {
-		if errors.Is(err, service.ErrValidation) {
+		if errors.Is(err, service.ErrVoucher) {
+			helpers.WriteError(w, 422, "invalid_voucher", "Voucher code is invalid or expired")
+		} else if errors.Is(err, service.ErrValidation) {
 			helpers.WriteError(w, 422, "invalid_booking", "Invalid booking dates or trip reference")
 		} else {
 			helpers.WriteDataError(w, err)

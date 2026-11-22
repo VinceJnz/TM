@@ -43,6 +43,8 @@ CREATE SEQUENCE unrelated_private_seq;`); err != nil {
 		{"at_financial_audit", "SELECT", true}, {"at_financial_audit", "INSERT", false}, {"at_financial_audit", "DELETE", false},
 		{"at_checkout_quotes", "UPDATE", false}, {"at_checkout_quotes", "INSERT", true}, {"at_stripe_events", "DELETE", false},
 		{"at_payment_reviews", "DELETE", false}, {"at_future_sensitive", "SELECT", false}, {"schema_migrations", "UPDATE", false},
+		{"at_voucher_redemptions", "SELECT", true}, {"at_voucher_redemptions", "INSERT", true},
+		{"at_voucher_redemptions", "UPDATE", false}, {"at_voucher_redemptions", "DELETE", false},
 		{"at_payments", "INSERT", true}, {"at_bookings", "UPDATE", true},
 	} {
 		var allowed bool
@@ -53,7 +55,7 @@ CREATE SEQUENCE unrelated_private_seq;`); err != nil {
 	for _, tc := range []struct {
 		column  string
 		allowed bool
-	}{{"state", true}, {"amount_minor", false}, {"expires_at", false}} {
+	}{{"state", true}, {"amount_minor", false}, {"expires_at", false}, {"voucher_id", false}, {"voucher_cutoff", false}} {
 		var allowed bool
 		if err := db.Get(&allowed, `SELECT has_column_privilege($1,$2,$3,'UPDATE')`, role, schema+".at_checkout_attempts", tc.column); err != nil || allowed != tc.allowed {
 			t.Fatal(tc, allowed, err)

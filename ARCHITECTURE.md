@@ -23,9 +23,9 @@ if this guide drifts; update the guide when resolving that drift.
   UI visibility is not authorization, and `own` is not interchangeable with `any`.
 - Default API/Compose builds compile fresh WASM from source. An explicit
   `CLIENT_IMAGE` override deliberately selects a prebuilt artifact.
-- The latest source migration at this checkpoint is **0029**. The last recorded
-  local deployment observation was **0028 applied, 0029 pending**. This is a dated
-  observation, not a guarantee about any current database. Recheck before deployment.
+- The voucher release includes migrations **0030** (booking vouchers) and **0031**
+  (voucher redemptions and checkout cutoff snapshots). Check the target migration
+  ledger and runtime grants before replacing an API image.
 - No guide or historical verification record authorizes live migrations, deployment,
   data changes or external provider calls. Follow the current user's authorization.
 

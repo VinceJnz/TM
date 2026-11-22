@@ -84,6 +84,10 @@ func generate() (map[string][]byte, error) {
 			case field.Type.Kind() == reflect.Bool:
 				goType = "bool"
 				schema["type"] = "boolean"
+			case field.Type == reflect.TypeOf((*string)(nil)):
+				goType = "*string"
+				schema["type"] = "string"
+				nullable = true
 			case field.Type.Kind() == reflect.String || field.Type.Name() == "String":
 				goType = "string"
 				schema["type"] = "string"

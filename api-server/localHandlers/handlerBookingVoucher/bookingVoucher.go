@@ -101,7 +101,7 @@ func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
 }
 func (h *Handler) failure(w http.ResponseWriter, err error) {
 	if errors.Is(err, service.ErrValidation) {
-		helpers.WriteError(w, 422, "invalid_security_change", "Enter a code and exactly one valid discount or fixed price")
+		helpers.WriteError(w, 422, "invalid_security_change", "Enter a code, an expiry date and exactly one valid discount or fixed price")
 	} else {
 		helpers.WriteDataError(w, err)
 	}

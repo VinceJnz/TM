@@ -155,8 +155,10 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	handlerTrip.New(app).RegisterRoutes(protected, "/trips") // Trip routes
 
 	// Add route groups previously role-gated; capability checks are enforced by RequireSessionAuth.
-	handlerSeasons.New(app).RegisterRoutes(protected, "/seasons")                     // Seasons routes
-	handlerUser.New(app).RegisterRoutes(protected, "/users")                          // User routes
+	handlerSeasons.New(app).RegisterRoutes(protected, "/seasons") // Seasons routes
+	users := handlerUser.New(app)
+	users.RegisterRoutes(protected, "/users")
+	users.RegisterBookingPeopleLookup(protected)
 	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups")         // UserAgeGroup routes
 	handlerUserPayments.New(app).RegisterRoutes(protected, "/payments")               // Payments routes
 	handlerPaymentRefunds.New(app).RegisterRoutes(protected, "/refunds")              // Refunds routes

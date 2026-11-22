@@ -40,6 +40,10 @@ type Booking struct {
 	Currency        zero.String         `json:"currency" db:"currency"`       // Currency code for the booking price
 	Created         time.Time           `json:"created" db:"created"`
 	Modified        time.Time           `json:"modified" db:"modified"`
+
+	PreserveBookingPrice bool    `json:"-" db:"-"`
+	VoucherInput         *string `json:"-" db:"-"`
+	VoucherCode          string  `json:"voucher_code" db:"voucher_code"`
 }
 
 type BookingStatus struct {
@@ -80,6 +84,7 @@ type GroupBooking struct {
 }
 
 type MyBooking struct {
+	VoucherCode     string              `json:"voucher_code" db:"voucher_code"`
 	ID              int                 `json:"id" db:"id"`
 	OwnerID         int                 `json:"owner_id" db:"owner_id"`
 	Owner           zero.String         `json:"owner_name" db:"owner_name"`

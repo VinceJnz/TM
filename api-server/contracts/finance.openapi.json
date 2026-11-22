@@ -227,6 +227,9 @@
           },
           "trip_name": {
             "type": "string"
+          },
+          "voucher_code": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -257,6 +260,12 @@
           "trip_id": {
             "type": [
               "integer",
+              "null"
+            ]
+          },
+          "voucher_code": {
+            "type": [
+              "string",
               "null"
             ]
           }
@@ -530,6 +539,9 @@
           },
           "trip_to_date": {
             "format": "date-time",
+            "type": "string"
+          },
+          "voucher_code": {
             "type": "string"
           }
         },

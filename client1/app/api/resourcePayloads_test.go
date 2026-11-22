@@ -44,3 +44,21 @@ func TestGeneratedResourceContractsDecodeDecimalsAndExcludeServerFields(t *testi
 		t.Fatal(report, err)
 	}
 }
+
+func TestBookingDetailsPayloadExcludesPrice(t *testing.T) {
+	var booking BookingDTO
+	if err := json.Unmarshal([]byte(`{"trip_id":3,"booking_price":"12.50"}`), &booking); err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(BookingDetailsPayload(booking))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(data, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := payload["booking_price"]; ok || string(payload["trip_id"]) != "3" {
+		t.Fatalf("unexpected booking details payload: %s", data)
+	}
+}

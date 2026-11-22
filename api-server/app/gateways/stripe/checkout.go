@@ -12,7 +12,16 @@ import (
 )
 
 func checkoutResult(a *stripe.CheckoutSession) checkout.Session {
-	return checkout.Session{ID: a.ID, URL: a.URL, AttemptID: a.Metadata["tm_attempt"], State: string(a.Status), Amount: a.AmountTotal, Currency: string(a.Currency), Mode: string(a.Mode), Paid: a.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid}
+	var paidAt time.Time
+	if a.PaymentIntent != nil && a.PaymentIntent.LatestCharge != nil {
+		charge := a.PaymentIntent.LatestCharge
+		// A captured card charge supplies a payment timestamp for recovery.
+		// Delayed payment methods require the signed success event.
+		if charge.Paid && charge.Captured && charge.Created > 0 && charge.PaymentMethodDetails != nil && charge.PaymentMethodDetails.Card != nil {
+			paidAt = time.Unix(charge.Created, 0)
+		}
+	}
+	return checkout.Session{PaidAt: paidAt, ID: a.ID, URL: a.URL, AttemptID: a.Metadata["tm_attempt"], State: string(a.Status), Amount: a.AmountTotal, Currency: string(a.Currency), Mode: string(a.Mode), Paid: a.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid}
 }
 func (g *Gateway) Create(ctx context.Context, a paymentLedger.Attempt) (checkout.Session, error) {
 	if g == nil || g.Client == nil {
@@ -48,6 +57,7 @@ func (g *Gateway) Lookup(ctx context.Context, a paymentLedger.Attempt) ([]checko
 	client := session.Client{B: g.backend, Key: g.apiKey}
 	if a.SessionID.Valid {
 		params := &stripe.CheckoutSessionParams{}
+		params.AddExpand("payment_intent.latest_charge")
 		params.Context = ctx
 		result, err := client.Get(a.SessionID.String, params)
 		if err != nil {
@@ -61,6 +71,7 @@ func (g *Gateway) Lookup(ctx context.Context, a paymentLedger.Attempt) ([]checko
 	params := &stripe.CheckoutSessionListParams{CreatedRange: &stripe.RangeQueryParams{GreaterThanOrEqual: a.Expires.Add(-40 * time.Minute).Unix(), LesserThanOrEqual: a.Expires.Unix()}}
 	params.Context = ctx
 	params.Limit = stripe.Int64(100)
+	params.AddExpand("data.payment_intent.latest_charge")
 	results := []checkout.Session{}
 	iter := client.List(params)
 	count := 0

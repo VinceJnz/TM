@@ -193,7 +193,8 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	localObjs.PersonID, editor.UiComponents.PersonID = editor.Children.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson")
+	lookup := "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL
+	localObjs.PersonID, editor.UiComponents.PersonID = editor.Children.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson", lookup)
 	editor.UiComponents.PersonID.Call("setAttribute", "required", "true")
 
 	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
@@ -354,7 +355,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add person", "addNewItemButton")
 	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 

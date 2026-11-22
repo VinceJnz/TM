@@ -17,7 +17,7 @@ type Service struct{ Store store.Store }
 func (s Service) Save(ctx context.Context, id int, v models.VoucherWrite) (models.BookingVoucher, error) {
 	v.Code = strings.ToUpper(strings.TrimSpace(v.Code))
 	result := models.BookingVoucher{}
-	if id < 0 || v.Code == "" || len(v.Code) > 64 || (v.DiscountPercent == nil) == (v.FixedCost == nil) {
+	if id < 0 || v.ExpiryDate == nil || v.Code == "" || len(v.Code) > 64 || (v.DiscountPercent == nil) == (v.FixedCost == nil) {
 		return result, ErrValidation
 	}
 	if p := v.DiscountPercent; p != nil {

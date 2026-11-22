@@ -201,6 +201,7 @@ func (editor *ItemEditor) populateEditForm() {
 	hint.Get("style").Set("display", "block")
 	hint.Get("style").Set("marginBottom", "8px")
 	form.Call("appendChild", hint)
+	editor.UiComponents.ExpiryDate.Set("required", true)
 	form.Call("appendChild", localObjs.ExpiryDate)
 	form.Call("appendChild", localObjs.IsActive)
 
@@ -291,7 +292,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	expiryDateRaw := strings.TrimSpace(editor.UiComponents.ExpiryDate.Get("value").String())
 	if expiryDateRaw == "" {
-		editor.CurrentRecord.ExpiryDate = nil
+		editor.onCompletionMsg("Enter an expiry date")
+		return nil
 	} else {
 		expiryDate, parseErr := time.Parse(viewHelpers.Layout, expiryDateRaw)
 		if parseErr != nil {

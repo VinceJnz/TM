@@ -14,7 +14,8 @@ const qryBookingPaymentSummary = `WITH booking_costs AS (
 		SELECT
 			atb.id,
 			atb.booking_status_id,
-			COALESCE(atb.booking_price, 0) AS booking_price,
+			atb.free_confirmed_at IS NOT NULL AS free_confirmed,
+			COALESCE((SELECT r.amount_minor::numeric/100 FROM at_voucher_redemptions r WHERE r.booking_id=atb.id), atb.booking_price, 0) AS booking_price,
 			COALESCE(
 				SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400),
 				0
@@ -47,6 +48,7 @@ const qryBookingPaymentSummary = `WITH booking_costs AS (
 	)
 	SELECT
 		bc.booking_status_id,
+		bc.free_confirmed,
 		bc.booking_price,
 		bc.booking_cost,
 		COALESCE(pt.total_paid, 0) AS total_paid,
@@ -70,6 +72,7 @@ const qryGetBookingIDByRefundID = `SELECT p.booking_id
 
 type bookingPaymentSummary struct {
 	BookingStatusID   int             `db:"booking_status_id"`
+	FreeConfirmed     bool            `db:"free_confirmed"`
 	BookingPrice      decimal.Decimal `db:"booking_price"`
 	BookingCost       decimal.Decimal `db:"booking_cost"`
 	TotalPaid         decimal.Decimal `db:"total_paid"`
@@ -134,6 +137,8 @@ func Sync(ctx context.Context, tx *sqlx.Tx, bookingID int) error {
 	}
 	if summary.BookingStatusID == 2 {
 		status = 2
+	} else if summary.FreeConfirmed {
+		status, pct = 3, 100
 	}
 	if status == 3 || status == 4 {
 		if err := Reserve(ctx, tx, bookingID, time.Now().Add(45*time.Minute)); err != nil {

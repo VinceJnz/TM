@@ -94,10 +94,61 @@ type CheckoutStatusResponse struct {
 
 // RegisterRoutes registers handler routes on the provided router.
 func (h *Handler) RegisterRoutesStripe(r *mux.Router, baseURL string) {
+	helpers.CapabilityRoute(r, baseURL+"/checkout/review/{id:[0-9]+}", "bookings", h.CheckoutReview).Methods("GET")
+	helpers.CapabilityRoute(r, baseURL+"/checkout/confirm/{id:[0-9]+}", "bookings", h.CheckoutConfirm).Methods("POST")
 	helpers.CapabilityRoute(r, baseURL+"/checkout/create/{id:[0-9]+}", "bookings", h.CheckoutCreate).Methods("POST")
 	helpers.CapabilityRoute(r, baseURL+"/checkout/check/{id:[0-9]+}", "bookings", h.CheckoutCheck).Methods("GET")
 	helpers.CapabilityRoute(r, baseURL+"/checkout/success/{id:[0-9]+}", "bookings", h.CheckoutSuccess).Methods("GET")
 	helpers.CapabilityRoute(r, baseURL+"/checkout/cancel/{id:[0-9]+}", "bookings", h.CheckoutCancel).Methods("GET")
+}
+
+func (h *Handler) CheckoutReview(w http.ResponseWriter, r *http.Request) {
+	user := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
+	if user == nil {
+		return
+	}
+	id := helpers.RouteID(w, r)
+	if id <= 0 {
+		return
+	}
+	review, err := paymentLedger.ReviewBooking(r.Context(), h.appConf.Db, id, user.UserID)
+	if err != nil {
+		writeBookingCheckoutError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, http.StatusOK, review)
+}
+
+func (h *Handler) CheckoutConfirm(w http.ResponseWriter, r *http.Request) {
+	user := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
+	if user == nil {
+		return
+	}
+	id := helpers.RouteID(w, r)
+	if id <= 0 {
+		return
+	}
+	ctx := paymentLedger.WithAudit(r.Context(), "user:"+strconv.Itoa(user.UserID), "confirmed zero-total booking")
+	if err := paymentLedger.ConfirmFreeBooking(ctx, h.appConf.Db, id, user.UserID); err != nil {
+		writeBookingCheckoutError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, http.StatusOK, struct {
+		Status string `json:"status"`
+	}{"confirmed"})
+}
+
+func writeBookingCheckoutError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, paymentLedger.ErrVoucherUnavailable):
+		helpers.WriteError(w, http.StatusConflict, "invalid_voucher", "Voucher code is invalid or expired. Edit the booking to replace or remove it.")
+	case errors.Is(err, paymentLedger.ErrQuoteChanged):
+		helpers.WriteError(w, http.StatusConflict, "booking_total_changed", "The booking total changed. Review the booking again.")
+	case errors.Is(err, paymentLedger.ErrCapacity):
+		helpers.WriteError(w, http.StatusConflict, "capacity_unavailable", "The trip has insufficient space for this booking.")
+	default:
+		helpers.WriteError(w, http.StatusConflict, "checkout_unavailable", "Could not prepare this booking. Check the participants and try again.")
+	}
 }
 
 // RegisterRoutesStripeWebhook registers the public Stripe webhook endpoint.
@@ -121,8 +172,26 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 	if id <= 0 {
 		return
 	}
-	result, err := checkout.New(h.appConf.Db, h.appConf.PaymentSvc).Start(r.Context(), id, user.UserID, user.Email, h.appConf.PaymentSvc.Domain)
+	var expected []int64
+	if r.Body != nil && r.Body != http.NoBody {
+		var input struct {
+			AmountMinor *int64 `json:"amount_minor"`
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 1024)
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
+			helpers.WriteError(w, http.StatusBadRequest, "invalid_request", "Invalid checkout request")
+			return
+		}
+		if input.AmountMinor != nil {
+			expected = append(expected, *input.AmountMinor)
+		}
+	}
+	result, err := checkout.New(h.appConf.Db, h.appConf.PaymentSvc).Start(r.Context(), id, user.UserID, user.Email, h.appConf.PaymentSvc.Domain, expected...)
 	if err != nil {
+		if errors.Is(err, paymentLedger.ErrQuoteChanged) || errors.Is(err, paymentLedger.ErrVoucherUnavailable) || errors.Is(err, paymentLedger.ErrCapacity) {
+			writeBookingCheckoutError(w, err)
+			return
+		}
 		code := 503
 		if errors.Is(err, paymentLedger.ErrCheckoutUnavailable) || errors.Is(err, paymentLedger.ErrAttemptExpired) || errors.Is(err, paymentLedger.ErrCapacity) {
 			code = 409
@@ -309,7 +378,7 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 		<div class="success-icon">&#10003;</div>
 		<h1>Payment Completed Successfully</h1>
 		<p>Your booking has been confirmed.</p>
-		<p>You can now close this window.</p>
+		<p><a href="/#/mybookings">Return to My Bookings</a></p>
 	</div>
 </body>
 </html>`, bookingID)
@@ -372,7 +441,7 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		"event_age_seconds":   eventAgeSec,
 	})
 
-	if event.Type != "checkout.session.completed" {
+	if event.Type != "checkout.session.completed" && event.Type != "checkout.session.async_payment_succeeded" {
 		logWebhookEvent("ignored_event", map[string]interface{}{
 			"event_id":   event.ID,
 			"event_type": event.Type,
@@ -420,7 +489,11 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	replay, err := paymentLedger.Finalize(r.Context(), h.appConf.Db, event.ID, checkoutSession.ID, checkoutSession.AmountTotal, string(checkoutSession.Currency))
+	var paidAt time.Time
+	if event.Created > 0 {
+		paidAt = time.Unix(event.Created, 0)
+	}
+	replay, err := paymentLedger.Finalize(r.Context(), h.appConf.Db, event.ID, checkoutSession.ID, checkoutSession.AmountTotal, string(checkoutSession.Currency), paidAt)
 	if err != nil {
 		logWebhookEvent("finalization_failed", map[string]interface{}{"event_id": event.ID, "checkout_session_id": checkoutSession.ID})
 		http.Error(w, "payment finalization failed; retry required", http.StatusInternalServerError)
@@ -500,7 +573,7 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 		<div class="cancel-icon">&#10005;</div>
 		<h1>Payment Cancelled</h1>
 		<p>Your payment was not completed.</p>
-		<p>You can now close this window.</p>
+		<p><a href="/#/mybookings">Return to My Bookings</a></p>
 	</div>
 </body>
 </html>`, bookingID)

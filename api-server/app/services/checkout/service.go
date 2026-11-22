@@ -13,6 +13,7 @@ type Session struct {
 	ID, URL, AttemptID, State, Currency, Mode string
 	Amount                                    int64
 	Paid                                      bool
+	PaidAt                                    time.Time
 }
 type Provider interface {
 	Create(context.Context, paymentLedger.Attempt) (Session, error)
@@ -25,8 +26,8 @@ type Service struct {
 }
 
 func New(db *sqlx.DB, provider Provider) *Service { return &Service{db, provider, time.Now} }
-func (s *Service) Start(ctx context.Context, id, owner int, email, domain string) (Session, error) {
-	a, err := paymentLedger.Prepare(ctx, s.DB, id, owner, email, domain)
+func (s *Service) Start(ctx context.Context, id, owner int, email, domain string, expected ...int64) (Session, error) {
+	a, err := paymentLedger.Prepare(ctx, s.DB, id, owner, email, domain, expected...)
 	if errors.Is(err, paymentLedger.ErrAttemptExpired) {
 		outcome, reconcileErr := s.Reconcile(ctx, id, owner)
 		if reconcileErr != nil {
@@ -35,7 +36,7 @@ func (s *Service) Start(ctx context.Context, id, owner int, email, domain string
 		if outcome != "expired" {
 			return Session{}, paymentLedger.ErrCheckoutUnavailable
 		}
-		a, err = paymentLedger.Prepare(ctx, s.DB, id, owner, email, domain)
+		a, err = paymentLedger.Prepare(ctx, s.DB, id, owner, email, domain, expected...)
 	}
 	if err != nil {
 		return Session{}, err
@@ -92,7 +93,7 @@ func (s *Service) Reconcile(ctx context.Context, id, owner int) (string, error) 
 			if err = paymentLedger.Attach(ctx, s.DB, a.ID, result.ID, result.URL, result.Amount); err != nil {
 				return "", err
 			}
-			_, err = paymentLedger.Finalize(ctx, s.DB, "reconcile:"+result.ID, result.ID, result.Amount, result.Currency)
+			_, err = paymentLedger.Finalize(ctx, s.DB, "reconcile:"+result.ID, result.ID, result.Amount, result.Currency, result.PaidAt)
 			return "paid", err
 		}
 		if result.State != "expired" {

@@ -194,7 +194,11 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.populateEditForm()
 	return nil
 }
-func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
+func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, lookupResource ...string) (object, inputObj js.Value) {
+	resource := ApiURL
+	if len(lookupResource) > 0 {
+		resource = lookupResource[0]
+	}
 	// Create a div for displaying Dropdown
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
@@ -248,7 +252,11 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 				for _, item := range options {
 					option := editor.document.Call("createElement", "option")
 					option.Set("value", item.ID)
-					option.Set("textContent", item.Name+" ("+item.Username+")")
+					name := item.Name
+					if item.Username != "" {
+						name += " (" + item.Username + ")"
+					}
+					option.Set("textContent", name)
 					option.Set("selected", strconv.Itoa(item.ID) == selected || item.ID == value)
 					StateDropDown.Call("appendChild", option)
 				}
@@ -266,11 +274,11 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 			status.Set("textContent", "Enter at least 2 characters")
 			return nil
 		}
-		load(ApiURL + "/lookup?q=" + url.QueryEscape(query))
+		load(resource + "/lookup?q=" + url.QueryEscape(query))
 		return nil
 	})
 	if value > 0 {
-		load(ApiURL + "/lookup?id=" + strconv.Itoa(value))
+		load(resource + "/lookup?id=" + strconv.Itoa(value))
 	}
 
 	return fieldset, StateDropDown

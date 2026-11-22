@@ -66,7 +66,7 @@ func (s Store) Lock(ctx context.Context, tx *sqlx.Tx, id, target int) (models.Bo
 		}
 	}
 	var current models.Booking
-	err := tx.GetContext(ctx, &current, `SELECT id,owner_id,trip_id,notes,from_date,to_date,booking_price FROM at_bookings WHERE id=$1 FOR UPDATE`, id)
+	err := tx.GetContext(ctx, &current, `SELECT id,owner_id,trip_id,notes,from_date,to_date,booking_price,voucher_code FROM at_bookings WHERE id=$1 FOR UPDATE`, id)
 	if err == nil && int(current.TripID.Int64) != oldTrip {
 		err = paymentLedger.ErrConcurrentChange
 	}
@@ -87,14 +87,18 @@ func changed(result sql.Result, err error) error {
 }
 func (s Store) Create(ctx context.Context, tx *sqlx.Tx, actor int, input models.Booking) (int, error) {
 	var id int
-	err := tx.QueryRowContext(ctx, qryCreate, actor, input.TripID, input.Notes, input.FromDate, input.ToDate).Scan(&id)
+	err := tx.QueryRowContext(ctx, qryCreate, actor, input.TripID, input.Notes, input.FromDate, input.ToDate, input.VoucherCode).Scan(&id)
 	return id, err
 }
 func (s Store) Update(ctx context.Context, tx *sqlx.Tx, actor int, any bool, input models.Booking) error {
 	if any {
-		return changed(tx.ExecContext(ctx, qryUpdateAdmin, input.ID, input.OwnerID, input.TripID, input.Notes, input.FromDate, input.ToDate, input.BookingPrice))
+		return changed(tx.ExecContext(ctx, qryUpdateAdmin, input.ID, input.OwnerID, input.TripID, input.Notes, input.FromDate, input.ToDate, input.BookingPrice, input.VoucherCode))
 	}
-	return changed(tx.ExecContext(ctx, qryUpdate, input.ID, actor, "own", input.Notes, input.FromDate, input.ToDate))
+	return changed(tx.ExecContext(ctx, qryUpdate, input.ID, actor, "own", input.Notes, input.FromDate, input.ToDate, input.VoucherCode))
+}
+
+func (s Store) ValidVoucher(ctx context.Context, tx *sqlx.Tx, code string) (bool, error) {
+	return paymentLedger.ValidVoucher(ctx, tx, code)
 }
 func (s Store) Delete(ctx context.Context, tx *sqlx.Tx, actor int, any bool, id int) error {
 	return changed(tx.ExecContext(ctx, qryDelete, id, actor, scope(any)))

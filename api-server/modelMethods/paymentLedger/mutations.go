@@ -67,9 +67,19 @@ func WritePayment(ctx context.Context, db *sqlx.DB, operation string, id int, in
 	if err != nil {
 		return 0, err
 	}
+	if operation != "delete" {
+		var confirmedFree bool
+		if err = tx.GetContext(ctx, &confirmedFree, `SELECT free_confirmed_at IS NOT NULL OR EXISTS(SELECT 1 FROM at_checkout_attempts WHERE booking_id=$1 AND state IN ('pending','attached')) FROM at_bookings WHERE id=$1`, input.BookingID); err != nil {
+			return 0, err
+		}
+		if confirmedFree {
+			return 0, ErrLedgerConflict
+		}
+	}
+	var wasPositive bool
 	if operation == "update" || operation == "delete" {
 		var providerBacked bool
-		if err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL FROM at_payments WHERE id=$1`, id); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT stripe_session_id IS NOT NULL OR EXISTS(SELECT 1 FROM at_voucher_redemptions WHERE source='manual' AND reference=p.id::text AND booking_id=p.booking_id), COALESCE(amount>0,false) FROM at_payments p WHERE id=$1`, id).Scan(&providerBacked, &wasPositive); err != nil {
 			return 0, err
 		}
 		if providerBacked {
@@ -90,6 +100,11 @@ func WritePayment(ctx context.Context, db *sqlx.DB, operation string, id int, in
 		return 0, err
 	}
 	if operation != "delete" {
+		if input.Amount.IsPositive() && (operation == "create" || old != input.BookingID || !wasPositive) {
+			if err := redeemManualPayment(ctx, tx, input.BookingID, id); err != nil {
+				return 0, err
+			}
+		}
 		if err = Sync(ctx, tx, input.BookingID); err != nil {
 			return 0, err
 		}
@@ -133,7 +148,7 @@ func WriteRefund(ctx context.Context, db *sqlx.DB, operation string, id int, inp
 	}
 	var providerBacked bool
 	if operation == "create" {
-		err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL FROM at_payments WHERE id=$1`, input.PaymentID)
+		err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL OR EXISTS(SELECT 1 FROM at_voucher_redemptions WHERE source='manual' AND reference=p.id::text AND booking_id=p.booking_id) FROM at_payments p WHERE id=$1`, input.PaymentID)
 	} else {
 		err = tx.GetContext(ctx, &providerBacked, `SELECT provider_refund_id IS NOT NULL FROM at_refunds WHERE id=$1`, id)
 	}
@@ -144,7 +159,7 @@ func WriteRefund(ctx context.Context, db *sqlx.DB, operation string, id int, inp
 		return 0, ErrLedgerConflict
 	}
 	if operation == "update" {
-		if err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL FROM at_payments WHERE id=$1`, input.PaymentID); err != nil {
+		if err = tx.GetContext(ctx, &providerBacked, `SELECT stripe_session_id IS NOT NULL OR EXISTS(SELECT 1 FROM at_voucher_redemptions WHERE source='manual' AND reference=p.id::text AND booking_id=p.booking_id) FROM at_payments p WHERE id=$1`, input.PaymentID); err != nil {
 			return 0, err
 		}
 		if providerBacked {

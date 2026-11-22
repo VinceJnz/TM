@@ -76,3 +76,19 @@ When a historical manual refund already has the exact provider reference and
 amount, confirmation binds that existing entry instead of crediting it twice.
 Multiple matching entries, different payments, or differing amounts fail closed
 for operator review; no historical entries are deleted or silently rewritten.
+
+## Voucher redemption
+
+Migration 0030 added voucher codes to bookings and explicit zero-total
+confirmation. Migration 0031 adds an immutable redemption per booking. A first
+positive manual payment, verified Stripe payment, or explicit zero-total
+confirmation records the voucher ID and code, effective time, reference, and
+agreed amount in minor units. Reconciliation uses that amount for instalments
+and refunds. The voucher may be reused by another booking before expiry.
+
+Expiry is exclusive at midnight in Pacific/Auckland. Existing vouchers with
+no expiry stay in the admin list and require an expiry before they can be used.
+New checkouts retain the voucher cutoff with the quote. A voucher checkout
+without a recorded cutoff or verified payment time requires payment review.
+Prior settled bookings keep their existing ledger history. Apply 0031 and
+refresh runtime grants before starting this release.

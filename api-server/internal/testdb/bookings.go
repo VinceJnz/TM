@@ -18,4 +18,6 @@ INSERT INTO at_booking_people VALUES (111,1,11,1,'first',NOW(),NOW()),(222,2,22,
 INSERT INTO at_trip_costs VALUES (1,1,1,1,10);
 ALTER TABLE at_bookings ADD COLUMN created timestamptz DEFAULT CURRENT_TIMESTAMP,ADD COLUMN modified timestamptz DEFAULT CURRENT_TIMESTAMP,ADD COLUMN booking_date date,ADD COLUMN group_booking_id integer,ADD COLUMN payment_date timestamptz,ADD COLUMN amount_paid integer,ADD COLUMN currency text;
 ALTER TABLE at_trips ADD COLUMN from_date timestamptz DEFAULT '2025-01-01',ADD COLUMN to_date timestamptz DEFAULT '2030-01-01';
+ALTER TABLE at_bookings ADD COLUMN voucher_code text NOT NULL DEFAULT '', ADD COLUMN free_confirmed_at timestamptz;
+CREATE TABLE at_booking_vouchers (code text PRIMARY KEY, discount_percent numeric, fixed_cost numeric, expiry_date date, is_active boolean, id serial UNIQUE);
 `

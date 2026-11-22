@@ -18,6 +18,8 @@ func WriteDataError(w http.ResponseWriter, err error) {
 		code, kind, message = 409, "stale_record", "This record changed. Reload it before saving your edits."
 	case errors.Is(err, sql.ErrNoRows):
 		code, kind, message = 404, "not_found", "Record not found"
+	case errors.Is(err, paymentLedger.ErrVoucherUnavailable):
+		code, kind, message = 409, "invalid_voucher", "Voucher was unavailable on the payment date"
 	case errors.Is(err, paymentLedger.ErrValidation):
 		code, kind, message = 422, "invalid_input", "Invalid financial input"
 	case errors.Is(err, paymentLedger.ErrCapacity), errors.Is(err, paymentLedger.ErrConcurrentChange), errors.Is(err, paymentLedger.ErrLedgerConflict):

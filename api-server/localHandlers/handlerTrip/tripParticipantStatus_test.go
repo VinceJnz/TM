@@ -20,6 +20,7 @@ CREATE TABLE at_booking_people (id int, booking_id int, person_id int);
 CREATE TABLE st_users (id int, name text, user_account_hidden bool);
 INSERT INTO at_trips VALUES (1, 'First trip', now(), now(), 10), (2, 'Second trip', now(), now(), 10), (3, 'Empty trip', now(), now(), 10);
 INSERT INTO at_bookings VALUES (10, 1, 1, NULL), (20, 1, 2, NULL), (30, 2, 2, NULL);
+ALTER TABLE at_bookings ADD COLUMN free_confirmed_at timestamptz;
 INSERT INTO at_booking_people VALUES (1, 10, 1), (2, 20, 2), (3, 30, 2);
 INSERT INTO st_users VALUES (1, 'First member', true), (2, 'Second member', false);
 `

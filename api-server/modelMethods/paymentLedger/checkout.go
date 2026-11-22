@@ -31,7 +31,7 @@ var ErrCheckoutUnavailable = errors.New("booking unavailable for checkout")
 
 // Prepare durably records the quote, capacity hold and immutable provider inputs
 // before making any external request. Retry uses exactly the same idempotency key.
-func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, domain string) (Attempt, error) {
+func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, domain string, expected ...int64) (Attempt, error) {
 	var a Attempt
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -52,6 +52,9 @@ func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, doma
 		if !time.Now().Before(a.Expires) {
 			return a, ErrAttemptExpired
 		}
+		if len(expected) > 0 && expected[0] != a.Amount {
+			return a, ErrQuoteChanged
+		}
 		return a, tx.Commit()
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
@@ -64,9 +67,26 @@ func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, doma
 	if existing.Valid {
 		return a, ErrCheckoutUnavailable
 	}
+	var cutoff sql.NullTime
+	var voucherID sql.NullInt64
+	var code string
+	if err := tx.GetContext(ctx, &code, `SELECT voucher_code FROM at_bookings WHERE id=$1`, bookingID); err != nil {
+		return a, err
+	}
+	if code != "" {
+		id, expires, err := lockVoucher(ctx, tx, code)
+		if err != nil {
+			return a, err
+		}
+		voucherID = sql.NullInt64{Int64: int64(id), Valid: true}
+		cutoff = sql.NullTime{Time: expires, Valid: true}
+	}
 	a.Amount, err = Quote(ctx, tx, bookingID)
 	if err != nil {
 		return a, err
+	}
+	if len(expected) > 0 && expected[0] != a.Amount {
+		return a, ErrQuoteChanged
 	}
 	key := make([]byte, 24)
 	if _, err = rand.Read(key); err != nil {
@@ -76,14 +96,21 @@ func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, doma
 	a.BookingID = bookingID
 	a.Email = email
 	a.Domain = domain
-	a.Expires = time.Now().UTC().Truncate(time.Second).Add(35 * time.Minute)
+	now := time.Now().UTC().Truncate(time.Second)
+	a.Expires = now.Add(35 * time.Minute)
+	if cutoff.Valid && cutoff.Time.Before(a.Expires) {
+		if cutoff.Time.Before(now.Add(31 * time.Minute)) {
+			return a, ErrVoucherUnavailable
+		}
+		a.Expires = cutoff.Time
+	}
 	if err = tx.QueryRowContext(ctx, `SELECT trip_name,COALESCE(description,'') FROM at_trips WHERE id=(SELECT trip_id FROM at_bookings WHERE id=$1)`, bookingID).Scan(&a.Title, &a.Description); err != nil {
 		return a, err
 	}
 	if err = Reserve(ctx, tx, bookingID, a.Expires.Add(15*time.Minute)); err != nil {
 		return a, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO at_checkout_attempts(id,booking_id,amount_minor,email,title,description,domain,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, a.ID, bookingID, a.Amount, email, a.Title, a.Description, domain, a.Expires)
+	_, err = tx.ExecContext(ctx, `INSERT INTO at_checkout_attempts(id,booking_id,amount_minor,email,title,description,domain,expires_at,voucher_id,voucher_cutoff) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, a.ID, bookingID, a.Amount, email, a.Title, a.Description, domain, a.Expires, voucherID, cutoff)
 	if err != nil {
 		return a, err
 	}

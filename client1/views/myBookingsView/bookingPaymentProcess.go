@@ -7,13 +7,6 @@ import (
 	"syscall/js"
 )
 
-// PaymentResponse represents the response from the checkout create endpoint
-type CheckoutCreateResponse struct {
-	CheckoutURL string `json:"checkout_url"`
-	SessionID   string `json:"session_id"`
-	Status      string `json:"status"`
-}
-
 // PaymentCheckResponse represents the response from the checkout check endpoint
 type CheckoutStatusResponse struct {
 	Status      string  `json:"status"`
@@ -24,12 +17,8 @@ type CheckoutStatusResponse struct {
 // Manage the opening and closing of the payment gateway page
 //*************************************************************
 // Sequence:
-// 1. User clicks "Make Payment" button -> MakePayment()
-// 2. MakePayment() calls API to create checkout session -> receives checkout URL
-// 3. openPaymentPage() opens new browser tab with payment URL
-// 4. Event listeners monitor window focus/blur
-// 5. On focus, checkPayment() checks payment status via API
-// 6. If payment complete/canceled/expired, close payment window and cleanup
+// The review panel starts checkout and passes the provider URL to this view.
+// On focus, the view checks payment status and closes the popup on completion.
 //*************************************************************
 
 // Store event listener cleanup functions
@@ -38,42 +27,6 @@ type eventCleanup struct {
 	focusFunc   js.Func
 	messageFunc js.Func
 	cleanedUp   bool
-}
-
-// MakePayment initiates the payment session
-func (p *ItemEditor) MakePayment() {
-	var checkoutResp CheckoutCreateResponse
-	log.Printf("%vMakePayment() starting for BookingID=%d", debugTag, p.CurrentRecord.ID)
-
-	success := func(err error) {
-		if err != nil {
-			log.Printf("%vMakePayment()1 error: %v", debugTag, err)
-			return
-		}
-
-		// Extract and validate checkout URL.
-		if checkoutResp.CheckoutURL == "" {
-			log.Printf("%vMakePayment()2 no checkout URL received", debugTag)
-			return
-		}
-
-		log.Printf("%vMakePayment()3 received checkout URL: %s", debugTag, checkoutResp.CheckoutURL)
-		p.openPaymentPage(checkoutResp.CheckoutURL)
-	}
-
-	fail := func(err error) {
-		log.Printf("%vMakePayment()4 failed: %v", debugTag, err)
-	}
-
-	// POST request to create checkout session
-	p.client.NewRequest(
-		http.MethodPost,
-		ApiURLBookings+"/checkout/create/"+strconv.FormatInt(int64(p.CurrentRecord.ID), 10),
-		&checkoutResp,
-		nil,
-		success,
-		fail,
-	)
 }
 
 // openPaymentPage opens a new browser tab with the payment page URL
@@ -140,6 +93,9 @@ func (p *ItemEditor) windowMessage(this js.Value, args []js.Value) interface{} {
 	p.paymentWindowDestroy()
 
 	if status == "complete" {
+		if p.bookingFlow {
+			p.resetEditForm()
+		}
 		p.RecordState = RecordStateReloadRequired
 		p.FetchItems()
 	}
@@ -173,6 +129,7 @@ func (p *ItemEditor) paymentWindowCreate(url string) {
 	if p.Children.PaymentState.paymentWindow.IsNull() || p.Children.PaymentState.paymentWindow.IsUndefined() {
 		log.Printf("%vpaymentWindowCreate() failed to open payment window - popup may be blocked", debugTag)
 		p.cleanupEventListeners()
+		window.Get("location").Call("assign", url)
 	} else {
 		log.Printf("%vpaymentWindowCreate() payment window opened successfully", debugTag)
 	}
@@ -277,6 +234,9 @@ func (p *ItemEditor) checkPayment() {
 			// Payment completed successfully
 			p.Children.PaymentState.paymentWindow.Call("close")
 			p.paymentWindowDestroy()
+			if p.bookingFlow {
+				p.resetEditForm()
+			}
 			// Refresh booking list
 			p.RecordState = RecordStateReloadRequired
 			p.FetchItems()

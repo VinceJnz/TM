@@ -26,3 +26,19 @@ func TestAdminPriceDoesNotSetPaidStatus(t *testing.T) {
 		t.Fatalf("invalid administrative input handling: %v", err)
 	}
 }
+
+func TestAdminBookingDetailsPreserveOmittedPrice(t *testing.T) {
+	for _, tc := range []struct {
+		body     string
+		preserve bool
+	}{
+		{`{"notes":"Updated booking notes"}`, true},
+		{`{"booking_price":null}`, false},
+	} {
+		r := httptest.NewRequest("PUT", "/", strings.NewReader(tc.body))
+		b, err := DecodeBookingWrite(httptest.NewRecorder(), r, true, false)
+		if err != nil || b.PreserveBookingPrice != tc.preserve || b.BookingPrice.Valid {
+			t.Fatalf("unexpected price handling for %s: %v", tc.body, err)
+		}
+	}
+}

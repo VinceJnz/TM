@@ -14,11 +14,11 @@ type Store struct{ DB *sqlx.DB }
 const participantQuery = `WITH booking_order AS (
 			SELECT 
 				atb.trip_id,
-				atb.payment_date,
+				COALESCE(atb.payment_date,atb.free_confirmed_at) AS payment_date,
 				atb.id as booking_id,
 				atbp.id as participant_id,
 				atbp.person_id as person_id,
-				ROW_NUMBER() OVER (PARTITION BY atb.trip_id ORDER BY atb.payment_date ASC, atbp.id ASC) AS booking_position
+				ROW_NUMBER() OVER (PARTITION BY atb.trip_id ORDER BY COALESCE(atb.payment_date,atb.free_confirmed_at) ASC, atbp.id ASC) AS booking_position
 			FROM at_booking_people atbp
 			JOIN at_bookings atb ON atb.id=atbp.booking_id
 			)

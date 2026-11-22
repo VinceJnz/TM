@@ -7,18 +7,15 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/service"
 	"client1/v2/views/bookingPeopleView"
-	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/utils/viewHelpers"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"syscall/js"
 	"time"
 
 	"client1/v2/app/domEvents"
-	"github.com/shopspring/decimal"
 )
 
 const debugTag = "bookingView."
@@ -38,37 +35,20 @@ const (
 )
 
 const ApiURL = "/bookings"
-const ApiURLVouchers = "/bookingVouchers"
 
 type TableData = api.BookingDTO
 
 type UI struct {
-	Notes           js.Value
-	FromDate        js.Value
-	ToDate          js.Value
-	BookingStatusID js.Value
-	VoucherCode     js.Value
-	BookingDate     js.Value
-	PaymentDate     js.Value
-	BookingPrice    js.Value
-}
-
-type VoucherData struct {
-	Code            string     `json:"code"`
-	DiscountPercent *float64   `json:"discount_percent"`
-	FixedCost       *float64   `json:"fixed_cost"`
-	ExpiryDate      *time.Time `json:"expiry_date"`
-	IsActive        bool       `json:"is_active"`
+	Notes       js.Value
+	FromDate    js.Value
+	ToDate      js.Value
+	VoucherCode js.Value
 }
 
 type ParentData struct {
 	ID       int       `json:"id"`
 	FromDate time.Time `json:"from_date"`
 	ToDate   time.Time `json:"to_date"`
-}
-
-type children struct {
-	BookingStatus *bookingStatusView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -79,18 +59,17 @@ type ItemEditor struct {
 
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
+	bookingFlow   bool
 	ItemState     viewHelpers.ItemState
 	Records       []TableData
 	RowSummaryDiv map[int]js.Value
 	UiComponents  UI
-	VoucherMap    map[string]VoucherData
 	Div           js.Value
 	EditDiv       js.Value
 	ListDiv       js.Value
 	ParentData    ParentData
 	ViewState     ViewState
 	RecordState   RecordState
-	Children      children
 	Page          httpProcessor.Page
 }
 
@@ -105,7 +84,6 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 
 	editor.ItemState = viewHelpers.ItemStateNone
 	editor.RowSummaryDiv = map[int]js.Value{}
-	editor.VoucherMap = map[string]VoucherData{}
 
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
@@ -128,12 +106,13 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 
 	editor.bookings.Invalidate()
 	editor.RecordState = RecordStateReloadRequired
-	editor.Children.BookingStatus = bookingStatusView.New(editor.document, events, editor.appCore)
 
 	return editor
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.bookingFlow = false
+	editor.ListDiv.Set("hidden", false)
 	editor.bookings.Invalidate()
 	editor.RecordState = RecordStateReloadRequired
 	editor.RowSummaryDiv = map[int]js.Value{}
@@ -169,6 +148,11 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
+	if editor.ItemState == viewHelpers.ItemStateSaving {
+		return nil
+	}
+	editor.bookingFlow = true
+	editor.ListDiv.Set("hidden", true)
 	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -199,47 +183,43 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.FromDate, editor.UiComponents.FromDate = viewHelpers.StringEdit(editor.CurrentRecord.FromDate.Format(viewHelpers.Layout), editor.document, "From", "date", "itemFromDate")
 	editor.UiComponents.FromDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.FromDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
-	domEvents.Listen(editor.UiComponents.FromDate, "change", editor.ValidateFromDate)
+	domEvents.Listen(editor.UiComponents.FromDate, "change", editor.validateDateChange)
 	editor.UiComponents.FromDate.Call("setAttribute", "required", "true")
 
 	localObjs.ToDate, editor.UiComponents.ToDate = viewHelpers.StringEdit(editor.CurrentRecord.ToDate.Format(viewHelpers.Layout), editor.document, "To", "date", "itemToDate")
 	editor.UiComponents.ToDate.Set("min", editor.ParentData.FromDate.Format(viewHelpers.Layout))
 	editor.UiComponents.ToDate.Set("max", editor.ParentData.ToDate.Format(viewHelpers.Layout))
-	domEvents.Listen(editor.UiComponents.ToDate, "change", editor.ValidateToDate)
+	domEvents.Listen(editor.UiComponents.ToDate, "change", editor.validateDateChange)
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
-
-	localObjs.BookingStatusID, editor.UiComponents.BookingStatusID = editor.Children.BookingStatus.NewDropdown(editor.CurrentRecord.BookingStatusID, "Status", "itemBookingStatusID")
-	editor.UiComponents.BookingStatusID.Call("setAttribute", "required", "true")
-
-	localObjs.VoucherCode, editor.UiComponents.VoucherCode = viewHelpers.StringEdit("", editor.document, "Voucher Code", "text", "itemVoucherCode")
-	domEvents.Listen(editor.UiComponents.VoucherCode, "change", editor.updateBookingPriceFromVoucher)
-
-	localObjs.BookingPrice, editor.UiComponents.BookingPrice = viewHelpers.StringEdit(editor.CurrentRecord.BookingPrice.StringFixed(2), editor.document, "Booking Price", "number", "itemBookingPrice")
-	editor.UiComponents.BookingPrice.Set("step", "0.01")
-	editor.UiComponents.BookingPrice.Set("readonly", true)
 
 	form.Call("appendChild", localObjs.Notes)
 	form.Call("appendChild", localObjs.FromDate)
 	form.Call("appendChild", localObjs.ToDate)
-	form.Call("appendChild", localObjs.BookingStatusID)
+	localObjs.VoucherCode, editor.UiComponents.VoucherCode = viewHelpers.StringEdit(editor.CurrentRecord.VoucherCode, editor.document, "Voucher code (optional)", "text", "itemVoucherCode")
+	editor.UiComponents.VoucherCode.Set("maxLength", 64)
 	form.Call("appendChild", localObjs.VoucherCode)
-	form.Call("appendChild", localObjs.BookingPrice)
 
+	status := editor.CurrentRecord.BookingStatus
+	cost := editor.CurrentRecord.BookingCost.StringFixedBank(2)
 	if editor.ItemState == viewHelpers.ItemStateAdding {
-		editor.applyVoucherToBookingPrice(editor.getVoucherFromUI())
+		status = "Not paid"
+		cost = "Calculated after you add participants."
 	}
-
-	if editor.appCore.CanManageAny("bookings") {
-		localObjs.BookingDate, editor.UiComponents.BookingDate = viewHelpers.StringEdit(editor.CurrentRecord.BookingDate.Format(viewHelpers.Layout), editor.document, "Booking Date", "date", "itemBookingDate")
-
-		localObjs.PaymentDate, editor.UiComponents.PaymentDate = viewHelpers.StringEdit(editor.CurrentRecord.PaymentDate.Format(viewHelpers.Layout), editor.document, "Payment", "date", "itemPaymentDate")
-
-		form.Call("appendChild", localObjs.BookingDate)
-		form.Call("appendChild", localObjs.PaymentDate)
+	for _, detail := range []string{"Payment status: " + status, "Booking cost: " + cost} {
+		row := editor.document.Call("createElement", "p")
+		row.Set("textContent", detail)
+		form.Call("appendChild", row)
 	}
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitValidateButton(editor.ValidateDates, editor.document, "Submit", "submitEditBtn")
+	submitLabel := "Submit"
+	if editor.bookingFlow {
+		heading := editor.document.Call("createElement", "h3")
+		heading.Set("textContent", "Step 1 of 4 · Booking details")
+		form.Call("prepend", heading)
+		submitLabel = "Save and continue"
+	}
+	submitBtn := viewHelpers.SubmitValidateButton(editor.ValidateDates, editor.document, submitLabel, "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 	viewHelpers.StyleButtonPrimary(submitBtn)
 	viewHelpers.StyleButtonSecondary(cancelBtn)
@@ -256,6 +236,8 @@ func (editor *ItemEditor) populateEditForm() {
 }
 
 func (editor *ItemEditor) resetEditForm() {
+	editor.bookingFlow = false
+	editor.ListDiv.Set("hidden", false)
 	// Clear existing content
 	editor.EditDiv.Set("innerHTML", "")
 
@@ -270,75 +252,17 @@ func (editor *ItemEditor) resetEditForm() {
 }
 
 func (editor *ItemEditor) ValidateDates() {
-	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be equal to or before To-date")
-	viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
+	from := editor.UiComponents.FromDate.Get("value").String()
+	to := editor.UiComponents.ToDate.Get("value").String()
+	message := ""
+	if from != "" && to != "" && from >= to {
+		message = "To date must be after From date."
+	}
+	editor.UiComponents.ToDate.Call("setCustomValidity", message)
 }
 
-func (editor *ItemEditor) ValidateFromDate(this js.Value, p []js.Value) any {
-	log.Println(debugTag+"ValidateFromDate()", editor.UiComponents.FromDate.Get("value").String(), editor.UiComponents.ToDate.Get("value").String())
-	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.FromDate, "From-date must be equal to or before To-date")
-}
-
-func (editor *ItemEditor) ValidateToDate(this js.Value, p []js.Value) any {
-	log.Println(debugTag+"ValidateToDate()", editor.UiComponents.FromDate.Get("value").String(), editor.UiComponents.ToDate.Get("value").String())
-	return viewHelpers.ValidateDatesFromLtTo(editor.UiComponents.FromDate, editor.UiComponents.ToDate, editor.UiComponents.ToDate, "To-date must be equal to or after From-date")
-}
-
-func (editor *ItemEditor) baseBookingPrice() decimal.Decimal {
-	if !editor.CurrentRecord.BookingCost.IsZero() {
-		return editor.CurrentRecord.BookingCost
-	}
-	return editor.CurrentRecord.BookingPrice
-}
-
-func normalizeVoucherCode(voucherCode string) string {
-	return strings.ToUpper(strings.TrimSpace(voucherCode))
-}
-
-func (editor *ItemEditor) getVoucherFromUI() (VoucherData, bool) {
-	if editor.UiComponents.VoucherCode.IsUndefined() || editor.UiComponents.VoucherCode.IsNull() {
-		return VoucherData{}, false
-	}
-
-	voucherCode := normalizeVoucherCode(editor.UiComponents.VoucherCode.Get("value").String())
-	if voucherCode == "" {
-		return VoucherData{}, false
-	}
-
-	if voucher, ok := editor.VoucherMap[voucherCode]; ok {
-		return voucher, true
-	}
-
-	editor.UiComponents.VoucherCode.Call("setCustomValidity", "Invalid voucher code")
-	return VoucherData{}, false
-}
-
-func (editor *ItemEditor) applyVoucherToBookingPrice(voucher VoucherData, hasVoucher bool) {
-	if editor.UiComponents.BookingPrice.IsUndefined() || editor.UiComponents.BookingPrice.IsNull() {
-		return
-	}
-
-	if !editor.UiComponents.VoucherCode.IsUndefined() && !editor.UiComponents.VoucherCode.IsNull() {
-		editor.UiComponents.VoucherCode.Call("setCustomValidity", "")
-	}
-
-	basePrice := editor.baseBookingPrice()
-	if basePrice.IsZero() {
-		editor.UiComponents.BookingPrice.Set("value", editor.CurrentRecord.BookingPrice.StringFixed(2))
-		return
-	}
-
-	if !hasVoucher {
-		editor.UiComponents.BookingPrice.Set("value", basePrice.RoundBank(2).StringFixed(2))
-		return
-	}
-
-	calculatedPrice := viewHelpers.CalculateVoucherBookingPrice(basePrice, voucher.DiscountPercent, voucher.FixedCost)
-	editor.UiComponents.BookingPrice.Set("value", calculatedPrice.StringFixed(2))
-}
-
-func (editor *ItemEditor) updateBookingPriceFromVoucher(this js.Value, p []js.Value) any {
-	editor.applyVoucherToBookingPrice(editor.getVoucherFromUI())
+func (editor *ItemEditor) validateDateChange(js.Value, []js.Value) any {
+	editor.ValidateDates()
 	return nil
 }
 
@@ -349,35 +273,15 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		event.Call("preventDefault")
 	}
 
-	var err error
+	editor.ValidateDates()
+	if !editor.UiComponents.ToDate.Get("form").Call("reportValidity").Bool() {
+		return nil
+	}
 
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
-	editor.CurrentRecord.FromDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing value:", err)
-	}
-	editor.CurrentRecord.ToDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing value:", err)
-	}
-	editor.CurrentRecord.BookingStatusID, err = strconv.Atoi(editor.UiComponents.BookingStatusID.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing value:", err)
-	}
-	editor.CurrentRecord.BookingPrice.UnmarshalText([]byte(editor.UiComponents.BookingPrice.Get("value").String()))
-
-	if editor.appCore.CanManageAny("bookings") {
-		editor.CurrentRecord.BookingDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.BookingDate.Get("value").String())
-		if err != nil {
-			log.Println("Error parsing value:", err)
-		}
-
-		editor.CurrentRecord.PaymentDate, err = time.Parse(viewHelpers.Layout, editor.UiComponents.PaymentDate.Get("value").String())
-		if err != nil {
-			log.Println("Error parsing value:", err)
-		}
-
-	}
+	editor.CurrentRecord.VoucherCode = editor.UiComponents.VoucherCode.Get("value").String()
+	editor.CurrentRecord.FromDate, _ = time.Parse(viewHelpers.Layout, editor.UiComponents.FromDate.Get("value").String())
+	editor.CurrentRecord.ToDate, _ = time.Parse(viewHelpers.Layout, editor.UiComponents.ToDate.Get("value").String())
 
 	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
@@ -394,41 +298,68 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 
 // cancelItemEdit handles the cancelling of the item edit form
 func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) any {
+	refresh := editor.bookingFlow && editor.CurrentRecord.ID > 0
 	editor.resetEditForm()
+	if refresh {
+		editor.bookings.Invalidate()
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+	}
 	return nil
 }
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.BookingPayload(item)); err != nil {
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.BookingDetailsPayload(item)); err != nil {
 		editor.updateStateDisplay(viewHelpers.ItemStateEditing)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.onCompletionMsg(err.Error())
+		return
+	}
+	if editor.bookingFlow {
+		editor.showBookingPeople(item)
 		return
 	}
 	editor.resetEditForm()
 
 	editor.refreshBookingRow(item.ID)
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
-	editor.onCompletionMsg("Item record updated successfully")
+	editor.onCompletionMsg("Booking updated successfully")
 }
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
 	var id int
 	editor.updateStateDisplay(viewHelpers.ItemStateSaving)
-	if err := editor.client.Request(http.MethodPost, ApiURL, &id, api.BookingPayload(item)); err != nil {
+	if err := editor.client.Request(http.MethodPost, ApiURL, &id, api.BookingDetailsPayload(item)); err != nil {
 		editor.updateStateDisplay(viewHelpers.ItemStateAdding)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.onCompletionMsg(err.Error())
 		return
 	}
-	editor.resetEditForm()
+	item.ID = id
+	item.OwnerID = editor.appCore.GetUser().UserID
+	item.BookingStatusID = 1
+	item.BookingStatus = "Not paid"
+	editor.showBookingPeople(item)
+}
 
-	editor.bookings.Invalidate()
-	editor.RecordState = RecordStateReloadRequired
-	editor.FetchItems() // Refresh the item list
+func (editor *ItemEditor) showBookingPeople(item TableData) {
+	editor.bookingFlow = true
+	editor.ListDiv.Set("hidden", true)
+	editor.CurrentRecord = item
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
-	editor.onCompletionMsg("Item record added successfully")
+	people := bookingPeopleView.New(editor.document, editor.events, editor.appCore, item.ID)
+	people.BookingSteps(editor.EditDiv, func() {
+		editor.CurrentRecord = item
+		editor.updateStateDisplay(viewHelpers.ItemStateEditing)
+		editor.populateEditForm()
+	}, func(url string) { js.Global().Get("location").Call("assign", url) }, func() {
+		editor.resetEditForm()
+		editor.bookings.Invalidate()
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+		editor.onCompletionMsg("Booking confirmed.")
+	})
 }
 
 func (editor *ItemEditor) FetchItems() {
@@ -442,9 +373,6 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.RecordState = RecordStateCurrent
-		// Fetch child data
-		editor.Children.BookingStatus.FetchItems()
-		editor.FetchVouchers()
 
 		localApiURL := ApiURL
 		if editor.ParentData.ID != 0 { // This creates a URL that gets items for a specific parent record.
@@ -466,36 +394,6 @@ func (editor *ItemEditor) FetchItems() {
 			success(nil)
 		}()
 	}
-}
-
-func (editor *ItemEditor) FetchVouchers() {
-	var vouchers []VoucherData
-
-	success := func(err error) {
-		voucherMap := map[string]VoucherData{}
-		today := time.Now().Truncate(24 * time.Hour)
-		for _, voucher := range vouchers {
-			if !voucher.IsActive {
-				continue
-			}
-			if voucher.ExpiryDate != nil {
-				expiryDate := voucher.ExpiryDate.Truncate(24 * time.Hour)
-				if expiryDate.Before(today) {
-					continue
-				}
-			}
-			voucherMap[normalizeVoucherCode(voucher.Code)] = voucher
-		}
-		editor.VoucherMap = voucherMap
-	}
-
-	fail := func(err error) {
-		log.Printf(debugTag+"FetchVouchers() error: %v", err)
-	}
-
-	go func() {
-		editor.client.NewRequest(http.MethodGet, ApiURLVouchers, &vouchers, nil, success, fail)
-	}()
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {
@@ -566,7 +464,7 @@ func (editor *ItemEditor) populateItemList() {
 	editor.RowSummaryDiv = map[int]js.Value{}
 
 	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Make a Booking", "addNewItemButton")
 	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
@@ -616,7 +514,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Create a toggle modify-people-list button
 		peopleButton := editor.document.Call("createElement", "button")
-		peopleButton.Set("innerHTML", "People")
+		peopleButton.Set("textContent", "Manage people")
 		peopleButton.Set("className", "btn btn-secondary")
 		domEvents.Listen(peopleButton, "click", func(this js.Value, args []js.Value) any {
 			bookingPeople.FetchItems()
@@ -624,6 +522,23 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		})
 		itemDiv.Call("appendChild", peopleButton)
+		if record.OwnerID == editor.appCore.GetUser().UserID && record.BookingStatusID == 1 && editor.appCore.HasAccess("bookings", []string{"POST"}, []string{"own", "any"}) {
+			resume := viewHelpers.Button(func(js.Value, []js.Value) any {
+				editor.showBookingPeople(record)
+				return nil
+			}, editor.document, "Continue booking", "booking-continue-"+strconv.Itoa(record.ID))
+			itemDiv.Call("appendChild", resume)
+			reviewButton, review := viewHelpers.BookingReview(editor.document, editor.client, record.ID,
+				func(url string) { js.Global().Get("location").Call("assign", url) },
+				func() {
+					editor.onCompletionMsg("Booking confirmed.")
+					editor.bookings.Invalidate()
+					editor.RecordState = RecordStateReloadRequired
+					editor.FetchItems()
+				})
+			itemDiv.Call("appendChild", reviewButton)
+			itemDiv.Call("appendChild", review)
+		}
 
 		itemDiv.Call("appendChild", bookingPeople.Div)
 

@@ -7,6 +7,7 @@ import (
 )
 
 type BookingWrite struct {
+	VoucherCode  *string             `json:"voucher_code,omitempty"`
 	OwnerID      int                 `json:"owner_id"`
 	TripID       zero.Int            `json:"trip_id"`
 	Notes        string              `json:"notes"`

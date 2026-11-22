@@ -7,6 +7,7 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	store "api-server/v2/modelMethods/accounts"
 	profileStore "api-server/v2/modelMethods/profiles"
+	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/models"
 	"errors"
 	"github.com/gorilla/mux"
@@ -26,6 +27,10 @@ func (h *Handler) RegisterRoutes(r *mux.Router, path string) {
 	helpers.AddRouteGroup(r, path, h, "users")
 	helpers.CapabilityRoute(r, path+"/set-username", "users", h.SetUsername).Methods("POST")
 	helpers.CapabilityRoute(r, path+"/lookup", "users", h.Lookup).Methods("GET")
+}
+
+func (h *Handler) RegisterBookingPeopleLookup(r *mux.Router) {
+	helpers.CapabilityRoute(r, "/bookings/{id:[0-9]+}/bookingPeople/lookup", "bookingPeople", h.bookingPeopleLookup).Methods("GET")
 }
 func (h *Handler) actor(w http.ResponseWriter, r *http.Request) int {
 	s := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
@@ -153,6 +158,18 @@ func (h *Handler) Lookup(w http.ResponseWriter, r *http.Request) {
 	if h.actor(w, r) == 0 {
 		return
 	}
+	h.lookup(w, r, 0, 0, "")
+}
+
+func (h *Handler) bookingPeopleLookup(w http.ResponseWriter, r *http.Request) {
+	if s := helpers.RequiredSession(w, r, h.appConf.SessionIDKey); s != nil {
+		if bookingID := helpers.RouteID(w, r); bookingID > 0 {
+			h.lookup(w, r, bookingID, s.UserID, s.AccessScope)
+		}
+	}
+}
+
+func (h *Handler) lookup(w http.ResponseWriter, r *http.Request, bookingID, viewer int, scope string) {
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	id := 0
 	if raw := r.URL.Query().Get("id"); raw != "" {
@@ -167,7 +184,13 @@ func (h *Handler) Lookup(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, 400, "invalid_search", "Search must be at most 100 bytes")
 		return
 	}
-	items, err := h.store.Lookup(r.Context(), query, id)
+	var items []resourcequery.UserOption
+	var err error
+	if bookingID > 0 {
+		items, err = h.store.BookingPeopleLookup(r.Context(), query, id, bookingID, viewer, scope)
+	} else {
+		items, err = h.store.Lookup(r.Context(), query, id)
+	}
 	if err != nil {
 		helpers.WriteDataError(w, err)
 		return

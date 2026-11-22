@@ -10,6 +10,7 @@ import (
 	"errors"
 	"github.com/shopspring/decimal"
 	"testing"
+	"time"
 )
 
 func TestVoucherValidationAndExplicitWrites(t *testing.T) {
@@ -20,15 +21,19 @@ func TestVoucherValidationAndExplicitWrites(t *testing.T) {
 	}
 	s := Service{Store: store.Store{DB: db}}
 	value := models.Money{Decimal: decimal.RequireFromString("12.34")}
-	v, err := s.Save(ctx, 0, models.VoucherWrite{Code: " synthetic ", FixedCost: &value, IsActive: true})
+	expires := time.Now().AddDate(0, 0, 30)
+	if _, err := s.Save(ctx, 0, models.VoucherWrite{Code: "MISSING", FixedCost: &value}); !errors.Is(err, ErrValidation) {
+		t.Fatal("missing expiry accepted", err)
+	}
+	v, err := s.Save(ctx, 0, models.VoucherWrite{Code: " synthetic ", FixedCost: &value, ExpiryDate: &expires, IsActive: true})
 	if err != nil || v.Code != "SYNTHETIC" {
 		t.Fatal(v, err)
 	}
 	invalid := models.Money{Decimal: decimal.RequireFromString("-1")}
-	if _, err = s.Save(ctx, v.ID, models.VoucherWrite{Code: "bad", FixedCost: &invalid}); !errors.Is(err, ErrValidation) {
+	if _, err = s.Save(ctx, v.ID, models.VoucherWrite{Code: "bad", ExpiryDate: &expires, FixedCost: &invalid}); !errors.Is(err, ErrValidation) {
 		t.Fatal("negative price accepted", err)
 	}
-	if _, err = s.Save(ctx, v.ID, models.VoucherWrite{Code: "bad", FixedCost: &value, DiscountPercent: func() *float64 { p := 12.34; return &p }()}); !errors.Is(err, ErrValidation) {
+	if _, err = s.Save(ctx, v.ID, models.VoucherWrite{Code: "bad", ExpiryDate: &expires, FixedCost: &value, DiscountPercent: func() *float64 { p := 12.34; return &p }()}); !errors.Is(err, ErrValidation) {
 		t.Fatal("ambiguous voucher accepted", err)
 	}
 	current, err := s.Store.Get(ctx, v.ID)

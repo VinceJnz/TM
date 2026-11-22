@@ -8,10 +8,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 )
 
 var ErrValidation = errors.New("invalid booking")
+var ErrVoucher = errors.New("voucher is invalid or expired")
 
 type Mailer interface {
 	SendMail(string, string, string) (bool, error)
@@ -58,14 +60,30 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 		if !any {
 			input.OwnerID = current.OwnerID
 			input.TripID = current.TripID
+		}
+		if !any || input.PreserveBookingPrice {
 			input.BookingPrice = current.BookingPrice
 		}
+		input.VoucherCode = current.VoucherCode
 	}
 	if err != nil {
 		return input, err
 	}
-	if operation != "delete" && (input.FromDate.IsZero() || input.ToDate.IsZero() || input.ToDate.Before(input.FromDate) || input.FromDate.Before(bounds.From) || input.ToDate.After(bounds.To) || (input.BookingPrice.Valid && input.BookingPrice.Decimal.IsNegative())) {
+	if operation != "delete" && (input.FromDate.IsZero() || input.ToDate.IsZero() || !input.ToDate.After(input.FromDate) || input.FromDate.Before(bounds.From) || input.ToDate.After(bounds.To) || (input.BookingPrice.Valid && input.BookingPrice.Decimal.IsNegative())) {
 		return input, ErrValidation
+	}
+	if input.VoucherInput != nil {
+		code := strings.ToUpper(strings.TrimSpace(*input.VoucherInput))
+		if code != "" && code != input.VoucherCode {
+			active, err := s.Store.ValidVoucher(ctx, tx, code)
+			if err != nil {
+				return input, err
+			}
+			if !active {
+				return input, ErrVoucher
+			}
+		}
+		input.VoucherCode = code
 	}
 	switch operation {
 	case "create":

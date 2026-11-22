@@ -63,8 +63,10 @@ type BookingDTO struct {
 	Currency        string          `json:"currency"`
 	Created         time.Time       `json:"created"`
 	Modified        time.Time       `json:"modified"`
+	VoucherCode     string          `json:"voucher_code"`
 }
 type MyBookingDTO struct {
+	VoucherCode     string          `json:"voucher_code"`
 	ID              int             `json:"id"`
 	OwnerID         int             `json:"owner_id"`
 	Owner           string          `json:"owner_name"`
@@ -126,6 +128,7 @@ type TripReportDTO struct {
 	BookingStatus   string    `json:"booking_status"`
 }
 type BookingWrite struct {
+	VoucherCode  *string         `json:"voucher_code,omitempty"`
 	OwnerID      int             `json:"owner_id"`
 	TripID       int             `json:"trip_id"`
 	Notes        string          `json:"notes"`

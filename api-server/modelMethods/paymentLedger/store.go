@@ -15,8 +15,12 @@ var ErrInvalidPayment = errors.New("payment does not match the stored checkout q
 
 // Finalize commits the event, ledger entry and derived booking state together.
 // Row locking serializes duplicate events, including across API replicas.
-func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amountMinor int64, currency string) (bool, error) {
-	replay, err := finalize(ctx, db, eventID, sessionID, amountMinor, currency)
+func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amountMinor int64, currency string, paymentTimes ...time.Time) (bool, error) {
+	var paidAt time.Time
+	if len(paymentTimes) > 0 {
+		paidAt = paymentTimes[0]
+	}
+	replay, err := finalize(ctx, db, eventID, sessionID, amountMinor, currency, paidAt)
 	if err != nil && !errors.Is(err, ErrInvalidPayment) {
 		// The financial transaction has rolled back. Record a separate durable
 		// exception only for a matching stored quote, never untrusted payloads.
@@ -29,7 +33,7 @@ func Finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 	return replay, err
 }
 
-func finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amountMinor int64, currency string) (bool, error) {
+func finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amountMinor int64, currency string, paidAt time.Time) (bool, error) {
 	if eventID == "" || sessionID == "" || amountMinor <= 0 {
 		return false, ErrInvalidPayment
 	}
@@ -80,7 +84,13 @@ func finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 		// durably without admitting the booking or recreating refunded money.
 		return true, tx.Commit()
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO at_payments(booking_id,payment_date,amount,payment_method,stripe_session_id) VALUES($1,$2,$3,'stripe_checkout',$4) ON CONFLICT(stripe_session_id) WHERE stripe_session_id IS NOT NULL DO NOTHING`, bookingID, time.Now(), amount, sessionID)
+	if err := redeemStripePayment(ctx, tx, bookingID, sessionID, paidAt, amountMinor); err != nil {
+		return false, err
+	}
+	if paidAt.IsZero() {
+		paidAt = time.Now()
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO at_payments(booking_id,payment_date,amount,payment_method,stripe_session_id) VALUES($1,$2,$3,'stripe_checkout',$4) ON CONFLICT(stripe_session_id) WHERE stripe_session_id IS NOT NULL DO NOTHING`, bookingID, paidAt, amount, sessionID)
 	if err != nil {
 		return false, err
 	}
@@ -98,17 +108,9 @@ func finalize(ctx context.Context, db *sqlx.DB, eventID, sessionID string, amoun
 
 // Quote computes cents from numeric SQL values, never binary floating point.
 func Quote(ctx context.Context, tx *sqlx.Tx, bookingID int) (int64, error) {
-	var amount decimal.NullDecimal
-	err := tx.GetContext(ctx, &amount, `SELECT COALESCE(b.booking_price,SUM(c.amount)*(EXTRACT(EPOCH FROM (b.to_date-b.from_date))/86400)) FROM at_bookings b JOIN at_trips t ON t.id=b.trip_id JOIN at_booking_people p ON p.booking_id=b.id JOIN st_users u ON u.id=p.person_id LEFT JOIN at_trip_costs c ON c.trip_cost_group_id=t.trip_cost_group_id AND c.member_status_id=u.member_status_id AND c.user_age_group_id=u.user_age_group_id WHERE b.id=$1 GROUP BY b.id HAVING COUNT(p.id)=COUNT(c.id)`, bookingID)
-	if err != nil {
-		return 0, err
+	amount, err := bookingTotal(ctx, tx, bookingID)
+	if err == nil && amount == 0 {
+		return 0, ErrQuoteChanged
 	}
-	if !amount.Valid || !amount.Decimal.IsPositive() {
-		return 0, ErrInvalidPayment
-	}
-	cents := amount.Decimal.Mul(decimal.NewFromInt(100)).Round(0)
-	if !cents.IsPositive() || cents.GreaterThan(decimal.NewFromInt(99999999)) {
-		return 0, ErrInvalidPayment
-	}
-	return cents.IntPart(), nil
+	return amount, err
 }

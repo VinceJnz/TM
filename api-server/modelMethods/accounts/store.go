@@ -16,6 +16,16 @@ func (s Store) Lookup(ctx context.Context, query string, id int) ([]resourcequer
 	return resourcequery.UserOptions(ctx, s.DB, query, id)
 }
 
+func (s Store) BookingPeopleLookup(ctx context.Context, query string, id, bookingID, viewer int, scope string) ([]resourcequery.UserOption, error) {
+	items := []resourcequery.UserOption{}
+	err := s.DB.SelectContext(ctx, &items, `SELECT id,name FROM st_users
+		WHERE (id=$3 OR user_account_hidden IS NOT TRUE)
+		AND (($2>0 AND id=$2) OR ($2=0 AND length($1)>=2 AND strpos(lower(name),lower($1))>0))
+		AND EXISTS(SELECT 1 FROM at_bookings WHERE id=$4 AND (owner_id=$3 OR lower($5)='any'))
+		ORDER BY id LIMIT 25`, query, id, viewer, bookingID, scope)
+	return items, err
+}
+
 var ErrReferenced = errors.New("account has dependent records")
 
 const columns = `version,id,name,username,COALESCE(email,'') AS email,COALESCE(user_address,'') AS user_address,COALESCE(member_code,'') AS member_code,COALESCE(user_birth_date,'0001-01-01'::date) AS user_birth_date,COALESCE(user_age_group_id,0) AS user_age_group_id,COALESCE(member_status_id,0) AS member_status_id,COALESCE(user_account_status_id,0) AS user_account_status_id,COALESCE(user_account_hidden,false) AS user_account_hidden,created,modified`
