@@ -72,6 +72,7 @@ func TestAccountChangesAreAuditedRevokeTokensAndPreserveHistory(t *testing.T) {
 		t.Fatal("history removed", err)
 	}
 	input.Email = "another@example.test"
+	input.MemberCode = ""
 	input.Username = "another"
 	other, err := s.Save(ctx, 10, 0, input, "")
 	if err != nil {

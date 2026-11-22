@@ -6,9 +6,9 @@ import (
 	store "api-server/v2/modelMethods/accounts"
 	"api-server/v2/models"
 	"context"
-	"crypto/rand"
+
 	"errors"
-	"fmt"
+
 	"strings"
 	"time"
 )
@@ -28,13 +28,6 @@ func (s Service) Save(ctx context.Context, actor, id int, v models.AccountWrite,
 		return models.AccountDTO{}, ErrValidation
 	}
 	v.Email = email
-	if id == 0 && v.MemberCode == "" {
-		var bytes [4]byte
-		if _, err = rand.Read(bytes[:]); err != nil {
-			return models.AccountDTO{}, err
-		}
-		v.MemberCode = fmt.Sprintf("TM-%s-%x", time.Now().Format("200601"), bytes)
-	}
 	tx, err := s.Store.Begin(ctx, actor, reason)
 	if err != nil {
 		return models.AccountDTO{}, err

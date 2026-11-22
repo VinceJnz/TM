@@ -322,14 +322,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 
 	user.AccountStatusID.SetValid(int64(models.AccountVerified)) // Email verified, pending admin approval
 
-	// Generate a unique member code
-	memberCode, err := handlerHelpers.GenerateMemberCode(h.appConf.Db)
-	if err != nil {
-		log.Printf("%vVerifyRegistration failed to generate member code: %v", debugTag, err)
-		http.Error(w, "failed to generate member code", http.StatusInternalServerError)
-		return
-	}
-	user.MemberCode.SetValid(memberCode)
+	// Member codes are allocated atomically by the database on insertion.
 
 	// Validate age group matches birthdate
 	if user.UserAgeGroupID.Valid && user.UserAgeGroupID.Int64 > 0 && user.BirthDate.Valid {

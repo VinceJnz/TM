@@ -3,37 +3,13 @@ package helpers
 import (
 	"fmt"
 	"log"
-	"math/rand"
+
 	"time"
 
 	"github.com/jmoiron/sqlx"
 )
 
 const regDebugTag = "registrationHelpers."
-
-// GenerateMemberCode generates a unique member code in the format TM-YYYYMM-XXXXX
-// where XXXXX is a random 5-digit number
-func GenerateMemberCode(db *sqlx.DB) (string, error) {
-	now := time.Now()
-	yearMonth := fmt.Sprintf("%04d%02d", now.Year(), now.Month())
-
-	// Try to generate a unique code (max 10 attempts)
-	for attempt := 0; attempt < 10; attempt++ {
-		randomPart := rand.Intn(100000) // 0-99999
-		memberCode := fmt.Sprintf("TM-%s-%05d", yearMonth, randomPart)
-
-		// Check if code already exists
-		var exists int
-		err := db.QueryRow("SELECT 1 FROM st_users WHERE member_code = $1", memberCode).Scan(&exists)
-		if err != nil {
-			// Code doesn't exist, we can use it
-			return memberCode, nil
-		}
-		// Code exists, try again
-	}
-
-	return "", fmt.Errorf("failed to generate unique member code after 10 attempts")
-}
 
 // GetAgeGroupByID fetches the age group record by its ID
 func GetAgeGroupByID(db *sqlx.DB, ageGroupID int64) (string, error) {
