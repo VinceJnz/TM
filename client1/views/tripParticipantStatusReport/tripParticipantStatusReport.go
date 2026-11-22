@@ -3,14 +3,12 @@ package tripParticipantStatusReport
 import (
 	"client1/v2/app/api"
 	"client1/v2/app/appCore"
-	"client1/v2/app/domEvents"
+
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/bookingView"
 	"client1/v2/views/utils/viewHelpers"
-	"log"
-	"net/http"
-	"strconv"
+
 	"syscall/js"
 )
 
@@ -67,11 +65,15 @@ type ItemEditor struct {
 	UiComponents  UI
 	Div           js.Value
 	//EditDiv       js.Value
-	ListDiv      js.Value
-	ParentID     int
-	ViewState    ViewState
-	RecordState  RecordState
-	tripExpanded map[int]bool
+	ListDiv        js.Value
+	ParentID       int
+	ViewState      ViewState
+	RecordState    RecordState
+	tripExpanded   map[int]bool
+	load           httpProcessor.LoadScope
+	Page           httpProcessor.Page
+	detailLoads    []*httpProcessor.LoadScope
+	bookingEditors []*bookingView.ItemEditor
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -105,6 +107,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.cancelLoads()
 	editor.RecordState = RecordStateReloadRequired
 	editor.ListDiv.Set("innerHTML", "")
 }
@@ -124,6 +127,8 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.cancelLoads()
+	editor.RecordState = RecordStateReloadRequired
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -131,254 +136,6 @@ func (editor *ItemEditor) Hide() {
 func (editor *ItemEditor) Display() {
 	editor.Div.Get("style").Call("setProperty", "display", "block")
 	editor.ViewState = ViewStateBlock
-}
-
-func (editor *ItemEditor) FetchItems() {
-	var records []TableData
-
-	success := func(err error) {
-		editor.Records = records
-		editor.populateItemList()
-		editor.updateStateDisplay(viewHelpers.ItemStateNone)
-	}
-
-	failure := func(err error) {
-		log.Printf(debugTag+"FetchItems()1 failure err: %v", err)
-		editor.RecordState = RecordStateReloadRequired
-		editor.updateStateDisplay(viewHelpers.ItemStateNone)
-		viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
-	}
-
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
-		editor.RecordState = RecordStateCurrent
-		// Fetch child data
-		go func() {
-			editor.client.NewRequest(http.MethodGet, ApiURL, &records, nil, success, failure)
-		}()
-	}
-}
-
-func (editor *ItemEditor) populateItemList() {
-	editor.ListDiv.Set("innerHTML", "")
-
-	if len(editor.Records) == 0 {
-		empty := editor.document.Call("createElement", "div")
-		empty.Set("innerHTML", "No participant records found for current trips.")
-		viewHelpers.SetStyles(empty, map[string]string{
-			"padding":       "16px",
-			"border":        "1px solid #dbe4ef",
-			"border-radius": "8px",
-			"background":    "#f7fafc",
-			"color":         "#44576d",
-		})
-		editor.ListDiv.Call("appendChild", empty)
-		return
-	}
-
-	tripSeen := map[int]bool{}
-	bookingSeen := map[int]bool{}
-	totalParticipants := 0
-	for _, record := range editor.Records {
-		tripSeen[record.TripID] = true
-		if record.BookingID > 0 {
-			bookingSeen[record.BookingID] = true
-		}
-		if record.PersonName != "" {
-			totalParticipants++
-		}
-	}
-
-	summary := editor.document.Call("createElement", "div")
-	viewHelpers.SetStyles(summary, map[string]string{
-		"border":        "1px solid #d7e3f3",
-		"border-radius": "10px",
-		"background":    "#f5f9ff",
-		"padding":       "8px 10px",
-		"margin-bottom": "8px",
-	})
-	summary.Set("innerHTML", "<strong>Trip Participant Status Report</strong><br>Trips: "+strconv.Itoa(len(tripSeen))+" | Bookings: "+strconv.Itoa(len(bookingSeen))+" | Participants: "+strconv.Itoa(totalParticipants))
-	editor.ListDiv.Call("appendChild", summary)
-
-	currentTripID := -1
-	currentBookingID := -1
-	bookingCount := 0
-	var tripCard js.Value
-	var bookingsContainer js.Value
-	var bookingCard js.Value
-
-	for _, i := range editor.Records {
-		record := i
-
-		if currentTripID != record.TripID {
-			currentTripID = record.TripID
-			currentBookingID = -1
-			bookingCount = 0
-
-			tripCard = editor.document.Call("createElement", "div")
-			tripCard.Set("id", debugTag+"tripCard")
-			tripCard.Get("style").Call("setProperty", "cursor", "pointer")
-			viewHelpers.SetStyles(tripCard, map[string]string{
-				"border":        "1px solid #cfd9e6",
-				"border-radius": "10px",
-				"padding":       "8px",
-				"margin-bottom": "6px",
-				"background":    "#ffffff",
-			})
-
-			// Trip header with toggle indicator
-			headerDiv := editor.document.Call("createElement", "div")
-			headerDiv.Get("style").Call("setProperty", "display", "flex")
-			headerDiv.Get("style").Call("setProperty", "align-items", "center")
-			headerDiv.Get("style").Call("setProperty", "gap", "8px")
-
-			toggleIndicator := editor.document.Call("createElement", "span")
-			toggleIndicator.Set("textContent", "\u25b6")
-			viewHelpers.SetStyles(toggleIndicator, map[string]string{
-				"font-size": "0.8em",
-				"color":     "#4f647a",
-				"width":     "12px",
-			})
-			headerDiv.Call("appendChild", toggleIndicator)
-
-			title := editor.document.Call("createElement", "div")
-			tripName := editor.document.Call("createElement", "strong")
-			tripName.Set("textContent", record.TripName)
-			title.Call("append", tripName, " - "+record.TripFrom.Format(viewHelpers.Layout)+" to "+record.TripTo.Format(viewHelpers.Layout)+" | Capacity: "+strconv.Itoa(record.MaxParticipants))
-			viewHelpers.SetStyles(title, map[string]string{
-				"font-size": "0.98em",
-				"color":     "#1d2f45",
-				"flex-grow": "1",
-			})
-			headerDiv.Call("appendChild", title)
-
-			makeBookingButton := editor.document.Call("createElement", "button")
-			makeBookingButton.Set("innerHTML", "Make Booking")
-			makeBookingButton.Set("className", "btn btn-primary")
-			viewHelpers.SetStyles(makeBookingButton, map[string]string{
-				"padding":   "4px 8px",
-				"font-size": "0.82em",
-			})
-			headerDiv.Call("appendChild", makeBookingButton)
-
-			tripCard.Call("appendChild", headerDiv)
-
-			// Bookings container (initially hidden)
-			bookingsContainer = editor.document.Call("createElement", "div")
-			bookingsContainer.Get("style").Call("setProperty", "display", "none")
-			bookingsContainer.Get("style").Call("setProperty", "margin-top", "4px")
-			tripCard.Call("appendChild", bookingsContainer)
-
-			bookingEditor := bookingView.New(editor.document, editor.events, editor.appCore, bookingView.ParentData{
-				ID:       record.TripID,
-				FromDate: record.TripFrom,
-				ToDate:   record.TripTo,
-			})
-			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
-			bookingsContainer.Call("appendChild", bookingEditor.Div)
-
-			// Create click handler with proper closure capture
-			tripID := record.TripID
-			domEvents.Listen(tripCard, "click", editor.createTripToggleHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
-
-			domEvents.Listen(makeBookingButton, "click", editor.createMakeBookingHandler(tripID, bookingsContainer, toggleIndicator, bookingEditor))
-
-			editor.ListDiv.Call("appendChild", tripCard)
-		}
-
-		if currentBookingID != record.BookingID || record.PersonName == "" {
-			currentBookingID = record.BookingID
-			if record.PersonName != "" {
-				bookingCount++
-			}
-
-			bookingCard = editor.document.Call("createElement", "div")
-			bookingCard.Set("id", debugTag+"bookingCard")
-			viewHelpers.SetStyles(bookingCard, map[string]string{
-				"border":        "1px solid #dbe4ef",
-				"border-radius": "8px",
-				"padding":       "6px 8px",
-				"margin":        "3px 0 0 0",
-				"background":    "#fbfdff",
-			})
-
-			heading := editor.document.Call("createElement", "div")
-			if record.PersonName != "" {
-				heading.Set("innerHTML", "<strong>Booking "+strconv.Itoa(bookingCount)+"</strong>")
-			} else {
-				heading.Set("innerHTML", "<strong>No bookings to display</strong>")
-			}
-			viewHelpers.SetStyles(heading, map[string]string{
-				"font-size":     "0.92em",
-				"margin-bottom": "3px",
-				"color":         "#2d4059",
-			})
-			bookingCard.Call("appendChild", heading)
-
-			bookingsContainer.Call("appendChild", bookingCard)
-		}
-
-		if record.PersonName == "" {
-			continue
-		}
-
-		participantRow := editor.document.Call("createElement", "div")
-		statusColors := participantStatusColors(record.BookingStatus)
-		viewHelpers.SetStyles(participantRow, map[string]string{
-			"margin":        "2px 0",
-			"padding":       "5px 8px",
-			"border-radius": "6px",
-			"border":        "1px solid " + statusColors.border,
-			"background":    statusColors.background,
-			"color":         "#23364a",
-			"font-size":     "0.88em",
-		})
-		name := editor.document.Call("createElement", "strong")
-		name.Set("textContent", record.PersonName)
-		participantRow.Call("appendChild", name)
-		if record.BookingPosition > 0 {
-			participantRow.Call("append", " | Status: "+participantStatusLabel(record.BookingStatus)+" | Position: "+strconv.Itoa(record.BookingPosition))
-		}
-
-		bookingCard.Call("appendChild", participantRow)
-	}
-}
-
-func (editor *ItemEditor) createTripToggleHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) func(js.Value, []js.Value) any {
-	return func(this js.Value, args []js.Value) interface{} {
-		isExpanded := editor.tripExpanded[tripID]
-		editor.tripExpanded[tripID] = !isExpanded
-
-		if !isExpanded {
-			// Show bookings
-			bookingsContainer.Get("style").Call("setProperty", "display", "block")
-			toggleIndicator.Set("textContent", "\u25bc")
-		} else {
-			// Hide bookings and close the booking form
-			bookingsContainer.Get("style").Call("setProperty", "display", "none")
-			toggleIndicator.Set("textContent", "\u25b6")
-			// Close the booking form
-			bookingEditor.EditDiv.Set("innerHTML", "")
-			bookingEditor.Div.Get("style").Call("setProperty", "display", "none")
-		}
-		return nil
-	}
-}
-
-func (editor *ItemEditor) createMakeBookingHandler(tripID int, bookingsContainer js.Value, toggleIndicator js.Value, bookingEditor *bookingView.ItemEditor) func(js.Value, []js.Value) any {
-	return func(this js.Value, args []js.Value) interface{} {
-		if len(args) > 0 {
-			args[0].Call("stopPropagation")
-		}
-
-		editor.tripExpanded[tripID] = true
-		bookingsContainer.Get("style").Call("setProperty", "display", "block")
-		toggleIndicator.Set("textContent", "\u25bc")
-
-		bookingEditor.NewItemData(js.Null(), nil)
-		bookingEditor.Div.Get("style").Call("setProperty", "display", "block")
-		return nil
-	}
 }
 
 type statusStyle struct {

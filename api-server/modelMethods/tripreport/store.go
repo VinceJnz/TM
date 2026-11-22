@@ -51,12 +51,35 @@ const participantQuery = `WITH booking_order AS (
 // Report rows have no resource ID. The query orders by trip and the unique
 // booking position, including an empty row for trips without participants.
 func (s Store) List(ctx context.Context, limit, offset int) ([]models.TripParticipantStatus, bool, error) {
+	return s.list(ctx, limit, offset, 0, false)
+}
+
+func (s Store) Trips(ctx context.Context, limit, offset int) ([]models.TripParticipantStatus, bool, error) {
+	return s.list(ctx, limit, offset, 0, true)
+}
+func (s Store) Participants(ctx context.Context, id, limit, offset int) ([]models.TripParticipantStatus, bool, error) {
+	if id <= 0 {
+		return nil, false, errors.New("invalid trip")
+	}
+	return s.list(ctx, limit, offset, id, false)
+}
+
+func (s Store) list(ctx context.Context, limit, offset, id int, summaries bool) ([]models.TripParticipantStatus, bool, error) {
 	if limit < 1 || limit > 500 || offset < 0 || offset > 1000000 {
 		return nil, false, errors.New("invalid report page")
 	}
 	items := []models.TripParticipantStatus{}
-	query := strings.TrimSuffix(strings.TrimSpace(participantQuery), ";") + " LIMIT $1 OFFSET $2"
-	if err := s.DB.SelectContext(ctx, &items, query, limit+1, offset); err != nil {
+	query := strings.TrimSuffix(strings.TrimSpace(participantQuery), ";")
+	args := []any{limit + 1, offset}
+	if summaries {
+		query = `SELECT id AS trip_id,trip_name,from_date,to_date,max_participants FROM at_trips ORDER BY id`
+	}
+	if id > 0 {
+		query = strings.Replace(query, "ORDER BY trip_id,", "WHERE att.id=$3 ORDER BY trip_id,", 1)
+		args = append(args, id)
+	}
+	query += " LIMIT $1 OFFSET $2"
+	if err := s.DB.SelectContext(ctx, &items, query, args...); err != nil {
 		return nil, false, err
 	}
 	more := len(items) > limit

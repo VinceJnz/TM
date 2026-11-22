@@ -24,6 +24,29 @@ INSERT INTO at_booking_people VALUES (1, 10, 1), (2, 20, 2), (3, 30, 2);
 INSERT INTO st_users VALUES (1, 'First member', true), (2, 'Second member', false);
 `
 
+func TestTripSummariesAndLazyRosterAreBounded(t *testing.T) {
+	db := testdb.Open(t, reportFixture)
+	s := tripreport.Store{DB: db}
+	ctx := context.Background()
+	trips, more, err := s.Trips(ctx, 2, 0)
+	if err != nil || !more || len(trips) != 2 || trips[0].BookingID.Valid || trips[0].PersonName.Valid {
+		t.Fatal("summary exposed roster or lost paging", trips, err)
+	}
+	rows, more, err := s.Participants(ctx, 1, 1, 0)
+	if err != nil || !more || len(rows) != 1 || rows[0].TripID != 1 || rows[0].PersonName.String != "name hidden" || rows[0].PersonID.Valid {
+		t.Fatal("lazy roster privacy or page failure", rows, err)
+	}
+	rows, more, err = s.Participants(ctx, 1, 1, 1)
+	if err != nil || more || len(rows) != 1 || rows[0].PersonName.String != "Second member" {
+		t.Fatal(rows, err)
+	}
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	if _, _, err = s.Trips(canceled, 1, 0); err == nil {
+		t.Fatal("summary ignored cancellation")
+	}
+}
+
 func TestTripListShowsRosterAndHonorsHiddenProfiles(t *testing.T) {
 	db := testdb.Open(t, reportFixture)
 	roster, more, err := (tripreport.Store{DB: db}).List(context.Background(), 100, 0)

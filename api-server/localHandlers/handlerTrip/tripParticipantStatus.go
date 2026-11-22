@@ -4,6 +4,7 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/tripreport"
 	"api-server/v2/models"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,7 +35,24 @@ func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, 400, "invalid_pagination", "limit must be 1..500 and offset 0..1000000")
 		return
 	}
-	items, more, err := (tripreport.Store{DB: h.appConf.Db}).List(r.Context(), limit, offset)
+	var items []models.TripParticipantStatus
+	var more bool
+	var err error
+	store := tripreport.Store{DB: h.appConf.Db}
+	switch {
+	case r.URL.Query().Get("view") == "trips":
+		items, more, err = store.Trips(r.Context(), limit, offset)
+	case r.URL.Query().Get("trip_id") != "":
+		id, e := strconv.Atoi(r.URL.Query().Get("trip_id"))
+		if e != nil || id <= 0 {
+			err = errors.New("invalid trip")
+			helpers.WriteError(w, 400, "invalid_trip", "A positive trip ID is required")
+			return
+		}
+		items, more, err = store.Participants(r.Context(), id, limit, offset)
+	default:
+		items, more, err = store.List(r.Context(), limit, offset)
+	}
 	if err != nil {
 		helpers.WriteDataError(w, err)
 		return
