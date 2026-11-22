@@ -18,6 +18,8 @@ import (
 	//oauthgw "your/module/path/app/gateways/oAuthGateway"
 
 	"api-server/v2/app/appCore"
+	authService "api-server/v2/app/services/authentication"
+	authStore "api-server/v2/modelMethods/authentication"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 )
@@ -141,7 +143,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if found && existing.UserActive() {
 		// Linking is only allowed after the provider has verified this email.
-		userID, _, err := dbAuthTemplate.FindOrCreateUserByProvider(debugTag+"callback", h.appConf.Db, incoming)
+		userID, err := (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).LinkIdentity(r.Context(), existing.ID, "google", identity.Sub, identity.Email, identity.Verified)
 		if err != nil {
 			handlerHelpers.WriteInternalServerError(w, "failed to link account")
 			return
