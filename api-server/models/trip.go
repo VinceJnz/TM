@@ -7,6 +7,7 @@ import (
 )
 
 type Trip struct {
+	Version         int64       `json:"version" db:"version"`
 	ID              int         `json:"id" db:"id"`
 	OwnerID         int         `json:"owner_id" db:"owner_id"`
 	Name            string      `json:"trip_name" db:"trip_name"`
@@ -68,6 +69,7 @@ type TripParticipantStatus struct {
 
 // TripCost represents the at_trip_costs table
 type TripCost struct {
+	Version         int64       `json:"version" db:"version"`
 	ID              int         `db:"id" json:"id"`
 	TripCostGroupID int         `db:"trip_cost_group_id" json:"trip_cost_group_id"`
 	Description     zero.String `db:"description" json:"description"`
@@ -84,6 +86,7 @@ type TripCost struct {
 
 // TripCostGroup represents the at_trip_costs table
 type TripCostGroup struct {
+	Version     int64     `json:"version" db:"version"`
 	ID          int       `db:"id" json:"id"`
 	Description string    `db:"description" json:"description"`
 	Created     time.Time `db:"created" json:"created"`

@@ -39,6 +39,7 @@ func TestPricingValidationReferencesAndDeletion(t *testing.T) {
 	if cost.Amount.String() != "12.34" {
 		t.Fatal(cost)
 	}
+	input.Version = cost.Version
 	input.SeasonID = 99999
 	if _, err = s.SaveCost(ctx, cost.ID, input); err == nil {
 		t.Fatal("missing reference accepted")
@@ -67,5 +68,46 @@ func TestPricingValidationReferencesAndDeletion(t *testing.T) {
 		if json.Unmarshal([]byte(value), &input.Amount) == nil {
 			t.Fatal("invalid money", value)
 		}
+	}
+}
+
+func TestPricingRejectsStaleVersions(t *testing.T) {
+	db := testdb.Open(t, "")
+	ctx := context.Background()
+	if err := migrations.Apply(ctx, db, false); err != nil {
+		t.Fatal(err)
+	}
+	s := Service{Store: store.Store{DB: db}}
+	group, err := s.SaveGroup(ctx, 0, models.TripCostGroupWrite{Description: "Original"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := models.TripCostGroupWrite{Description: "First editor", Version: group.Version}
+	if _, err = s.SaveGroup(ctx, group.ID, input); err != nil {
+		t.Fatal(err)
+	}
+	input.Description = "Stale editor"
+	if _, err = s.SaveGroup(ctx, group.ID, input); !errors.Is(err, models.ErrStaleRecord) {
+		t.Fatal("stale group accepted", err)
+	}
+	current, err := s.Store.Group(ctx, group.ID)
+	if err != nil || current.Description != "First editor" {
+		t.Fatal(current, err)
+	}
+	var price models.TripCostWrite
+	if err = json.Unmarshal([]byte(`{"trip_cost_group_id":1,"member_status_id":1,"user_age_group_id":1,"season_id":1,"amount":12.34}`), &price); err != nil {
+		t.Fatal(err)
+	}
+	price.TripCostGroupID = group.ID
+	cost, err := s.SaveCost(ctx, 0, price)
+	if err != nil {
+		t.Fatal(err)
+	}
+	price.Version = cost.Version
+	if _, err = s.SaveCost(ctx, cost.ID, price); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.SaveCost(ctx, cost.ID, price); !errors.Is(err, models.ErrStaleRecord) {
+		t.Fatal("stale price accepted", err)
 	}
 }

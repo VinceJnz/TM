@@ -59,3 +59,9 @@ func (s Store) Delete(ctx context.Context, tx *sqlx.Tx, actor int, any bool, id 
 	}
 	return changed(tx.ExecContext(ctx, qryDelete, id, actor, scope))
 }
+
+func (s Store) Version(ctx context.Context, tx *sqlx.Tx, id int) (int64, error) {
+	var version int64
+	err := tx.GetContext(ctx, &version, `SELECT version FROM at_trips WHERE id=$1`, id)
+	return version, err
+}

@@ -91,6 +91,7 @@ type MyBookingDTO struct {
 	Modified        time.Time       `json:"modified"`
 }
 type TripDTO struct {
+	Version         int64     `json:"version"`
 	ID              int       `json:"id"`
 	OwnerID         int       `json:"owner_id"`
 	Name            string    `json:"trip_name"`
@@ -133,6 +134,7 @@ type BookingWrite struct {
 	BookingPrice decimal.Decimal `json:"booking_price"`
 }
 type TripWrite struct {
+	Version         int64     `json:"version"`
 	Name            string    `json:"trip_name"`
 	Location        string    `json:"location"`
 	DifficultyID    int       `json:"difficulty_level_id"`
@@ -144,6 +146,7 @@ type TripWrite struct {
 	TripCostGroupID int       `json:"trip_cost_group_id"`
 }
 type TripCostDTO struct {
+	Version         int64     `json:"version"`
 	ID              int       `json:"id"`
 	TripCostGroupID int       `json:"trip_cost_group_id"`
 	Description     string    `json:"description"`
@@ -158,12 +161,14 @@ type TripCostDTO struct {
 	Modified        time.Time `json:"modified"`
 }
 type TripCostGroupDTO struct {
+	Version     int64     `json:"version"`
 	ID          int       `json:"id"`
 	Description string    `json:"description"`
 	Created     time.Time `json:"created"`
 	Modified    time.Time `json:"modified"`
 }
 type TripCostWrite struct {
+	Version         int64   `json:"version"`
 	TripCostGroupID int     `json:"trip_cost_group_id"`
 	MemberStatusID  int     `json:"member_status_id"`
 	UserAgeGroupID  int     `json:"user_age_group_id"`
@@ -171,6 +176,7 @@ type TripCostWrite struct {
 	Amount          float64 `json:"amount"`
 }
 type TripCostGroupWrite struct {
+	Version     int64  `json:"version"`
 	Description string `json:"description"`
 }
 type GroupResourceDTO struct {

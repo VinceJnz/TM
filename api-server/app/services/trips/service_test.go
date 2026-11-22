@@ -4,6 +4,7 @@ import (
 	"api-server/v2/internal/testdb"
 	"api-server/v2/migrations"
 	store "api-server/v2/modelMethods/trips"
+	"api-server/v2/models"
 	"context"
 	"database/sql"
 	"errors"
@@ -35,5 +36,8 @@ func TestTripServicePreservesOwnershipAndExistingBookingDates(t *testing.T) {
 	trip.ToDate = time.Date(2026, 1, 11, 0, 0, 0, 0, time.UTC)
 	if _, err = service.Save(ctx, 1, false, "update", trip); err != nil {
 		t.Fatal(err)
+	}
+	if _, err = service.Save(ctx, 1, false, "update", trip); !errors.Is(err, models.ErrStaleRecord) {
+		t.Fatal("stale trip overwrite accepted", err)
 	}
 }

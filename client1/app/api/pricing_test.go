@@ -20,7 +20,7 @@ func TestPricingPayloadHasOnlyMutableFields(t *testing.T) {
 	if err = json.Unmarshal(b, &payload); err != nil {
 		t.Fatal(err)
 	}
-	if payload["amount"] != 12.34 || len(payload) != 5 {
+	if payload["amount"] != 12.34 || len(payload) != 6 {
 		t.Fatal(string(b))
 	}
 	for _, key := range []string{"id", "created", "modified", "member_status"} {

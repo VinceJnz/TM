@@ -1,7 +1,7 @@
 package trips
 
 const (
-	qryGetAll = `SELECT att.id,att.owner_id,att.trip_name,att.location,att.from_date,att.to_date,att.max_participants,att.created,att.modified,att.trip_status_id,att.trip_type_id,att.difficulty_level_id,att.trip_cost_group_id,att.description, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
+	qryGetAll = `SELECT att.version,att.id,att.owner_id,att.trip_name,att.location,att.from_date,att.to_date,att.max_participants,att.created,att.modified,att.trip_status_id,att.trip_type_id,att.difficulty_level_id,att.trip_cost_group_id,att.description, ettd.level as difficulty_level, etts.status as trip_status, sum(atbcount.participants) as participants
 					FROM at_trips att
 					LEFT JOIN et_trip_difficulty ettd ON ettd.id=att.difficulty_level_id
 					JOIN et_trip_status etts ON etts.id=att.trip_status_id
@@ -11,7 +11,7 @@ const (
 						GROUP BY atb.id) atbcount ON atbcount.trip_id=att.id
 					--WHERE att.owner_id = $1 OR true=$2
 					GROUP BY att.id, ettd.level, etts.status`
-	qryGet = `SELECT att.id,att.owner_id,att.trip_name,att.location,att.from_date,att.to_date,att.max_participants,att.created,att.modified,att.trip_status_id,att.trip_type_id,att.difficulty_level_id,att.trip_cost_group_id,att.description, etts.status as trip_status
+	qryGet = `SELECT att.version,att.id,att.owner_id,att.trip_name,att.location,att.from_date,att.to_date,att.max_participants,att.created,att.modified,att.trip_status_id,att.trip_type_id,att.difficulty_level_id,att.trip_cost_group_id,att.description, etts.status as trip_status
 					FROM at_trips att
 					LEFT JOIN et_trip_status etts ON etts.id=att.trip_status_id
 					WHERE att.id = $1`

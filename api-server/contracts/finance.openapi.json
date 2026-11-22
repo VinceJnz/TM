@@ -804,6 +804,9 @@
           },
           "user_age_group_id": {
             "type": "integer"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -823,6 +826,9 @@
           "modified": {
             "format": "date-time",
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -833,6 +839,9 @@
             "maxLength": 50,
             "minLength": 1,
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "required": [
@@ -863,6 +872,9 @@
           },
           "user_age_group_id": {
             "minimum": 1,
+            "type": "integer"
+          },
+          "version": {
             "type": "integer"
           }
         },
@@ -972,6 +984,9 @@
               "integer",
               "null"
             ]
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -1082,6 +1097,9 @@
               "integer",
               "null"
             ]
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "type": "object"

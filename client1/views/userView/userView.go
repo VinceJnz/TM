@@ -456,6 +456,7 @@ func (editor *ItemEditor) UpdateItem(item TableData, reason string) {
 	if err := editor.client.RequestWithHeaders(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.AccountPayload(item), map[string]string{"X-Change-Reason": reason}); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg("Change failed; please retry. " + err.Error())
+		viewHelpers.ConflictReload(editor.Div, err, func() { editor.resetEditForm(); editor.RecordState = RecordStateReloadRequired; editor.FetchItems() })
 		return
 	}
 	editor.resetEditForm()

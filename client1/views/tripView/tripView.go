@@ -124,6 +124,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
 	editor.ListDiv.Set("innerHTML", "")
@@ -144,6 +145,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -384,7 +386,8 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 		editor.updateStateDisplay(viewHelpers.ItemStateSaving)
 		if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.TripPayload(item)); err != nil {
 			editor.updateStateDisplay(viewHelpers.ItemStateEditing)
-			editor.onCompletionMsg("Change failed; please retry.")
+			editor.onCompletionMsg("Change failed; please retry. " + err.Error())
+			viewHelpers.ConflictReload(editor.Div, err, func() { editor.resetEditForm(); editor.RecordState = RecordStateReloadRequired; editor.FetchItems() })
 			return
 		}
 		editor.resetEditForm()

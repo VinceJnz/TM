@@ -45,6 +45,13 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 		input.ID, err = s.Store.Create(ctx, tx, actor, input)
 		input.OwnerID = actor
 	case "update":
+		current, e := s.Store.Version(ctx, tx, input.ID)
+		if e != nil {
+			return input, e
+		}
+		if input.Version <= 0 || input.Version != current {
+			return input, models.ErrStaleRecord
+		}
 		var fit bool
 		fit, err = s.Store.BookingsFit(ctx, tx, input)
 		if err == nil && !fit {
@@ -60,6 +67,12 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 	}
 	if err != nil {
 		return input, err
+	}
+	if operation != "delete" {
+		input.Version, err = s.Store.Version(ctx, tx, input.ID)
+		if err != nil {
+			return input, err
+		}
 	}
 	return input, tx.Commit()
 }
