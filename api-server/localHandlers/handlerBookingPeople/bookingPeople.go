@@ -1,191 +1,116 @@
 package handlerBookingPeople
 
 import (
-	"context"
-	"database/sql"
-
-	"fmt"
-	"log"
-	"net/http"
-
 	"api-server/v2/app/appCore"
+	service "api-server/v2/app/services/participants"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
+	store "api-server/v2/modelMethods/participants"
 	"api-server/v2/models"
-
+	"errors"
 	"github.com/gorilla/mux"
-)
-
-const debugTag = "handlerBookingPeople."
-
-const (
-	qryGetAll = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
-					FROM at_booking_people bp
-						JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id WHERE (b.owner_id=$1 OR LOWER($2)='any')`
-	qryGet = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
-				FROM at_booking_people bp
-					JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id
-				WHERE bp.id = $1 AND (b.owner_id=$2 OR LOWER($3)='any')`
-	qryGetList = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
-				FROM at_booking_people bp
-					JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id
-				WHERE bp.booking_id = $1 AND (b.owner_id=$2 OR LOWER($3)='any')`
-	qryCreate = `INSERT INTO at_booking_people (owner_id, booking_id, person_id, notes) SELECT $1,b.id,$3,$4 FROM at_bookings b WHERE b.id=$2 AND (b.owner_id=$1 OR LOWER($5)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL FOR UPDATE OF b RETURNING id`
-	qryUpdate = `UPDATE at_booking_people
-					SET (person_id, notes) = ($4, $5)
-					WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL FOR UPDATE OF b)`
-	qryDelete = `DELETE FROM at_booking_people WHERE id = $1 AND EXISTS (SELECT 1 FROM at_bookings b WHERE b.id=at_booking_people.booking_id AND (b.owner_id=$2 OR LOWER($3)='any') AND b.booking_status_id=1 AND b.stripe_session_id IS NULL FOR UPDATE OF b)`
+	"net/http"
 )
 
 type Handler struct {
-	appConf *appCore.Config
+	app   *appCore.Config
+	store store.Store
 }
 
-func New(appConf *appCore.Config) *Handler {
-	return &Handler{appConf: appConf}
-}
-
-// RegisterRoutes registers handler routes on the provided router.
-func (h *Handler) RegisterRoutes(r *mux.Router, baseURL string) {
-	helpers.AddRouteGroup(r, baseURL, h, "bookingPeople")
+func New(app *appCore.Config) *Handler { return &Handler{app, store.Store{DB: app.Db}} }
+func (h *Handler) RegisterRoutes(r *mux.Router, path string) {
+	helpers.AddRouteGroup(r, path, h, "bookingPeople")
 	helpers.CapabilityRoute(r, "/bookings/{id:[0-9]+}/bookingPeople", "bookingPeople", h.GetList).Methods("GET")
 }
-
-// GetAll: retrieves and returns all records
-func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil || session.UserID <= 0 {
-		return
-	}
-
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetAll, session.UserID, session.AccessScope)
+func (h *Handler) session(w http.ResponseWriter, r *http.Request) *models.Session {
+	return helpers.RequiredSession(w, r, h.app.SessionIDKey)
 }
+func (h *Handler) read(w http.ResponseWriter, r *http.Request, parent, id int) {
+	s := h.session(w, r)
+	if s == nil {
+		return
+	}
+	p, ok := helpers.ReadResourcePage(w, r)
+	if !ok {
+		return
+	}
+	rows, info, err := h.store.List(r.Context(), s.UserID, s.AccessScope, parent, id, p)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteResourcePage(w, rows, info)
+}
+func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) { h.read(w, r, 0, 0) }
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil || session.UserID <= 0 {
-		return
+	id := helpers.RouteID(w, r)
+	if id > 0 {
+		h.read(w, r, id, 0)
 	}
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGetList, id, session.UserID, session.AccessScope)
 }
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil || session.UserID <= 0 {
-		return
+	id := helpers.RouteID(w, r)
+	if id > 0 {
+		h.read(w, r, 0, id)
 	}
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-	dbStandardTemplate.GetList(w, r, debugTag, h.appConf.Db, &[]models.BookingPeople{}, qryGet, id, session.UserID, session.AccessScope)
 }
-
-// Create: adds a new record and returns the new record
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var record models.BookingPeople
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil || session.UserID == 0 {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.save(w, r, false) }
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.save(w, r, true) }
+func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
+	session := h.session(w, r)
+	if session == nil {
 		return
 	}
-
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Create err=%+v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	id := 0
+	if update {
+		id = helpers.RouteID(w, r)
+		if id == 0 {
+			return
+		}
+	}
+	var input models.ParticipantWrite
+	if err := helpers.DecodeJSONBody(r, &input); err != nil {
+		helpers.WriteError(w, 400, "invalid_request", "Invalid security payload")
 		return
 	}
-
-	if err := h.RecordValidation(r.Context(), session, record); err != nil {
-		http.Error(w, debugTag+"Create: "+err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-
-	dbStandardTemplate.Create(w, r, debugTag, h.appConf.Db, &record.ID, qryCreate, session.UserID, record.BookingID, record.PersonID, record.Notes, session.AccessScope)
-}
-
-// Update: modifies the existing record identified by id and returns the updated record
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var record models.BookingPeople
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil || session.UserID == 0 {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	if err := helpers.DecodeJSONBody(r, &record); err != nil {
-		log.Printf(debugTag+"Update decode error: %v", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	record.ID = id
-
-	if err := h.RecordValidation(r.Context(), session, record); err != nil {
-		http.Error(w, debugTag+"Update: "+err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-
-	dbStandardTemplate.Update(w, r, debugTag, h.appConf.Db, &record, qryUpdate, id, session.UserID, session.AccessScope, record.PersonID, record.Notes)
-}
-
-// Delete: removes a record identified by id
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	var err error
-	var record models.BookingPeople
-	id := dbStandardTemplate.GetID(w, r)
-	if id <= 0 {
-		return
-	}
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-	if session == nil || session.UserID == 0 {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Validation stuff
-	record.ID = id
-	err = h.appConf.Db.GetContext(r.Context(), &record, qryGet, record.ID, session.UserID, session.AccessScope)
+	result, err := (service.Service{Store: h.store}).Mutate(r.Context(), session.UserID, session.AccessScope, id, input, false)
 	if err != nil {
-		http.Error(w, debugTag+"Delete - Record not found: ", http.StatusUnprocessableEntity)
+		h.failure(w, err)
 		return
 	}
-
-	if err := h.RecordValidation(r.Context(), session, record); err != nil {
-		http.Error(w, debugTag+"Delete: "+err.Error(), http.StatusUnprocessableEntity)
+	if !update {
+		helpers.WriteJSON(w, 201, result)
 		return
 	}
-
-	dbStandardTemplate.Delete(w, r, debugTag, h.appConf.Db, nil, qryDelete, id, session.UserID, session.AccessScope)
+	updated, err := h.store.Get(r.Context(), session.UserID, session.AccessScope, result)
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, updated)
 }
-
-const (
-	qryParentRecordValidation = `SELECT id,owner_id,booking_status_id,stripe_session_id FROM at_bookings WHERE id = $1`
-)
-
-func (h *Handler) RecordValidation(ctx context.Context, session *models.Session, record models.BookingPeople) error {
-	var err error
-
-	parentID := record.BookingID
-	validationRecord := models.Booking{}
-	err = h.appConf.Db.GetContext(ctx, &validationRecord, qryParentRecordValidation, parentID)
-	switch {
-	case err == sql.ErrNoRows:
-		return fmt.Errorf("booking not found for booking_id=%v", parentID)
-	case err != nil:
-		log.Printf("%sParentRecordValidation() database error for booking_id=%v: %v", debugTag, parentID, err)
-		return fmt.Errorf("unable to validate booking record")
-	case validationRecord.BookingStatusID != int(models.Not_paid) || validationRecord.StripeSessionID.Valid:
-		return fmt.Errorf("booking is locked for payment")
-	case validationRecord.OwnerID != session.UserID && !dbStandardTemplate.CanAccessAny(session):
-		return fmt.Errorf("access denied")
-	default:
-		return nil
+func (h *Handler) failure(w http.ResponseWriter, err error) {
+	if errors.Is(err, service.ErrLocked) {
+		helpers.WriteError(w, 409, "booking_locked", "Booking is locked or inaccessible")
+	} else if errors.Is(err, service.ErrValidation) {
+		helpers.WriteError(w, 422, "invalid_security_change", "Invalid IDs or unsupported capability scope")
+	} else {
+		helpers.WriteDataError(w, err)
 	}
 }
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	session := h.session(w, r)
+	if session == nil {
+		return
+	}
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	if _, err := (service.Service{Store: h.store}).Mutate(r.Context(), session.UserID, session.AccessScope, id, models.ParticipantWrite{}, true); err != nil {
+		h.failure(w, err)
+		return
+	}
+	helpers.WriteJSON(w, 200, nil)
+}
+
+const qryCreate = store.CreateQuery
