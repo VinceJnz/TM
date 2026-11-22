@@ -4,7 +4,8 @@ x-api: &api
     dockerfile: Dockerfile.apibuild
     target: final
     args:
-      CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
+      CLIENT_IMAGE: ${CLIENT_IMAGE:-client1-built}
+      CLIENT_BUILDER: ${TM_CLIENT_BUILDER:-go-builder}
   env_file:
     - ${TM_API_ENV_FILE:-./api-server/.env}
   environment:
@@ -75,7 +76,8 @@ services:
       dockerfile: Dockerfile.apibuild
       target: interactive
       args:
-        CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
+        CLIENT_IMAGE: ${CLIENT_IMAGE:-client1-built}
+        CLIENT_BUILDER: ${TM_CLIENT_BUILDER:-go-builder}
 
   apiserver-debug:
     <<: *api
@@ -86,7 +88,8 @@ services:
       dockerfile: Dockerfile.apibuild
       target: debug
       args:
-        CLIENT_IMAGE: ${CLIENT_IMAGE:-tm-client1-wasm:go-dev}
+        CLIENT_IMAGE: ${CLIENT_IMAGE:-client1-built}
+        CLIENT_BUILDER: ${TM_CLIENT_BUILDER:-go-builder}
     ports:
       - "127.0.0.1:8085:8085"
       - "127.0.0.1:8086:8086"
