@@ -2,7 +2,9 @@ package handlerAuth
 
 import (
 	"api-server/v2/app/appCore"
+	authService "api-server/v2/app/services/authentication"
 	handlerHelpers "api-server/v2/localHandlers/helpers"
+	authStore "api-server/v2/modelMethods/authentication"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"errors"
@@ -283,77 +285,18 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find registration-verification token
-	tok, err := dbAuthTemplate.ConsumeToken(r.Context(), h.appConf.Db, "registration-verification", payload.Token)
+	userID, err := (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).Register(r.Context(), payload.Token)
 	if err != nil {
-		log.Printf("%vVerifyRegistration registration verification token not found: %v", debugTag, err)
-		http.Error(w, "invalid or expired verification token", http.StatusForbidden)
-		return
-	}
-
-	// Verify token hasn't been used and is for registration
-	if tok.UserID != 0 {
-		log.Printf("%vVerifyRegistration registration token has invalid UserID: %d", debugTag, tok.UserID)
-		http.Error(w, "invalid verification token", http.StatusForbidden)
-		return
-	}
-	// Reject legacy plaintext tokens. Pending users must register again.
-	user, err := decodePendingRegistration(tok.SessionData.String)
-	if err != nil {
-		log.Printf("%vVerifyRegistration invalid or legacy pending registration", debugTag)
-		http.Error(w, "registration expired or invalid; please register again", http.StatusBadRequest)
-		return
-	}
-
-	// Validate required fields
-	if user.Email.String == "" || user.Name == "" {
-		log.Printf("%vVerifyRegistration missing required user fields: email=%q name=%q",
-			debugTag, user.Email.String, user.Name)
-		http.Error(w, "incomplete registration data", http.StatusBadRequest)
-		return
-	}
-
-	// Validate email format
-	if !handlerHelpers.IsValidEmail(user.Email.String) {
-		log.Printf("%vVerifyRegistration invalid email format: %q", debugTag, user.Email.String)
-		http.Error(w, "invalid email format", http.StatusBadRequest)
-		return
-	}
-
-	user.AccountStatusID.SetValid(int64(models.AccountVerified)) // Email verified, pending admin approval
-
-	// Member codes are allocated atomically by the database on insertion.
-
-	// Validate age group matches birthdate
-	if user.UserAgeGroupID.Valid && user.UserAgeGroupID.Int64 > 0 && user.BirthDate.Valid {
-		ageGroupName, err := handlerHelpers.GetAgeGroupByID(h.appConf.Db, user.UserAgeGroupID.Int64)
-		if err != nil {
-			log.Printf("%vVerifyRegistration failed to fetch age group: %v", debugTag, err)
-			http.Error(w, "invalid age group in registration data", http.StatusBadRequest)
-			return
+		switch {
+		case errors.Is(err, authService.ErrToken):
+			handlerHelpers.WriteError(w, 403, "invalid_token", "Invalid or expired verification token")
+		case errors.Is(err, authService.ErrRegistration):
+			handlerHelpers.WriteError(w, 400, "invalid_registration", "Registration data is invalid; register again")
+		default:
+			handlerHelpers.WriteError(w, 500, "registration_failed", "Failed to create user account; please retry")
 		}
-
-		isValid, err := handlerHelpers.ValidateAgeGroupForBirthDate(user.BirthDate.Time, user.UserAgeGroupID.Int64, ageGroupName)
-		if err != nil || !isValid {
-			log.Printf("%vVerifyRegistration age validation failed: %v", debugTag, err)
-			http.Error(w, "age group validation failed", http.StatusBadRequest)
-			return
-		}
-	}
-
-	// Persist the prepared password hash without hashing it a second time.
-	userID, err := dbAuthTemplate.UserWriteQry(debugTag+"VerifyRegistration:create", h.appConf.Db, user)
-	if err != nil {
-		log.Printf("%vVerifyRegistration failed to create user (sensitive details omitted)", debugTag)
-		http.Error(w, "failed to create user account", http.StatusInternalServerError)
 		return
 	}
-
-	// Delete the registration verification token (one-time use)
-	// Verification token was consumed atomically before creating the account.
-
-	log.Printf("%vVerifyRegistration user registered and verified: userID=%d (pending admin activation)", debugTag, userID)
-
 	handlerHelpers.WriteJSON(w, http.StatusCreated, map[string]any{
 		"status":  "account_verified",
 		"message": "account created and verified, pending admin approval",
@@ -434,62 +377,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 // Expects: {"token": "...", "remember_me": true/false}
 // Returns: session cookie with user info
 func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Token      string `json:"token"`
-		RememberMe bool   `json:"remember_me"`
-	}
-	if err := handlerHelpers.DecodeJSONBody(r, &payload); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-
-	if payload.Token == "" {
-		http.Error(w, "OTP token is required", http.StatusBadRequest)
-		return
-	}
-
-	userID, user, err := handlerHelpers.VerifyOTPTokenAndLoadUser(r.Context(), debugTag+"VerifyOTP:", h.appConf.Db, "login-otp", payload.Token, true)
-	if err != nil {
-		if errors.Is(err, handlerHelpers.ErrAuthUserInactive) {
-			http.Error(w, "user account not active", http.StatusForbidden)
-			return
-		}
-		if errors.Is(err, handlerHelpers.ErrAuthTokenInvalid) {
-			log.Printf("%vVerifyOTP OTP token not found: %v", debugTag, err)
-			http.Error(w, "invalid or expired OTP", http.StatusForbidden)
-			return
-		}
-
-		if errors.Is(err, handlerHelpers.ErrAuthUserNotFound) {
-			log.Printf("%vVerifyOTP failed to read user: %v", debugTag, err)
-			http.Error(w, "user not found", http.StatusInternalServerError)
-			return
-		}
-
-		log.Printf("%vVerifyOTP unexpected verification failure: %v", debugTag, err)
-		http.Error(w, "failed to verify OTP", http.StatusInternalServerError)
-		return
-	}
-
-	// Create session with appropriate expiry
-	sessionExpiry := handlerHelpers.SessionExpiryFromRememberMe(payload.RememberMe)
-
-	if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"VerifyOTP:", w, h.appConf.Db, userID, h.appConf.Settings.Host, sessionExpiry); err != nil {
-		log.Printf("%vVerifyOTP failed to create session token: %v", debugTag, err)
-		http.Error(w, "failed to create session", http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("%vVerifyOTP OTP verified and session created for user %d (remember_me=%v)", debugTag, userID, payload.RememberMe)
-
-	// Return user info
-	handlerHelpers.WriteJSON(w, http.StatusOK, map[string]any{
-		"status":   "logged_in",
-		"user_id":  user.ID,
-		"username": user.Username,
-		"email":    user.Email.String,
-		"name":     user.Name,
-	})
+	h.verifyLoginOTP(w, r, "login-otp")
 }
 
 type RestResource struct {
@@ -650,62 +538,5 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 // Expects: {"token": "...", "remember_me": true/false}
 // Returns: session cookie with user info
 func (h *Handler) VerifyPasswordOTP(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Token      string `json:"token"`
-		RememberMe bool   `json:"remember_me"`
-	}
-	if err := handlerHelpers.DecodeJSONBody(r, &payload); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-
-	if payload.Token == "" {
-		http.Error(w, "token required", http.StatusBadRequest)
-		return
-	}
-
-	userID, user, err := handlerHelpers.VerifyOTPTokenAndLoadUser(r.Context(), debugTag+"VerifyPasswordOTP:", h.appConf.Db, "password-login-otp", payload.Token, true)
-	if err != nil {
-		if errors.Is(err, handlerHelpers.ErrAuthTokenInvalid) {
-			log.Printf("%v OTP token not found or invalid: %v", debugTag, err)
-			http.Error(w, "invalid or expired OTP", http.StatusForbidden)
-			return
-		}
-
-		if errors.Is(err, handlerHelpers.ErrAuthUserNotFound) {
-			log.Printf("%v failed to read user: %v", debugTag, err)
-			http.Error(w, "user not found", http.StatusInternalServerError)
-			return
-		}
-
-		if errors.Is(err, handlerHelpers.ErrAuthUserInactive) {
-			log.Printf("%v user account not active", debugTag)
-			http.Error(w, "user account not active", http.StatusForbidden)
-			return
-		}
-
-		log.Printf("%v unexpected verification failure: %v", debugTag, err)
-		http.Error(w, "failed to verify OTP", http.StatusInternalServerError)
-		return
-	}
-
-	// Create session with appropriate expiry
-	sessionExpiry := handlerHelpers.SessionExpiryFromRememberMe(payload.RememberMe)
-
-	if err := handlerHelpers.CreateAndSetSessionCookie(debugTag+"VerifyPasswordOTP:", w, h.appConf.Db, userID, h.appConf.Settings.Host, sessionExpiry); err != nil {
-		log.Printf("%v failed to create session token: %v", debugTag, err)
-		http.Error(w, "failed to create session", http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("%v password OTP verified and session created for user %d (remember_me=%v)", debugTag, userID, payload.RememberMe)
-
-	// Return user info
-	handlerHelpers.WriteJSON(w, http.StatusOK, map[string]any{
-		"status":   "logged_in",
-		"user_id":  user.ID,
-		"username": user.Username,
-		"email":    user.Email.String,
-		"name":     user.Name,
-	})
+	h.verifyLoginOTP(w, r, "password-login-otp")
 }
