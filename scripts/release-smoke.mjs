@@ -79,13 +79,15 @@ try {
   const pending = new Map();
   const requests = [];
   const exceptions = [];
+  const browserConsole=[];
   socket.addEventListener('message', event => {
     const message = JSON.parse(event.data);
     if (message.id) {
       const resolve = pending.get(message.id);pending.delete(message.id);resolve?.(message);
     }
     if (message.method === 'Network.requestWillBeSent') requests.push(message.params.request.url);
-    if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails.text);
+    if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails.exception?.description||message.params.exceptionDetails.text);
+    if (message.method === 'Runtime.consoleAPICalled') browserConsole.push(message.params.args.map(a=>a.value??a.description??a.type).join(' '));
   });
   async function send(method, params = {}) {
     const id = ++sequence;
@@ -104,7 +106,7 @@ try {
     if (result.result?.value === true) {rendered = true;break;}
     await delay(100);
   }
-  assert(rendered, 'WASM did not render the authenticated UI with the runtime API prefix');
+  if(!rendered){const diagnostic=await send('Runtime.evaluate',{expression:"JSON.stringify({text:document.body.textContent.slice(0,1400),user:document.querySelector('#userDisplay')?.textContent,base:window.TM_CONFIG?.apiBase})",returnByValue:true});assert.fail('WASM did not render the authenticated UI: '+diagnostic.result?.value+' exceptions='+exceptions.join(' | ')+' console='+browserConsole.slice(-12).join(' | '));}
   await waitUI("Array.from(document.querySelectorAll('#sideMenu a')).some(a=>a.textContent==='Trip List'&&getComputedStyle(a).display!=='none')",'standard member Trip List menu item is hidden');
   const menuClose=await send('Runtime.evaluate',{expression:"document.querySelector('#menuIcon').click();const close=document.querySelector('#sideMenuClose');const valid=close?.textContent===String.fromCharCode(0x00d7)&&close.getAttribute('aria-label')==='Close menu'&&document.querySelector('#sideMenu').style.width==='250px';const route=location.hash;close.click();valid&&document.querySelector('#sideMenu').style.width==='0px'&&location.hash===route",returnByValue:true});
   assert.equal(menuClose.result?.value,true,'side menu close symbol or action is incorrect');
@@ -165,6 +167,19 @@ try {
   assert(reportRendered,'Trip List participant report did not render in the browser');
   const disclosureIcon=await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent span')).some(span=>span.textContent===String.fromCharCode(0x25b6))",returnByValue:true});
   assert.equal(disclosureIcon.result?.value,true,'disclosure arrow rendered as corrupted text');
+  assert(!requests.some(url=>url.includes('trip_id=')),'report eagerly fetched participant lists');
+  await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('[aria-controls^=trip-details-]')).find(b=>b.getClientRects().length>0).focus()"});
+  await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13});
+  await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+  await waitUI("document.activeElement.getAttribute('aria-expanded')==='true'",'Trip List keyboard disclosure failed');
+  for(let i=0;i<120&&!requests.some(url=>url.includes('trip_id='));i++)await delay(100);
+  assert(requests.some(url=>url.includes('trip_id=')&&url.includes('limit=50')),'bounded lazy roster request missing');
+  await waitUI("!document.querySelector('[id^=trip-details-] [aria-busy=true]')",'participant page remained busy');
+  await send('Runtime.evaluate',{expression:"window.__cancelFetch=window.fetch;window.fetch=(url,options)=>{if(String(url).includes('trip_id=')){return new Promise((resolve,reject)=>{window.__finishRoster=()=>resolve(new Response('[]',{headers:{'Content-Type':'application/json'}}));window.__rosterSignal=options.signal;options.signal.addEventListener('abort',()=>{window.__rosterAborted=true;reject(new DOMException('Cancelled','AbortError'));},{once:true});});}return window.__cancelFetch(url,options);};const toggle=Array.from(document.querySelectorAll('[aria-controls^=trip-details-]')).find(b=>b.getClientRects().length>0);toggle.click();toggle.click();"});
+  await waitUI("!!window.__rosterSignal",'delayed participant request did not start');
+  await send('Runtime.evaluate',{expression:"location.hash='/mybookings'"});
+  await waitUI("window.__rosterAborted===true",'leaving Trip List did not abort its participant request');
+  await send('Runtime.evaluate',{expression:"window.__finishRoster();window.fetch=window.__cancelFetch;delete window.__cancelFetch"});
   await send('Runtime.evaluate',{expression:"window.fetch=window.__tmFetch;delete window.__tmFetch"});
   await send('Runtime.evaluate', {expression: "location.hash='/mybookings'"});
   await waitForPage('Items 1–100');
@@ -213,6 +228,17 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   assert.equal(preserved.result.value,true,'failed account edit was lost or remained disabled');
   const isolated=await send('Runtime.evaluate',{expression:"window.__accountURL.endsWith('/users/'+document.querySelector('form[id^=inlineEditForm_]').id.split('_').pop())&&window.__accountBody.name==='Preserved account edit'",returnByValue:true});
   assert.equal(isolated.result.value,true,'submitting the first account form targeted another account');
+  await waitUI("!!document.querySelector('[data-tm-reload]')",'conflict did not offer explicit reload');
+  await send('Runtime.evaluate',{expression:"document.querySelector('[data-tm-reload]').click()"});
+  await waitUI("!!document.querySelector('dialog[open]')",'discard confirmation missing');
+  await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+  await waitUI("!document.querySelector('dialog[open]')",'discard cancellation failed');
+  const conflictPreserved=await send('Runtime.evaluate',{expression:"document.querySelector('[id^=itemName-]').value==='Preserved account edit'",returnByValue:true});
+  assert.equal(conflictPreserved.result.value,true,'cancelled reload discarded edits');
+  await send('Runtime.evaluate',{expression:"document.querySelector('[data-tm-reload]').click()"});
+  await waitUI("!!document.querySelector('dialog[open]')",'reload confirmation did not reopen');
+  await send('Runtime.evaluate',{expression:"document.querySelector('dialog[open] button[type=submit]').click()"});
+  await waitUI("document.querySelectorAll('form[id^=inlineEditForm_]').length===0",'confirmed reload did not discard stale forms');
   await send('Runtime.evaluate',{expression:"window.fetch=window.__accountFetch;location.hash='/securitygroup'"});
   const disclosure="Array.from(document.querySelectorAll('[id=\"securityGroupView.groupCard\"] .tm-disclosure')).find(b=>b.getClientRects().length>0)";
   await waitUI(`!!(${disclosure})`,'semantic disclosure missing');
@@ -221,7 +247,7 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
   await waitUI("document.activeElement.getAttribute('aria-expanded')==='true'",'keyboard disclosure failed');
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-  const mobile=await send('Runtime.evaluate',{expression:"window.innerWidth===390&&!!document.querySelector('meta[name=viewport]')",returnByValue:true});
+  const mobile=await send('Runtime.evaluate',{expression:"window.innerWidth===390&&!!document.querySelector('meta[name=viewport]')&&document.documentElement.scrollWidth<=window.innerWidth+1",returnByValue:true});
   assert.equal(mobile.result.value,true,'mobile viewport is not configured');
   assert.equal(exceptions.length,0,`browser exceptions: ${exceptions.join(', ')}`);
   console.log('Real-browser WASM, account forms, modal focus, keyboard and mobile checks passed');
