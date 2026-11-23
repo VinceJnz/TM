@@ -197,8 +197,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.PersonID, editor.UiComponents.PersonID = editor.Children.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson", lookup)
 	editor.UiComponents.PersonID.Call("setAttribute", "required", "true")
 
-	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes", "text", "itemNotes")
-	editor.UiComponents.Notes.Call("setAttribute", "required", "true")
+	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes (optional)", "text", "itemNotes")
 
 	form.Call("appendChild", localObjs.PersonID)
 	form.Call("appendChild", localObjs.Notes)
