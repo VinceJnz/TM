@@ -29,6 +29,9 @@ func (s Service) Save(ctx context.Context, actor, id int, v models.GroupBookingW
 		if e != nil {
 			return models.GroupBooking{}, e
 		}
+		if v.Version != current.Version {
+			return models.GroupBooking{}, models.ErrStaleRecord
+		}
 		if v.OwnerID == 0 {
 			v.OwnerID = current.OwnerID
 		}

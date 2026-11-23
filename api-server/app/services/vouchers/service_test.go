@@ -40,6 +40,19 @@ func TestVoucherValidationAndExplicitWrites(t *testing.T) {
 	if err != nil || current.Code != "SYNTHETIC" {
 		t.Fatal("invalid update changed voucher", err)
 	}
+	update := models.VoucherWrite{Version: v.Version, Code: "Edited", ExpiryDate: &expires, FixedCost: &value}
+	updated, err := s.Save(ctx, v.ID, update)
+	if err != nil || updated.Version != v.Version+1 {
+		t.Fatal(updated, err)
+	}
+	update.Code = "Stale"
+	if _, err := s.Save(ctx, v.ID, update); !errors.Is(err, models.ErrStaleRecord) {
+		t.Fatal("stale voucher edit accepted", err)
+	}
+	current, err = s.Store.Get(ctx, v.ID)
+	if err != nil || current.Code != "EDITED" {
+		t.Fatal(current, err)
+	}
 }
 
 func TestVoucherFixedPriceRejectsPrecisionBeforeFloatRounding(t *testing.T) {

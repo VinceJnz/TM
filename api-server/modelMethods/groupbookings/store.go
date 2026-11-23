@@ -10,7 +10,7 @@ import (
 
 type Store struct{ DB *sqlx.DB }
 
-const read = `SELECT id,group_name,owner_id,created,modified FROM at_group_bookings`
+const read = `SELECT id,group_name,owner_id,created,modified,version FROM at_group_bookings`
 
 func (s Store) List(ctx context.Context, p resourcequery.Page) ([]models.GroupBooking, resourcequery.PageInfo, error) {
 	return resourcequery.SelectPage[models.GroupBooking](ctx, s.DB, p, read)
@@ -32,10 +32,10 @@ func (s Store) Referenced(ctx context.Context, tx *sqlx.Tx, id int) (bool, error
 }
 func (s Store) Save(ctx context.Context, tx *sqlx.Tx, id int, v models.GroupBookingWrite) (models.GroupBooking, error) {
 	var result models.GroupBooking
-	q := `INSERT INTO at_group_bookings(group_name,owner_id) VALUES($1,$2) RETURNING id,group_name,owner_id,created,modified`
+	q := `INSERT INTO at_group_bookings(group_name,owner_id) VALUES($1,$2) RETURNING id,group_name,owner_id,created,modified,version`
 	args := []any{v.GroupName, v.OwnerID}
 	if id > 0 {
-		q = `UPDATE at_group_bookings SET group_name=$1,owner_id=$2 WHERE id=$3 RETURNING id,group_name,owner_id,created,modified`
+		q = `UPDATE at_group_bookings SET group_name=$1,owner_id=$2 WHERE id=$3 RETURNING id,group_name,owner_id,created,modified,version`
 		args = append(args, id)
 	}
 	err := tx.GetContext(ctx, &result, q, args...)

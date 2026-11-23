@@ -5,7 +5,6 @@ import (
 	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/models"
 	"context"
-	"database/sql"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -42,15 +41,15 @@ func (s Store) Save(ctx context.Context, id int, v models.VoucherWrite) (models.
 	if id == 0 {
 		err = tx.GetContext(ctx, &id, qryCreate, args...)
 	} else {
-		var changed sql.Result
-		changed, err = tx.ExecContext(ctx, qryUpdate, append(args, id)...)
-		if err == nil {
-			var n int64
-			n, err = changed.RowsAffected()
-			if err == nil && n == 0 {
-				err = sql.ErrNoRows
-			}
+		var version int64
+		err = tx.GetContext(ctx, &version, "SELECT version FROM at_booking_vouchers WHERE id = $1 FOR UPDATE", id)
+		if err != nil {
+			return result, err
 		}
+		if version != v.Version {
+			return result, models.ErrStaleRecord
+		}
+		_, err = tx.ExecContext(ctx, qryUpdate, append(args, id)...)
 	}
 	if err != nil {
 		return result, err

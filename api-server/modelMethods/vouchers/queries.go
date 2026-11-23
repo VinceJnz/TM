@@ -1,17 +1,17 @@
 package vouchers
 
 const (
-	qryGetAllActive = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified
+	qryGetAllActive = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified, version
 					FROM at_booking_vouchers
 					WHERE is_active = true
 					AND expiry_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Pacific/Auckland')::date
 					ORDER BY code`
 
-	qryGetAllAdmin = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified
+	qryGetAllAdmin = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified, version
 					FROM at_booking_vouchers
 					ORDER BY code`
 
-	qryGet = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified
+	qryGet = `SELECT id, code, discount_percent, fixed_cost, expiry_date, is_active, created, modified, version
 				FROM at_booking_vouchers
 				WHERE id = $1`
 

@@ -43,6 +43,7 @@ const (
 const ApiURL = "/bookingVouchers"
 
 type TableData struct {
+	Version         int64      `json:"version"`
 	ID              int        `json:"id"`
 	Code            string     `json:"code"`
 	DiscountPercent *float64   `json:"discount_percent"`
@@ -51,6 +52,23 @@ type TableData struct {
 	IsActive        bool       `json:"is_active"`
 	Created         time.Time  `json:"created"`
 	Modified        time.Time  `json:"modified"`
+}
+
+type voucherWrite struct {
+	Code            string     `json:"code"`
+	DiscountPercent *float64   `json:"discount_percent"`
+	FixedCost       *float64   `json:"fixed_cost"`
+	ExpiryDate      *time.Time `json:"expiry_date"`
+	IsActive        bool       `json:"is_active"`
+	Version         int64      `json:"version"`
+}
+
+func (item TableData) write() *voucherWrite {
+	return &voucherWrite{
+		Code: item.Code, DiscountPercent: item.DiscountPercent,
+		FixedCost: item.FixedCost, ExpiryDate: item.ExpiryDate,
+		IsActive: item.IsActive, Version: item.Version,
+	}
 }
 
 type UI struct {
@@ -338,9 +356,14 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, item.write()); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.onCompletionMsg(err.Error())
+		viewHelpers.ConflictReload(editor.Div, err, func() {
+			editor.resetEditForm()
+			editor.RecordState = RecordStateReloadRequired
+			editor.FetchItems()
+		})
 		return
 	}
 	editor.resetEditForm()
@@ -354,7 +377,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-		if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+		if err := editor.client.Request(http.MethodPost, ApiURL, nil, item.write()); err != nil {
 			editor.updateStateDisplay(ItemStateAdding)
 			editor.onCompletionMsg("Change failed; please retry.")
 			return

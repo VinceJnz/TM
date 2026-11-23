@@ -30,13 +30,20 @@ func TestReferencedGroupPreservesBookingAndOwner(t *testing.T) {
 	if _, err = db.Exec(`INSERT INTO at_bookings(owner_id,trip_id,booking_status_id,group_booking_id) VALUES(1,1,1,$1)`, v.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.Save(ctx, 1, v.ID, models.GroupBookingWrite{GroupName: "Changed", OwnerID: 2}); !errors.Is(err, ErrReferenced) {
+	if _, err = s.Save(ctx, 1, v.ID, models.GroupBookingWrite{Version: v.Version, GroupName: "Changed", OwnerID: 2}); !errors.Is(err, ErrReferenced) {
 		t.Fatal("referenced owner changed", err)
 	}
 	if err = s.Delete(ctx, 1, v.ID); !errors.Is(err, ErrReferenced) {
 		t.Fatal("referenced group deleted", err)
 	}
-	if _, err = s.Save(ctx, 1, v.ID, models.GroupBookingWrite{GroupName: "Renamed"}); err != nil {
+	if _, err = s.Save(ctx, 1, v.ID, models.GroupBookingWrite{Version: v.Version, GroupName: "Renamed"}); err != nil {
 		t.Fatal(err)
+	}
+	if _, err = s.Save(ctx, 1, v.ID, models.GroupBookingWrite{Version: v.Version, GroupName: "Stale"}); !errors.Is(err, models.ErrStaleRecord) {
+		t.Fatal("stale group edit accepted", err)
+	}
+	current, err := s.Store.Get(ctx, v.ID)
+	if err != nil || current.GroupName != "Renamed" || current.Version != v.Version+1 {
+		t.Fatal(current, err)
 	}
 }

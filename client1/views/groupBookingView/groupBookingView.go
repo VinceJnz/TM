@@ -43,11 +43,22 @@ const (
 const ApiURL = "/groupBooking"
 
 type TableData struct {
+	Version   int64  `json:"version"`
 	ID        int    `json:"id"`
 	GroupName string `json:"group_name"`
 	OwnerID   int    `json:"owner_id"`
 	Created   string `json:"created"`
 	Modified  string `json:"modified"`
+}
+
+type groupBookingWrite struct {
+	GroupName string `json:"group_name"`
+	OwnerID   int    `json:"owner_id"`
+	Version   int64  `json:"version"`
+}
+
+func (item TableData) write() *groupBookingWrite {
+	return &groupBookingWrite{GroupName: item.GroupName, OwnerID: item.OwnerID, Version: item.Version}
 }
 
 type UI struct {
@@ -253,9 +264,14 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
-	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
+	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, item.write()); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.onCompletionMsg(err.Error())
+		viewHelpers.ConflictReload(editor.Div, err, func() {
+			editor.resetEditForm()
+			editor.RecordState = RecordStateReloadRequired
+			editor.FetchItems()
+		})
 		return
 	}
 	editor.resetEditForm()
@@ -270,7 +286,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 func (editor *ItemEditor) AddItem(item TableData) {
 	go func() {
 		editor.updateStateDisplay(ItemStateSaving)
-		if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
+		if err := editor.client.Request(http.MethodPost, ApiURL, nil, item.write()); err != nil {
 			editor.updateStateDisplay(ItemStateAdding)
 			editor.onCompletionMsg("Change failed; please retry.")
 			return

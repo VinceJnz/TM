@@ -46,3 +46,8 @@ plain-text errors remain represented alongside structured errors. Behavioral
 tests compare security handler validation and read-array contracts with generated
 metadata. The generator does not replace database/reference or multi-step domain
 validation. Extend metadata and behavioral tests with each resource migration.
+
+For voucher and group booking edits, PUT requires the version from the most
+recent read. A missing or stale version returns HTTP 409 with error code
+stale_record. Creation ignores the version and the database starts it at 1.
+Existing response shapes are preserved with an additional version field.

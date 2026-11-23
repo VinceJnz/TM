@@ -78,7 +78,7 @@ func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
 	}
 	var input models.GroupBookingWrite
 	if err := helpers.DecodeJSONBody(r, &input); err != nil {
-		helpers.WriteError(w, 400, "invalid_request", "Invalid security payload")
+		helpers.WriteError(w, 400, "invalid_request", "Invalid group booking payload")
 		return
 	}
 	result, err := (service.Service{Store: h.store}).Save(r.Context(), actor, id, input)

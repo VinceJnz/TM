@@ -54,6 +54,7 @@ type BookingStatus struct {
 }
 
 type BookingVoucher struct {
+	Version         int64      `json:"version" db:"version"`
 	ID              int        `json:"id" db:"id"`
 	Code            string     `json:"code" db:"code"`
 	DiscountPercent *float64   `json:"discount_percent" db:"discount_percent"`
@@ -76,6 +77,7 @@ type BookingPeople struct {
 }
 
 type GroupBooking struct {
+	Version   int64  `json:"version" db:"version"`
 	ID        int    `db:"id" json:"id"`
 	GroupName string `db:"group_name" json:"group_name"`
 	OwnerID   int    `db:"owner_id" json:"owner_id"`
