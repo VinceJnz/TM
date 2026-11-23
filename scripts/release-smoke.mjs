@@ -212,7 +212,7 @@ try {
   assert(requests.some(url => url.startsWith(`${origin}${prefix}/auth/menuUser`)), 'frontend did not use its current origin/prefix');
   assert(!requests.some(url => url.includes('localhost:8086')), 'frontend retained a compiled localhost URL');
   await send('Runtime.evaluate',{expression:"location.hash='/tripsreport'"});
-  await waitUI("!!document.querySelector('#trip-book-1')",'Trip List booking action did not appear');
+  await waitUI("document.querySelector('#trip-book-1')?.disabled===false",'Trip List booking action did not appear');
   await send('Runtime.evaluate',{expression:"document.querySelector('#trip-book-1').click()"});
   await waitUI("!!document.querySelector('#trip-details-1 form #itemVoucherCode') && !document.querySelector('#trip-details-1 form #itemBookingPrice')",'Trip List booking form did not offer an optional voucher with a calculated price');
   await send('Runtime.evaluate',{expression:"location.hash='/mybookings'"});
@@ -225,6 +225,7 @@ try {
   await waitUI(`(${myBookingStep})?.textContent.includes('SMOKE-FREE') && (${myBookingStep})?.textContent.includes('NZ$0.00')`,'review did not apply the saved voucher');
   await send('Runtime.evaluate',{expression:`Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Confirm booking').click()`});
   await waitUI(`(${memberBooking})?.textContent.includes('Status:Confirmed')`,'zero-total booking was not confirmed');
+  await waitUI("document.querySelector('#statusOutput > [role=status]')?.textContent==='Booking confirmed.'",'booking result was not announced');
   assert(requests.some(url=>url.endsWith('/bookings/checkout/confirm/1')), 'zero-total confirmation request missing');
   assert(!requests.some(url=>url.includes('/bookings/checkout/create/')), 'zero-total booking opened Stripe checkout');
   const tripBooking = "document.querySelector('#trip-details-1 [id=\"bookingView.itemEditDiv\"]')";
@@ -235,7 +236,7 @@ try {
     await send('Runtime.evaluate',{expression:`(${button}).click()`});
   }
   await send('Runtime.evaluate',{expression:"location.hash='/tripsreport'"});
-  await waitUI("document.querySelector('#pageTitle')?.textContent==='Trip List' && document.querySelector('#trip-book-1')?.getClientRects().length>0",'Trip List booking action did not reappear');
+  await waitUI("document.querySelector('#pageTitle')?.textContent==='Trip List' && document.querySelector('#trip-book-1')?.getClientRects().length>0 && !document.querySelector('#trip-book-1').disabled",'Trip List booking action did not reappear');
   await send('Runtime.evaluate',{expression:"document.querySelector('#trip-book-1').click()"});
   await waitUI(`(${tripBooking})?.querySelector('#itemNotes')?.getClientRects().length>0`,'new booking details did not appear');
   await clickBooking('Save and continue');

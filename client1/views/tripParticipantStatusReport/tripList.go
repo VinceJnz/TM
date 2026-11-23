@@ -33,8 +33,8 @@ func (e *ItemEditor) FetchItems() {
 		if !ticket.Finish(err) {
 			return
 		}
-		viewHelpers.Pending(e.Div, false)
 		if err != nil {
+			viewHelpers.Pending(e.Div, false)
 			e.RecordState = RecordStateReloadRequired
 			viewHelpers.RenderRetry(e.ListDiv, e.FetchItems)
 			return
@@ -42,6 +42,7 @@ func (e *ItemEditor) FetchItems() {
 		e.Page = page
 		e.Records = rows
 		e.populateItemList()
+		viewHelpers.Pending(e.Div, false)
 	}()
 }
 func (e *ItemEditor) populateItemList() {
@@ -118,6 +119,7 @@ func (e *ItemEditor) populateItemList() {
 			book.Display()
 			return nil
 		}, e.document, "Make Booking", "trip-book-"+strconv.Itoa(record.TripID))
+		viewHelpers.ActionFor(makeBooking, "bookings", "POST")
 		makeBooking.Set("hidden", !e.appCore.HasAccess("bookings", []string{"POST"}, []string{"own", "any"}))
 		row.Call("append", toggle, makeBooking)
 		card.Call("append", row, details)
