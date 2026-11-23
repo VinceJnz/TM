@@ -27,20 +27,24 @@ try {
     & docker rm -f $name 2>$null | Out-Null
 }
 
-# Validate the actual release override without loading workstation credentials.
-$emptyFile=[IO.Path]::GetTempFileName()
-$previous=@{}
-$testValues=@{TM_API_ENV_FILE=$emptyFile;TM_API_DB_PASSWORD='synthetic-api';TM_DB_PASSWORD='synthetic-db';TM_EMAIL_REDIRECT_ALL='false';TM_EMAIL_REDIRECT_TO='';TM_STRIPE_TEST_MODE='false';TM_RELEASE_API_IMAGE=('registry.example.test/tm@sha256:'+('a'*64))}
+# Validate the release override with a synthetic api-server/.env.
+$root=Split-Path -Parent $PSScriptRoot
+$fixture=Join-Path ([IO.Path]::GetTempPath()) ("tm-release-config-"+[guid]::NewGuid().ToString('N'))
+$files=@('docker-compose.yml','docker-compose.release.yml')
+$apiDirectory=Join-Path $fixture 'api-server'
+$apiEnv=Join-Path $apiDirectory '.env'
+$releaseImage='registry.example.test/tm@sha256:'+('a'*64)
 try {
-    foreach ($key in $testValues.Keys) { $previous[$key]=[Environment]::GetEnvironmentVariable($key,'Process');[Environment]::SetEnvironmentVariable($key,$testValues[$key],'Process') }
-    $root=Split-Path -Parent $PSScriptRoot
-    $configuration = & docker compose --env-file $emptyFile --project-directory $root -f (Join-Path $root 'docker-compose.yml') -f (Join-Path $root 'docker-compose.release.yml') --profile prod config --format json
+    New-Item -ItemType Directory -Path $apiDirectory -Force | Out-Null
+    foreach ($file in $files) { Copy-Item -LiteralPath (Join-Path $root $file) -Destination $fixture }
+    [IO.File]::WriteAllLines($apiEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',"TM_RELEASE_API_IMAGE=$releaseImage",'DEV_MODE=false','EMAIL_REDIRECT_ALL=false','STRIPE_TEST_MODE=false'))
+    $configuration = & docker compose --env-file $apiEnv --project-directory $fixture -f (Join-Path $fixture $files[0]) -f (Join-Path $fixture $files[1]) --profile prod config --format json
     if ($LASTEXITCODE -ne 0) { throw 'Synthetic release configuration failed.' }
     $api=($configuration | ConvertFrom-Json).services.apiserver
     Assert-ProductionEnvironment $api.environment
-    if ($api.image -cne $testValues.TM_RELEASE_API_IMAGE -or $null -ne $api.build) { throw 'Release override did not preserve the approved image or disable builds.' }
+    if ($api.image -cne $releaseImage -or $null -ne $api.build) { throw 'Release override did not preserve the approved image or disable builds.' }
     Write-Host 'Release Compose override validated with synthetic configuration.'
 } finally {
-    foreach ($key in $testValues.Keys) { [Environment]::SetEnvironmentVariable($key,$previous[$key],'Process') }
-    Remove-Item -LiteralPath $emptyFile
+    foreach ($file in $files) { Remove-Item -LiteralPath (Join-Path $fixture $file) -ErrorAction SilentlyContinue }
+    Remove-Item -LiteralPath $apiEnv,$apiDirectory,$fixture -ErrorAction SilentlyContinue
 }

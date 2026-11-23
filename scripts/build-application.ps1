@@ -21,6 +21,6 @@ $revision=Get-BuildRevision $revision ([bool]$changes) $RequireClean.IsPresent
 if($LASTEXITCODE -ne 0){throw 'Frontend artifact build failed; API build was not started.'}
 $profile='prod';$service='apiserver'
 if($ApiTarget -ne 'final'){$profile=$ApiTarget;$service="apiserver-$ApiTarget"}
-& docker compose --project-directory $root -f (Join-Path $root 'docker-compose.yml') --profile $profile build --build-arg "CLIENT_IMAGE=$ClientImage" --build-arg "SOURCE_REVISION=$revision" $service
+& docker compose --env-file (Join-Path $root 'api-server/.env') --project-directory $root -f (Join-Path $root 'docker-compose.yml') --profile $profile build --build-arg "CLIENT_IMAGE=$ClientImage" --build-arg "SOURCE_REVISION=$revision" $service
 if($LASTEXITCODE -ne 0){throw 'API image assembly failed.'}
 Write-Host "Application build passed: $ClientBuilder frontend, $ApiTarget API target, revision $revision. No containers were started."

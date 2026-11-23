@@ -180,7 +180,7 @@ Use Docker BuildKit; the Dockerfiles use BuildKit cache mounts. Default Compose
 builds compile the frontend from source and package its matching WASM runtime:
 
 ```powershell
-docker compose --profile prod up --build -d
+docker compose --env-file api-server/.env --profile prod up --build -d
 ```
 
 Runtime configuration and outstanding database migrations must be prepared first.
@@ -188,7 +188,7 @@ For a build that records the Git revision, or to select Go/TinyGo explicitly:
 
 ```powershell
 ./scripts/build-application.ps1 -ClientBuilder go-builder
-docker compose --profile prod up -d --no-deps --force-recreate apiserver
+docker compose --env-file api-server/.env --profile prod up -d --no-deps --force-recreate apiserver
 ```
 
 The build script starts no containers. A `CLIENT_IMAGE` override deliberately

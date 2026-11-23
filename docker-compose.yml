@@ -7,19 +7,15 @@ x-api: &api
       CLIENT_IMAGE: ${CLIENT_IMAGE:-client1-built}
       CLIENT_BUILDER: ${TM_CLIENT_BUILDER:-go-builder}
   env_file:
-    - ${TM_API_ENV_FILE:-./api-server/.env}
+    - ./api-server/.env
   environment:
     DATA_SOURCE: ${TM_API_DATA_SOURCE:-}
-    DEV_MODE: "false"
-    EMAIL_DEBUG_ADDR: ""
-    EMAIL_REDIRECT_ALL: ${TM_EMAIL_REDIRECT_ALL:-false}
-    EMAIL_REDIRECT_TO: ${TM_EMAIL_REDIRECT_TO:-}
-    STRIPE_TEST_MODE: ${TM_STRIPE_TEST_MODE:-false}
     DB_HOST: dbserver
     DB_PORT: "5432"
     DB_USER: ${TM_API_DB_USER:-api_user}
     DB_PASSWORD: ${TM_API_DB_PASSWORD:?Set TM_API_DB_PASSWORD outside source control}
     DB_NAME: ${TM_DB_NAME:-mydatabase}
+    TM_DB_PASSWORD: ""
   ports:
     - "127.0.0.1:8085:8085"
     - "8086:8086"

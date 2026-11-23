@@ -223,8 +223,7 @@ Keep toolchain versions/digests aligned; do not upgrade them incidentally.
 | `CLIENT_BUILDER` | Docker build argument selecting `go-builder` or `tinygo-builder` |
 | `TM_CLIENT_BUILDER` | Compose input for the self-contained frontend build |
 | `CLIENT_IMAGE` | Explicit prebuilt artifact override; omit it for the self-contained default |
-| Root `.env` / injected Compose inputs | Compose substitution, including `TM_*` settings; never a source-controlled secret store |
-| `api-server/.env` by default | API runtime env file, selectable with `TM_API_ENV_FILE` |
+| `api-server/.env` | API runtime and Compose interpolation file for all profiles, including development mode, email redirection and Stripe test mode |
 | `TM_API_DATA_SOURCE` | Explicit Compose override for runtime `DATA_SOURCE`; otherwise Compose supplies `DB_*` |
 | `TRUSTED_PROXY_CIDRS` | Deliberate trust boundary for forwarding headers |
 | `EMAIL_REDIRECT_ALL` / `EMAIL_REDIRECT_TO` | Redirect application mail to one defined inbox; Compose uses corresponding `TM_` inputs |
@@ -242,7 +241,7 @@ the tools profile. Select final, interactive and debug targets deliberately.
 
 `scripts/build-application.ps1` builds both components, records the source revision,
 marks dirty builds and optionally requires a clean tree. It starts no containers and
-applies no migrations. Default `docker compose --profile prod up --build -d` now builds
+applies no migrations. Default `docker compose --env-file api-server/.env --profile prod up --build -d` now builds
 both components unless an explicit prebuilt override is supplied. Recreating a container
 alone does not rebuild artifacts. Use BuildKit; routine cache pruning is not required.
 
@@ -325,7 +324,7 @@ password, applies pending migrations and refreshes runtime grants:
 ```powershell
 ./scripts/migrate-local.ps1
 ./scripts/build-application.ps1
-docker compose --profile prod up -d --no-deps --force-recreate apiserver
+docker compose --env-file api-server/.env --profile prod up -d --no-deps --force-recreate apiserver
 ```
 
 These commands are guidance, not actions performed by reading/updating this guide.
