@@ -22,7 +22,11 @@ $apiEnv=Join-Path $apiDirectory '.env'
 $composeEnv=Join-Path $fixture '.env'
 try {
  New-Item -ItemType Directory -Path $apiDirectory -Force | Out-Null
- foreach ($file in $files) { Copy-Item -LiteralPath (Join-Path $root $file) -Destination $fixture }
+ foreach ($file in $files) {
+  if ($file -eq 'docker-compose.override.yml') {
+   [IO.File]::WriteAllText((Join-Path $fixture $file),'services: {}')
+  } else { Copy-Item -LiteralPath (Join-Path $root $file) -Destination $fixture }
+ }
  [IO.File]::WriteAllLines($composeEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',('TM_RELEASE_API_IMAGE=registry.example.test/tm@sha256:'+('a'*64)), 'TM_DEV_MODE=false','TM_STRIPE_TEST_MODE=false','TM_EMAIL_REDIRECT_ALL=false','TM_EMAIL_REDIRECT_TO=wrong@example.test'))
  foreach($mode in 'true','false') {
   $recipient=if ($mode -eq 'true') {'synthetic@example.test'} else {''}
@@ -46,5 +50,7 @@ try {
  Write-Host 'All Compose profiles and overlays honor api-server/.env.'
 } finally {
  foreach ($file in $files) { Remove-Item -LiteralPath (Join-Path $fixture $file) -ErrorAction SilentlyContinue }
- Remove-Item -LiteralPath $apiEnv,$composeEnv,$apiDirectory,$fixture -ErrorAction SilentlyContinue
+ Remove-Item -LiteralPath $apiEnv,$composeEnv -Force -ErrorAction SilentlyContinue
+ if (Test-Path -LiteralPath $apiDirectory) { [IO.Directory]::Delete($apiDirectory) }
+ if (Test-Path -LiteralPath $fixture) { [IO.Directory]::Delete($fixture) }
 }

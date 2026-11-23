@@ -1,33 +1,40 @@
-import https from 'node:https';
-import assert from 'node:assert/strict';
-import {spawn} from 'node:child_process';
-
-const origin = process.env.API_ORIGIN || 'https://tm-smoke:8443';
+const origin = Deno.env.get('API_ORIGIN') || 'https://tm-smoke:8443';
 const prefix = '/custom/v9';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-function request(path, method = 'GET', data, cookie, extra = {}) {
-  return new Promise((resolve, reject) => {
-    const req = https.request(new URL(path, origin), {
-      method, rejectUnauthorized: false, timeout: 5000,
-      headers: {'Content-Type': 'application/json', ...(cookie ? {Cookie: cookie} : {}), ...extra},
-    }, res => {
-      const chunks = [];
-      res.on('data', chunk => chunks.push(chunk));
-      res.on('error', reject);
-      res.on('end', () => resolve({status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks)}));
-    });
-    req.on('error', reject);
-    req.on('timeout', () => req.destroy(new Error('request timeout')));
-    req.end(data ? JSON.stringify(data) : undefined);
+
+function assert(condition, message = 'assertion failed') {
+  if (!condition) throw new Error(message);
+}
+assert.equal = (actual, expected, message = 'unexpected value') =>
+  assert(Object.is(actual, expected), `${message}: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`);
+assert.deepEqual = (actual, expected, message = 'unexpected JSON') =>
+  assert.equal(JSON.stringify(actual), JSON.stringify(expected), message);
+assert.match = (value, pattern, message) => assert(pattern.test(value), message);
+assert.fail = message => { throw new Error(message); };
+
+async function request(path, method = 'GET', data, cookie, extra = {}) {
+  const res = await fetch(new URL(path, origin), {
+    method, redirect: 'manual', signal: AbortSignal.timeout(5000),
+    headers: {'Content-Type': 'application/json', ...(cookie ? {Cookie: cookie} : {}), ...extra},
+    body: data ? JSON.stringify(data) : undefined,
   });
+  const headers = Object.fromEntries(res.headers);
+  headers['set-cookie'] = res.headers.getSetCookie();
+  const body = path === '/main.wasm' ? await res.bytes() : await res.text();
+  return {status: res.status, headers, body};
 }
 let ready = false;
+let readinessError;
 for (let i = 0; i < 60; i++) {
-  try { ready = (await request('/readyz')).status === 200; } catch {}
+  try {
+    const {status} = await request('/readyz');
+    ready = status === 200;
+    readinessError = 'HTTP ' + status;
+  } catch (error) { readinessError = error.message; }
   if (ready) break;
   await delay(250);
 }
-assert(ready, 'API never became ready with the restricted runtime role');
+assert(ready, 'API never became ready with the restricted runtime role: ' + readinessError);
 assert.equal((await request(`${prefix}/bookings`)).status, 401);
 assert.equal((await request(`${prefix}/auth/login`, 'POST', {username: 'smoke-member'})).status, 503);
 assert.equal((await request(`${prefix}/auth/oauth/login`)).status, 503);
@@ -69,7 +76,7 @@ assert(asset.body.length > 1024 && asset.headers.etag, 'WASM artifact or validat
 assert.equal((await request('/main.wasm', 'GET', undefined, undefined, {'If-None-Match': asset.headers.etag})).status, 304);
 console.log('API readiness, OTP session, ownership, permission and artifact checks passed');
 
-const browser = spawn('chromium', ['--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--ignore-certificate-errors', '--remote-debugging-port=9222', 'about:blank'], {stdio: 'ignore'});
+const browser = new Deno.Command('/usr/local/bin/smoke-chromium', {args: ['--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--ignore-certificate-errors', '--remote-debugging-port=9222', '--user-data-dir=/tmp/tm-chromium', 'about:blank'], clearEnv: true, env: {HOME: '/tmp', PATH: '/usr/bin:/bin'}, stdout: 'null', stderr: 'null'}).spawn();
 let socket;
 try {
   let target;
@@ -315,5 +322,11 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   assert.equal(exceptions.length,0,`browser exceptions: ${exceptions.join(', ')}`);
   console.log('Real-browser WASM, account forms, modal focus, keyboard and mobile checks passed');
 } finally {
-  socket?.close();browser.kill('SIGTERM');
+  socket?.close();
+  try {
+    browser.kill('SIGTERM');
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+  }
+  await browser.status;
 }

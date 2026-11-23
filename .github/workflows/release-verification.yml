@@ -8,6 +8,9 @@ on:
       - codex/project-improvements
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: TinyGo client and Linux API tests
@@ -26,7 +29,15 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        env:
+          CHECKOUT_TOKEN: ${{ github.token }}
+        run: |
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          auth=$(printf 'x-access-token:%s' "$CHECKOUT_TOKEN" | base64 -w0)
+          git -c "http.extraHeader=Authorization: Basic $auth" fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
       - name: Verify release identity and health policy
         shell: pwsh
@@ -63,8 +74,9 @@ jobs:
       - name: Verify standard Go frontend and WASM transport
         run: |
           docker build -f Dockerfile.client1 --build-arg CLIENT_BUILDER=go-builder -t tm-client1-wasm:go-verify .
-          docker run --rm -v "$GITHUB_WORKSPACE/client1:/app:ro" -w /app golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab \
-            sh -c 'apk add --no-cache nodejs bash >/dev/null && GOOS=js GOARCH=wasm go test -exec /usr/local/go/lib/wasm/go_js_wasm_exec ./...'
+          docker build -f scripts/Dockerfile.smoke --target wasm-tests -t tm-wasm-tests:verify .
+          docker run --rm -v "$GITHUB_WORKSPACE/client1:/app:ro" tm-wasm-tests:verify
+
 
       - name: Build and inspect production image
         run: |

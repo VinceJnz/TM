@@ -306,7 +306,7 @@ Relevant commands from the repository root:
 ```
 
 Release verification checks generated contracts/configuration policies, both frontend
-builds, WASM package tests, API/PostgreSQL tests and vet, packaged runtime/Chromium,
+builds, Deno-hosted WASM package tests, API/PostgreSQL tests and vet, packaged runtime/Chromium,
 health and graceful shutdown. Dependency audit and upgrade rehearsal are additional
 checks, also wired into CI. CI covers pull requests and pushes to `main` and
 `codex/project-improvements`; do not infer a remote run passed from a local result.

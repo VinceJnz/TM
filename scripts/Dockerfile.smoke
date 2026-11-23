@@ -1,5 +1,20 @@
-FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
-RUN apk add --no-cache chromium openssl
+FROM golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab AS go-toolchain
+FROM denoland/deno:alpine-2.5.6@sha256:b9c7668c78fe393893f00b0fc8ba3d0f2e1bbb8f891a79a963b3b713ab110767 AS deno-runtime
+USER root
+ENTRYPOINT []
+
+FROM deno-runtime AS wasm-tests
+COPY --from=go-toolchain /usr/local/go /usr/local/go
+ENV PATH=/usr/local/go/bin:$PATH GOPATH=/go GOOS=js GOARCH=wasm
+COPY scripts/run-wasm-test.mjs /checks/run-wasm-test.mjs
+WORKDIR /app
+CMD ["go", "test", "-exec", "deno run --no-prompt --allow-read --allow-env /checks/run-wasm-test.mjs", "./..."]
+
+FROM deno-runtime AS smoke
+RUN LD_LIBRARY_PATH=/usr/lib:/lib apk add --no-cache chromium openssl
+RUN printf '#!/bin/sh\nLD_LIBRARY_PATH=/usr/lib:/lib exec /usr/bin/chromium "$@"\n' > /usr/local/bin/smoke-chromium \
+    && chmod 755 /usr/local/bin/smoke-chromium
 WORKDIR /checks
 COPY scripts/release-smoke.mjs /checks/release-smoke.mjs
-CMD ["node", "/checks/release-smoke.mjs"]
+ENTRYPOINT []
+CMD ["deno", "run", "--no-prompt", "--allow-env=API_ORIGIN", "--allow-net", "--unsafely-ignore-certificate-errors=tm-smoke", "--allow-run=/usr/local/bin/smoke-chromium", "/checks/release-smoke.mjs"]

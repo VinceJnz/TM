@@ -46,5 +46,7 @@ try {
     Write-Host 'Release Compose override validated with synthetic configuration.'
 } finally {
     foreach ($file in $files) { Remove-Item -LiteralPath (Join-Path $fixture $file) -ErrorAction SilentlyContinue }
-    Remove-Item -LiteralPath $apiEnv,$apiDirectory,$fixture -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $apiEnv -Force -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $apiDirectory) { [IO.Directory]::Delete($apiDirectory) }
+    if (Test-Path -LiteralPath $fixture) { [IO.Directory]::Delete($fixture) }
 }
