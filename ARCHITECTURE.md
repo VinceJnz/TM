@@ -1,7 +1,7 @@
 # Trip Manager architecture and decision guide
 
-Last reviewed: **22 November 2026**. Source checkpoint: `5494300` on
-`codex/project-improvements`, plus the documentation update introducing this guide.
+Last reviewed: **23 November 2026**. Source checkpoint: `23bcf5e` on
+`codex/project-improvements`.
 
 This is the primary architecture handoff for future project sessions. It describes
 implemented behavior, accepted decisions and known limitations. Read [AGENTS.md](AGENTS.md)
@@ -82,6 +82,8 @@ migration mechanism.
 declare the permission resource alongside the path. Middleware reads the matched
 route declaration; it does not infer permissions from URL segments. Nested routes,
 aliases and custom commands must declare the intended canonical resource explicitly.
+Route tests check the protected inventory and verify canonical resource names and
+session requirements on representative nested, checkout, and alias routes.
 
 The router also provides request tracing/deadlines, deliberate CORS configuration,
 trusted-proxy handling, `/livez`, `/readyz`, `/client-config.js` and static serving.
@@ -116,11 +118,12 @@ See [API contracts](docs/api-contracts.md) and [pagination](docs/api-pagination.
 
 **Concurrency:** account/profile writes carry database versions from migration 0025.
 Migration 0029 extends this to trips, trip prices and trip price groups.
-Migration 0032 adds voucher and group booking versions. Apply it before starting
-the new API. Open forms and API clients must reload and submit the returned version. The client
-returns the version it read; stale updates receive `409 stale_record`. Updates and
-successful retries require authoritative reloads. This protection is not universal
-across all resources yet.
+Migration 0032 adds voucher and group booking versions with a default of 1 for
+existing rows. An update trigger advances each version. The migration also
+handles audited schema adoption when the columns already exist. Protected PUTs
+require the version returned by the latest read and respond with
+`409 stale_record` for missing or stale versions. The editors preserve unsaved
+input and offer a confirmed reload. Apply 0032 before starting the matching API.
 
 **Identity:** migrations 0026/0027 enforce normalized nonblank member-code uniqueness
 and allocate codes on insertion, preserving all ID digits. Existing duplicate codes
@@ -167,6 +170,9 @@ does not justify new broad whole-user updates. Migrate touched workflows through
 new service/store, preserving token/session and error behavior with regression tests.
 
 Permissions are grants through user groups for a resource, HTTP method and scope.
+The protected middleware reads grants through the
+[authentication store](api-server/modelMethods/authentication/capability.go).
+Legacy entry points delegate capability queries to that same store.
 [`SupportsScope`](api-server/app/authorization/scope.go) rejects unsupported ownership
 semantics. Middleware approval does not establish ownership of a particular record;
 enforce access on collections, individual/nested records, mutations and referenced parents.
@@ -197,15 +203,19 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   Never let one form submit another form's current-record state.
 - Shared helpers provide validation feedback, busy states, empty states and confirmation
   dialogs. Conflicts preserve edits and offer confirmed discard/reload; cancellation
-  preserves the form.
+  preserves the form. Operation results are announced through a persistent
+  status region even when message history is collapsed.
 - `Action`/`ActionFor` declare permission method/resource metadata at construction.
   Visibility must not depend on button text. The server remains authoritative.
 - Native buttons, expanded/controls attributes, focus styles, wrapping layouts and
   viewport settings support keyboard/mobile access. Continue applying these patterns
   when touching older views; existing checks are not a complete accessibility audit.
 - Trip List pages trip summaries, fetches bounded participant pages on expansion,
-  and cancels pending detail loads when the view is left. The legacy full report
-  API remains compatible.
+  and cancels pending detail loads when the view is left. Its booking action
+  stays disabled during a summary refresh. The legacy full report API remains
+  compatible.
+- Trip edit forms load difficulty, status, type, and cost-group options before
+  rendering. The view cancels the lookup on hide or reset and offers Retry on failure.
 - Test compiler-sensitive code in both builds. A real TinyGo startup failure was caught
   during the conflict changes. The current code uses typed error unwrapping and direct
   JSON destination pointers instead of introducing unsupported reflection paths.
@@ -227,6 +237,7 @@ Keep toolchain versions/digests aligned; do not upgrade them incidentally.
 | `CLIENT_IMAGE` | Explicit prebuilt artifact override; omit it for the self-contained default |
 | `api-server/.env` | API runtime and Compose interpolation file for all profiles, including development mode, email redirection and Stripe test mode |
 | `TM_API_DATA_SOURCE` | Explicit Compose override for runtime `DATA_SOURCE`; otherwise Compose supplies `DB_*` |
+| `TM_DB_SSLMODE` | Compose sets DB_SSLMODE for the DB_* fallback. The local default is disable. Set verify-full and configure a trusted CA for remote PostgreSQL. |
 | `TRUSTED_PROXY_CIDRS` | Deliberate trust boundary for forwarding headers |
 | `EMAIL_REDIRECT_ALL` / `EMAIL_REDIRECT_TO` | Redirect application mail to one defined inbox; Compose uses corresponding `TM_` inputs |
 | `STRIPE_TEST_MODE` | Requires configured test credentials and rejects live provider responses/events; it does not convert live keys |
@@ -246,6 +257,11 @@ marks dirty builds and optionally requires a clean tree. It starts no containers
 applies no migrations. Default `docker compose --env-file api-server/.env --profile prod up --build -d` now builds
 both components unless an explicit prebuilt override is supplied. Recreating a container
 alone does not rebuild artifacts. Use BuildKit; routine cache pruning is not required.
+
+Published builds default to building the client from source. When supplied a
+prebuilt client digest, the release builder checks its compiler and source
+revision labels. The deployment script checks the API image digest and revision,
+waits up to 120 seconds for API health, and leaves database dependencies running.
 
 Immutable production image approval, monitoring and recovery are separate operator
 actions: see [release operations](docs/release-operations.md),
@@ -278,10 +294,10 @@ and verification evidence. Their deployment observations are historical.
 |---|---|
 | Resource boundaries | Stores/services for catalogs, group bookings, participants, vouchers and other core resources; Trip Type create-table regression fixed |
 | Account safety | Address limits aligned; shared error DTOs; account/profile versions; unique member codes; isolated inline forms |
-| Authentication | Core service/store, narrow OAuth changes, atomic registration/login and request-context propagation |
-| Money/concurrency | Exact voucher writes; stale-trip/pricing protection in 0029; existing ledger invariants retained |
-| UI | Explicit capability actions, dialogs, conflict recovery, keyboard controls and cancellable lazy rosters |
-| Build/verification | Self-contained frontend/API build, compiler parity checks, branch CI coverage and expanded browser regressions |
+| Authentication | Core service/store including capability lookup, route inventory and alias checks, narrow OAuth changes, atomic registration/login and request-context propagation |
+| Money/concurrency | Exact voucher writes, trip and pricing versions in 0029, and voucher and group booking versions in 0032 |
+| UI | Capability actions, conflict recovery, keyboard controls, cancellable rosters, status announcements, and reliable trip edit lookups |
+| Build/verification | Self-contained frontend/API build, compiler parity and artifact identity checks, deployment health wait, and expanded browser checks |
 
 **Remaining limitations / follow-up candidates, not claims of completed work:**
 
@@ -292,7 +308,7 @@ and verification evidence. Their deployment observations are historical.
 | Medium | Contract and validation coverage | Some legacy resources still reuse models or handwritten contracts. Extend explicit DTOs and resource-specific validation as features change; the generator is not complete domain validation |
 | Medium | UI duplication and accessibility | Continue shared components, unique control IDs and lifecycle ownership. Manual screen-reader, device and broader visual audits remain necessary |
 | Operational | Environment and provider acceptance | Recheck actual migrations, roles, monitoring installation and required integrations. Automated provider fakes do not establish real Gmail/Google/Stripe readiness |
-| Low / conditional | Build/configuration maintenance | Prebuilt artifact provenance remains an operator responsibility. Keep duplicate compiler stages aligned; review explicit DB TLS settings for remote deployments rather than assuming local Compose defaults are suitable |
+| Low / conditional | Build/configuration maintenance | Record approved artifact digests, keep compiler stages aligned, and verify database TLS settings and trust roots for remote deployments |
 
 No additional wholesale checkout migration is required by this checkpoint. Its
 service/ledger boundary is the pattern to preserve, not unfinished generic CRUD work.
@@ -313,24 +329,32 @@ health and graceful shutdown. Dependency audit and upgrade rehearsal are additio
 checks, also wired into CI. CI covers pull requests and pushes to `main` and
 `codex/project-improvements`; do not infer a remote run passed from a local result.
 
-At the recorded source checkpoint on 22 November 2026 these checks passed locally.
-Browser regressions included two open account forms, conflict cancellation/reload,
-read-only actions, keyboard disclosure, lazy roster loading, navigation cancellation
-and mobile overflow. Provider interactions use synthetic data/fakes; real mail,
-Google accounts and Stripe charges were not exercised.
+On 23 November 2026, full release verification passed locally for `23bcf5e`.
+The exact Go-built rollout image also passed Chromium smoke verification.
+Checks covered session and ownership rules, account forms and conflicts, trip
+edit and booking flows, status announcements, keyboard navigation, and mobile overflow.
+
+The same revision was deployed to the local Compose stack after a database
+backup and grant check. Migration 0032 was recorded, the API passed readiness,
+and the operations check reported zero alerts. External alert delivery,
+live provider integrations, and manual screen-reader and device checks remain
+unverified at this checkpoint.
 
 For an **authorized local rollout**, prepare runtime settings/backup and verify
 migration/grant state first. The local helper prompts for the migration owner's
 password, applies pending migrations and refreshes runtime grants:
 
 ```powershell
+./scripts/build-application.ps1 -RequireClean
 ./scripts/migrate-local.ps1
-./scripts/build-application.ps1
-docker compose --env-file api-server/.env --profile prod up -d --no-deps --force-recreate apiserver
+docker compose --env-file api-server/.env --profile prod up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 apiserver
+docker compose --env-file api-server/.env --profile prod exec apiserver /app/tm-operations-check
 ```
 
 These commands are guidance, not actions performed by reading/updating this guide.
-Use the production release procedure for production. Recheck schema compatibility
+The previous API checks the exact migration ledger and rejects migration 0032.
+Coordinate migration and API replacement to limit downtime. Use the production
+release procedure for production. Recheck schema compatibility
 before rollback; do not restore old financial data to simplify an application rollback.
 
 ## 10. Keeping future sessions consistent

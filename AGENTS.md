@@ -50,7 +50,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Middleware capability approval does not establish record ownership. Enforce scope for collection reads, single-record reads, nested routes, writes, and referenced parent records.
 - Treat UI capabilities as presentation only. Every protected operation must be authorized on the server.
 - Do not add permissions based only on role names or hardcoded group IDs when the capability model can express them.
-- Protected routes declare capability metadata with `CapabilityRoute` or `AddRouteGroup`; `handlerAuth.setRestResource` reads the matched route declaration. Test nested and custom routes explicitly.
+- Protected routes declare capability metadata with `CapabilityRoute` or `AddRouteGroup`; `handlerAuth.setRestResource` reads the matched route declaration. Use the authentication store for grant lookups. Test the canonical resource and session requirement on nested, custom, and alias routes.
 - Never log or return passwords, password hashes, session tokens, OTPs, OAuth codes, or secrets. Avoid logging complete user structs or authentication payloads.
 - Hash passwords before any persistence, including pending-registration data. Use explicit request/response DTOs so sensitive model fields cannot be serialized accidentally.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
@@ -64,6 +64,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Use integer minor units or a consistent decimal representation for money. Make currency units explicit at gateway boundaries; avoid floating-point conversions.
 - Add a clearly named migration for schema changes. Do not edit historical dumps as the migration mechanism or assume checked-in SQL matches a deployed database.
 - Explain migration ordering, compatibility, and data impact. Verify constraints and migrations against a disposable database when needed; never use production data as a test fixture.
+- For versioned full edits, return the current version on reads and require it on updates. Check it inside the write transaction or update predicate and return HTTP 409 with code stale_record when it is missing or stale. Preserve the browser edits and offer confirmed reload. Migration 0032 extends this workflow to vouchers and group bookings.
 - Do not delete bookings, users, payment history, or refund history to simplify referential-integrity problems.
 
 ## WASM frontend
@@ -73,16 +74,17 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Release `js.Func` callbacks and remove event listeners when their owning view is destroyed. Handle fetch failures, response-body failures, and cancellation without leaving blocked waits.
 - Do not introduce additional localhost assumptions. Prefer same-origin or configurable API addressing when working on deployment configuration.
 - Keep `main.wasm` paired with the `wasm_exec.js` supplied by the compiler that built it. Never hand-edit generated artifacts.
-- Check affected menus, forms, and capability-dependent actions when changing API contracts or permissions.
+- Check affected menus, forms, and capability-dependent actions when changing API contracts or permissions. Use action metadata and the shared pending helper to disable actions on rows being refreshed.
+- Load required dropdown data before rendering edit forms. Cancel obsolete loads on hide or reset and expose a retry on failure. Use the shared status announcement for operation results even when the message history is collapsed.
 
 ## Docker and configuration
 
 - Read the module files and Dockerfiles for current toolchain versions; do not upgrade dependencies or base images incidentally.
-- `CLIENT_BUILDER` selects `go-builder` or `tinygo-builder`. `CLIENT_IMAGE` can override the default source-built client with a prebuilt artifact consumed by the API image. Build and select matching artifacts explicitly when using that override.
-- Runtime database settings are `DATA_SOURCE` or the supported `DB_*` fallback. Compose uses its DB_* settings unless TM_API_DATA_SOURCE is explicitly supplied; forwarding headers require TRUSTED_PROXY_CIDRS.
+- `CLIENT_BUILDER` selects `go-builder` or `tinygo-builder`. `CLIENT_IMAGE` can override the default source-built client with a prebuilt artifact consumed by the API image. For published builds, use an immutable client digest and verify that the artifact labels match the requested compiler and source revision.
+- Runtime database settings are `DATA_SOURCE` or the supported `DB_*` fallback. Compose uses DB_* settings unless TM_API_DATA_SOURCE is supplied. Set TM_DB_SSLMODE for Compose DB_* connections. Require certificate and hostname verification for remote PostgreSQL. Forwarding headers require TRUSTED_PROXY_CIDRS.
 - Do not add secrets, private keys, credentials, tokens, or real user data to source control, image layers, logs, or test fixtures. Prefer runtime secret injection for deployment changes.
 - Keep database/Adminer/debugger exposure limited to the intended environment. Do not enable development authentication behavior in production.
-- Select the Docker final, interactive, or debug target explicitly. Keep base-image digests pinned and refresh them through tested changes. A successful client build does not prove the assembled API image works.
+- Select the Docker final, interactive, or debug target explicitly. Keep base-image digests pinned and refresh them through tested changes. Test the assembled API image. For an authorized release, prepare and verify the new image before applying pending migrations, then verify the running image, API readiness, and operational checks. Use the release runbook for the deployment sequence.
 
 ## Verification
 
