@@ -76,6 +76,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Keep `main.wasm` paired with the `wasm_exec.js` supplied by the compiler that built it. Never hand-edit generated artifacts.
 - Check affected menus, forms, and capability-dependent actions when changing API contracts or permissions. Use action metadata and the shared pending helper to disable actions on rows being refreshed.
 - Load required dropdown data before rendering edit forms. Cancel obsolete loads on hide or reset and expose a retry on failure. Use the shared status announcement for operation results even when the message history is collapsed.
+- Keep Make Booking's Add Person picker as a single input with keyboard- and pointer-selectable suggestions. Use the booking-scoped lookup, debounce typing, and cancel superseded searches. Keep the selected person ID separate from the display text, clear it when the text changes, and require a valid selection before submission.
 
 ## Docker and configuration
 
@@ -99,7 +100,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
   ./scripts/verify-release.ps1
   ```
 
-  This builds both Go and TinyGo clients, runs all WASM package tests and API/PostgreSQL integration tests, and verifies the packaged runtime in Chromium with synthetic OTP login, ownership checks, and graceful shutdown. It requires Docker and dependency access. External mail, Google accounts, and Stripe charges are not exercised.
+  This builds both Go and TinyGo clients, runs all WASM package tests and API/PostgreSQL integration tests, and verifies the packaged runtime with synthetic OTP login, ownership checks, Chromium booking autocomplete, and graceful shutdown. It requires Docker and dependency access. External mail, Google accounts, and Stripe charges are not exercised.
 - To build the standard Go client artifact separately:
 
   ```powershell

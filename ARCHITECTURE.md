@@ -216,6 +216,18 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   compatible.
 - Trip edit forms load difficulty, status, type, and cost-group options before
   rendering. The view cancels the lookup on hide or reset and offers Retry on failure.
+- Make Booking's Add Person form uses
+  [`userView.NewPersonAutocomplete`](client1/views/userView/personAutocomplete.go)
+  for one visible input with suggestions below it.
+  [`bookingPeopleView`](client1/views/bookingPeopleView/bookingPeopleView.go)
+  supplies `GET /bookings/{id}/bookingPeople/lookup` and validates the separately
+  stored person ID before saving. The endpoint searches display names and returns
+  up to 25 matches, subject to booking access and person visibility. The picker
+  searches after two characters and a 250 ms pause. It uses `domEvents.Timeout`
+  for the delay and `LoadScope` with `RequestContext` to cancel superseded requests
+  and discard late responses. Users can select by keyboard or pointer. Editing
+  the text clears the ID. Existing participants use their saved display name,
+  with lookup by ID if the name is missing.
 - Test compiler-sensitive code in both builds. A real TinyGo startup failure was caught
   during the conflict changes. The current code uses typed error unwrapping and direct
   JSON destination pointers instead of introducing unsupported reflection paths.
@@ -333,6 +345,10 @@ On 23 November 2026, full release verification passed locally for `23bcf5e`.
 The exact Go-built rollout image also passed Chromium smoke verification.
 Checks covered session and ownership rules, account forms and conflicts, trip
 edit and booking flows, status announcements, keyboard navigation, and mobile overflow.
+
+The [Chromium booking smoke test](scripts/release-smoke.mjs) exercises Add Person
+by typing a name, selecting a match with the keyboard, editing the text to clear
+the selection, and selecting again before saving the participant.
 
 The same revision was deployed to the local Compose stack after a database
 backup and grant check. Migration 0032 was recorded, the API passed readiness,
