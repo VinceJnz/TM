@@ -12,6 +12,7 @@ import (
 	"client1/v2/views/tripStatusView"
 	"client1/v2/views/tripTypeView"
 	"client1/v2/views/utils/viewHelpers"
+	"context"
 	"log"
 	"net/http"
 	"strconv"
@@ -77,6 +78,7 @@ type ItemEditor struct {
 	RecordState   RecordState
 	Children      children
 	Page          httpProcessor.Page
+	editLoad      httpProcessor.LoadScope
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -125,6 +127,8 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.editLoad.Cancel()
+	viewHelpers.Pending(editor.Div, false)
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
@@ -146,6 +150,8 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.editLoad.Cancel()
+	viewHelpers.Pending(editor.Div, false)
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -158,14 +164,58 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
-	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
-	editor.CurrentRecord = TableData{}
-
-	editor.CurrentRecord.FromDate = time.Now().Truncate(24 * time.Hour)
-	editor.CurrentRecord.ToDate = time.Now().Truncate(24 * time.Hour)
-
-	editor.populateEditForm()
+	date := time.Now().Truncate(24 * time.Hour)
+	editor.openEdit(TableData{FromDate: date, ToDate: date}, viewHelpers.ItemStateAdding)
 	return nil
+}
+
+func (editor *ItemEditor) openEdit(record TableData, state viewHelpers.ItemState) {
+	ticket := editor.editLoad.Start()
+	viewHelpers.Pending(editor.Div, true)
+	go func() {
+		lookups, err := editor.loadEditLookups(ticket.Context)
+		if !ticket.Finish(err) {
+			return
+		}
+		viewHelpers.Pending(editor.Div, false)
+		if err != nil {
+			editor.EditDiv.Get("style").Set("display", "block")
+			viewHelpers.RenderRetry(editor.EditDiv, func() { editor.openEdit(record, state) })
+			return
+		}
+		editor.Children.Difficulty.Records = lookups.difficulties
+		editor.Children.TripStatus.Records = lookups.statuses
+		editor.Children.TripType.Records = lookups.types
+		editor.Children.TripCostGroup.Records = lookups.costGroups
+		editor.CurrentRecord = record
+		editor.updateStateDisplay(state)
+		editor.populateEditForm()
+	}()
+}
+
+type editLookups struct {
+	difficulties []tripDifficultyView.TableData
+	statuses     []tripStatusView.TableData
+	types        []tripTypeView.TableData
+	costGroups   []tripCostGroupView.TableData
+}
+
+func (editor *ItemEditor) loadEditLookups(ctx context.Context) (editLookups, error) {
+	var lookups editLookups
+	for _, request := range []struct {
+		path    string
+		records any
+	}{
+		{tripDifficultyView.ApiURL, &lookups.difficulties},
+		{tripStatusView.ApiURL, &lookups.statuses},
+		{tripTypeView.ApiURL, &lookups.types},
+		{tripCostGroupView.ApiURL, &lookups.costGroups},
+	} {
+		if err := editor.client.RequestContext(ctx, http.MethodGet, request.path, request.records, nil); err != nil {
+			return lookups, err
+		}
+	}
+	return lookups, nil
 }
 
 // NewDropdown creates a dropdown list for selecting a value from a list of items
@@ -440,11 +490,6 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.RecordState = RecordStateCurrent
-		// Fetch child data
-		editor.Children.Difficulty.FetchItems()
-		editor.Children.TripStatus.FetchItems()
-		editor.Children.TripType.FetchItems()
-		editor.Children.TripCostGroup.FetchItems()
 
 		go func() {
 			if err := editor.client.PageRequest(&editor.Page,
@@ -525,9 +570,7 @@ func (editor *ItemEditor) populateItemList() {
 			editButton.Set("className", "btn btn-secondary")
 			viewHelpers.Action(editButton, "PUT")
 			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
-				editor.CurrentRecord = record
-				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
-				editor.populateEditForm()
+				editor.openEdit(record, viewHelpers.ItemStateEditing)
 				return nil
 			})
 			itemDiv.Call("appendChild", editButton)
