@@ -2,6 +2,8 @@ package main
 
 import (
 	"api-server/v2/app/appCore"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -101,5 +103,28 @@ func TestPublicAndSessionRouteInventory(t *testing.T) {
 	}
 	for key, group := range expected {
 		t.Errorf("missing %s in route group %q", key, group)
+	}
+}
+
+func TestNestedAndAliasCapabilities(t *testing.T) {
+	app := appCore.New(false)
+	app.Settings.APIprefix = "/custom/v9"
+	router := buildRouter(app)
+	for _, tc := range []struct{ method, path, resource string }{
+		{"GET", "/trips/10/bookings", "bookings"},
+		{"POST", "/bookings/checkout/confirm/10", "bookings"},
+		{"PUT", "/securityAccessType/10", "securityAccessScope"},
+	} {
+		req := httptest.NewRequest(tc.method, app.Settings.APIprefix+tc.path, nil)
+		var match mux.RouteMatch
+		if !router.Match(req, &match) || match.Route.GetName() != "capability:"+tc.resource {
+			t.Errorf("%s %s did not declare %s", tc.method, tc.path, tc.resource)
+			continue
+		}
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, req)
+		if response.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s without a session returned %d", tc.method, tc.path, response.Code)
+		}
 	}
 }

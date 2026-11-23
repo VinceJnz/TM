@@ -6,7 +6,6 @@ import (
 	"api-server/v2/models"
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -16,56 +15,12 @@ import (
 
 const debugTag = "dbAuthTemplate."
 
-// sqlCheckAccess checks that the user account has been activated and that it has access to the requested resource and method.
-// NOTE: If the group (stg) admin_flag is set then access is given regardless of the resource or action settings.
-const (
-	sqlUserCheckAccess = `SELECT etat.ID, etat.name AS access_scope, stg.name AS "group"
-	FROM st_users stu
-		JOIN st_user_group stug ON stug.user_id=stu.id
-		JOIN st_group stg ON stg.id=stug.group_id
-		JOIN st_group_resource stgr ON stgr.group_id=stg.id
-		JOIN et_resource etr ON etr.id=stgr.resource_id
-		JOIN et_access_level etal ON etal.id=stgr.access_level_id
-		JOIN et_access_scope etat ON etat.id=stgr.access_scope_id
-	WHERE stu.ID=$1
-		AND stu.user_account_status_id=$4
-		AND UPPER(etr.Name)=UPPER($2)
-		AND UPPER(etal.Name)=UPPER($3)
-	GROUP BY etat.ID, etat.name, stg.name
-	ORDER BY
-		CASE LOWER(etat.name::text)
-			WHEN 'any' THEN 2
-			WHEN 'own' THEN 1
-			ELSE 0
-		END DESC,
-		etat.ID DESC
-	LIMIT 1`
-)
-
-// CheckAccess Checks the user's access to the requested resource and stores the result of the check
-// The query must return only the row based on the highest level of access the user is allowed.
-// e.g. the order is Group, Owner, World
-// Deny would take preferance over Allow - but we don't have this concept yet.
-//
-// This access check may be moved closer to handler-level authorization logic in a future refactor.
-// for example...
-// CheckAccess Checks that the user is authorised to take this action
-// Resource = name of the data resource being accesses being accessed
-// Action = type of access request action e.g. view, save, edit, list, delete
 func UserCheckAccess(debugStr string, Db *sqlx.DB, UserID int, ResourceName, ActionName string) (models.AccessCheck, error) {
 	return UserCheckAccessContext(context.Background(), Db, UserID, ResourceName, ActionName)
 }
 
 func UserCheckAccessContext(ctx context.Context, Db *sqlx.DB, UserID int, ResourceName, ActionName string) (models.AccessCheck, error) {
-	var err error
-	var access models.AccessCheck
-
-	err = Db.QueryRowContext(ctx, sqlUserCheckAccess, UserID, ResourceName, ActionName, models.AccountActive).Scan(&access.AccessScopeID, &access.AccessScope, &access.Group)
-	if err != nil { // If the number of rows returned is 0 then user is not authorised to access the resource
-		log.Printf("%v %v %v %v %+v %v %v %v %v %v %v", debugTag+"UserCheckAccess Access denied", "err =", err, "access =", access, "UserID =", UserID, "ResourceName =", ResourceName, "ActionName =", ActionName)
-		return models.AccessCheck{}, fmt.Errorf("access lookup: %w", err)
-	}
-	return access, nil
+	return (authStore.Store{DB: Db}).Capability(ctx, UserID, ResourceName, ActionName)
 }
 
 const (

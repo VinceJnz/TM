@@ -3,7 +3,6 @@ package handlerAuth
 import (
 	authService "api-server/v2/app/services/authentication"
 	authStore "api-server/v2/modelMethods/authentication"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"context"
 	"database/sql"
@@ -50,7 +49,7 @@ func (h *Handler) RequireCapability(next http.Handler) http.Handler {
 			writeJSONResponse(w, 500, map[string]string{"error": "configuration_error", "message": "route capability is not configured"}, "capability")
 			return
 		}
-		grant, err := dbAuthTemplate.UserCheckAccessContext(r.Context(), h.appConf.Db, session.UserID, resource.ResourceName, resource.AccessMethod)
+		grant, err := (authStore.Store{DB: h.appConf.Db}).Capability(r.Context(), session.UserID, resource.ResourceName, resource.AccessMethod)
 		if err != nil {
 			code := 503
 			if errors.Is(err, sql.ErrNoRows) {
