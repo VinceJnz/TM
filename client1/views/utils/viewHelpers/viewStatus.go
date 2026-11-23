@@ -24,6 +24,7 @@ type ItemStateView struct {
 	itemState    ItemState
 	stateDiv     js.Value
 	messagesDiv  js.Value
+	announcer    js.Value
 	toggleBtn    js.Value
 	messagesOpen bool
 }
@@ -51,12 +52,18 @@ func NewItemStateView(Document, StateDiv js.Value) ItemStateView {
 	headerDiv.Call("appendChild", toggleBtn)
 	StateDiv.Call("appendChild", headerDiv)
 	StateDiv.Call("appendChild", messagesDiv)
+	announcer := Document.Call("createElement", "div")
+	announcer.Set("className", "tm-visually-hidden")
+	announcer.Call("setAttribute", "role", "status")
+	announcer.Call("setAttribute", "aria-atomic", "true")
+	StateDiv.Call("appendChild", announcer)
 
 	itemState := ItemStateView{
 		document:     Document,
 		itemState:    ItemStateNone,
 		stateDiv:     StateDiv,
 		messagesDiv:  messagesDiv,
+		announcer:    announcer,
 		toggleBtn:    toggleBtn,
 		messagesOpen: false,
 	}
@@ -105,6 +112,7 @@ func (i *ItemStateView) UpdateStatus(newState ItemState, debugTag string) {
 
 // updateStatus is an event handler the updates the status on the main page.
 func (i *ItemStateView) DisplayMessage(message string) {
+	i.announcer.Set("textContent", message)
 	message = time.Now().Local().Format("15.04.05 02-01-2006") + ` ` + message
 	i.addMessage(message)
 }

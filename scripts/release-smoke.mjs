@@ -121,6 +121,7 @@ try {
   }
   if(!rendered){const diagnostic=await send('Runtime.evaluate',{expression:"JSON.stringify({text:document.body.textContent.slice(0,1400),user:document.querySelector('#userDisplay')?.textContent,base:window.TM_CONFIG?.apiBase})",returnByValue:true});assert.fail('WASM did not render the authenticated UI: '+diagnostic.result?.value+' exceptions='+exceptions.join(' | ')+' console='+browserConsole.slice(-12).join(' | '));}
   await waitUI("document.querySelector('#statusOutputToggle[aria-expanded=false][aria-controls=statusOutputMessages]') !== null",'messages control did not start collapsed');
+  await waitUI("document.querySelector('#statusOutput > [role=status][aria-atomic=true]')?.getClientRects().length === 1",'messages live region is unavailable when history is collapsed');
   await send('Runtime.evaluate',{expression:"document.querySelector('#statusOutputToggle').focus()"});
   for (const expanded of ['true','false']) {
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13});

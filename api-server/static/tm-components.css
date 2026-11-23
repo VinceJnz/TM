@@ -24,3 +24,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .person-autocomplete-matches [role=option] { padding: .4rem .6rem; overflow-wrap: anywhere; cursor: pointer; }
 .person-autocomplete-matches [role=option]:hover,
 .person-autocomplete-matches [aria-selected=true] { background: var(--tm-surface-muted); outline: 1px solid var(--tm-primary); outline-offset: -1px; }
+
+.tm-visually-hidden {
+ position: absolute;
+ width: 1px;
+ height: 1px;
+ padding: 0;
+ overflow: hidden;
+ clip-path: inset(50%);
+ white-space: nowrap;
+}
