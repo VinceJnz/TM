@@ -70,6 +70,7 @@ type ItemEditor struct {
 	document       js.Value
 	events         *eventProcessor.EventProcessor
 	onItemsChanged func()
+	closePicker    func()
 	CurrentRecord  TableData
 	ItemState      ItemState
 	Records        []TableData
@@ -131,7 +132,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 
 func (editor *ItemEditor) ResetView() {
 	editor.RecordState = RecordStateReloadRequired
-	editor.EditDiv.Set("innerHTML", "")
+	editor.resetEditForm()
 	editor.ListDiv.Set("innerHTML", "")
 }
 
@@ -150,6 +151,9 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	if editor.closePicker != nil {
+		editor.closePicker()
+	}
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -188,14 +192,18 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	if editor.closePicker != nil {
+		editor.closePicker()
+	}
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
 
 	var localObjs UI
 
-	lookup := "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL
-	localObjs.PersonID, editor.UiComponents.PersonID = editor.Children.PeopleSelector.NewDropdown(editor.CurrentRecord.PersonID, "Person", "itemPerson", lookup)
-	editor.UiComponents.PersonID.Call("setAttribute", "required", "true")
+	lookup := "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL + "/lookup"
+	localObjs.PersonID, editor.UiComponents.PersonID, editor.closePicker = editor.Children.PeopleSelector.NewPersonAutocomplete(
+		editor.CurrentRecord.PersonID, editor.CurrentRecord.Person, "Person", "itemPerson", lookup,
+	)
 
 	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes (optional)", "text", "itemNotes")
 
@@ -220,6 +228,10 @@ func (editor *ItemEditor) populateEditForm() {
 }
 
 func (editor *ItemEditor) resetEditForm() {
+	if editor.closePicker != nil {
+		editor.closePicker()
+		editor.closePicker = nil
+	}
 	// Clear existing content
 	editor.EditDiv.Set("innerHTML", "")
 
@@ -241,12 +253,12 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 		log.Println(debugTag + "SubmitItemEdit()2 prevent event default")
 	}
 
-	var err error
-
-	editor.CurrentRecord.PersonID, err = strconv.Atoi(editor.UiComponents.PersonID.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing booking id:", err)
+	personID, err := strconv.Atoi(editor.UiComponents.PersonID.Get("value").String())
+	if err != nil || personID <= 0 {
+		editor.onCompletionMsg("Select a person from the suggestions.")
+		return nil
 	}
+	editor.CurrentRecord.PersonID = personID
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
 
 	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.

@@ -19,3 +19,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 [hidden] { display: none !important; }
 
 .tm-menu-toggle { background: transparent; border: 0; color: inherit; cursor: pointer; }
+
+.person-autocomplete-matches { max-height: 12rem; overflow: auto; border: 1px solid var(--tm-border); border-radius: 4px; background: var(--tm-surface); }
+.person-autocomplete-matches [role=option] { padding: .4rem .6rem; overflow-wrap: anywhere; cursor: pointer; }
+.person-autocomplete-matches [role=option]:hover,
+.person-autocomplete-matches [aria-selected=true] { background: var(--tm-surface-muted); outline: 1px solid var(--tm-primary); outline-offset: -1px; }

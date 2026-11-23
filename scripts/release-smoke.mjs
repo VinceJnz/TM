@@ -240,9 +240,21 @@ try {
   await clickBooking('Save and continue');
   await waitUI(`(${tripBooking})?.textContent.includes('Step 2 of 4')`,'saving did not advance to people');
   await clickBooking('Add person');
-  await send('Runtime.evaluate',{expression:`(${tripBooking}).querySelector('input[type="search"]').value='Other Member'`});
-  await clickBooking('Search');
-  await waitUI(`(${tripBooking}).querySelector('#itemPerson')?.value==='2'`,'standard member could not find a participant');
+  const personInput = `(${tripBooking}).querySelector('#itemPerson')`;
+  const typePerson = value => send('Runtime.evaluate',{expression:`(() => { const input = ${personInput}; input.focus(); input.value = ${JSON.stringify(value)}; input.dispatchEvent(new Event('input', {bubbles:true})); })()`});
+  const selectPerson = async () => {
+    await waitUI(`(${tripBooking}).querySelector('#itemPerson-matches [role=option]')?.textContent.includes('Other Member')`,'typing did not find a participant');
+    for (const key of ['ArrowDown', 'Enter']) {
+      await send('Input.dispatchKeyEvent',{type:'keyDown',key});
+      await send('Input.dispatchKeyEvent',{type:'keyUp',key});
+    }
+    await waitUI(`${personInput}.value.includes('Other Member') && ${personInput}.getAttribute('aria-expanded')==='false' && ${personInput}.validity.valid`,'keyboard did not select the participant');
+  };
+  await typePerson('Other Member');
+  await selectPerson();
+  await typePerson('Other Mem');
+  await waitUI(`!${personInput}.validity.valid`,'editing the name left the previous selection valid');
+  await selectPerson();
   await clickBooking('Submit');
   await waitUI(`(${tripBooking})?.textContent.includes('Other Member') && !(${tripBooking}).querySelector('#itemPerson')`,'participant was not saved');
   await clickBooking('Back to booking details');
