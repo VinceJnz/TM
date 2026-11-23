@@ -17,13 +17,13 @@ CLIENT_IMAGE unset to use this default; that override still intentionally select
 a prebuilt artifact. TM_CLIENT_BUILDER selects go-builder or tinygo-builder for
 the self-contained build. The paired compiler stages are checked for drift.
 When overriding CLIENT_IMAGE for a published build, select the client artifact by
-registry digest and record that digest, the compiler builder, and the client
+registry digest. The release builder checks the client compiler and source revision labels against the requested release. Record the digest, compiler, and client
 source revision alongside the API image digest. The API image records the
 artifact reference in its org.tripmanager.client.image label. Keep the compiler-supplied
 wasm_exec.js paired with its WASM artifact through the build.
 
 For a remote PostgreSQL deployment, set the connection policy explicitly in the
-runtime DATA_SOURCE, or set DB_SSLMODE in the API runtime environment when using
+runtime DATA_SOURCE, or set DB_SSLMODE in the API runtime environment (TM_DB_SSLMODE for Compose) when using
 DB_* settings. The DB_* fallback uses sslmode=disable if DB_SSLMODE is unset.
 Where remote PostgreSQL uses TLS, configure certificate and hostname verification
 with sslmode=verify-full and a trusted CA. Verify readiness with the application
@@ -31,6 +31,10 @@ runtime credentials and verify migration/grant state and required provider
 connectivity in the target environment.
 
 Apply pending migrations before starting the matching application build.
+Migration 0032 adds two version columns with default 1 and two update triggers.
+The older API's exact migration check will reject the upgraded ledger. Build and
+verify the new image first, back up the database, then schedule the migration and
+API replacement together.
 
 The supported deployment entry point validates immutable API references and
 checks the image's source revision before invoking Compose:
@@ -39,7 +43,7 @@ checks the image's source revision before invoking Compose:
 
 The default is validation only. Deployment requires an explicitly authorized
 operator invocation with `-Apply`, credentials injected at runtime, and separately
-approved database migrations applied first. It does not build or publish images.
+approved database migrations applied first. It waits up to 120 seconds for API health and does not recreate database dependencies. It does not build or publish images.
 Record the approved digest and source revision in the deployment record. Direct
 Compose invocation does not enforce the script's digest policy.
 

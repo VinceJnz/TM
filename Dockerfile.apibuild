@@ -56,7 +56,9 @@ RUN apk add --no-cache ca-certificates && \
 WORKDIR /app
 ARG SOURCE_REVISION=unknown
 ARG CLIENT_IMAGE
+ARG CLIENT_BUILDER
 LABEL org.tripmanager.client.image=$CLIENT_IMAGE
+LABEL org.tripmanager.client.builder=$CLIENT_BUILDER
 LABEL org.opencontainers.image.source="https://github.com/VinceJnz/TM" org.opencontainers.image.revision=$SOURCE_REVISION
 COPY --from=apibuilder /app/static/ ./static/
 COPY --from=client1-artifact /out/main.wasm /out/wasm_exec.js ./static/

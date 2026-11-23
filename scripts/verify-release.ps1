@@ -47,14 +47,17 @@ Invoke-Docker @("run", "--rm", "-v", "${clientPath}:/app:ro", "tm-wasm-tests:ver
 Write-Host "Building the production API image without credentials..."
 Invoke-Docker @(
 	"build", "-f", (Join-Path $repositoryRoot "Dockerfile.apibuild"),
-	"--target", "final", "--build-arg", "CLIENT_IMAGE=tm-client1-wasm:tinygo",
+	"--target", "final", "--build-arg", "CLIENT_IMAGE=tm-client1-wasm:tinygo", "--build-arg", "CLIENT_BUILDER=tinygo-builder",
 	"-t", "tm-apiserver:verify", $repositoryRoot
 )
 
 Write-Host "Checking image identity, credentials, and WASM artifacts..."
 $image = Invoke-Docker @("image", "inspect", "tm-apiserver:verify") | ConvertFrom-Json
 if ($image[0].Config.Labels.'org.tripmanager.client.image' -cne "tm-client1-wasm:tinygo") {
-	throw "API image did not record the selected client artifact."
+		throw "API image did not record the selected client artifact."
+}
+if ($image[0].Config.Labels.'org.tripmanager.client.builder' -cne "tinygo-builder") {
+	throw "API image did not record the selected compiler."
 }
 Invoke-Docker @(
 	"run", "--rm", "--entrypoint", "sh", "tm-apiserver:verify", "-ec",

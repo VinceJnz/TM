@@ -11,6 +11,7 @@ x-api: &api
   environment:
     DATA_SOURCE: ${TM_API_DATA_SOURCE:-}
     DB_HOST: dbserver
+    DB_SSLMODE: ${TM_DB_SSLMODE:-disable}
     DB_PORT: "5432"
     DB_USER: ${TM_API_DB_USER:-api_user}
     DB_PASSWORD: ${TM_API_DB_PASSWORD:?Set TM_API_DB_PASSWORD outside source control}

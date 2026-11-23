@@ -45,6 +45,14 @@ RUN cp /usr/local/tinygo/targets/wasm_exec.js /tmp/client1-out/wasm_exec.js
 FROM ${CLIENT_BUILDER} AS selected
 
 FROM scratch AS artifact
+ARG CLIENT_BUILDER
+ARG SOURCE_REVISION=unknown
+LABEL org.tripmanager.client.builder=$CLIENT_BUILDER
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 COPY --from=selected /tmp/client1-out/ /out/
 #FROM scratch AS artifact
+ARG CLIENT_BUILDER
+ARG SOURCE_REVISION=unknown
+LABEL org.tripmanager.client.builder=$CLIENT_BUILDER
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 #COPY --from=selected /out/ /out/

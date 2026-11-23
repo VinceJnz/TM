@@ -23,9 +23,9 @@ if this guide drifts; update the guide when resolving that drift.
   UI visibility is not authorization, and `own` is not interchangeable with `any`.
 - Default API/Compose builds compile fresh WASM from source. An explicit
   `CLIENT_IMAGE` override deliberately selects a prebuilt artifact.
-- The voucher release includes migrations **0030** (booking vouchers) and **0031**
-  (voucher redemptions and checkout cutoff snapshots). Check the target migration
-  ledger and runtime grants before replacing an API image.
+- Voucher migrations **0030** and **0031** add vouchers, redemptions and checkout
+  cutoff snapshots. **0032** adds edit versions to vouchers and group bookings.
+  Check the target migration ledger and runtime grants before replacing an API image.
 - No guide or historical verification record authorizes live migrations, deployment,
   data changes or external provider calls. Follow the current user's authorization.
 
@@ -115,7 +115,9 @@ See [API contracts](docs/api-contracts.md) and [pagination](docs/api-pagination.
   migrations or historical dumps to implement a schema change.
 
 **Concurrency:** account/profile writes carry database versions from migration 0025.
-Migration 0029 extends this to trips, trip prices and trip price groups. The client
+Migration 0029 extends this to trips, trip prices and trip price groups.
+Migration 0032 adds voucher and group booking versions. Apply it before starting
+the new API. Open forms and API clients must reload and submit the returned version. The client
 returns the version it read; stale updates receive `409 stale_record`. Updates and
 successful retries require authoritative reloads. This protection is not universal
 across all resources yet.
@@ -285,7 +287,7 @@ and verification evidence. Their deployment observations are historical.
 
 | Priority | Area | Guidance |
 |---|---|---|
-| Medium | Partial concurrency coverage | Security writes, catalogs, group bookings and vouchers do not all carry versions. Extend deliberately where concurrent full edits pose a material risk; update callers and tests together |
+| Medium | Partial concurrency coverage | Security writes and catalogs do not all carry versions. Extend deliberately where concurrent full edits pose a material risk; update callers and tests together |
 | Medium | Legacy persistence/adapters | Specialized password-reset SQL and compatibility/generic helpers remain. Check actual production callers before removing them; do not replace a tested transaction just to rename a package |
 | Medium | Contract and validation coverage | Some legacy resources still reuse models or handwritten contracts. Extend explicit DTOs and resource-specific validation as features change; the generator is not complete domain validation |
 | Medium | UI duplication and accessibility | Continue shared components, unique control IDs and lifecycle ownership. Manual screen-reader, device and broader visual audits remain necessary |
