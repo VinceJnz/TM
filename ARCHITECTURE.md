@@ -115,6 +115,12 @@ See [API contracts](docs/api-contracts.md) and [pagination](docs/api-pagination.
 - `schema_migrations` records migration names/checksums. Startup/readiness check schema
   compatibility; startup does not silently apply migrations. Never edit applied
   migrations or historical dumps to implement a schema change.
+- Migration 0033 adds `compatible_since` to the ledger without changing application data.
+  The migration runner records an explicit compatibility floor for a tested expansion
+  in the same transaction as the schema change. API readiness requires every embedded
+  migration and checks its checksum. An API built with this policy may also accept newer
+  ledger entries when each entry declares a floor the binary supports. The migration
+  runner still rejects unknown entries. Pre-0033 binaries require a coordinated cutover.
 
 **Concurrency:** account/profile writes carry database versions from migration 0025.
 Migration 0029 extends this to trips, trip prices and trip price groups.
@@ -307,6 +313,7 @@ and verification evidence. Their deployment observations are historical.
 | Resource boundaries | Stores/services for catalogs, group bookings, participants, vouchers and other core resources; Trip Type create-table regression fixed |
 | Account safety | Address limits aligned; shared error DTOs; account/profile versions; unique member codes; isolated inline forms |
 | Authentication | Core service/store including capability lookup, route inventory and alias checks, narrow OAuth changes, atomic registration/login and request-context propagation |
+| TM-13 | Declare backward-compatible expansions explicitly | Enable verified application rollback across compatible migrations while preserving required checksum checks and coordinated cutovers for other changes |
 | Money/concurrency | Exact voucher writes, trip and pricing versions in 0029, and voucher and group booking versions in 0032 |
 | UI | Capability actions, conflict recovery, keyboard controls, cancellable rosters, status announcements, and reliable trip edit lookups |
 | Build/verification | Self-contained frontend/API build, compiler parity and artifact identity checks, deployment health wait, and expanded browser checks |
@@ -368,8 +375,8 @@ docker compose --env-file api-server/.env --profile prod exec apiserver /app/tm-
 ```
 
 These commands are guidance, not actions performed by reading/updating this guide.
-The previous API checks the exact migration ledger and rejects migration 0032.
-Coordinate migration and API replacement to limit downtime. Use the production
+Pre-0033 APIs check the exact migration ledger and reject newly applied migrations.
+Coordinate the 0033 migration and API replacement to limit downtime. Use the production
 release procedure for production. Recheck schema compatibility
 before rollback; do not restore old financial data to simplify an application rollback.
 

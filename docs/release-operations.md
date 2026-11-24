@@ -32,7 +32,12 @@ connectivity in the target environment.
 
 Apply pending migrations before starting the matching application build.
 Migration 0032 adds two version columns with default 1 and two update triggers.
-The older API's exact migration check will reject the upgraded ledger. Build and
+Migration 0033 adds a compatibility floor column to the migration ledger. A migration
+declares a floor only after the intended previous API images pass against the expanded
+schema. Earlier API builds require a coordinated cutover for 0033. A future rollback
+requires every newer ledger entry to explicitly support the rollback image.
+
+The pre-0033 API's exact migration check will reject the upgraded ledger. Build and
 verify the new image first, back up the database, then schedule the migration and
 API replacement together.
 

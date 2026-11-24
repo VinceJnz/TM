@@ -4,8 +4,42 @@ import (
 	"api-server/v2/internal/testdb"
 	"context"
 	"github.com/lib/pq"
+	"strings"
 	"testing"
 )
+
+func TestRuntimeSchemaCompatibility(t *testing.T) {
+	db := testdb.Open(t, "")
+	ctx := context.Background()
+	if err := Apply(ctx, db, false); err != nil {
+		t.Fatal(err)
+	}
+	const future = "9999_future.sql"
+	if _, err := db.Exec(`INSERT INTO schema_migrations(version,checksum,compatible_since) VALUES($1,$2,$3)`, future, strings.Repeat("a", 64), Latest); err != nil {
+		t.Fatal(err)
+	}
+	if err := Check(ctx, db); err != nil {
+		t.Fatalf("compatible expansion rejected: %v", err)
+	}
+	if err := Apply(ctx, db, false); err == nil {
+		t.Fatal("old migration runner accepted unknown migration")
+	}
+	if _, err := db.Exec(`UPDATE schema_migrations SET compatible_since=NULL WHERE version=$1`, future); err != nil {
+		t.Fatal(err)
+	}
+	if err := Check(ctx, db); err == nil {
+		t.Fatal("undeclared future migration accepted")
+	}
+	if _, err := db.Exec(`UPDATE schema_migrations SET compatible_since=$2 WHERE version=$1`, future, Latest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM schema_migrations WHERE version=$1`, Latest); err != nil {
+		t.Fatal(err)
+	}
+	if err := Check(ctx, db); err == nil {
+		t.Fatal("future migration masked a missing required migration")
+	}
+}
 
 func TestEmptyDatabaseBootstrapAndRepeat(t *testing.T) {
 	db := testdb.Open(t, "")

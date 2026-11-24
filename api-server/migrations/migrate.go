@@ -20,7 +20,13 @@ import (
 //go:embed *.sql
 var files embed.FS
 
-const Latest = "0032_voucher_group_booking_versions.sql"
+const compatibilityBaseline = "0033_schema_compatibility.sql"
+const Latest = compatibilityBaseline
+
+// Future migrations may record the earliest API schema they preserve. An
+// omitted declaration requires a coordinated cutover. Each declaration must
+// be backed by testing those API versions against the expanded schema.
+var compatibleSince = map[string]string{}
 
 func Names() []string {
 	entries, _ := files.ReadDir(".")
@@ -131,6 +137,16 @@ func Apply(ctx context.Context, db *sqlx.DB, adopt bool) error {
 			tx.Rollback()
 			return err
 		}
+		if floor, ok := compatibleSince[name]; ok {
+			if !known[floor] || floor < compatibilityBaseline || floor >= name {
+				tx.Rollback()
+				return fmt.Errorf("invalid compatibility floor for migration %s", name)
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE schema_migrations SET compatible_since=$2 WHERE version=$1`, name, floor); err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
 		if err := tx.Commit(); err != nil {
 			return err
 		}
@@ -138,28 +154,47 @@ func Apply(ctx context.Context, db *sqlx.DB, adopt bool) error {
 	return nil
 }
 
+type appliedMigration struct {
+	Version         string         `db:"version"`
+	Checksum        string         `db:"checksum"`
+	CompatibleSince sql.NullString `db:"compatible_since"`
+}
+
 func Check(ctx context.Context, db *sqlx.DB) error {
-	var recorded []struct {
-		Version  string `db:"version"`
-		Checksum string `db:"checksum"`
-	}
-	if err := db.SelectContext(ctx, &recorded, "SELECT version,checksum FROM schema_migrations"); err != nil {
+	var recorded []appliedMigration
+	if err := db.SelectContext(ctx, &recorded, `SELECT version,checksum,compatible_since FROM schema_migrations`); err != nil {
 		return errors.New("database migrations are required")
 	}
-	names := Names()
-	if len(recorded) != len(names) {
-		return errors.New("database migrations are not current")
-	}
 	checksums := map[string]string{}
-	for _, name := range names {
+	for _, name := range Names() {
 		data, _ := files.ReadFile(name)
 		sum := sha256.Sum256(bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")))
 		checksums[name] = hex.EncodeToString(sum[:])
 	}
+	return checkApplied(recorded, checksums)
+}
+
+func checkApplied(recorded []appliedMigration, checksums map[string]string) error {
+	matched := 0
 	for _, entry := range recorded {
-		if checksums[entry.Version] != entry.Checksum {
+		if checksum, known := checksums[entry.Version]; known {
+			if checksum != entry.Checksum {
+				return errors.New("database migration checksum mismatch")
+			}
+			matched++
+			continue
+		}
+		_, knownFloor := checksums[entry.CompatibleSince.String]
+		if entry.Version <= Latest || !entry.CompatibleSince.Valid || !knownFloor || entry.CompatibleSince.String < compatibilityBaseline {
+			return errors.New("database migration requires a newer API")
+		}
+		digest, err := hex.DecodeString(entry.Checksum)
+		if err != nil || len(digest) != sha256.Size {
 			return errors.New("database migration checksum mismatch")
 		}
+	}
+	if matched != len(checksums) {
+		return errors.New("database migrations are not current")
 	}
 	return nil
 }
