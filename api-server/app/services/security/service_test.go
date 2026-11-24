@@ -29,7 +29,7 @@ func TestSecurityChangesValidateAndAuditAtomically(t *testing.T) {
 	if err = db.QueryRow(`SELECT actor,request_id FROM at_security_audit WHERE resource='st_user_group' AND record_id=$1`, v.ID).Scan(&actor, &id); err != nil || actor != "user:100" || id != observability.RequestID(ctx) {
 		t.Fatal(actor, id, err)
 	}
-	if _, err = s.SaveMember(ctx, 100, v.ID, models.UserGroupWrite{UserID: 99999, GroupID: 1}); err == nil {
+	if _, err = s.SaveMember(ctx, 100, v.ID, models.UserGroupWrite{Version: v.Version, UserID: 99999, GroupID: 1}); err == nil {
 		t.Fatal("invalid reference accepted")
 	}
 	if err = s.Delete(ctx, 100, v.ID, false); err != nil {
@@ -75,8 +75,13 @@ func TestGroupDefinitionsUseValidatedAuditedTransactions(t *testing.T) {
 	if err = s.DeleteGroup(ctx, 100, v.ID); err == nil {
 		t.Fatal("referenced group was deleted")
 	}
-	if _, err = s.SaveGroup(ctx, 100, v.ID, models.GroupWrite{Name: "Updated"}); err != nil {
+	if _, err = s.SaveGroup(ctx, 100, v.ID, models.GroupWrite{Name: "Updated", Version: v.Version}); err != nil {
 		t.Fatal(err)
+	}
+	for _, version := range []int64{0, v.Version} {
+		if _, err = s.SaveGroup(ctx, 100, v.ID, models.GroupWrite{Name: "Lost update", Version: version}); !errors.Is(err, models.ErrStaleRecord) {
+			t.Fatalf("version %d returned %v", version, err)
+		}
 	}
 	var count int
 	if err = db.Get(&count, `SELECT count(*) FROM at_security_audit WHERE resource='st_group' AND record_id=$1 AND actor='user:100'`, v.ID); err != nil || count != 2 {

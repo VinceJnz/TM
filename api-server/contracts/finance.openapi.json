@@ -333,6 +333,9 @@
           },
           "name": {
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -373,6 +376,9 @@
           },
           "resource_id": {
             "type": "integer"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -394,6 +400,9 @@
           "resource_id": {
             "minimum": 1,
             "type": "integer"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "required": [
@@ -414,6 +423,9 @@
             "maxLength": 45,
             "minLength": 1,
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "required": [
@@ -1146,6 +1158,9 @@
           },
           "user_name": {
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -1158,6 +1173,9 @@
           },
           "user_id": {
             "minimum": 1,
+            "type": "integer"
+          },
+          "version": {
             "type": "integer"
           }
         },
@@ -7896,7 +7914,23 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GroupWrite"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/GroupWrite"
+                  },
+                  {
+                    "properties": {
+                      "version": {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "version"
+                    ],
+                    "type": "object"
+                  }
+                ]
               }
             }
           },
@@ -8050,7 +8084,19 @@
             "description": "Request validation, authorization, record conflict or dependency failure"
           },
           "409": {
-            "description": "Operation conflicts with existing data or immutable financial state"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "A missing or stale version returns stale_record"
           },
           "422": {
             "content": {
@@ -9073,7 +9119,23 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GroupResourceWrite"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/GroupResourceWrite"
+                  },
+                  {
+                    "properties": {
+                      "version": {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "version"
+                    ],
+                    "type": "object"
+                  }
+                ]
               }
             }
           },
@@ -9227,7 +9289,19 @@
             "description": "Request validation, authorization, record conflict or dependency failure"
           },
           "409": {
-            "description": "Operation conflicts with existing data or immutable financial state"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "A missing or stale version returns stale_record"
           },
           "422": {
             "content": {
@@ -10250,7 +10324,23 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UserGroupWrite"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UserGroupWrite"
+                  },
+                  {
+                    "properties": {
+                      "version": {
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "version"
+                    ],
+                    "type": "object"
+                  }
+                ]
               }
             }
           },
@@ -10404,7 +10494,19 @@
             "description": "Request validation, authorization, record conflict or dependency failure"
           },
           "409": {
-            "description": "Operation conflicts with existing data or immutable financial state"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "A missing or stale version returns stale_record"
           },
           "422": {
             "content": {

@@ -287,6 +287,21 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   const adminLogin=await request(`${prefix}/auth/verify-otp`,'POST',{token:'synthetic-admin-otp'});
   assert.equal(adminLogin.status,200);
   const adminCookie=adminLogin.headers['set-cookie'].find(value=>value.startsWith('session=')).split(';')[0];
+  const groupsPath = `${prefix}/securityGroup`;
+  const createdGroup = await request(groupsPath, 'POST', {name: 'Smoke concurrency group'}, adminCookie);
+  assert.equal(createdGroup.status, 201, 'security group creation failed');
+  const groupPath = `${groupsPath}/${JSON.parse(createdGroup.body)}`;
+  const originalGroup = JSON.parse((await request(groupPath, 'GET', undefined, adminCookie)).body)[0];
+  assert(originalGroup.version > 0, 'security group response omitted its version');
+  const updatedGroup = await request(groupPath, 'PUT', {name: 'Updated smoke group', version: originalGroup.version}, adminCookie);
+  assert.equal(updatedGroup.status, 200, 'current security group edit failed');
+  assert(JSON.parse(updatedGroup.body).version > originalGroup.version, 'security group version did not advance');
+  for (const payload of [{name: 'Missing version'}, {name: 'Stale version', version: originalGroup.version}]) {
+    const conflict = await request(groupPath, 'PUT', payload, adminCookie);
+    assert.equal(conflict.status, 409, 'security group edit should conflict');
+    assert.equal(JSON.parse(conflict.body).error.code, 'stale_record');
+  }
+  assert.equal((await request(groupPath, 'DELETE', undefined, adminCookie)).status, 200);
   await send('Network.setCookie',{name:'session',value:adminCookie.slice('session='.length),url:origin,secure:true,httpOnly:true,sameSite:'Lax'});
   await send('Page.navigate',{url:`${origin}/`});
   async function waitUI(expression,message){for(let i=0;i<120;i++){const value=await send('Runtime.evaluate',{expression,returnByValue:true});if(value.result?.value===true)return;await delay(100);}const diagnostic=await send('Runtime.evaluate',{expression:"JSON.stringify({active:document.activeElement.outerHTML,disclosures:Array.from(document.querySelectorAll('.tm-disclosure')).map(e=>({html:e.outerHTML,visible:!!e.getClientRects().length,disabled:e.disabled})),writes:window.__accountWrites,invalid:Array.from(document.querySelectorAll('input,select,textarea')).filter(e=>e.getClientRects().length&&!e.validity.valid).map(e=>({id:e.id,message:e.validationMessage})),feedback:Array.from(document.querySelectorAll('.tm-feedback')).map(e=>e.textContent)})",returnByValue:true});assert.fail(message+' '+diagnostic.result?.value+' exceptions='+exceptions.join(','));}

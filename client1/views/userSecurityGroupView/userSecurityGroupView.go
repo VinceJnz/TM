@@ -301,7 +301,12 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.MembershipPayload(item)); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
-		editor.onCompletionMsg("Change failed; please retry.")
+		viewHelpers.ConflictReload(editor.Div, err, func() {
+			editor.resetEditForm()
+			editor.RecordState = RecordStateReloadRequired
+			editor.FetchItems()
+		})
+		editor.onCompletionMsg("Change failed. " + err.Error())
 		return
 	}
 	editor.resetEditForm()

@@ -7,6 +7,7 @@ import (
 )
 
 type Group struct {
+	Version     int64       `json:"version" db:"version"`
 	ID          int         `json:"id" db:"id"`
 	Name        string      `json:"name" db:"name"`
 	Description zero.String `json:"description" db:"description"`
@@ -16,6 +17,7 @@ type Group struct {
 }
 
 type UserGroup struct {
+	Version  int64     `json:"version" db:"version"`
 	ID       int       `json:"id" db:"id"`
 	UserID   int       `json:"user_id" db:"user_id"`
 	User     string    `json:"user_name" db:"user_name"`
@@ -26,6 +28,7 @@ type UserGroup struct {
 }
 
 type GroupResource struct {
+	Version       int64  `json:"version" db:"version"`
 	ID            int    `json:"id" db:"id"`
 	GroupID       int    `json:"group_id" db:"group_id"`
 	Group         string `json:"group_name" db:"group_name"`

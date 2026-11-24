@@ -130,6 +130,11 @@ handles audited schema adoption when the columns already exist. Protected PUTs
 require the version returned by the latest read and respond with
 `409 stale_record` for missing or stale versions. The editors preserve unsaved
 input and offer a confirmed reload. Apply 0032 before starting the matching API.
+Migration 0034 applies the same mechanism to security group definitions, grants,
+and memberships. The browser sends the version captured with the record, and
+the update predicate protects the write and its audit transaction. Explicit
+response DTOs and generated API and WASM contracts preserve the existing JSON
+fields and include the version. Existing records start at version 1.
 
 **Identity:** migrations 0026/0027 enforce normalized nonblank member-code uniqueness
 and allocate codes on insertion, preserving all ID digits. Existing duplicate codes
@@ -328,8 +333,8 @@ and verification evidence. Their deployment observations are historical.
 
 | Priority | Area | Guidance |
 |---|---|---|
-| Medium | Partial concurrency coverage | Security writes and catalogs do not all carry versions. Extend deliberately where concurrent full edits pose a material risk; update callers and tests together |
-| Medium | Legacy persistence/adapters | Specialized password-reset SQL and compatibility/generic helpers remain. Check actual production callers before removing them; do not replace a tested transaction just to rename a package |
+| Medium | Partial concurrency coverage | Catalogs and other resources still have unversioned edits. Extend deliberately where concurrent full edits pose a material risk; update callers and tests together |
+| Medium | Legacy persistence/adapters | Compatibility and generic helpers remain. Check actual production callers before removing them |
 | Medium | Contract and validation coverage | Some legacy resources still reuse models or handwritten contracts. Extend explicit DTOs and resource-specific validation as features change; the generator is not complete domain validation |
 | Medium | UI duplication and accessibility | Continue shared components, unique control IDs and lifecycle ownership. Manual screen-reader, device and broader visual audits remain necessary |
 | Operational | Environment and provider acceptance | Recheck actual migrations, roles, monitoring installation and required integrations. Automated provider fakes do not establish real Gmail/Google/Stripe readiness |
@@ -382,7 +387,7 @@ docker compose --env-file api-server/.env --profile prod exec apiserver /app/tm-
 
 These commands are guidance, not actions performed by reading/updating this guide.
 Pre-0033 APIs check the exact migration ledger and reject newly applied migrations.
-Coordinate the 0033 migration and API replacement to limit downtime. Use the production
+Coordinate the 0033 and 0034 migrations and API replacement to limit downtime. Use the production
 release procedure for production. Recheck schema compatibility
 before rollback; do not restore old financial data to simplify an application rollback.
 

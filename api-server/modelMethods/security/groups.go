@@ -4,11 +4,12 @@ import (
 	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/models"
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/jmoiron/sqlx"
 )
 
-const groupRead = `SELECT id,COALESCE(name,'') AS name,COALESCE(description,'') AS description FROM st_group`
+const groupRead = `SELECT id,version,COALESCE(name,'') AS name,COALESCE(description,'') AS description FROM st_group`
 
 var ErrReferencedGroup = errors.New("group still has memberships or grants")
 
@@ -22,13 +23,16 @@ func (s Store) Group(ctx context.Context, id int) (models.Group, error) {
 }
 func (s Store) SaveGroup(ctx context.Context, tx *sqlx.Tx, id int, v models.GroupWrite) (models.Group, error) {
 	var result models.Group
-	query := `INSERT INTO st_group(name,description) VALUES($1,$2) RETURNING id,name,description`
+	query := `INSERT INTO st_group(name,description) VALUES($1,$2) RETURNING id,version,name,description`
 	args := []any{v.Name, v.Description}
 	if id > 0 {
-		query = `UPDATE st_group SET name=$1,description=$2 WHERE id=$3 RETURNING id,name,description`
-		args = append(args, id)
+		query = `UPDATE st_group SET name=$1,description=$2 WHERE id=$3 AND version=$4 RETURNING id,version,name,description`
+		args = append(args, id, v.Version)
 	}
 	err := tx.GetContext(ctx, &result, query, args...)
+	if id > 0 && errors.Is(err, sql.ErrNoRows) {
+		return result, models.ErrStaleRecord
+	}
 	return result, err
 }
 func (s Store) DeleteGroup(ctx context.Context, tx *sqlx.Tx, id int) error {

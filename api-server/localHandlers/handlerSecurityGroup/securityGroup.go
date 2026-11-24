@@ -45,7 +45,11 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteDataError(w, err)
 		return
 	}
-	helpers.WriteResourcePage(w, rows, info)
+	response := make([]models.GroupDTO, len(rows))
+	for i, row := range rows {
+		response[i] = models.GroupDTO(row)
+	}
+	helpers.WriteResourcePage(w, response, info)
 }
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if h.actor(w, r) == 0 {
@@ -60,7 +64,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteDataError(w, err)
 		return
 	}
-	helpers.WriteJSON(w, 200, []models.Group{v})
+	helpers.WriteJSON(w, 200, []models.GroupDTO{models.GroupDTO(v)})
 }
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.save(w, r, false) }
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.save(w, r, true) }
@@ -90,7 +94,7 @@ func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
 		helpers.WriteJSON(w, 201, result.ID)
 		return
 	}
-	helpers.WriteJSON(w, 200, result)
+	helpers.WriteJSON(w, 200, models.GroupDTO(result))
 }
 func (h *Handler) failure(w http.ResponseWriter, err error) {
 	if errors.Is(err, store.ErrReferencedGroup) {

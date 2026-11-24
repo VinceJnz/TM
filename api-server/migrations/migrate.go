@@ -21,7 +21,7 @@ import (
 var files embed.FS
 
 const compatibilityBaseline = "0033_schema_compatibility.sql"
-const Latest = compatibilityBaseline
+const Latest = "0034_security_edit_versions.sql"
 
 // Future migrations may record the earliest API schema they preserve. An
 // omitted declaration requires a coordinated cutover. Each declaration must

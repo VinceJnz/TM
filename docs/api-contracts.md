@@ -38,8 +38,10 @@ access and deletion conflicts; client tests verify nullable display fields and
 the actual mutable-field projection. Legacy resources outside this migration
 remain outside the generated contract coverage.
 
-Security grant and membership views now also share generated read/write DTOs.
-Their schemas specify required positive IDs, supported scopes and permission
+Security group, grant and membership views share generated read/write DTOs.
+Their PUT schemas require the version returned on reads and describe the
+`409 stale_record` response for missing or stale versions. POST still returns the
+created ID and the database starts versions at 1. Their schemas also specify required positive IDs, supported scopes and permission
 resources. Pricing metadata includes description lengths and currency bounds.
 Generated operations include validation/conflict/dependency responses; legacy
 plain-text errors remain represented alongside structured errors. Behavioral

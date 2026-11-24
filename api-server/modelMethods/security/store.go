@@ -13,8 +13,8 @@ import (
 
 type Store struct{ DB *sqlx.DB }
 
-const grantRead = `SELECT r.id,r.group_id,g.name AS group_name,r.resource_id,e.name AS resource,r.access_level_id,l.name AS access_level,r.access_scope_id,s.name AS access_scope,r.created,r.modified FROM st_group_resource r JOIN st_group g ON g.id=r.group_id JOIN et_resource e ON e.id=r.resource_id JOIN et_access_level l ON l.id=r.access_level_id JOIN et_access_scope s ON s.id=r.access_scope_id`
-const memberRead = `SELECT m.id,m.user_id,u.name AS user_name,m.group_id,g.name AS group_name,m.created,m.modified FROM st_user_group m JOIN st_users u ON u.id=m.user_id JOIN st_group g ON g.id=m.group_id`
+const grantRead = `SELECT r.id,r.version,r.group_id,g.name AS group_name,r.resource_id,e.name AS resource,r.access_level_id,l.name AS access_level,r.access_scope_id,s.name AS access_scope,r.created,r.modified FROM st_group_resource r JOIN st_group g ON g.id=r.group_id JOIN et_resource e ON e.id=r.resource_id JOIN et_access_level l ON l.id=r.access_level_id JOIN et_access_scope s ON s.id=r.access_scope_id`
+const memberRead = `SELECT m.id,m.version,m.user_id,u.name AS user_name,m.group_id,g.name AS group_name,m.created,m.modified FROM st_user_group m JOIN st_users u ON u.id=m.user_id JOIN st_group g ON g.id=m.group_id`
 
 func (s Store) Grants(ctx context.Context, p resourcequery.Page, group ...int) ([]models.GroupResource, resourcequery.PageInfo, error) {
 	if len(group) > 0 && group[0] > 0 {
@@ -56,24 +56,30 @@ func (s Store) GrantShape(ctx context.Context, tx *sqlx.Tx, v models.GroupResour
 }
 func (s Store) SaveGrant(ctx context.Context, tx *sqlx.Tx, id int, v models.GroupResourceWrite) (models.GroupResource, error) {
 	var result models.GroupResource
-	query := "INSERT INTO st_group_resource(group_id,resource_id,access_level_id,access_scope_id) VALUES($1,$2,$3,$4) RETURNING id,group_id,resource_id,access_level_id,access_scope_id,created,modified"
+	query := "INSERT INTO st_group_resource(group_id,resource_id,access_level_id,access_scope_id) VALUES($1,$2,$3,$4) RETURNING id,version,group_id,resource_id,access_level_id,access_scope_id,created,modified"
 	args := []any{v.GroupID, v.ResourceID, v.AccessLevelID, v.AccessScopeID}
 	if id > 0 {
-		query = "UPDATE st_group_resource SET group_id=$1,resource_id=$2,access_level_id=$3,access_scope_id=$4,modified=CURRENT_TIMESTAMP WHERE id=$5 RETURNING id,group_id,resource_id,access_level_id,access_scope_id,created,modified"
-		args = append(args, id)
+		query = "UPDATE st_group_resource SET group_id=$1,resource_id=$2,access_level_id=$3,access_scope_id=$4,modified=CURRENT_TIMESTAMP WHERE id=$5 AND version=$6 RETURNING id,version,group_id,resource_id,access_level_id,access_scope_id,created,modified"
+		args = append(args, id, v.Version)
 	}
 	err := tx.GetContext(ctx, &result, query, args...)
+	if id > 0 && err == sql.ErrNoRows {
+		return result, models.ErrStaleRecord
+	}
 	return result, err
 }
 func (s Store) SaveMember(ctx context.Context, tx *sqlx.Tx, id int, v models.UserGroupWrite) (models.UserGroup, error) {
 	var result models.UserGroup
-	query := "INSERT INTO st_user_group(user_id,group_id) VALUES($1,$2) RETURNING id,user_id,group_id,created,modified"
+	query := "INSERT INTO st_user_group(user_id,group_id) VALUES($1,$2) RETURNING id,version,user_id,group_id,created,modified"
 	args := []any{v.UserID, v.GroupID}
 	if id > 0 {
-		query = "UPDATE st_user_group SET user_id=$1,group_id=$2,modified=CURRENT_TIMESTAMP WHERE id=$3 RETURNING id,user_id,group_id,created,modified"
-		args = append(args, id)
+		query = "UPDATE st_user_group SET user_id=$1,group_id=$2,modified=CURRENT_TIMESTAMP WHERE id=$3 AND version=$4 RETURNING id,version,user_id,group_id,created,modified"
+		args = append(args, id, v.Version)
 	}
 	err := tx.GetContext(ctx, &result, query, args...)
+	if id > 0 && err == sql.ErrNoRows {
+		return result, models.ErrStaleRecord
+	}
 	return result, err
 }
 func (s Store) DeleteGrant(ctx context.Context, tx *sqlx.Tx, id int) error {

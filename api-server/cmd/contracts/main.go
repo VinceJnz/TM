@@ -29,8 +29,8 @@ func generate() (map[string][]byte, error) {
 	types := []definition{{"Payment", reflect.TypeOf(models.UserPayments{}), false}, {"Refund", reflect.TypeOf(models.PaymentRefund{}), false}, {"PaymentWrite", reflect.TypeOf(paymentLedger.PaymentWrite{}), true}, {"RefundWrite", reflect.TypeOf(paymentLedger.RefundWrite{}), true}}
 	types = append(types, definition{"BookingDTO", reflect.TypeOf(models.Booking{}), false}, definition{"MyBookingDTO", reflect.TypeOf(models.MyBooking{}), false}, definition{"TripDTO", reflect.TypeOf(models.Trip{}), false}, definition{"TripReportDTO", reflect.TypeOf(models.TripParticipantStatus{}), false}, definition{"BookingWrite", reflect.TypeOf(models.BookingWrite{}), true}, definition{"TripWrite", reflect.TypeOf(models.TripWrite{}), true})
 	types = append(types, definition{"TripCostDTO", reflect.TypeOf(models.TripCost{}), false}, definition{"TripCostGroupDTO", reflect.TypeOf(models.TripCostGroup{}), false}, definition{"TripCostWrite", reflect.TypeOf(models.TripCostWrite{}), true}, definition{"TripCostGroupWrite", reflect.TypeOf(models.TripCostGroupWrite{}), true})
-	types = append(types, definition{"GroupResourceDTO", reflect.TypeOf(models.GroupResource{}), false}, definition{"UserGroupDTO", reflect.TypeOf(models.UserGroup{}), false}, definition{"GroupResourceWrite", reflect.TypeOf(models.GroupResourceWrite{}), true}, definition{"UserGroupWrite", reflect.TypeOf(models.UserGroupWrite{}), true})
-	types = append(types, definition{"GroupDTO", reflect.TypeOf(models.Group{}), false}, definition{"GroupWrite", reflect.TypeOf(models.GroupWrite{}), true}, definition{"ProfileDTO", reflect.TypeOf(models.ProfileDTO{}), false}, definition{"ProfileWrite", reflect.TypeOf(models.ProfileWrite{}), true}, definition{"EmailChangeRequest", reflect.TypeOf(models.EmailChangeRequest{}), true}, definition{"EmailChangeProof", reflect.TypeOf(models.EmailChangeProof{}), true})
+	types = append(types, definition{"GroupResourceDTO", reflect.TypeOf(models.GroupResourceDTO{}), false}, definition{"UserGroupDTO", reflect.TypeOf(models.UserGroupDTO{}), false}, definition{"GroupResourceWrite", reflect.TypeOf(models.GroupResourceWrite{}), true}, definition{"UserGroupWrite", reflect.TypeOf(models.UserGroupWrite{}), true})
+	types = append(types, definition{"GroupDTO", reflect.TypeOf(models.GroupDTO{}), false}, definition{"GroupWrite", reflect.TypeOf(models.GroupWrite{}), true}, definition{"ProfileDTO", reflect.TypeOf(models.ProfileDTO{}), false}, definition{"ProfileWrite", reflect.TypeOf(models.ProfileWrite{}), true}, definition{"EmailChangeRequest", reflect.TypeOf(models.EmailChangeRequest{}), true}, definition{"EmailChangeProof", reflect.TypeOf(models.EmailChangeProof{}), true})
 	types = append(types, definition{"AccountDTO", reflect.TypeOf(models.AccountDTO{}), false}, definition{"AccountWrite", reflect.TypeOf(models.AccountWrite{}), true})
 	var source bytes.Buffer
 	types = append(types, definition{"APIError", reflect.TypeOf(models.APIError{}), false}, definition{"ErrorResponse", reflect.TypeOf(models.ErrorResponse{}), false})
@@ -119,6 +119,17 @@ func generate() (map[string][]byte, error) {
 			return map[string]any{"application/json": map[string]any{"schema": schema}}
 		}
 		request := map[string]any{"required": true, "content": jsonContent(ref(resource.Write))}
+		updateRequest := request
+		conflict := map[string]any{"description": "Operation conflicts with existing data or immutable financial state"}
+		switch resource.Path {
+		case "securityGroup", "securityGroupResource", "securityUserGroup":
+			version := map[string]any{
+				"type": "object", "required": []string{"version"},
+				"properties": map[string]any{"version": map[string]any{"type": "integer", "minimum": 1}},
+			}
+			updateRequest = map[string]any{"required": true, "content": jsonContent(map[string]any{"allOf": []any{ref(resource.Write), version}})}
+			conflict = map[string]any{"description": "A missing or stale version returns stale_record", "content": jsonContent(ref("ErrorResponse"))}
+		}
 		listResponse := map[string]any{"description": "Bounded array; single-record GET also returns an array", "content": jsonContent(map[string]any{"type": "array", "items": ref(resource.Read)})}
 		responses := map[string]any{"200": listResponse, "401": map[string]any{"description": "Session required"}, "403": map[string]any{"description": "Resource capability and supported scope required"}}
 		if resource.Path == "bookings" || resource.Path == "myBookings" {
@@ -133,7 +144,7 @@ func generate() (map[string][]byte, error) {
 		paths["/"+resource.Path+"/{id}"] = map[string]any{
 			"parameters": []any{map[string]any{"name": "id", "in": "path", "required": true, "schema": map[string]any{"type": "integer", "minimum": 1}}},
 			"get":        map[string]any{"responses": responses},
-			"put":        map[string]any{"requestBody": request, "responses": map[string]any{"200": map[string]any{"description": "Updated record", "content": jsonContent(ref(resource.Read))}, "409": map[string]any{"description": "Operation conflicts with existing data or immutable financial state"}}},
+			"put":        map[string]any{"requestBody": updateRequest, "responses": map[string]any{"200": map[string]any{"description": "Updated record", "content": jsonContent(ref(resource.Read))}, "409": conflict}},
 			"delete":     map[string]any{"responses": map[string]any{"200": map[string]any{"description": "Deleted record"}, "409": map[string]any{"description": "Provider records are immutable"}}},
 		}
 		collection := paths["/"+resource.Path].(map[string]any)

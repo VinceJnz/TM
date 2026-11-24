@@ -184,6 +184,7 @@ type TripCostGroupWrite struct {
 	Description string `json:"description"`
 }
 type GroupResourceDTO struct {
+	Version       int64     `json:"version"`
 	ID            int       `json:"id"`
 	GroupID       int       `json:"group_id"`
 	Group         string    `json:"group_name"`
@@ -197,6 +198,7 @@ type GroupResourceDTO struct {
 	Modified      time.Time `json:"modified"`
 }
 type UserGroupDTO struct {
+	Version  int64     `json:"version"`
 	ID       int       `json:"id"`
 	UserID   int       `json:"user_id"`
 	User     string    `json:"user_name"`
@@ -206,16 +208,19 @@ type UserGroupDTO struct {
 	Modified time.Time `json:"modified"`
 }
 type GroupResourceWrite struct {
-	GroupID       int `json:"group_id"`
-	ResourceID    int `json:"resource_id"`
-	AccessLevelID int `json:"access_level_id"`
-	AccessScopeID int `json:"access_scope_id"`
+	Version       int64 `json:"version,omitempty"`
+	GroupID       int   `json:"group_id"`
+	ResourceID    int   `json:"resource_id"`
+	AccessLevelID int   `json:"access_level_id"`
+	AccessScopeID int   `json:"access_scope_id"`
 }
 type UserGroupWrite struct {
-	UserID  int `json:"user_id"`
-	GroupID int `json:"group_id"`
+	Version int64 `json:"version,omitempty"`
+	UserID  int   `json:"user_id"`
+	GroupID int   `json:"group_id"`
 }
 type GroupDTO struct {
+	Version     int64     `json:"version"`
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
@@ -223,6 +228,7 @@ type GroupDTO struct {
 	Modified    time.Time `json:"modified"`
 }
 type GroupWrite struct {
+	Version     int64  `json:"version,omitempty"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }

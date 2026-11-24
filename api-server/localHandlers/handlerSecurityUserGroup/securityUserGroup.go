@@ -49,7 +49,11 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteDataError(w, err)
 		return
 	}
-	helpers.WriteResourcePage(w, rows, info)
+	response := make([]models.UserGroupDTO, len(rows))
+	for i, row := range rows {
+		response[i] = models.UserGroupDTO(row)
+	}
+	helpers.WriteResourcePage(w, response, info)
 }
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if h.actor(w, r) == 0 {
@@ -64,7 +68,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteDataError(w, err)
 		return
 	}
-	helpers.WriteJSON(w, 200, []models.UserGroup{v})
+	helpers.WriteJSON(w, 200, []models.UserGroupDTO{models.UserGroupDTO(v)})
 }
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) { h.save(w, r, false) }
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) { h.save(w, r, true) }
@@ -94,7 +98,7 @@ func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
 		helpers.WriteJSON(w, 201, result.ID)
 		return
 	}
-	helpers.WriteJSON(w, 200, result)
+	helpers.WriteJSON(w, 200, models.UserGroupDTO(result))
 }
 func (h *Handler) failure(w http.ResponseWriter, err error) {
 	if errors.Is(err, service.ErrValidation) {
