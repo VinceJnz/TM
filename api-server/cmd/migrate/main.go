@@ -15,9 +15,13 @@ import (
 
 func main() {
 	check := flag.Bool("check-existing", false, "read-only baseline compatibility report; no migrations or grants")
+	checkRuntime := flag.Bool("check-runtime", false, "check the deployed schema and runtime privileges without making changes")
 	adopt := flag.Bool("adopt-existing", false, "record the baseline for an audited compatible existing schema; never recreate its tables")
 	role := flag.String("grant-role", "", "explicitly grant runtime access to an existing non-administrative API role")
 	flag.Parse()
+	if *checkRuntime && (*check || *adopt || *role != "") {
+		log.Fatal("check-runtime cannot be combined with migration or grant options")
+	}
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
 		log.Fatal("invalid optional .env file")
 	}
@@ -28,6 +32,16 @@ func main() {
 		log.Fatal("database unavailable")
 	}
 	defer db.Close()
+	if *checkRuntime {
+		if err := migrations.Check(ctx, db); err != nil {
+			log.Fatal(err)
+		}
+		if err := migrations.CheckRuntimeRole(ctx, db); err != nil {
+			log.Fatal(err)
+		}
+		log.Print("database schema and runtime grants verified")
+		return
+	}
 	if *check {
 		differences, err := migrations.Compatibility(ctx, db)
 		if err != nil {

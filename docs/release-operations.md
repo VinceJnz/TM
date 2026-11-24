@@ -48,9 +48,19 @@ checks the image's source revision before invoking Compose:
 
 The default is validation only. Deployment requires an explicitly authorized
 operator invocation with `-Apply`, credentials injected at runtime, and separately
-approved database migrations applied first. It waits up to 120 seconds for API health and does not recreate database dependencies. It does not build or publish images.
+approved database migrations applied first. Use `-Preflight` to pull the approved
+image, validate its revision and production settings, and verify the schema and
+effective privileges as the target runtime user. The preflight runs a one-off
+container with `tm-migrate -check-runtime` and performs no database writes.
+`-Apply` runs the same checks before replacing the API. It waits up to 120 seconds
+for API health and leaves database dependencies running.
 Record the approved digest and source revision in the deployment record. Direct
 Compose invocation does not enforce the script's digest policy.
+
+For a remote PostgreSQL target, record that the runtime DSN uses `sslmode=verify-full`
+with a trusted CA and correct hostname. Record the acceptance result for each
+provider required by the target and for alert delivery. Use the existing sandbox
+procedures for provider tests and keep secrets out of the deployment record.
 
 Configure the host monitoring runner to invoke the following every minute and
 alert on a nonzero exit code or a missing result for two consecutive intervals:

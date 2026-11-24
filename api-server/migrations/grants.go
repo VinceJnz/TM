@@ -90,18 +90,8 @@ func GrantRuntimeAccess(ctx context.Context, db *sqlx.DB, role string) error {
 			return err
 		}
 		if strings.Contains(privileges, "INSERT") {
-			var sequences []string
-			// Legacy dumps can reference nextval() without an OWNED BY link.
-			// Include default-expression dependencies as well as serial/identity
-			// ownership, without granting unrelated sequences in the schema.
-			if err = tx.SelectContext(ctx, &sequences, `SELECT DISTINCT quote_ident(n.nspname)||'.'||quote_ident(s.relname)
-FROM pg_class s JOIN pg_namespace n ON n.oid=s.relnamespace
-WHERE s.relkind='S' AND (
- EXISTS(SELECT 1 FROM pg_depend d JOIN pg_attrdef a ON d.classid='pg_attrdef'::regclass AND d.objid=a.oid
-        WHERE a.adrelid=$1::text::regclass AND d.refclassid='pg_class'::regclass AND d.refobjid=s.oid)
- OR EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass AND d.objid=s.oid
-        AND d.refclassid='pg_class'::regclass AND d.refobjid=$1::text::regclass AND d.deptype IN ('a','i'))
-)`, qualified); err != nil {
+			sequences, err := insertSequences(ctx, tx, qualified)
+			if err != nil {
 				return err
 			}
 			for _, sequence := range sequences {
@@ -119,4 +109,18 @@ WHERE s.relkind='S' AND (
 		return err
 	}
 	return tx.Commit()
+}
+
+// Include default-expression dependencies and serial or identity ownership.
+func insertSequences(ctx context.Context, tx *sqlx.Tx, qualified string) ([]string, error) {
+	var sequences []string
+	err := tx.SelectContext(ctx, &sequences, `SELECT DISTINCT quote_ident(n.nspname)||'.'||quote_ident(s.relname)
+FROM pg_class s JOIN pg_namespace n ON n.oid=s.relnamespace
+WHERE s.relkind='S' AND (
+ EXISTS(SELECT 1 FROM pg_depend d JOIN pg_attrdef a ON d.classid='pg_attrdef'::regclass AND d.objid=a.oid
+        WHERE a.adrelid=$1::text::regclass AND d.refclassid='pg_class'::regclass AND d.refobjid=s.oid)
+ OR EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass AND d.objid=s.oid
+        AND d.refclassid='pg_class'::regclass AND d.refobjid=$1::text::regclass AND d.deptype IN ('a','i'))
+)`, qualified)
+	return sequences, err
 }

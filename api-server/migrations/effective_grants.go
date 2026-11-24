@@ -2,11 +2,74 @@ package migrations
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"strings"
 )
+
+func CheckRuntimeRole(ctx context.Context, db *sqlx.DB) error {
+	tx, err := db.BeginTxx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var role, schema string
+	var unsafe, canUseSchema bool
+	if err := tx.QueryRowContext(ctx, `SELECT current_user, current_schema(),
+		has_schema_privilege(current_user,current_schema(),'CREATE') OR EXISTS(
+			SELECT 1 FROM pg_roles WHERE (rolsuper OR rolcreaterole OR rolcreatedb)
+			AND pg_has_role(current_user,oid,'MEMBER')),
+		has_schema_privilege(current_user,current_schema(),'USAGE')`).Scan(&role, &schema, &unsafe, &canUseSchema); err != nil {
+		return err
+	}
+	if unsafe {
+		return errors.New("runtime role has administrative or schema creation privileges")
+	}
+	if !canUseSchema {
+		return errors.New("runtime role lacks schema usage")
+	}
+	var tables []string
+	if err := tx.SelectContext(ctx, &tables, `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+		WHERE n.nspname=current_schema() AND c.relkind IN ('r','p')
+		AND (left(c.relname,3) IN ('at_','et_','st_') OR c.relname='schema_migrations')`); err != nil {
+		return err
+	}
+	policy := runtimePolicy()
+	missing := len(policy)
+	expectedSequences := map[string]bool{}
+	for _, table := range tables {
+		privileges, known := policy[table]
+		if !known {
+			continue
+		}
+		missing--
+		if !strings.Contains(privileges, "INSERT") {
+			continue
+		}
+		sequences, err := insertSequences(ctx, tx, pq.QuoteIdentifier(schema)+"."+pq.QuoteIdentifier(table))
+		if err != nil {
+			return err
+		}
+		for _, sequence := range sequences {
+			expectedSequences[sequence] = true
+		}
+	}
+	if missing != 0 {
+		return errors.New("runtime schema is missing required tables")
+	}
+	var canRedact bool
+	function := pq.QuoteIdentifier(schema) + ".redact_notification_payloads(integer,integer,integer)"
+	if err := tx.GetContext(ctx, &canRedact, `SELECT has_function_privilege(current_user,$1,'EXECUTE')`, function); err != nil {
+		return err
+	}
+	if !canRedact {
+		return errors.New("runtime role lacks notification redaction permission")
+	}
+	return verifyRuntimePrivileges(ctx, tx, role, tables, expectedSequences)
+}
 
 // Check effective access, including inherited and PUBLIC privileges. Do not
 // silently revoke permissions belonging to other roles or change memberships.

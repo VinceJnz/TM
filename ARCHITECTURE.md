@@ -282,7 +282,10 @@ alone does not rebuild artifacts. Use BuildKit; routine cache pruning is not req
 Published builds default to building the client from source. When supplied a
 prebuilt client digest, the release builder checks its compiler and source
 revision labels. The deployment script checks the API image digest and revision,
-waits up to 120 seconds for API health, and leaves database dependencies running.
+checks the schema and effective database grants with the candidate image and target
+runtime account, waits up to 120 seconds for API health, and leaves database
+dependencies running. `-Preflight` runs these identity, configuration and database
+checks without replacing the API.
 
 Immutable production image approval, monitoring and recovery are separate operator
 actions: see [release operations](docs/release-operations.md),
@@ -304,6 +307,7 @@ actions: see [release operations](docs/release-operations.md),
 | TM-10 | Build frontend and API together by default | Prevent the stale-WASM packaging failure seen with the earlier Compose workflow |
 | TM-11 | Standard members can read the global redacted roster | Explicit owner decision; retain hidden-profile protections and booking ownership |
 | TM-12 | Keep test delivery/payment flags explicit | Testing must not accidentally contact real recipients or accept live payment activity |
+| TM-13 | Declare backward-compatible expansions explicitly | Enable verified application rollback across compatible migrations while preserving required checksum checks and coordinated cutovers for other changes |
 
 ## 8. Completed changes versus remaining limitations
 
@@ -316,7 +320,6 @@ and verification evidence. Their deployment observations are historical.
 | Resource boundaries | Stores/services for catalogs, group bookings, participants, vouchers and other core resources; Trip Type create-table regression fixed |
 | Account safety | Address limits aligned; shared error DTOs; account/profile versions; unique member codes; isolated inline forms |
 | Authentication | Core service/store including capability lookup, route inventory and alias checks, narrow OAuth changes, atomic registration/login and request-context propagation |
-| TM-13 | Declare backward-compatible expansions explicitly | Enable verified application rollback across compatible migrations while preserving required checksum checks and coordinated cutovers for other changes |
 | Money/concurrency | Exact voucher writes, trip and pricing versions in 0029, and voucher and group booking versions in 0032 |
 | UI | Capability actions, conflict recovery, keyboard controls, cancellable rosters, status announcements, and reliable trip edit lookups |
 | Build/verification | Self-contained frontend/API build, compiler parity and artifact identity checks, deployment health wait, and expanded browser checks |

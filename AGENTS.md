@@ -89,6 +89,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Do not add secrets, private keys, credentials, tokens, or real user data to source control, image layers, logs, or test fixtures. Prefer runtime secret injection for deployment changes.
 - Keep database/Adminer/debugger exposure limited to the intended environment. Do not enable development authentication behavior in production.
 - Select the Docker final, interactive, or debug target explicitly. Keep base-image digests pinned and refresh them through tested changes. Test the assembled API image. For an authorized release, prepare and verify the new image before applying pending migrations, then verify the running image, API readiness, and operational checks. Use the release runbook for the deployment sequence.
+- Run the release database preflight with the candidate image and target runtime credentials. Use `tm-migrate -check-runtime` for a read-only schema and effective grant check. Record provider and alert acceptance separately for the target.
 
 ## Verification
 
