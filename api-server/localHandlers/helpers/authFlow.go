@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	authService "api-server/v2/app/services/authentication"
+	authStore "api-server/v2/modelMethods/authentication"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"bytes"
@@ -27,12 +29,13 @@ var (
 )
 
 func CreateAndSetSessionCookie(ctx context.Context, debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
-	sessionToken, err := dbAuthTemplate.CreateNamedTokenContext(ctx, debugStr+"CreateAndSetSessionCookie", db, true, userID, host, "session", expiration)
+	auth := authService.Service{Store: authStore.Store{DB: db}}
+	raw, err := auth.Issue(ctx, userID, host, "session", expiration, "")
 	if err != nil {
 		log.Printf("%vCreateAndSetSessionCookie() failed to create session token: %v", debugStr, err)
 		return err
 	}
-	http.SetCookie(w, sessionToken)
+	http.SetCookie(w, &http.Cookie{Name: "session", Value: raw, Path: "/", Domain: host, Expires: expiration, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	return nil
 }
 
@@ -50,12 +53,12 @@ func CreateNamedTokenAndSendEmail(
 	buildBody func(token string) string,
 	deleteOnSendFailure bool,
 ) (string, bool, error) {
-	tokenCookie, err := dbAuthTemplate.CreateNamedTokenContext(ctx, debugStr+"CreateNamedTokenAndSendEmail", db, true, userID, host, tokenName, expiration)
+	auth := authService.Service{Store: authStore.Store{DB: db}}
+	tokenValue, err := auth.Issue(ctx, userID, host, tokenName, expiration, "")
 	if err != nil {
 		return "", false, err
 	}
 
-	tokenValue := tokenCookie.Value
 	body := ""
 	if buildBody != nil {
 		body = buildBody(tokenValue)
@@ -75,8 +78,8 @@ func CreateNamedTokenAndSendEmail(
 	}
 	if err := sendErr; err != nil {
 		if deleteOnSendFailure {
-			if tok, findErr := dbAuthTemplate.FindToken(debugStr+"CreateNamedTokenAndSendEmail:findTokenForDeletion", db, tokenName, tokenValue); findErr == nil {
-				_ = dbAuthTemplate.TokenDeleteQry(debugStr+"CreateNamedTokenAndSendEmail:delOnSendFailure", db, tok.ID)
+			if discardErr := auth.DiscardProof(ctx, userID, tokenName, tokenValue); discardErr != nil {
+				log.Printf("%s failed to discard undelivered authentication proof", debugStr)
 			}
 		}
 		return tokenValue, false, err

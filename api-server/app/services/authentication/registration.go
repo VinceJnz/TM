@@ -37,7 +37,7 @@ func (s Service) StageRegistration(ctx context.Context, host string, request Reg
 }
 
 func (s Service) DiscardRegistration(ctx context.Context, proof string) error {
-	return s.Store.DiscardAnonymousProof(ctx, registrationPurpose, proof)
+	return s.DiscardProof(ctx, 0, registrationPurpose, proof)
 }
 
 // Register atomically consumes the proof and inserts the account. Transient

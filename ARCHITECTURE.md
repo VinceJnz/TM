@@ -175,6 +175,8 @@ consumes the proof, changes the password and invalidates sessions transactionall
 Login account lookup and legacy login-token issuance use the same service. The
 registration proof and hashed profile are inserted together, and failed delivery
 discards the pending proof. `dbAuthTemplate` retains compatibility entry points.
+OTP delivery cleanup also uses the authentication service and scopes deletion to
+the issued proof and its account. OAuth session issuance uses the same token store.
 
 Permissions are grants through user groups for a resource, HTTP method and scope.
 The protected middleware reads grants through the

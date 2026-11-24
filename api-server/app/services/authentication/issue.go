@@ -15,6 +15,12 @@ func newToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(bytes), nil
 }
 
+func (s Service) DiscardProof(ctx context.Context, userID int, name, raw string) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	return s.Store.DiscardProof(ctx, userID, name, raw)
+}
+
 func (s Service) Issue(ctx context.Context, id int, host, name string, expires time.Time, data string) (string, error) {
 	raw, err := newToken()
 	if err != nil {

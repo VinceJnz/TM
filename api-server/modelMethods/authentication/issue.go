@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func (s Store) DiscardAnonymousProof(ctx context.Context, name, raw string) error {
-	_, err := s.DB.ExecContext(ctx, `DELETE FROM st_token WHERE name=$1 AND token=$2 AND user_id=0`, name, Digest(raw))
+func (s Store) DiscardProof(ctx context.Context, userID int, name, raw string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM st_token WHERE name=$1 AND token=$2 AND user_id=$3`, name, Digest(raw), userID)
 	return err
 }
 

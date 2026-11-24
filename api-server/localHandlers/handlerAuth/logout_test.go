@@ -27,12 +27,12 @@ func TestLogoutRequiresPostRevokesSessionAndExpiresCookie(t *testing.T) {
 	}
 	for _, tc := range []struct {
 		method, origin string
-		status         int
-	}{{"GET", "", 405}, {"POST", "https://attacker.test", 403}, {"POST", "https://localhost", 202}} {
+		userID, status int
+	}{{"GET", "", 1, 405}, {"POST", "https://attacker.test", 1, 403}, {"POST", "https://localhost", 2, 503}, {"POST", "https://localhost", 1, 202}} {
 		r := httptest.NewRequest(tc.method, "https://localhost/auth/logout/", nil)
 		r.AddCookie(cookie)
 		r.Header.Set("Origin", tc.origin)
-		r = r.WithContext(context.WithValue(r.Context(), app.SessionIDKey, &models.Session{UserID: 1}))
+		r = r.WithContext(context.WithValue(r.Context(), app.SessionIDKey, &models.Session{UserID: tc.userID}))
 		w := httptest.NewRecorder()
 		h.AuthLogout(w, r)
 		if w.Code != tc.status {
