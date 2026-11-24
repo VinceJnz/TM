@@ -23,6 +23,8 @@ func New(app *appCore.Config) *Handler { return &Handler{appConf: app, store: st
 func (h *Handler) RegisterRoutes(r *mux.Router, base string) {
 	helpers.AddRouteGroup(r, base, h, "trips")
 	helpers.CapabilityRoute(r, base+"Report", "tripsReport", h.GetParticipantStatus).Methods("GET")
+	helpers.CapabilityRoute(r, base+"/{id:[0-9]+}/questionnaire", "trips", h.getQuestionnaire).Methods("GET")
+	helpers.CapabilityRoute(r, base+"/{id:[0-9]+}/questionnaire", "trips", h.publishQuestionnaire).Methods("PUT")
 }
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	page, ok := helpers.ReadResourcePage(w, r)

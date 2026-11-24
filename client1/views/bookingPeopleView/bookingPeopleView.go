@@ -1,12 +1,14 @@
 package bookingPeopleView
 
 import (
+	"client1/v2/app/api"
 	"client1/v2/app/appCore"
 	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -45,14 +47,15 @@ const (
 const ApiURL = "/bookingPeople"
 
 type TableData struct {
-	ID        int       `json:"id"`
-	OwnerID   int       `json:"owner_id"`
-	BookingID int       `json:"booking_id"`
-	PersonID  int       `json:"person_id"`
-	Person    string    `json:"person_name"`
-	Notes     string    `json:"notes"`
-	Created   time.Time `json:"created"`
-	Modified  time.Time `json:"modified"`
+	ID        int                     `json:"id"`
+	OwnerID   int                     `json:"owner_id"`
+	BookingID int                     `json:"booking_id"`
+	PersonID  int                     `json:"person_id"`
+	Person    string                  `json:"person_name"`
+	Notes     string                  `json:"notes"`
+	Created   time.Time               `json:"created"`
+	Modified  time.Time               `json:"modified"`
+	Details   *api.ParticipantDetails `json:"details,omitempty"`
 }
 
 type UI struct {
@@ -72,6 +75,8 @@ type ItemEditor struct {
 	events         *eventProcessor.EventProcessor
 	onItemsChanged func()
 	closePicker    func()
+	detailsLoad    httpProcessor.LoadScope
+	readDetails    func() *api.ParticipantDetails
 	CurrentRecord  TableData
 	ItemState      ItemState
 	Records        []TableData
@@ -132,6 +137,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.detailsLoad.Cancel()
 	editor.RecordState = RecordStateReloadRequired
 	editor.resetEditForm()
 	editor.ListDiv.Set("innerHTML", "")
@@ -152,6 +158,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.detailsLoad.Cancel()
 	if editor.closePicker != nil {
 		editor.closePicker()
 	}
@@ -193,6 +200,33 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	ticket := editor.detailsLoad.Start()
+	editor.EditDiv.Set("innerHTML", "")
+	editor.EditDiv.Get("style").Set("display", "block")
+	record := editor.CurrentRecord
+	go func() {
+		var questionnaire api.Questionnaire
+		path := "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL + "/questionnaire"
+		err := editor.client.RequestContext(ticket.Context, http.MethodGet, path, &questionnaire, nil)
+		var details api.ParticipantDetails
+		if err == nil && record.ID > 0 {
+			err = editor.client.RequestContext(ticket.Context, http.MethodGet, ApiURL+"/"+strconv.Itoa(record.ID)+"/details", &details, nil)
+		}
+		if !ticket.Finish(err) {
+			return
+		}
+		if err != nil {
+			viewHelpers.RenderRetry(editor.EditDiv, editor.populateEditForm)
+			return
+		}
+		if details.Name == "" {
+			details.Name = record.Person
+		}
+		editor.renderEditForm(questionnaire, details)
+	}()
+}
+
+func (editor *ItemEditor) renderEditForm(questionnaire api.Questionnaire, details api.ParticipantDetails) {
 	if editor.closePicker != nil {
 		editor.closePicker()
 	}
@@ -206,9 +240,10 @@ func (editor *ItemEditor) populateEditForm() {
 		editor.CurrentRecord.PersonID, editor.CurrentRecord.Person, "Person", "itemPerson", lookup,
 	)
 
-	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Notes (optional)", "text", "itemNotes")
+	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Other information or messages for the trip leader (optional)", "text", "itemNotes")
 
 	form.Call("appendChild", localObjs.PersonID)
+	editor.readDetails = editor.participantFields(form, questionnaire, details)
 	form.Call("appendChild", localObjs.Notes)
 
 	// Create submit button
@@ -229,6 +264,8 @@ func (editor *ItemEditor) populateEditForm() {
 }
 
 func (editor *ItemEditor) resetEditForm() {
+	editor.detailsLoad.Cancel()
+	editor.readDetails = nil
 	if editor.closePicker != nil {
 		editor.closePicker()
 		editor.closePicker = nil
@@ -261,6 +298,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	}
 	editor.CurrentRecord.PersonID = personID
 	editor.CurrentRecord.Notes = editor.UiComponents.Notes.Get("value").String()
+	editor.CurrentRecord.Details = editor.readDetails()
 
 	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
@@ -286,7 +324,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.showSaveError(err, item)
 		return
 	}
 	editor.resetEditForm()
@@ -303,7 +341,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
 		editor.updateStateDisplay(ItemStateAdding)
-		editor.onCompletionMsg("Change failed; please retry.")
+		editor.showSaveError(err, item)
 		return
 	}
 	editor.resetEditForm()
@@ -313,6 +351,44 @@ func (editor *ItemEditor) AddItem(item TableData) {
 	editor.notifyItemsChanged()
 	editor.updateStateDisplay(ItemStateNone)
 	editor.onCompletionMsg("Item record added successfully")
+}
+
+func (editor *ItemEditor) showSaveError(err error, item TableData) {
+	var apiError *httpProcessor.APIError
+	if !errors.As(err, &apiError) {
+		editor.onCompletionMsg("Change failed; please retry.")
+		return
+	}
+	switch apiError.Code {
+	case "invalid_participant", "invalid_questionnaire_answers":
+		editor.onCompletionMsg(apiError.Message)
+	case "stale_record":
+		viewHelpers.Feedback(editor.EditDiv, "The booking questions changed. Reload them to review your answers.")
+		if editor.EditDiv.Call("querySelector", ".tm-reload-questions").Truthy() {
+			return
+		}
+		reload := viewHelpers.Button(func(js.Value, []js.Value) any {
+			ticket := editor.detailsLoad.Start()
+			go func() {
+				var questionnaire api.Questionnaire
+				path := "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL + "/questionnaire"
+				err := editor.client.RequestContext(ticket.Context, http.MethodGet, path, &questionnaire, nil)
+				if !ticket.Finish(err) {
+					return
+				}
+				if err != nil {
+					editor.onCompletionMsg("Questions could not be reloaded. Please retry.")
+					return
+				}
+				editor.renderEditForm(questionnaire, *item.Details)
+			}()
+			return nil
+		}, editor.document, "Reload questions", "")
+		reload.Set("className", "btn btn-secondary tm-reload-questions")
+		editor.EditDiv.Call("prepend", reload)
+	default:
+		editor.onCompletionMsg("Change failed; please retry.")
+	}
 }
 
 func (editor *ItemEditor) FetchItems() {

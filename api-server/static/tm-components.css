@@ -37,6 +37,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .tm-trip-row strong { font-size: 1.15rem; }
 .tm-trip-meta { display: block; color: var(--tm-text-subtle); margin-block: .2rem; }
 .tm-trip-description { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tm-participant-field { display: grid; gap: .35rem; margin-block: .75rem; }
 @media (max-width: 600px) {
  .tm-schedule-filters { align-items: stretch; }
  .tm-schedule-filters label { flex: 1 1 8rem; }

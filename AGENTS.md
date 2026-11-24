@@ -68,6 +68,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Explain migration ordering, compatibility, and data impact. Verify constraints and migrations against a disposable database when needed; never use production data as a test fixture.
 - Declare a migration compatibility floor in `migrations.compatibleSince` only after verifying that every supported API release from that floor onward can run against the expanded schema. Without a declaration, coordinate the migration and API cutover. Migration 0033 introduces the ledger column and requires a cutover from earlier binaries.
 - For versioned full edits, return the current version on reads and require it on updates. Check it inside the write transaction or update predicate and return HTTP 409 with code stale_record when it is missing or stale. Preserve the browser edits and offer confirmed reload. Migration 0032 extends this workflow to vouchers and group bookings.
+- Validate per-participant details and questionnaire answers on the server. Keep details out of general roster responses. Publish trip questionnaires as immutable revisions and preserve the revision and answers supplied for each participant.
 - Migration 0034 also requires edit versions for security group definitions, grants, and memberships. Regenerate the API and WASM contracts when changing their DTOs.
 - Do not delete bookings, users, payment history, or refund history to simplify referential-integrity problems.
 

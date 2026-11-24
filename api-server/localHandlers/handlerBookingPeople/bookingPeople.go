@@ -20,6 +20,9 @@ func New(app *appCore.Config) *Handler { return &Handler{app, store.Store{DB: ap
 func (h *Handler) RegisterRoutes(r *mux.Router, path string) {
 	helpers.AddRouteGroup(r, path, h, "bookingPeople")
 	helpers.CapabilityRoute(r, "/bookings/{id:[0-9]+}/bookingPeople", "bookingPeople", h.GetList).Methods("GET")
+	helpers.CapabilityRoute(r, "/bookings/{id:[0-9]+}/bookingPeople/questionnaire", "bookingPeople", h.getQuestionnaire).Methods("GET")
+	helpers.CapabilityRoute(r, path+"/{id:[0-9]+}/details", "bookingPeople", h.getDetails).Methods("GET")
+	helpers.CapabilityRoute(r, "/tripsReport/participants/{id:[0-9]+}/details", "tripsReport", h.getLeaderDetails).Methods("GET")
 }
 func (h *Handler) session(w http.ResponseWriter, r *http.Request) *models.Session {
 	return helpers.RequiredSession(w, r, h.app.SessionIDKey)
@@ -69,7 +72,7 @@ func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
 	}
 	var input models.ParticipantWrite
 	if err := helpers.DecodeJSONBody(r, &input); err != nil {
-		helpers.WriteError(w, 400, "invalid_request", "Invalid security payload")
+		helpers.WriteError(w, 400, "invalid_request", "Invalid participant details")
 		return
 	}
 	result, err := (service.Service{Store: h.store}).Mutate(r.Context(), session.UserID, session.AccessScope, id, input, false)
@@ -92,7 +95,9 @@ func (h *Handler) failure(w http.ResponseWriter, err error) {
 	if errors.Is(err, service.ErrLocked) {
 		helpers.WriteError(w, 409, "booking_locked", "Booking is locked or inaccessible")
 	} else if errors.Is(err, service.ErrValidation) {
-		helpers.WriteError(w, 422, "invalid_security_change", "Invalid IDs or unsupported capability scope")
+		helpers.WriteError(w, 422, "invalid_participant", "Check the required participant details")
+	} else if errors.Is(err, models.ErrQuestionnaire) {
+		helpers.WriteError(w, 422, "invalid_questionnaire_answers", "Check the required questions and available answers")
 	} else {
 		helpers.WriteDataError(w, err)
 	}

@@ -239,6 +239,19 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
 - The bootstrap loads the base theme before the component styles. The schedule
   filter panel and sign-in card use the shared surface, border, and radius
   settings, and both inherit the base font.
+- Migration 0035 adds participant snapshots and `trip_answers` to
+  `at_booking_people`. Trip types provide default questions and organizers can
+  publish trip-specific revisions. Participant saves lock the trip and booking,
+  check the questionnaire revision, and write the details in the same transaction.
+  Revised answers retain a copy of the previous revision's responses. The booking
+  people endpoint serves details within existing booking scope. A separate
+  report endpoint checks that the requester owns the trip before returning details.
+- New bookings require complete participant fields and required trip answers
+  during review, new checkout preparation, and free confirmation. Existing
+  bookings and already-open checkout attempts retain their original path.
+  Submitted membership categories are stored independently of the verified
+  account membership used in pricing. Build and verify the new image before
+  applying migration 0035 and its runtime grants, and coordinate the API cutover.
 - Trip edit forms load difficulty, status, type, and cost-group options before
   rendering. The view cancels the lookup on hide or reset and offers Retry on failure.
 - Make Booking's Add Person form uses

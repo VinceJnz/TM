@@ -44,11 +44,12 @@ const ApiURL = "/tripsReport"
 
 type TableData struct {
 	api.TripReportDTO
-	Type        string `json:"type"`
-	Grade       string `json:"grade"`
-	Status      string `json:"status"`
-	Location    string `json:"location"`
-	Description string `json:"description"`
+	Type           string `json:"type"`
+	Grade          string `json:"grade"`
+	Status         string `json:"status"`
+	Location       string `json:"location"`
+	Description    string `json:"description"`
+	CanReadDetails bool   `json:"can_read_details"`
 }
 
 type UI struct {

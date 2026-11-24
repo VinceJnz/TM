@@ -2,6 +2,7 @@ package participants
 
 import (
 	store "api-server/v2/modelMethods/participants"
+	"api-server/v2/modelMethods/trips"
 	"api-server/v2/models"
 	"context"
 	"errors"
@@ -47,6 +48,33 @@ func (s Service) Mutate(ctx context.Context, actor int, scope string, id int, in
 	}
 	if err != nil {
 		return 0, err
+	}
+	if input.Details != nil && !remove {
+		details := *input.Details
+		if !details.Valid() {
+			return 0, ErrValidation
+		}
+		trip := int(parent.TripID.Int64)
+		current, err := trips.Questionnaire(ctx, tx, trip, 0)
+		if err != nil {
+			return 0, err
+		}
+		if details.QuestionnaireRevision != current.Revision {
+			return 0, models.ErrStaleRecord
+		}
+		if err := current.ValidateAnswers(details.Answers, true); err != nil {
+			return 0, err
+		}
+		if current.Revision == 0 && len(current.Questions) > 0 {
+			current.Revision = 1
+			if err := trips.InsertQuestionnaire(ctx, tx, trip, current); err != nil {
+				return 0, err
+			}
+			details.QuestionnaireRevision = current.Revision
+		}
+		if err := s.Store.SaveDetails(ctx, tx, id, details); err != nil {
+			return 0, err
+		}
 	}
 	return id, tx.Commit()
 }

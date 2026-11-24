@@ -44,6 +44,7 @@ func TestScheduleFiltersBeforePagingAndIncludesOverlappingTrips(t *testing.T) {
 			(3, 'Hard walk', '2026-11-02', '2026-11-02', 10, 1, 2, 1, NULL, NULL),
 			(4, 'Overlapping walk', '2026-10-31', '2026-11-01', 10, 1, 1, 1, NULL, 'Overnight'),
 			(5, 'December walk', '2026-12-01', '2026-12-01', 10, 1, 1, 1, NULL, NULL);
+		ALTER TABLE at_trips ADD COLUMN owner_id integer NOT NULL DEFAULT 1;
 	`)
 	store := tripreport.Store{DB: db}
 	month := time.Date(2026, time.November, 1, 0, 0, 0, 0, time.UTC)

@@ -146,6 +146,8 @@ func writeBookingCheckoutError(w http.ResponseWriter, err error) {
 		helpers.WriteError(w, http.StatusConflict, "booking_total_changed", "The booking total changed. Review the booking again.")
 	case errors.Is(err, paymentLedger.ErrCapacity):
 		helpers.WriteError(w, http.StatusConflict, "capacity_unavailable", "The trip has insufficient space for this booking.")
+	case errors.Is(err, paymentLedger.ErrParticipantDetails):
+		helpers.WriteError(w, http.StatusConflict, "participant_details_required", "Complete the required details for each participant before continuing.")
 	default:
 		helpers.WriteError(w, http.StatusConflict, "checkout_unavailable", "Could not prepare this booking. Check the participants and try again.")
 	}
@@ -188,7 +190,8 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := checkout.New(h.appConf.Db, h.appConf.PaymentSvc).Start(r.Context(), id, user.UserID, user.Email, h.appConf.PaymentSvc.Domain, expected...)
 	if err != nil {
-		if errors.Is(err, paymentLedger.ErrQuoteChanged) || errors.Is(err, paymentLedger.ErrVoucherUnavailable) || errors.Is(err, paymentLedger.ErrCapacity) {
+		if errors.Is(err, paymentLedger.ErrQuoteChanged) || errors.Is(err, paymentLedger.ErrVoucherUnavailable) ||
+			errors.Is(err, paymentLedger.ErrCapacity) || errors.Is(err, paymentLedger.ErrParticipantDetails) {
 			writeBookingCheckoutError(w, err)
 			return
 		}

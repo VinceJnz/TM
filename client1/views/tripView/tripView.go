@@ -79,6 +79,7 @@ type ItemEditor struct {
 	Children      children
 	Page          httpProcessor.Page
 	editLoad      httpProcessor.LoadScope
+	questionLoad  httpProcessor.LoadScope
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -128,6 +129,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 
 func (editor *ItemEditor) ResetView() {
 	editor.editLoad.Cancel()
+	editor.questionLoad.Cancel()
 	viewHelpers.Pending(editor.Div, false)
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
@@ -151,6 +153,7 @@ func (editor *ItemEditor) Toggle() {
 
 func (editor *ItemEditor) Hide() {
 	editor.editLoad.Cancel()
+	editor.questionLoad.Cancel()
 	viewHelpers.Pending(editor.Div, false)
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
@@ -164,12 +167,14 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
+	editor.questionLoad.Cancel()
 	date := time.Now().Truncate(24 * time.Hour)
 	editor.openEdit(TableData{FromDate: date, ToDate: date}, viewHelpers.ItemStateAdding)
 	return nil
 }
 
 func (editor *ItemEditor) openEdit(record TableData, state viewHelpers.ItemState) {
+	editor.questionLoad.Cancel()
 	ticket := editor.editLoad.Start()
 	viewHelpers.Pending(editor.Div, true)
 	go func() {
@@ -574,6 +579,13 @@ func (editor *ItemEditor) populateItemList() {
 				return nil
 			})
 			itemDiv.Call("appendChild", editButton)
+			questions := viewHelpers.Button(func(js.Value, []js.Value) any {
+				editor.openQuestionnaire(record)
+				return nil
+			}, editor.document, "Booking questions", "trip-questions-"+strconv.Itoa(record.ID))
+			viewHelpers.Action(questions, "PUT")
+			viewHelpers.StyleButtonSecondary(questions)
+			itemDiv.Call("appendChild", questions)
 
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")

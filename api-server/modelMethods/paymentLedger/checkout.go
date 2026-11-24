@@ -67,6 +67,9 @@ func Prepare(ctx context.Context, db *sqlx.DB, bookingID, owner int, email, doma
 	if existing.Valid {
 		return a, ErrCheckoutUnavailable
 	}
+	if err := requireParticipantDetails(ctx, tx, bookingID); err != nil {
+		return a, err
+	}
 	var cutoff sql.NullTime
 	var voucherID sql.NullInt64
 	var code string

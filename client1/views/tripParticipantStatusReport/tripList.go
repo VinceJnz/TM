@@ -130,7 +130,7 @@ func (e *ItemEditor) populateItemList() {
 			open(expanded)
 			if expanded && !loaded {
 				loaded = true
-				e.fetchRoster(record.TripID, roster, page, scope)
+				e.fetchRoster(record.TripID, record.CanReadDetails, roster, page, scope)
 			}
 			return nil
 		})
@@ -138,7 +138,7 @@ func (e *ItemEditor) populateItemList() {
 			open(true)
 			if !loaded {
 				loaded = true
-				e.fetchRoster(record.TripID, roster, page, scope)
+				e.fetchRoster(record.TripID, record.CanReadDetails, roster, page, scope)
 			}
 			book.NewItemData(js.Null(), nil)
 			book.Display()
@@ -153,7 +153,7 @@ func (e *ItemEditor) populateItemList() {
 	}
 	viewHelpers.PageControls(e.ListDiv, &e.Page, len(e.Records), func() { e.RecordState = RecordStateReloadRequired; e.FetchItems() })
 }
-func (e *ItemEditor) fetchRoster(id int, root js.Value, page *httpProcessor.Page, scope *httpProcessor.LoadScope) {
+func (e *ItemEditor) fetchRoster(id int, canReadDetails bool, root js.Value, page *httpProcessor.Page, scope *httpProcessor.LoadScope) {
 	ticket := scope.Start()
 	pending := page.Snapshot()
 	viewHelpers.Pending(root, true)
@@ -165,7 +165,7 @@ func (e *ItemEditor) fetchRoster(id int, root js.Value, page *httpProcessor.Page
 		}
 		viewHelpers.Pending(root, false)
 		if err != nil {
-			viewHelpers.RenderRetry(root, func() { e.fetchRoster(id, root, page, scope) })
+			viewHelpers.RenderRetry(root, func() { e.fetchRoster(id, canReadDetails, root, page, scope) })
 			return
 		}
 		*page = pending
@@ -192,8 +192,11 @@ func (e *ItemEditor) fetchRoster(id int, root js.Value, page *httpProcessor.Page
 				participant.Call("append", " | Status: "+participantStatusLabel(r.BookingStatus)+" | Position: "+strconv.Itoa(r.BookingPosition))
 			}
 			booking.Call("appendChild", participant)
+			if canReadDetails && r.ParticipantID > 0 {
+				e.addLeaderDetails(booking, r.ParticipantID)
+			}
 		}
 		viewHelpers.EmptyState(root, count)
-		viewHelpers.PageControls(root, page, len(rows), func() { e.fetchRoster(id, root, page, scope) })
+		viewHelpers.PageControls(root, page, len(rows), func() { e.fetchRoster(id, canReadDetails, root, page, scope) })
 	}()
 }

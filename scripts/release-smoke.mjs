@@ -171,6 +171,18 @@ try {
   for(let i=0;i<60;i++){const result=await send('Runtime.evaluate',{expression:'window.__tmWriteFailures',returnByValue:true});if(result.result?.value===2)break;await delay(100);}
   const retries=await send('Runtime.evaluate',{expression:'window.__tmWriteFailures',returnByValue:true});assert.equal(retries.result.value,2,'failed edit was not retryable');
   await send('Runtime.evaluate',{expression:"window.fetch=window.__tmWriteFetch;delete window.__tmWriteFetch"});
+  await send('Runtime.evaluate',{expression:"document.querySelector('#trip-questions-1').click()"});
+  await waitUI("!!document.querySelector('#mainContent form [name=kind]')",'trip organizer could not open booking questions');
+  await send('Runtime.evaluate',{expression:`(() => {
+    const form = document.querySelector('#mainContent form [name=kind]').closest('form');
+    Array.from(form.querySelectorAll('button')).find(b=>b.textContent==='Add question').click();
+    const fields = form.querySelectorAll('fieldset');
+    const question = fields[fields.length-1];
+    question.querySelector('[name=key]').value = 'equipment';
+    question.querySelector('[name=label]').value = 'What equipment do you need?';
+    form.requestSubmit();
+  })()`});
+  await waitUI("!document.querySelector('#mainContent form [name=kind]')",'trip organizer could not publish booking questions');
   // A failed list request must expose a working Retry action.
   await send('Runtime.evaluate',{expression:`window.__tmFetch=window.fetch;let failReport=true;window.fetch=(url,options)=>{if(String(url).includes('/tripsReport')&&failReport){failReport=false;return Promise.resolve(new Response('synthetic unavailable',{status:503}));}return window.__tmFetch(url,options);};`});
   await send('Runtime.evaluate', {expression: "location.hash='/tripsreport'"});
@@ -256,6 +268,8 @@ try {
   await waitUI(`(${tripBooking})?.textContent.includes('Step 2 of 4')`,'saving did not advance to people');
   await clickBooking('Add person');
   const personInput = `(${tripBooking}).querySelector('#itemPerson')`;
+  await waitUI(`!!${personInput}`,'participant questionnaire did not load');
+  await waitUI(`(${tripBooking}).textContent.includes('What equipment do you need?')`,'published question did not appear on participant form');
   const typePerson = value => send('Runtime.evaluate',{expression:`(() => { const input = ${personInput}; input.focus(); input.value = ${JSON.stringify(value)}; input.dispatchEvent(new Event('input', {bubbles:true})); })()`});
   const selectPerson = async () => {
     await waitUI(`(${tripBooking}).querySelector('#itemPerson-matches [role=option]')?.textContent.includes('Other Member')`,'typing did not find a participant');
@@ -270,6 +284,15 @@ try {
   await typePerson('Other Mem');
   await waitUI(`!${personInput}.validity.valid`,'editing the name left the previous selection valid');
   await selectPerson();
+  await send('Runtime.evaluate',{expression:`(() => {
+    const form = ${personInput}.closest('form');
+    const values = ['Other Member', '0200000000', 'Synthetic address', 'Test Contact', '0200000001', 'None'];
+    form.querySelectorAll('.tm-participant-field input').forEach((field, i) => field.value = values[i]);
+    const [membership, needsTransport, offersTransport] = form.querySelectorAll('.tm-participant-field select');
+    membership.value = 'member';
+    needsTransport.value = 'no';
+    offersTransport.value = 'yes';
+  })()`});
   await clickBooking('Submit');
   await waitUI(`(${tripBooking})?.textContent.includes('Other Member') && !(${tripBooking}).querySelector('#itemPerson')`,'participant was not saved');
   await clickBooking('Back to booking details');

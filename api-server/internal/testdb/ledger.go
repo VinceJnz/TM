@@ -1,6 +1,7 @@
 package testdb
 
 const Ledger = Bookings + `
+ALTER TABLE at_bookings ADD COLUMN requires_participant_details boolean NOT NULL DEFAULT false;
 ALTER TABLE at_trips ADD COLUMN max_participants integer DEFAULT 10;
 CREATE TABLE at_checkout_reservations(booking_id integer PRIMARY KEY,seats integer,expires_at timestamptz);
 ALTER TABLE at_bookings ADD COLUMN IF NOT EXISTS amount_paid integer,ADD COLUMN IF NOT EXISTS payment_date timestamptz;

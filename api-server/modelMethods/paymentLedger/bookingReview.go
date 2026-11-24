@@ -99,6 +99,9 @@ func ReviewBooking(ctx context.Context, db *sqlx.DB, bookingID, owner int) (Book
 	err = tx.GetContext(ctx, &review.AmountMinor, `SELECT amount_minor FROM at_checkout_attempts
 		WHERE booking_id=$1 AND state IN ('pending','attached') LIMIT 1`, bookingID)
 	if errors.Is(err, sql.ErrNoRows) {
+		if err := requireParticipantDetails(ctx, tx, bookingID); err != nil {
+			return review, err
+		}
 		review.AmountMinor, err = bookingTotal(ctx, tx, bookingID)
 	}
 	if err != nil {
@@ -129,6 +132,9 @@ func ConfirmFreeBooking(ctx context.Context, db *sqlx.DB, bookingID, owner int) 
 	}
 	if confirmed {
 		return tx.Commit()
+	}
+	if err := requireParticipantDetails(ctx, tx, bookingID); err != nil {
+		return err
 	}
 	if voucher == "" {
 		return ErrQuoteChanged

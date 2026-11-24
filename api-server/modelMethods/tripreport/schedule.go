@@ -8,6 +8,7 @@ import (
 type ScheduleFilter struct {
 	Month           *time.Time
 	TypeID, GradeID int
+	ActorID         int
 	Upcoming, Past  bool
 }
 
@@ -22,6 +23,7 @@ type Summary struct {
 	Status          string    `db:"status" json:"status"`
 	Location        string    `db:"location" json:"location"`
 	Description     string    `db:"description" json:"description"`
+	CanReadDetails  bool      `db:"can_read_details" json:"can_read_details"`
 }
 
 type FilterOption struct {
@@ -51,7 +53,7 @@ func (s Store) Schedule(ctx context.Context, filter ScheduleFilter, limit, offse
 		SELECT t.id AS trip_id, t.trip_name, t.from_date, t.to_date, t.max_participants,
 			COALESCE(ty.type, '') AS type, COALESCE(d.level, '') AS grade,
 			COALESCE(st.status, '') AS status, COALESCE(t.location, '') AS location,
-			COALESCE(t.description, '') AS description
+			COALESCE(t.description, '') AS description, t.owner_id=$9 AS can_read_details
 		FROM at_trips t
 		LEFT JOIN et_trip_type ty ON ty.id=t.trip_type_id
 		LEFT JOIN et_trip_difficulty d ON d.id=t.difficulty_level_id
@@ -63,7 +65,7 @@ func (s Store) Schedule(ctx context.Context, filter ScheduleFilter, limit, offse
 			AND (NOT $5::boolean OR t.to_date >= (now() AT TIME ZONE 'Pacific/Auckland')::date)
 			AND (NOT $6::boolean OR t.to_date < (now() AT TIME ZONE 'Pacific/Auckland')::date)
 		ORDER BY CASE WHEN $6 THEN t.from_date END DESC, t.from_date, t.id
-		LIMIT $7 OFFSET $8`, start, end, filter.TypeID, filter.GradeID, filter.Upcoming, filter.Past, limit+1, offset)
+		LIMIT $7 OFFSET $8`, start, end, filter.TypeID, filter.GradeID, filter.Upcoming, filter.Past, limit+1, offset, filter.ActorID)
 	if err != nil {
 		return nil, false, err
 	}

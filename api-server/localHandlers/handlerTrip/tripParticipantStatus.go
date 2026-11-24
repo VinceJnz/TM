@@ -50,7 +50,7 @@ func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.URL.Query().Get("view") == "schedule":
 		query := r.URL.Query()
-		filter := tripreport.ScheduleFilter{}
+		filter := tripreport.ScheduleFilter{ActorID: session.UserID}
 		for name, id := range map[string]*int{"type": &filter.TypeID, "grade": &filter.GradeID} {
 			if raw := query.Get(name); raw != "" {
 				n, err := strconv.ParseInt(raw, 10, 32)

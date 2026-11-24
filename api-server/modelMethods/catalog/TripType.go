@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	TripTypeQryGetAll = `SELECT * FROM et_trip_type`
-	TripTypeQryGet    = `SELECT * FROM et_trip_type WHERE id = $1`
+	TripTypeQryGetAll = `SELECT id,type,created,modified FROM et_trip_type`
+	TripTypeQryGet    = `SELECT id,type,created,modified FROM et_trip_type WHERE id = $1`
 	TripTypeQryCreate = `INSERT INTO et_trip_type (type)
 					VALUES ($1)
 					RETURNING id`
