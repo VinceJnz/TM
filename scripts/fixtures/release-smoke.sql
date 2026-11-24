@@ -23,8 +23,8 @@ INSERT INTO at_trip_cost_groups(id,description) VALUES(1,'Synthetic prices');
 INSERT INTO at_trip_costs(trip_cost_group_id,member_status_id,user_age_group_id,season_id,amount) VALUES(1,1,1,1,10);
 INSERT INTO at_trips(id,owner_id,trip_name,from_date,to_date,trip_status_id,trip_type_id,trip_cost_group_id,max_participants)
 VALUES(1,1,'Synthetic trip','2026-01-01','2026-01-03',2,1,1,10);
-INSERT INTO at_bookings(id,owner_id,trip_id,notes,from_date,to_date,booking_status_id)
-VALUES(1,1,1,'Member booking','2026-01-01','2026-01-02',1),(2,2,1,'Other booking','2026-01-01','2026-01-02',1);
+INSERT INTO at_bookings(id,owner_id,trip_id,notes,from_date,to_date,booking_status_id,requires_participant_details)
+VALUES(1,1,1,'Member booking','2026-01-01','2026-01-02',1,false),(2,2,1,'Other booking','2026-01-01','2026-01-02',1,false);
 INSERT INTO at_booking_people(owner_id,booking_id,person_id) VALUES(1,1,1),(2,2,2);
 INSERT INTO at_booking_vouchers(code,fixed_cost,expiry_date) VALUES('SMOKE-FREE',0,CURRENT_DATE+30);
 UPDATE at_bookings SET voucher_code='SMOKE-FREE' WHERE id=1;
