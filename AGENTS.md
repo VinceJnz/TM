@@ -74,6 +74,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## WASM frontend
 
+- Use the shared member form and card styles for sign-in, registration, recovery, and profile forms. Reuse the booking field grid for paired controls, keep labels and validation associated with their controls, and preserve authentication and verification flows when changing presentation.
+
 - In the member Trip List, keep the selected month, trip type, and grade in the schedule URL. Apply the filters to the full result before pagination. Keep participant rosters lazy and under the existing report access policy.
 
 - Keep browser code in `client1/`; preserve compatibility with both configured Go and TinyGo builds when changing shared frontend paths.

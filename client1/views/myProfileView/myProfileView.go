@@ -141,18 +141,18 @@ func (editor *ItemEditor) onCompletionMsg(msg string) {
 func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "")
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "myProfileEditForm")
+	form.Set("className", "tm-member-form")
+	card := editor.document.Call("createElement", "section")
+	card.Set("className", "tm-card tm-member-card")
 
 	title := editor.document.Call("createElement", "h2")
 	title.Set("innerHTML", "My Profile")
-	editor.EditDiv.Call("appendChild", title)
+	card.Call("appendChild", title)
 
 	readonly := editor.document.Call("createElement", "div")
 	readonly.Set("innerHTML", "<p><strong>Username:</strong> "+safehtml.EscapeString(editor.CurrentRecord.Username)+"</p><p><strong>Member Code:</strong> "+safehtml.EscapeString(editor.CurrentRecord.MemberCode)+"</p>")
-	viewHelpers.SetStyles(readonly, map[string]string{
-		"margin-bottom": "16px",
-		"color":         "#4a5a6a",
-	})
-	editor.EditDiv.Call("appendChild", readonly)
+	readonly.Set("className", "tm-member-facts tm-trip-meta")
+	card.Call("appendChild", readonly)
 
 	var localObjs UI
 
@@ -172,16 +172,17 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(birthDateValue, editor.document, "Birth Date", "date", "profileBirthDate")
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
-	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Hide Details", "checkbox", "profileHidden")
+	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Hide my profile in member listings", "checkbox", "profileHidden")
 
-	form.Call("appendChild", localObjs.Name)
-	form.Call("appendChild", localObjs.Email)
-	form.Call("appendChild", localObjs.Address)
-	form.Call("appendChild", localObjs.BirthDate)
-	form.Call("appendChild", localObjs.AccountHidden)
+	fields := editor.document.Call("createElement", "div")
+	fields.Set("className", "tm-booking-fields")
+	localObjs.Address.Get("classList").Call("add", "tm-field-wide")
+	localObjs.AccountHidden.Get("classList").Call("add", "tm-field-wide")
+	fields.Call("append", localObjs.Name, localObjs.Email, localObjs.Address, localObjs.BirthDate, localObjs.AccountHidden)
+	form.Call("appendChild", fields)
 
 	if editor.canEditProfile() {
-		submitBtn := viewHelpers.SubmitButton(editor.document, "Save", "submitProfileEditBtn")
+		submitBtn := viewHelpers.SubmitButton(editor.document, "Save profile", "submitProfileEditBtn")
 		viewHelpers.StyleButtonPrimary(submitBtn)
 		buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn)
 		form.Call("appendChild", buttonRow)
@@ -194,7 +195,8 @@ func (editor *ItemEditor) populateEditForm() {
 		}
 	}
 
-	editor.EditDiv.Call("appendChild", form)
+	card.Call("appendChild", form)
+	editor.EditDiv.Call("appendChild", card)
 }
 
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{} {

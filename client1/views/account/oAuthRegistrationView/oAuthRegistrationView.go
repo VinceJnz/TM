@@ -598,15 +598,7 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 	editor.CurrentRecord = TableData{Name: name}
 
 	container := editor.document.Call("createElement", "div")
-	container.Set("className", "oauth-complete-registration-dialog")
-	viewHelpers.SetStyles(container, map[string]string{
-		"maxWidth":        "420px",
-		"padding":         "20px",
-		"marginTop":       "16px",
-		"border":          "1px solid #d0d7de",
-		"borderRadius":    "8px",
-		"backgroundColor": "#f8fafc",
-	})
+	container.Set("className", "oauth-complete-registration-dialog tm-card tm-member-card")
 
 	title := editor.document.Call("createElement", "h3")
 	title.Set("innerText", "Complete your profile")
@@ -695,21 +687,16 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 		return nil
 	}, editor.document, "oauthCompletionForm")
 
-	usernameLabel := usernameFieldset.Get("firstChild")
-	viewHelpers.StyleStringEdit(usernameFieldset, usernameLabel, usernameInput, true)
+	form.Set("className", "tm-member-form")
 	usernameInput.Set("required", true)
 	usernameInput.Set("minLength", 3)
 	usernameInput.Set("maxLength", 20)
 	usernameInput.Set("placeholder", "Choose a username")
 	form.Call("appendChild", usernameFieldset)
 
-	addressLabel := addressFieldset.Get("firstChild")
-	viewHelpers.StyleStringEdit(addressFieldset, addressLabel, addressInput, false)
 	addressInput.Set("placeholder", "Optional")
 	form.Call("appendChild", addressFieldset)
 
-	birthDateLabel := birthDateFieldset.Get("firstChild")
-	viewHelpers.StyleStringEdit(birthDateFieldset, birthDateLabel, birthDateInput, false)
 	form.Call("appendChild", birthDateFieldset)
 
 	ageGroupFieldset := editor.document.Call("createElement", "fieldset")
@@ -720,12 +707,6 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 	ageGroupFieldset.Call("appendChild", ageGroupLabel)
 
 	ageGroupSelect.Set("id", "oauthCompletionUserAgeGroupID")
-	viewHelpers.SetStyles(ageGroupSelect, map[string]string{
-		"width":        "100%",
-		"padding":      "8px",
-		"marginBottom": "15px",
-		"boxSizing":    "border-box",
-	})
 	placeholderOpt := editor.document.Call("createElement", "option")
 	placeholderOpt.Set("value", "0")
 	placeholderOpt.Set("textContent", "-- Select Age Group --")
@@ -734,25 +715,13 @@ func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {
 	form.Call("appendChild", ageGroupFieldset)
 	editor.populateAgeGroupsDropdown(ageGroupSelect, 0)
 
-	hiddenLabel := hiddenFieldset.Get("firstChild")
-	viewHelpers.StyleBooleanEdit(hiddenFieldset, hiddenLabel, hiddenInput, "20px")
 	form.Call("appendChild", hiddenFieldset)
 
 	submitBtn.Set("id", "oauthCompletionSubmit")
 	submitBtn.Set("type", "submit")
 	submitBtn.Set("className", "btn btn-primary")
-	submitBtn.Set("textContent", "Submit")
-	viewHelpers.StyleSubmitButton(submitBtn)
-	viewHelpers.SetStyles(submitBtn, map[string]string{
-		"display":         "block",
-		"marginTop":       "12px",
-		"fontWeight":      "700",
-		"backgroundColor": "#1d4ed8",
-		"color":           "#ffffff",
-		"border":          "1px solid #1e40af",
-		"boxShadow":       "0 10px 24px rgba(29, 78, 216, 0.22)",
-	})
-	form.Call("appendChild", submitBtn)
+	submitBtn.Set("textContent", "Complete registration")
+	form.Call("appendChild", viewHelpers.FormButtonRow(editor.document, submitBtn))
 
 	container.Call("appendChild", form)
 	editor.Elements.EditDiv.Call("appendChild", container)

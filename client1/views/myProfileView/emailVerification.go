@@ -14,6 +14,10 @@ func (editor *ItemEditor) renderEmailVerification() {
 	}
 	block := editor.document.Call("createElement", "div")
 	block.Set("id", "profileEmailVerification")
+	block.Set("className", "tm-card tm-member-card")
+	title := editor.document.Call("createElement", "h2")
+	title.Set("textContent", "Verify your email change")
+	block.Call("appendChild", title)
 	oldRow, oldCode := viewHelpers.StringEdit("", editor.document, "Current email approval code", "text", "profileOldEmailCode")
 	newRow, newCode := viewHelpers.StringEdit("", editor.document, "New email verification code", "text", "profileNewEmailCode")
 	form := viewHelpers.Form(func(_ js.Value, args []js.Value) any {
@@ -37,9 +41,11 @@ func (editor *ItemEditor) renderEmailVerification() {
 		}()
 		return nil
 	}, editor.document, "profileEmailVerificationForm")
+	form.Set("className", "tm-member-form")
 	form.Call("appendChild", oldRow)
 	form.Call("appendChild", newRow)
-	form.Call("appendChild", viewHelpers.SubmitButton(editor.document, "Verify email change", "profileConfirmEmail"))
+	form.Call("appendChild", viewHelpers.FormButtonRow(editor.document,
+		viewHelpers.SubmitButton(editor.document, "Verify email change", "profileConfirmEmail")))
 	block.Call("appendChild", form)
 	editor.Div.Call("appendChild", block)
 }

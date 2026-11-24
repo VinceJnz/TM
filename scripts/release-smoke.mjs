@@ -133,6 +133,16 @@ try {
   assert.equal(menuClose.result?.value,true,'side menu close symbol or action is incorrect');
   const safeUserText=await send('Runtime.evaluate',{expression:"window.__tmXss!==true && !document.querySelector('#userDisplay img') && document.querySelector('#userDisplay').textContent.includes('<img')",returnByValue:true});
   assert.equal(safeUserText.result?.value,true,'stored profile markup executed or was interpreted as HTML');
+  await send('Runtime.evaluate',{expression:"location.hash='/myprofile'"});
+  await waitUI("document.querySelector('#myProfileEditForm.tm-member-form')?.getClientRects().length>0 && document.querySelector('#submitProfileEditBtn')?.textContent==='Save profile'",'shared profile form did not render');
+  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await waitUI("(() => { const fields=document.querySelector('#myProfileEditForm .tm-booking-fields'); return innerWidth===390 && fields.getBoundingClientRect().right<=391 && getComputedStyle(fields).gridTemplateColumns.trim().split(/\\s+/).length===1; })()",'profile fields did not fit the mobile viewport');
+  await send('Emulation.clearDeviceMetricsOverride');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#profileAddress').value='Synthetic profile address';document.querySelector('#myProfileEditForm').requestSubmit()"});
+  await waitUI("document.querySelector('#statusOutput > [role=status]')?.textContent==='Profile updated successfully'",'profile form could not save');
+  const profile = await request(`${prefix}/myProfile`, 'GET', undefined, cookie);
+  assert.equal(profile.status,200);
+  assert.equal(JSON.parse(profile.body).user_address,'Synthetic profile address');
   await send('Runtime.evaluate', {expression: "location.hash='/mybookings'"});
   const pager = "Array.from(document.querySelectorAll('.tm-pagination')).find(el=>el.getClientRects().length>0)";
   async function waitForPage(label) {
@@ -344,6 +354,16 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   assert.equal(logout.status,202,'session-owned POST logout failed');
   assert(logout.headers['set-cookie']?.some(value=>value.startsWith('session=;')&&value.includes('Max-Age=0')),'logout did not expire browser cookie');
   assert.equal((await request(`${prefix}/bookings`,'GET',undefined,cookie)).status,401,'revoked session remained valid');
+  await send('Page.navigate',{url:`${origin}/#/login-register`});
+  await waitUI("document.querySelector('#loginForm.tm-member-form')?.getClientRects().length>0",'styled sign-in form did not render');
+  await send('Runtime.evaluate',{expression:"document.querySelector('.tm-member-recovery summary').click()"});
+  await waitUI("document.querySelector('#resetEmail')?.getClientRects().length>0 && document.querySelector('#resetCode')?.closest('form')?.classList.contains('tm-member-form')",'password recovery forms did not use the shared layout');
+  await send('Runtime.evaluate',{expression:"document.querySelector('.auth-form a').click()"});
+  await waitUI("document.querySelector('#regForm.tm-member-form')?.getClientRects().length>0 && document.querySelector('label[for=regToken]')?.textContent==='Email verification code'",'styled registration form did not render');
+  const popup = await send('Page.addScriptToEvaluateOnNewDocument',{source:"if (new URLSearchParams(location.search).has('oauth-register')) Object.defineProperty(window,'opener',{value:{}})"});
+  await send('Page.navigate',{url:`${origin}/?oauth-register=true`});
+  await waitUI("document.querySelector('.tm-member-popup #registrationForm.tm-member-form')?.getClientRects().length>0 && document.querySelector('#submitBtn')?.textContent==='Complete registration'",'Google completion form did not use the shared layout');
+  await send('Page.removeScriptToEvaluateOnNewDocument',{identifier:popup.identifier});
   const limitedLogin = await request(`${prefix}/auth/verify-otp`, 'POST', {token: 'synthetic-booking-otp'});
   assert.equal(limitedLogin.status, 200, 'booking member OTP login failed');
   const limitedCookie = limitedLogin.headers['set-cookie'].find(value=>value.startsWith('session=')).split(';')[0];

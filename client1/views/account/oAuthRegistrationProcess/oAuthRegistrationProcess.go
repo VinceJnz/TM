@@ -275,17 +275,7 @@ func (p *Process) showRegistrationFormInPopup() {
 
 	// Create container
 	container := doc.Call("createElement", "div")
-	container.Set("className", "oauth-registration-container")
-	viewHelpers.SetStyles(container, map[string]string{
-		"maxWidth":        "400px",
-		"margin":          "40px auto",
-		"padding":         "30px",
-		"fontFamily":      "sans-serif",
-		"backgroundColor": "#ffffff",
-		"border":          "1px solid #d0d7de",
-		"borderRadius":    "10px",
-		"boxShadow":       "0 12px 30px rgba(15, 23, 42, 0.12)",
-	})
+	container.Set("className", "oauth-registration-container tm-card tm-member-card tm-member-popup")
 
 	// Title
 	title := doc.Call("createElement", "h2")
@@ -295,7 +285,7 @@ func (p *Process) showRegistrationFormInPopup() {
 	// Info message
 	info := doc.Call("createElement", "p")
 	info.Set("textContent", "Please provide additional information to complete your registration.")
-	viewHelpers.SetStyleProperty(info, "color", "#666")
+	info.Set("className", "tm-trip-meta")
 	container.Call("appendChild", info)
 
 	// Status message div
@@ -307,11 +297,10 @@ func (p *Process) showRegistrationFormInPopup() {
 	// Create form
 	form := doc.Call("createElement", "form")
 	form.Set("id", "registrationForm")
+	form.Set("className", "tm-member-form")
 
 	// Username field
 	usernameFieldset, usernameInput := viewHelpers.StringEdit("", doc, "Username (required)", "text", "username")
-	usernameLabel := usernameFieldset.Get("firstChild")
-	viewHelpers.StyleStringEdit(usernameFieldset, usernameLabel, usernameInput, true)
 	usernameInput.Set("required", true)
 	usernameInput.Set("minLength", 3)
 	usernameInput.Set("maxLength", 20)
@@ -320,15 +309,11 @@ func (p *Process) showRegistrationFormInPopup() {
 
 	// Address field (optional)
 	addressFieldset, addressInput := viewHelpers.StringEdit("", doc, "Address (optional)", "text", "address")
-	addressLabel := addressFieldset.Get("firstChild")
-	viewHelpers.StyleStringEdit(addressFieldset, addressLabel, addressInput, false)
 	addressInput.Set("placeholder", "Your address")
 	form.Call("appendChild", addressFieldset)
 
 	// Birth date field
 	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", doc, "Birth Date", "date", "birth_date")
-	birthDateLabel := birthDateFieldset.Get("firstChild")
-	viewHelpers.StyleStringEdit(birthDateFieldset, birthDateLabel, birthDateInput, false)
 	form.Call("appendChild", birthDateFieldset)
 
 	// Age group dropdown
@@ -340,12 +325,6 @@ func (p *Process) showRegistrationFormInPopup() {
 	ageGroupFieldset.Call("appendChild", ageGroupLabel)
 	ageGroupSelect := doc.Call("createElement", "select")
 	ageGroupSelect.Set("id", "user_age_group_id")
-	viewHelpers.SetStyles(ageGroupSelect, map[string]string{
-		"width":        "100%",
-		"padding":      "8px",
-		"marginBottom": "15px",
-		"boxSizing":    "border-box",
-	})
 	placeholderOpt := doc.Call("createElement", "option")
 	placeholderOpt.Set("value", "0")
 	placeholderOpt.Set("textContent", "-- Select Age Group --")
@@ -356,8 +335,6 @@ func (p *Process) showRegistrationFormInPopup() {
 
 	// Account hidden checkbox
 	checkboxFieldset, accountHiddenInput := viewHelpers.BooleanEdit(false, doc, "Hide my account from public listings", "checkbox", "account_hidden")
-	checkboxLabel := checkboxFieldset.Get("firstChild")
-	viewHelpers.StyleBooleanEdit(checkboxFieldset, checkboxLabel, accountHiddenInput, "20px")
 	form.Call("appendChild", checkboxFieldset)
 
 	// Submit button
@@ -365,19 +342,8 @@ func (p *Process) showRegistrationFormInPopup() {
 	submitBtn.Set("id", "submitBtn")
 	submitBtn.Set("type", "submit")
 	submitBtn.Set("className", "btn btn-primary")
-	submitBtn.Set("textContent", "Submit")
-	viewHelpers.StyleSubmitButton(submitBtn)
-	viewHelpers.SetStyles(submitBtn, map[string]string{
-		"display":         "block",
-		"marginTop":       "12px",
-		"fontWeight":      "700",
-		"backgroundColor": "#1d4ed8",
-		"color":           "#ffffff",
-		"border":          "1px solid #1e40af",
-		"boxShadow":       "0 10px 24px rgba(29, 78, 216, 0.22)",
-	})
-
-	form.Call("appendChild", submitBtn)
+	submitBtn.Set("textContent", "Complete registration")
+	form.Call("appendChild", viewHelpers.FormButtonRow(doc, submitBtn))
 	domEvents.
 
 		// Handle form submission
@@ -406,7 +372,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 	if len(username) < 3 || len(username) > 20 {
 		p.showStatus(statusDiv, "Username must be 3-20 characters", "error")
 		submitBtn.Set("disabled", false)
-		submitBtn.Set("textContent", "Submit")
+		submitBtn.Set("textContent", "Complete registration")
 		return
 	}
 
@@ -419,14 +385,14 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 	if ageGroupIDStr == "" || ageGroupIDStr == "0" {
 		p.showStatus(statusDiv, "Age group is required", "error")
 		submitBtn.Set("disabled", false)
-		submitBtn.Set("textContent", "Submit")
+		submitBtn.Set("textContent", "Complete registration")
 		return
 	}
 	ageGroupID, err := strconv.ParseInt(ageGroupIDStr, 10, 64)
 	if err != nil || ageGroupID <= 0 {
 		p.showStatus(statusDiv, "Invalid age group selection", "error")
 		submitBtn.Set("disabled", false)
-		submitBtn.Set("textContent", "Submit")
+		submitBtn.Set("textContent", "Complete registration")
 		return
 	}
 	regData.UserAgeGroupID = ageGroupID
@@ -436,7 +402,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 	if birthDateStr == "" {
 		p.showStatus(statusDiv, "Birth date is required", "error")
 		submitBtn.Set("disabled", false)
-		submitBtn.Set("textContent", "Submit")
+		submitBtn.Set("textContent", "Complete registration")
 		return
 	}
 	if t, err := time.Parse(viewHelpers.Layout, birthDateStr); err == nil {
@@ -444,7 +410,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 	} else {
 		p.showStatus(statusDiv, "Invalid birth date format", "error")
 		submitBtn.Set("disabled", false)
-		submitBtn.Set("textContent", "Submit")
+		submitBtn.Set("textContent", "Complete registration")
 		return
 	}
 
@@ -462,7 +428,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 				log.Printf("%v Registration failed: %v", debugTag, err)
 				p.showStatus(statusDiv, "Registration failed: "+err.Error(), "error")
 				submitBtn.Set("disabled", false)
-				submitBtn.Set("textContent", "Submit")
+				submitBtn.Set("textContent", "Complete registration")
 				return
 			}
 
@@ -491,7 +457,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 			log.Printf("%v Registration error: %v", debugTag, err)
 			p.showStatus(statusDiv, "Registration error: "+err.Error(), "error")
 			submitBtn.Set("disabled", false)
-			submitBtn.Set("textContent", "Submit")
+			submitBtn.Set("textContent", "Complete registration")
 		},
 	)
 }

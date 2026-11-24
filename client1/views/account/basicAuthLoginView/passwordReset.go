@@ -16,20 +16,23 @@ func (editor *ItemEditor) clearPasswordReset() {
 func (editor *ItemEditor) passwordResetForm() js.Value {
 	doc := editor.document
 	panel := doc.Call("createElement", "details")
+	panel.Set("className", "tm-member-recovery")
 	summary := doc.Call("createElement", "summary")
 	summary.Set("textContent", "Forgot password?")
 	panel.Call("appendChild", summary)
 
 	sendForm := doc.Call("createElement", "form")
+	sendForm.Set("className", "tm-member-form")
 	emailField, email := viewHelpers.StringEdit("", doc, "Account email", "email", "resetEmail")
 	email.Set("required", true)
 	email.Set("autocomplete", "email")
 	sendButton := viewHelpers.SubmitButton(doc, "Send reset code", "sendResetCode")
 	sendForm.Call("appendChild", emailField)
-	sendForm.Call("appendChild", sendButton)
+	sendForm.Call("appendChild", viewHelpers.FormButtonRow(doc, sendButton))
 	panel.Call("appendChild", sendForm)
 
 	resetForm := doc.Call("createElement", "form")
+	resetForm.Set("className", "tm-member-form")
 	codeField, code := viewHelpers.StringEdit("", doc, "Reset code", "text", "resetCode")
 	code.Set("autocomplete", "one-time-code")
 	passwordField, password := viewHelpers.StringEdit("", doc, "New password", "password", "resetPassword")
@@ -40,9 +43,7 @@ func (editor *ItemEditor) passwordResetForm() js.Value {
 	}
 	code.Set("required", true)
 	resetButton := viewHelpers.SubmitButton(doc, "Reset password", "submitResetPassword")
-	for _, element := range []js.Value{codeField, passwordField, confirmField, resetButton} {
-		resetForm.Call("appendChild", element)
-	}
+	resetForm.Call("append", codeField, passwordField, confirmField, viewHelpers.FormButtonRow(doc, resetButton))
 	panel.Call("appendChild", resetForm)
 
 	status := doc.Call("createElement", "p")

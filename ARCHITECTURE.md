@@ -222,6 +222,10 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   dialogs. Conflicts preserve edits and offer confirmed discard/reload; cancellation
   preserves the form. Operation results are announced through a persistent
   status region even when message history is collapsed.
+- Member account forms opt into the shared member form styles in
+  `tm-components.css`. My Profile uses the responsive booking field grid,
+  while sign-in, registration, recovery, and code verification use stacked
+  controls. Google registration completion uses the same surfaces and inputs.
 - `Action`/`ActionFor` declare permission method/resource metadata at construction.
   Visibility must not depend on button text. The server remains authoritative.
 - Native buttons, expanded/controls attributes, focus styles, wrapping layouts and

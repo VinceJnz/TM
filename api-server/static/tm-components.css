@@ -75,6 +75,32 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .tm-participant-form input:not([type=hidden]), .tm-participant-form select, .tm-participant-form textarea,
 .tm-booking-fields input, .tm-booking-fields select { width: 100%; font: inherit; }
 .tm-booking-participant .btn { margin-inline-end: .5rem; }
+.tm-member-card { box-sizing: border-box; max-width: 48rem; padding: clamp(1rem, 3vw, 1.5rem); }
+.tm-member-card h2 { margin: 0 0 .75rem; }
+.tm-member-popup { margin: 1.25rem auto; width: min(100% - 2rem, 30rem); }
+.tm-member-facts { display: flex; flex-wrap: wrap; column-gap: 1.25rem; margin-bottom: 1rem; }
+.tm-member-facts p { margin: .25rem 0; }
+.tm-member-form { display: grid; gap: .85rem; min-width: 0; }
+.tm-member-form > .input-group, .tm-member-form > .form-group,
+.tm-member-form .tm-booking-fields > .input-group {
+ margin: 0; padding: 0; border: 0; background: transparent; min-width: 0;
+}
+.tm-member-form .input-group > label, .tm-member-form .form-group > label {
+ display: block; margin-bottom: .35rem;
+}
+.tm-member-form input:not([type=checkbox]), .tm-member-form select, .tm-member-form textarea {
+ width: 100%; min-width: 0; font: inherit;
+}
+.tm-member-form .input-group:has(> input[type=checkbox]) {
+ display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .5rem; align-items: center;
+}
+.tm-member-form .input-group > input[type=checkbox] { grid-area: 1 / 1; margin: 0; }
+.tm-member-form .input-group:has(> input[type=checkbox]) > label { grid-column: 2; margin: 0; }
+.tm-member-form .input-group > [role=alert] { display: block; color: var(--tm-danger); }
+.tm-member-form .input-group > [role=alert]:empty { display: none; }
+.tm-member-form .form-button-row { margin-top: 0; }
+.tm-member-recovery > summary { cursor: pointer; padding: .65rem 0; color: var(--tm-primary-hover); }
+.tm-member-recovery > form { margin-top: .75rem; }
 @media (max-width: 600px) {
  .tm-schedule-filters { align-items: stretch; }
  .tm-schedule-filters label { flex: 1 1 8rem; }

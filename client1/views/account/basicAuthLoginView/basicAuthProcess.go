@@ -228,6 +228,7 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) any {
 func (editor *ItemEditor) regForm() js.Value {
 	// registration form
 	regForm := viewHelpers.Form(editor.handleRegisterSubmit, editor.document, "regForm")
+	regForm.Set("className", "tm-member-form")
 	regUserObj, regUserInp := viewHelpers.StringEdit("", editor.document, "Username", "text", "regUsername")
 	regEmailObj, regEmailInp := viewHelpers.StringEdit("", editor.document, "Email", "email", "regEmail")
 	regNameObj, regNameInp := viewHelpers.StringEdit("", editor.document, "Full Name", "text", "regName")
@@ -254,7 +255,8 @@ func (editor *ItemEditor) regForm() js.Value {
 
 	regHiddenObj, regHiddenInp := viewHelpers.BooleanEdit(false, editor.document, "Hide My Details", "checkbox", "regAccountHidden")
 
-	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "OTP Token", "text", "regToken")
+	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "Email verification code", "text", "regToken")
+	regTokenInp.Set("autocomplete", "one-time-code")
 	regTokenInp.Set("disabled", true)
 
 	editor.UiComponents.Username = regUserInp
@@ -283,6 +285,7 @@ func (editor *ItemEditor) regForm() js.Value {
 		viewHelpers.SubmitButton(editor.document, "Register", "regSubmit"),
 		viewHelpers.Button(editor.handleVerifyRegistration, editor.document, "Verify Registration", "verSubmit"),
 	)
+	regActions.Set("className", "input-group form-button-row")
 	regForm.Call("appendChild", regActions)
 
 	// Fetch and populate age groups dropdown
@@ -333,6 +336,7 @@ func (editor *ItemEditor) regForm_old() js.Value {
 func (editor *ItemEditor) loginForm() js.Value {
 	// login area (username/email + password -> send OTP -> verify)
 	loginForm := viewHelpers.Form(editor.handleLoginWithPassword, editor.document, "loginForm")
+	loginForm.Set("className", "tm-member-form")
 	loginUserObj, loginUserInp := viewHelpers.StringEdit("", editor.document, "Username or Email", "text", "loginUsername")
 	loginPassObj, loginPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "loginPassword")
 	loginTokenObj, loginTokenInp := viewHelpers.StringEdit("", editor.document, "Sign-in code", "text", "loginOtp")
@@ -349,9 +353,10 @@ func (editor *ItemEditor) loginForm() js.Value {
 	loginActions := viewHelpers.ActionGroup(
 		editor.document,
 		"loginActions",
-		viewHelpers.SubmitButton(editor.document, "Send OTP", "sendOtp"),
-		viewHelpers.Button(editor.handleVerifyOTP, editor.document, "Verify OTP", "verifyOtpBtn"),
+		viewHelpers.SubmitButton(editor.document, "Send sign-in code", "sendOtp"),
+		viewHelpers.Button(editor.handleVerifyOTP, editor.document, "Verify code", "verifyOtpBtn"),
 	)
+	loginActions.Set("className", "input-group form-button-row")
 	loginForm.Call("appendChild", loginActions)
 	return loginForm
 }
