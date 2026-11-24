@@ -239,6 +239,9 @@ func (editor *ItemEditor) renderEditForm(questionnaire api.Questionnaire, detail
 	localObjs.PersonID, editor.UiComponents.PersonID, editor.closePicker = editor.Children.PeopleSelector.NewPersonAutocomplete(
 		editor.CurrentRecord.PersonID, editor.CurrentRecord.Person, "Person", "itemPerson", lookup,
 	)
+	if details.Membership != "" && editor.CurrentRecord.ID > 0 {
+		localObjs.PersonID.Call("querySelector", "#itemPerson").Set("readOnly", true)
+	}
 
 	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Other information or messages for the trip leader (optional)", "text", "itemNotes")
 

@@ -58,6 +58,11 @@ func TestQuestionnaireRevisionAndParticipantDetails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	replacement := input
+	replacement.PersonID = 3
+	if _, err := service.Mutate(ctx, 2, "own", participant, replacement, false); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("participant details could be reassigned to another person: %v", err)
+	}
 	if _, err := people.Details(ctx, participant, 3, "own", false); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("unrelated user could read private details: %v", err)
 	}

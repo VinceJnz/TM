@@ -15,6 +15,7 @@ INSERT INTO et_booking_status VALUES (1,'Not paid');
 INSERT INTO at_trips VALUES (1,'Test trip',1);
 INSERT INTO at_bookings VALUES (11,1,1,'first',1,NOW(),NOW()+INTERVAL '1 day',10,NULL),(22,2,1,'second',1,NOW(),NOW()+INTERVAL '1 day',10,NULL);
 INSERT INTO at_booking_people VALUES (111,1,11,1,'first',NOW(),NOW()),(222,2,22,2,'second',NOW(),NOW());
+ALTER TABLE at_booking_people ADD COLUMN submitted_name text;
 INSERT INTO at_trip_costs VALUES (1,1,1,1,10);
 ALTER TABLE at_bookings ADD COLUMN created timestamptz DEFAULT CURRENT_TIMESTAMP,ADD COLUMN modified timestamptz DEFAULT CURRENT_TIMESTAMP,ADD COLUMN booking_date date,ADD COLUMN group_booking_id integer,ADD COLUMN payment_date timestamptz,ADD COLUMN amount_paid integer,ADD COLUMN currency text;
 ALTER TABLE at_trips ADD COLUMN from_date timestamptz DEFAULT '2025-01-01',ADD COLUMN to_date timestamptz DEFAULT '2030-01-01';

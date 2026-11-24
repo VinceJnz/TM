@@ -246,6 +246,8 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   Revised answers retain a copy of the previous revision's responses. The booking
   people endpoint serves details within existing booking scope. A separate
   report endpoint checks that the requester owns the trip before returning details.
+  Once details are recorded, changing the participant or booking trip requires
+  removing the affected participant records before entering the new details.
 - New bookings require complete participant fields and required trip answers
   during review, new checkout preparation, and free confirmation. Existing
   bookings and already-open checkout attempts retain their original path.
