@@ -447,7 +447,7 @@ func (editor *ItemEditor) populateItemList() {
 			if len(args) > 0 {
 				args[0].Call("stopPropagation")
 			}
-			editor.toggleGroupEditForm(record)
+			editor.toggleGroupEditForm(record, editButton)
 			return nil
 		})
 
@@ -496,7 +496,7 @@ func (editor *ItemEditor) populateItemList() {
 
 }
 
-func (editor *ItemEditor) toggleGroupEditForm(record TableData) {
+func (editor *ItemEditor) toggleGroupEditForm(record TableData, trigger js.Value) {
 	editContainer := editor.document.Call("getElementById", debugTag+"editContainer_"+strconv.Itoa(record.ID))
 
 	// Check if edit form is already displayed
@@ -507,29 +507,41 @@ func (editor *ItemEditor) toggleGroupEditForm(record TableData) {
 		editContainer.Get("style").Call("setProperty", "display", "none")
 		editContainer.Set("innerHTML", "")
 	} else {
-		// Show the form
-		editor.CurrentRecord = record
-		editor.updateStateDisplay(ItemStateEditing)
-		editor.renderInlineGroupEditForm(editContainer, record)
 		editContainer.Get("style").Call("setProperty", "display", "block")
+		editor.renderInlineGroupEditForm(editContainer, record, trigger)
 	}
 }
 
-func (editor *ItemEditor) renderInlineGroupEditForm(container js.Value, record TableData) {
+func (editor *ItemEditor) renderInlineGroupEditForm(container js.Value, record TableData, trigger js.Value) {
 	container.Set("innerHTML", "") // Clear container
 
-	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "groupEditForm_"+strconv.Itoa(record.ID))
-
-	var localObjs UI
-
-	localObjs.GroupID, editor.UiComponents.GroupID = editor.NewDropdown(editor.CurrentRecord.GroupID, "Security Group", "itemGroup")
-	editor.UiComponents.GroupID.Call("setAttribute", "required", "true")
-
-	form.Call("appendChild", localObjs.GroupID)
+	controlID := debugTag + "membership_" + strconv.Itoa(record.ID)
+	field, input := editor.NewDropdown(record.GroupID, "Security Group", controlID)
+	input.Set("required", true)
+	form := viewHelpers.Form(func(_ js.Value, args []js.Value) any {
+		args[0].Call("preventDefault")
+		if editor.ItemState == ItemStateSaving || !input.Call("reportValidity").Bool() {
+			return nil
+		}
+		groupID, err := strconv.Atoi(input.Get("value").String())
+		if err != nil {
+			return nil
+		}
+		item := record
+		item.GroupID = groupID
+		go editor.UpdateItem(item)
+		return nil
+	}, editor.document, controlID+"_form")
+	form.Call("appendChild", field)
 
 	// Create submit and cancel buttons
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitGroupEditBtn")
-	cancelBtn := viewHelpers.Button(editor.cancelInlineGroupEdit, editor.document, "Cancel", "cancelGroupEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", controlID+"_submit")
+	cancelBtn := viewHelpers.Button(func(js.Value, []js.Value) any {
+		container.Get("style").Call("setProperty", "display", "none")
+		container.Set("innerHTML", "")
+		trigger.Call("focus")
+		return nil
+	}, editor.document, "Cancel", controlID+"_cancel")
 
 	viewHelpers.StyleButtonPrimary(submitBtn)
 	viewHelpers.StyleButtonSecondary(cancelBtn)
@@ -537,15 +549,7 @@ func (editor *ItemEditor) renderInlineGroupEditForm(container js.Value, record T
 	form.Call("appendChild", buttonRow)
 
 	container.Call("appendChild", form)
-}
-
-func (editor *ItemEditor) cancelInlineGroupEdit(this js.Value, p []js.Value) interface{} {
-	if editor.CurrentRecord.ID > 0 {
-		editContainer := editor.document.Call("getElementById", debugTag+"editContainer_"+strconv.Itoa(editor.CurrentRecord.ID))
-		editContainer.Get("style").Call("setProperty", "display", "none")
-		editContainer.Set("innerHTML", "")
-	}
-	return nil
+	input.Call("focus")
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {

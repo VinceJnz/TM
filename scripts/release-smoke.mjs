@@ -338,6 +338,16 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await waitUI("!!document.querySelector('dialog[open]')",'reload confirmation did not reopen');
   await send('Runtime.evaluate',{expression:"document.querySelector('dialog[open] button[type=submit]').click()"});
   await waitUI("document.querySelectorAll('form[id^=inlineEditForm_]').length===0",'confirmed reload did not discard stale forms');
+  const users = "Array.from(document.querySelectorAll('#mainContent .tm-disclosure')).filter(b=>b.textContent.includes('Smoke Member')||b.textContent.includes('Other Member'))";
+  await waitUI(`${users}.length===2`,'member disclosures did not load');
+  await send('Runtime.evaluate',{expression:`${users}.forEach(button=>button.click())`});
+  const membershipEdits = "Array.from(document.querySelectorAll('[id=\"userSecurityGroupView.itemListDiv\"] button')).filter(b=>b.textContent==='Edit'&&b.getClientRects().length>0)";
+  await waitUI(`${membershipEdits}.length===2`,'membership edit actions did not load');
+  const membershipSelects = "Array.from(document.querySelectorAll('select[id^=\"userSecurityGroupView.membership_\"]'))";
+  await send('Runtime.evaluate',{expression:`${membershipEdits}.forEach(button=>button.click())`});
+  await waitUI(`${membershipSelects}.length===2 && ${membershipSelects}[0].id!==${membershipSelects}[1].id && ${membershipSelects}[1]===document.activeElement`,'membership editors did not use unique controls or focus the last opened select');
+  await send('Runtime.evaluate',{expression:`${membershipSelects}[1].form.querySelector('button[id$=_cancel]').click()`});
+  await waitUI(`${membershipSelects}.length===1 && document.activeElement===${membershipEdits}[1]`,'cancelling a membership form did not preserve the other form and restore focus');
   await send('Runtime.evaluate',{expression:"window.fetch=window.__accountFetch;location.hash='/securitygroup'"});
   const disclosure="Array.from(document.querySelectorAll('[id=\"securityGroupView.groupCard\"] .tm-disclosure')).find(b=>b.getClientRects().length>0)";
   await waitUI(`!!(${disclosure})`,'semantic disclosure missing');

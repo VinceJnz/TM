@@ -215,6 +215,9 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   view-owned, cancellable and restore focus. Avoid new unmanaged `js.Func` callbacks.
 - Inline account forms capture their own record/fields and use account-specific IDs.
   Never let one form submit another form's current-record state.
+- Inline membership forms capture their own record version and select element,
+  have unique control IDs and focus the select on open. Security editors offer
+  confirmed reload for concurrent changes.
 - Shared helpers provide validation feedback, busy states, empty states and confirmation
   dialogs. Conflicts preserve edits and offer confirmed discard/reload; cancellation
   preserves the form. Operation results are announced through a persistent

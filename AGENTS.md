@@ -76,6 +76,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Keep browser code in `client1/`; preserve compatibility with both configured Go and TinyGo builds when changing shared frontend paths.
 - Use the existing view, event, and HTTP abstractions before adding alternatives. Keep validation that protects data integrity on the server as well as in the UI.
 - Release `js.Func` callbacks and remove event listeners when their owning view is destroyed. Handle fetch failures, response-body failures, and cancellation without leaving blocked waits.
+- Keep inline membership edits bound to their own record version and select element. Give each form unique control IDs and focus the select when opening it.
 - Do not introduce additional localhost assumptions. Prefer same-origin or configurable API addressing when working on deployment configuration.
 - Keep `main.wasm` paired with the `wasm_exec.js` supplied by the compiler that built it. Never hand-edit generated artifacts.
 - Check affected menus, forms, and capability-dependent actions when changing API contracts or permissions. Use action metadata and the shared pending helper to disable actions on rows being refreshed.
