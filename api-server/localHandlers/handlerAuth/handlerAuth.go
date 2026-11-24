@@ -7,6 +7,7 @@ import (
 	authStore "api-server/v2/modelMethods/authentication"
 	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -19,6 +20,16 @@ import (
 )
 
 const debugTag = "handlerAuth."
+
+func (h *Handler) authentication() authService.Service {
+	return authService.Service{Store: authStore.Store{DB: h.appConf.Db}}
+}
+
+func (h *Handler) loginAccount(ctx context.Context, username, email string) (models.User, error) {
+	username, email = strings.TrimSpace(username), strings.TrimSpace(email)
+	preferEmail := handlerHelpers.IsValidEmail(email) && username == email
+	return h.authentication().LoginAccount(ctx, username, email, preferEmail)
+}
 
 type Handler struct {
 	appConf *appCore.Config
@@ -79,7 +90,7 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handlerHelpers.FindUserByUsernameOrEmail(r.Context(), debugTag+"RequestLoginToken:", h.appConf.Db, payload.Username, payload.Email)
+	user, err := h.loginAccount(r.Context(), payload.Username, payload.Email)
 	if err != nil {
 		log.Printf("%v failed to find user: %v", debugTag, err)
 		if payload.Username == "" && payload.Email == "" {
@@ -96,7 +107,7 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create one-time email token valid for 1 hour
-	tokenCookie, err := dbAuthTemplate.CreateNamedTokenContext(r.Context(), debugTag+"RequestLoginToken:CreateNamedToken", h.appConf.Db, true, user.ID, h.appConf.Settings.Host, "_temp_email_token", time.Now().Add(1*time.Hour))
+	token, err := h.authentication().Issue(r.Context(), user.ID, h.appConf.Settings.Host, "_temp_email_token", time.Now().Add(time.Hour), "")
 	if err != nil {
 		log.Printf("%vRequestLoginToken failed to create email token: %v", debugTag, err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -105,18 +116,17 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 
 	// Compose email
 	subject := "Your one-time login token"
-	body := fmt.Sprintf("Hi %s,\n\nUse this one-time token to log in: %s\n\nThis token expires in 1 hour.", user.Name, tokenCookie.Value)
+	body := fmt.Sprintf("Hi %s,\n\nUse this one-time token to log in: %s\n\nThis token expires in 1 hour.", user.Name, token)
 
 	// Send email using configured EmailSvc
 	if email := h.appConf.EmailService(); email != nil {
 		if success, err := email.SendMail(user.Email.String, subject, body); err != nil {
 			log.Printf("%vRequestLoginToken failed to send login token email: %v", debugTag, err)
-			// Fall back to logging the token for debugging
 		} else {
 			log.Printf("%vRequestLoginToken email sent successfully: %v", debugTag, success)
 		}
 	} else {
-		log.Printf("%vRequestLoginToken EmailSvc not configured; token for %v not sent", debugTag, user.Email.String)
+		log.Printf("%vRequestLoginToken EmailSvc not configured; token not sent", debugTag)
 	}
 
 	w.WriteHeader(http.StatusAccepted)
@@ -185,72 +195,31 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if username already exists
-	_, err = dbAuthTemplate.UserNameReadQryContext(r.Context(), debugTag+"Register:checkUsername ", h.appConf.Db, payload.Username)
-	if err == nil {
-		// Username exists
+	auth := h.authentication()
+	token, err := auth.StageRegistration(r.Context(), h.appConf.Settings.Host, payload)
+	payload.Password = registrationRequest{}.Password
+	switch {
+	case errors.Is(err, authService.ErrUsernameTaken):
 		http.Error(w, "this username is already taken", http.StatusConflict)
 		return
-	}
-
-	// Check if email already exists
-	_, err = dbAuthTemplate.UserEmailReadQryContext(r.Context(), debugTag+"Register:checkEmail ", h.appConf.Db, payload.Email.String)
-	if err == nil {
-		// Email exists
+	case errors.Is(err, authService.ErrEmailTaken):
 		http.Error(w, "an account with this email address already exists", http.StatusConflict)
 		return
-	}
-
-	regDataJSON, err := encodePendingRegistration(payload)
-	payload.Password = registrationRequest{}.Password
-	if err != nil {
-		log.Printf("%vRegister failed to prepare pending registration", debugTag)
-		http.Error(w, "failed to process registration", http.StatusInternalServerError)
-		return
-	}
-
-	tokenCookie, err := dbAuthTemplate.CreateNamedTokenContext(r.Context(),
-		debugTag+"Register:CreateNamedToken",
-		h.appConf.Db,
-		true,
-		0, // UserID = 0 (temporary token for unauthenticated registration)
-		h.appConf.Settings.Host,
-		"registration-verification",
-		time.Now().Add(24*time.Hour),
-	)
-	if err != nil {
-		log.Printf("%vRegister failed to create registration token: %v", debugTag, err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Store registration data in the token's SessionData field so it can be retrieved during verification
-	tok, err := dbAuthTemplate.FindToken(debugTag+"Register:findTokenToUpdate", h.appConf.Db, "registration-verification", tokenCookie.Value)
-	if err == nil {
-		tok.SessionData.SetValid(string(regDataJSON))
-		if _, err := dbAuthTemplate.TokenWriteQry(debugTag+"Register:updateSessionData", h.appConf.Db, tok); err != nil {
-			log.Printf("%vRegister failed to update pending registration", debugTag)
-			_ = dbAuthTemplate.TokenDeleteQry(debugTag+"Register:discard", h.appConf.Db, tok.ID)
-			http.Error(w, "failed to process registration", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		log.Printf("%vRegister failed to locate pending registration token", debugTag)
+	case err != nil:
+		log.Printf("%vRegister failed to stage pending registration", debugTag)
 		http.Error(w, "failed to process registration", http.StatusInternalServerError)
 		return
 	}
 
 	// Send verification email
 	subject := "Verify your email to complete registration"
-	body := fmt.Sprintf("Hi %s,\n\nVerify your email using this code: %s\n\nThis code expires in 24 hours.\n\nIf you didn't register, you can ignore this email.", payload.Username, tokenCookie.Value)
+	body := fmt.Sprintf("Hi %s,\n\nVerify your email using this code: %s\n\nThis code expires in 24 hours.\n\nIf you didn't register, you can ignore this email.", payload.Username, token)
 
 	if email := h.appConf.EmailService(); email != nil {
 		if success, err := email.SendMail(payload.Email.String, subject, body); err != nil {
 			log.Printf("%vRegister failed to send registration verification email: %v", debugTag, err)
-			// Delete the token if email failed
-			tok, err := dbAuthTemplate.FindToken(debugTag+"Register:findTokenForDeletion", h.appConf.Db, "registration-verification", tokenCookie.Value) // Find the token to get its ID for deletion
-			if err == nil {
-				_ = dbAuthTemplate.TokenDeleteQry(debugTag+"Register:del_on_email_failure", h.appConf.Db, tok.ID)
+			if err := auth.DiscardRegistration(r.Context(), token); err != nil {
+				log.Printf("%vRegister failed to discard pending registration", debugTag)
 			}
 			http.Error(w, "failed to send verification email", http.StatusInternalServerError)
 			return
@@ -321,7 +290,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handlerHelpers.FindUserByUsernameOrEmail(r.Context(), debugTag+"LoginSendOTP:", h.appConf.Db, payload.Username, payload.Email)
+	user, err := h.loginAccount(r.Context(), payload.Username, payload.Email)
 	if err != nil && payload.Username == "" && payload.Email == "" {
 		http.Error(w, "username or email required", http.StatusBadRequest)
 		return
@@ -458,7 +427,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Look up user by username or email
-	user, err := handlerHelpers.FindUserByUsernameOrEmail(r.Context(), debugTag+"LoginWithPassword:", h.appConf.Db, payload.Username, payload.Email)
+	user, err := h.loginAccount(r.Context(), payload.Username, payload.Email)
 	if err != nil {
 		// Don't reveal whether user exists - send generic response for security
 		log.Printf("%vLoginWithPassword user not found for password login: %v", debugTag, err)

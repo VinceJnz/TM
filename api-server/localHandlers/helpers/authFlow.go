@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -26,39 +25,6 @@ var (
 	ErrAuthUserNotFound = errors.New("auth user not found")
 	ErrAuthUserInactive = errors.New("auth user inactive")
 )
-
-func FindUserByUsernameOrEmail(ctx context.Context, debugStr string, db *sqlx.DB, username, email string) (models.User, error) {
-	username = strings.TrimSpace(username)
-	email = strings.TrimSpace(email)
-	preferEmail := email != "" && IsValidEmail(email) && (username == "" || username == email)
-
-	if preferEmail {
-		user, err := dbAuthTemplate.UserEmailReadQryContext(ctx, debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
-		if err == nil {
-			return user, nil
-		}
-		if username == "" || username == email {
-			return models.User{}, err
-		}
-	}
-
-	if username != "" {
-		user, err := dbAuthTemplate.UserNameReadQryContext(ctx, debugStr+"FindUserByUsernameOrEmail:byName ", db, username)
-		if err == nil {
-			return user, nil
-		}
-		// If an email was supplied as well, fall through and try by email.
-		if email == "" {
-			return models.User{}, err
-		}
-	}
-
-	if email != "" {
-		return dbAuthTemplate.UserEmailReadQryContext(ctx, debugStr+"FindUserByUsernameOrEmail:byEmail ", db, email)
-	}
-
-	return models.User{}, errors.New("username or email required")
-}
 
 func CreateAndSetSessionCookie(ctx context.Context, debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
 	sessionToken, err := dbAuthTemplate.CreateNamedTokenContext(ctx, debugStr+"CreateAndSetSessionCookie", db, true, userID, host, "session", expiration)

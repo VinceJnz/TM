@@ -170,10 +170,11 @@ Linking changes only identity fields and checks current account state. Enrollmen
 updates only permitted profile fields with concurrency checks; it must not overwrite
 passwords or administrative activation decisions.
 
-`dbAuthTemplate` still contains compatibility entry points and specialized legacy
-code, including the existing transactional password-reset implementation. Its presence
-does not justify new broad whole-user updates. Migrate touched workflows through the
-new service/store, preserving token/session and error behavior with regression tests.
+Password reset and logout use the authentication service and store. Reset still
+consumes the proof, changes the password and invalidates sessions transactionally.
+Login account lookup and legacy login-token issuance use the same service. The
+registration proof and hashed profile are inserted together, and failed delivery
+discards the pending proof. `dbAuthTemplate` retains compatibility entry points.
 
 Permissions are grants through user groups for a resource, HTTP method and scope.
 The protected middleware reads grants through the

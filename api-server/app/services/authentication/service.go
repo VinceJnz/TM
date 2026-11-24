@@ -23,3 +23,7 @@ func (s Service) LinkIdentity(ctx context.Context, id int, provider, subject, em
 func (s Service) Session(ctx context.Context, raw string) (models.User, error) {
 	return s.Store.Principal(ctx, raw)
 }
+
+func (s Service) Logout(ctx context.Context, raw string, userID int) error {
+	return s.Store.RevokeSession(ctx, raw, userID)
+}

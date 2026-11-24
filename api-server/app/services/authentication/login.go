@@ -4,25 +4,36 @@ import (
 	store "api-server/v2/modelMethods/authentication"
 	"api-server/v2/models"
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"errors"
 	"time"
 )
 
 var ErrInactive = errors.New("account is not active")
 
+func (s Service) LoginAccount(ctx context.Context, username, email string, preferEmail bool) (models.User, error) {
+	if preferEmail || username == "" {
+		if email == "" {
+			return models.User{}, sql.ErrNoRows
+		}
+		return s.Store.Email(ctx, email)
+	}
+	user, err := s.Store.Username(ctx, username)
+	if err == nil || email == "" {
+		return user, err
+	}
+	return s.Store.Email(ctx, email)
+}
+
 func (s Service) Login(ctx context.Context, name, proof, host string, expires time.Time) (string, models.User, error) {
 	var user models.User
 	if name != "login-otp" && name != "password-login-otp" {
 		return "", user, ErrToken
 	}
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
+	raw, err := newToken()
+	if err != nil {
 		return "", user, err
 	}
-	raw := base64.RawURLEncoding.EncodeToString(bytes)
 	tx, err := s.Store.DB.BeginTxx(ctx, nil)
 	if err != nil {
 		return "", user, err

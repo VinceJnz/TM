@@ -2,7 +2,6 @@ package handlerAuth
 
 import (
 	handlerHelpers "api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"context"
 	"database/sql"
 	"encoding/base64"
@@ -11,8 +10,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 var passwordResetWorkers = make(chan struct{}, 8)
@@ -54,7 +51,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		defer func() { <-passwordResetWorkers }()
 		ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
-		recipient, code, err := dbAuthTemplate.CreatePasswordReset(ctx, h.appConf.Db, email)
+		recipient, code, err := h.authentication().CreatePasswordReset(ctx, email)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				log.Print("password reset code creation failed")
@@ -109,10 +106,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
-	if err == nil {
-		err = dbAuthTemplate.ResetPassword(r.Context(), h.appConf.Db, code, string(hash))
-	}
+	err = h.authentication().ResetPassword(r.Context(), code, request.Password)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		handlerHelpers.WriteError(w, http.StatusBadRequest, "invalid_code", "The reset code is invalid or expired.")

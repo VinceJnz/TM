@@ -7,12 +7,19 @@ import (
 	"time"
 )
 
-func (s Service) Issue(ctx context.Context, id int, host, name string, expires time.Time, data string) (string, error) {
+func newToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-	raw := base64.RawURLEncoding.EncodeToString(bytes)
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+func (s Service) Issue(ctx context.Context, id int, host, name string, expires time.Time, data string) (string, error) {
+	raw, err := newToken()
+	if err != nil {
+		return "", err
+	}
 	if expires.IsZero() {
 		expires = time.Now().Add(time.Hour)
 	}

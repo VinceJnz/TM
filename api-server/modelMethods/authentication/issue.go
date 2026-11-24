@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+func (s Store) DiscardAnonymousProof(ctx context.Context, name, raw string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM st_token WHERE name=$1 AND token=$2 AND user_id=0`, name, Digest(raw))
+	return err
+}
+
 func (s Store) Issue(ctx context.Context, tx *sqlx.Tx, id int, host, name, raw string, expires time.Time, data string) error {
 	var value any
 	if data != "" {

@@ -65,7 +65,11 @@ func (db *registrationDB) QueryContext(_ context.Context, query string, args []d
 	case strings.Contains(query, "SELECT age_group"):
 		return &registrationRows{[]string{"age_group"}, []driver.Value{"adult"}}, nil
 	case strings.HasPrefix(query, "INSERT INTO st_token"):
+		if db.failSave {
+			return nil, errors.New("simulated pending registration write failure")
+		}
 		db.token = args[3].Value.(string)
+		db.data = args[4].Value.(string)
 		return &registrationRows{[]string{"id"}, []driver.Value{int64(1)}}, nil
 	case strings.HasPrefix(query, "SELECT ID FROM st_token"):
 		if args[0].Value == int64(1) {
@@ -158,8 +162,8 @@ func TestRegistrationStopsWhenPendingDataCannotBeSaved(t *testing.T) {
 	response := httptest.NewRecorder()
 	h.Register(response, httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(
 		`{"username":"test-user","name":"Test User","email":"user@example.test","user_birth_date":"1990-01-01T00:00:00Z","user_age_group_id":1}`)))
-	if response.Code != http.StatusInternalServerError || !db.tokenDeleted || db.userCreated {
-		t.Fatal("failed pending-data write was not rejected and cleaned up")
+	if response.Code != http.StatusInternalServerError || db.token != "" || db.userCreated {
+		t.Fatal("failed pending-data write left a token or created an account")
 	}
 }
 

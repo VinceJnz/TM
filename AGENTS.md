@@ -53,6 +53,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Protected routes declare capability metadata with `CapabilityRoute` or `AddRouteGroup`; `handlerAuth.setRestResource` reads the matched route declaration. Use the authentication store for grant lookups. Test the canonical resource and session requirement on nested, custom, and alias routes.
 - Never log or return passwords, password hashes, session tokens, OTPs, OAuth codes, or secrets. Avoid logging complete user structs or authentication payloads.
 - Hash passwords before any persistence, including pending-registration data. Use explicit request/response DTOs so sensitive model fields cannot be serialized accidentally.
+- Stage the registration proof and hashed profile in one store write. Use the authentication service for login account lookup, password reset, and session revocation.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
 
 ## PostgreSQL and financial integrity
