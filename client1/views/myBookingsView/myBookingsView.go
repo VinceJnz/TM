@@ -215,6 +215,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
+	form.Set("className", "tm-card tm-booking-form")
 
 	var localObjs UI
 
@@ -243,14 +244,15 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.VoucherCode, editor.UiComponents.VoucherCode = viewHelpers.StringEdit(editor.CurrentRecord.VoucherCode, editor.document, "Voucher code (optional)", "text", "itemVoucherCode")
 	editor.UiComponents.VoucherCode.Set("maxLength", 64)
 
-	form.Call("appendChild", localObjs.TripID)
-	form.Call("appendChild", localObjs.Notes)
-	form.Call("appendChild", localObjs.FromDate)
-	form.Call("appendChild", localObjs.ToDate)
-	form.Call("appendChild", localObjs.VoucherCode)
+	fields := editor.document.Call("createElement", "div")
+	fields.Set("className", "tm-booking-fields")
+	localObjs.TripID.Get("classList").Call("add", "tm-field-wide")
+	localObjs.Notes.Get("classList").Call("add", "tm-field-wide")
+	fields.Call("append", localObjs.TripID, localObjs.FromDate, localObjs.ToDate, localObjs.Notes, localObjs.VoucherCode)
+	form.Call("appendChild", fields)
 
 	// Create submit button
-	submitLabel := "Submit"
+	submitLabel := "Save booking"
 	if editor.bookingFlow {
 		heading := editor.document.Call("createElement", "h3")
 		heading.Set("textContent", "Step 1 of 4 · Booking details")
@@ -528,7 +530,8 @@ func (editor *ItemEditor) showBookingPeople(item TableData) {
 	editor.CurrentRecord = item
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	people := bookingPeopleView.New(editor.document, editor.events, editor.appCore, item.ID)
-	people.BookingSteps(editor.EditDiv, func() {
+	tripContext := item.TripName + " · " + item.FromDate.Format("2 Jan 2006") + " – " + item.ToDate.Format("2 Jan 2006")
+	people.BookingSteps(editor.EditDiv, tripContext, func() {
 		editor.CurrentRecord = item
 		editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 		editor.populateEditForm()
@@ -598,9 +601,19 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 	}()
 }
 
-func (editor *ItemEditor) bookingSummaryText(record TableData) string {
-	ownerDisplay := editor.bookingOwnerDisplay(record)
-	return "Trip: " + record.TripName + " (BOOKED by:" + ownerDisplay + ", Notes:" + record.Notes + ", Status:" + record.BookingStatus + ", From:" + record.FromDate.Format(viewHelpers.Layout) + " - To:" + record.ToDate.Format(viewHelpers.Layout) + ", Participants:" + strconv.Itoa(record.Participants) + ", Cost:$" + record.BookingCost.StringFixedBank(2) + ")"
+func (editor *ItemEditor) renderBookingSummary(root js.Value, record TableData) {
+	root.Set("textContent", "")
+	add := func(tag, class, value string) {
+		element := editor.document.Call("createElement", tag)
+		element.Set("className", class)
+		element.Set("textContent", value)
+		root.Call("appendChild", element)
+	}
+	add("h2", "tm-booking-title", record.TripName)
+	add("span", "tm-booking-status", record.BookingStatus)
+	dates := record.FromDate.Format("2 Jan 2006") + " – " + record.ToDate.Format("2 Jan 2006")
+	add("p", "tm-trip-meta", dates+" · Participants: "+strconv.Itoa(record.Participants))
+	add("p", "tm-booking-cost", "Booking total · NZ$"+record.BookingCost.StringFixedBank(2))
 }
 
 func (editor *ItemEditor) refreshBookingRow(bookingID int) {
@@ -628,7 +641,7 @@ func (editor *ItemEditor) refreshBookingRow(bookingID int) {
 		}
 
 		if summaryDiv, ok := editor.RowSummaryDiv[bookingID]; ok && !summaryDiv.IsUndefined() && !summaryDiv.IsNull() {
-			summaryDiv.Set("textContent", editor.bookingSummaryText(updated))
+			editor.renderBookingSummary(summaryDiv, updated)
 			return
 		}
 
@@ -655,17 +668,16 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 	editor.RowSummaryDiv = map[int]js.Value{}
 
-	processHint := editor.document.Call("createElement", "small")
-	processHint.Set("innerHTML", "Create booking, add people, review, then pay or confirm.")
-	processHint.Get("style").Set("display", "block")
-	processHint.Get("style").Set("marginBottom", "8px")
-	editor.ListDiv.Call("appendChild", processHint)
-
-	// Add New Item button
+	toolbar := editor.document.Call("createElement", "div")
+	toolbar.Set("className", "tm-booking-actions")
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Create Booking", "addNewItemButton")
+	viewHelpers.StyleButtonPrimary(addNewItemButton)
 	viewHelpers.Action(addNewItemButton, "POST")
-	viewHelpers.Action(addNewItemButton, "POST")
-	editor.ListDiv.Call("appendChild", addNewItemButton)
+	toolbar.Call("appendChild", addNewItemButton)
+	editor.ListDiv.Call("appendChild", toolbar)
+	if len(editor.Records) == 0 {
+		viewHelpers.Feedback(editor.ListDiv, "You have no bookings yet.")
+	}
 
 	for _, i := range editor.Records {
 		record := i // Capture loop value so callbacks use the correct record.
@@ -679,14 +691,31 @@ func (editor *ItemEditor) populateItemList() {
 			editor.refreshBookingRow(bookingID)
 		})
 
-		itemDiv := editor.document.Call("createElement", "div")
-		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		itemDiv := editor.document.Call("createElement", "article")
+		itemDiv.Set("id", "my-booking-"+strconv.Itoa(bookingID))
+		itemDiv.Set("className", "tm-card tm-booking-card")
 
 		summaryDiv := editor.document.Call("createElement", "div")
-		summaryDiv.Set("textContent", editor.bookingSummaryText(record))
+		summaryDiv.Set("className", "tm-booking-summary")
+		editor.renderBookingSummary(summaryDiv, record)
 		editor.RowSummaryDiv[record.ID] = summaryDiv
 		itemDiv.Call("appendChild", summaryDiv)
+		details := editor.document.Call("createElement", "details")
+		details.Set("className", "tm-booking-details")
+		disclosure := editor.document.Call("createElement", "summary")
+		disclosure.Set("textContent", "View booking")
+		details.Call("appendChild", disclosure)
+		metadata := editor.document.Call("createElement", "p")
+		metadata.Set("className", "tm-trip-meta tm-booking-notes")
+		metadata.Set("textContent", "Booked by "+editor.bookingOwnerDisplay(record))
+		if record.Notes != "" {
+			metadata.Call("append", " · "+record.Notes)
+		}
+		details.Call("appendChild", metadata)
+		actions := editor.document.Call("createElement", "div")
+		actions.Set("className", "tm-booking-actions")
+		details.Call("appendChild", actions)
+		var reviewPanel js.Value
 
 		if canManage {
 			// Create an edit button
@@ -698,7 +727,7 @@ func (editor *ItemEditor) populateItemList() {
 				editor.loadTripsAndOpen(record, viewHelpers.ItemStateEditing)
 				return nil
 			})
-			itemDiv.Call("appendChild", editButton)
+			actions.Call("appendChild", editButton)
 		}
 
 		// Create a toggle modify-people-list button
@@ -713,7 +742,7 @@ func (editor *ItemEditor) populateItemList() {
 			bookingPeople.Toggle()
 			return nil
 		})
-		itemDiv.Call("appendChild", peopleButton)
+		actions.Call("appendChild", peopleButton)
 
 		if record.BookingStatusID == 1 && !record.HasPaymentHistory && record.OwnerID == editor.appCore.GetUser().UserID && editor.appCore.HasAccess("bookings", []string{"POST"}, []string{"own", "any"}) {
 			if editable {
@@ -721,6 +750,8 @@ func (editor *ItemEditor) populateItemList() {
 					editor.showBookingPeople(record)
 					return nil
 				}, editor.document, "Continue booking", "booking-continue-"+strconv.Itoa(record.ID))
+				viewHelpers.StyleButtonPrimary(resume)
+				viewHelpers.ActionFor(resume, "bookings", "POST")
 				itemDiv.Call("appendChild", resume)
 			}
 			reviewButton, review := viewHelpers.BookingReview(editor.document, editor.client, record.ID,
@@ -733,8 +764,8 @@ func (editor *ItemEditor) populateItemList() {
 					editor.RecordState = RecordStateReloadRequired
 					editor.FetchItems()
 				})
-			itemDiv.Call("appendChild", reviewButton)
-			itemDiv.Call("appendChild", review)
+			actions.Call("appendChild", reviewButton)
+			reviewPanel = review
 		}
 
 		if canManage {
@@ -747,10 +778,14 @@ func (editor *ItemEditor) populateItemList() {
 				editor.deleteItem(record.ID)
 				return nil
 			})
-			itemDiv.Call("appendChild", deleteButton)
+			actions.Call("appendChild", deleteButton)
 		}
 
-		itemDiv.Call("appendChild", bookingPeople.Div)
+		if reviewPanel.Truthy() {
+			details.Call("appendChild", reviewPanel)
+		}
+		details.Call("appendChild", bookingPeople.Div)
+		itemDiv.Call("appendChild", details)
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}

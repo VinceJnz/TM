@@ -47,6 +47,7 @@ type UI struct {
 
 type ParentData struct {
 	ID       int       `json:"id"`
+	Name     string    `json:"trip_name"`
 	FromDate time.Time `json:"from_date"`
 	ToDate   time.Time `json:"to_date"`
 }
@@ -157,6 +158,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.CurrentRecord = TableData{}
 
 	editor.CurrentRecord.TripID = editor.ParentData.ID
+	editor.CurrentRecord.TripName = editor.ParentData.Name
 	editor.CurrentRecord.FromDate = editor.ParentData.FromDate
 	editor.CurrentRecord.ToDate = editor.ParentData.ToDate
 
@@ -173,6 +175,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
+	form.Set("className", "tm-card tm-booking-form")
 
 	var localObjs UI
 
@@ -191,12 +194,13 @@ func (editor *ItemEditor) populateEditForm() {
 	domEvents.Listen(editor.UiComponents.ToDate, "change", editor.validateDateChange)
 	editor.UiComponents.ToDate.Call("setAttribute", "required", "true")
 
-	form.Call("appendChild", localObjs.Notes)
-	form.Call("appendChild", localObjs.FromDate)
-	form.Call("appendChild", localObjs.ToDate)
 	localObjs.VoucherCode, editor.UiComponents.VoucherCode = viewHelpers.StringEdit(editor.CurrentRecord.VoucherCode, editor.document, "Voucher code (optional)", "text", "itemVoucherCode")
 	editor.UiComponents.VoucherCode.Set("maxLength", 64)
-	form.Call("appendChild", localObjs.VoucherCode)
+	fields := editor.document.Call("createElement", "div")
+	fields.Set("className", "tm-booking-fields")
+	localObjs.Notes.Get("classList").Call("add", "tm-field-wide")
+	fields.Call("append", localObjs.FromDate, localObjs.ToDate, localObjs.Notes, localObjs.VoucherCode)
+	form.Call("appendChild", fields)
 
 	status := editor.CurrentRecord.BookingStatus
 	cost := editor.CurrentRecord.BookingCost.StringFixedBank(2)
@@ -348,7 +352,8 @@ func (editor *ItemEditor) showBookingPeople(item TableData) {
 	editor.CurrentRecord = item
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	people := bookingPeopleView.New(editor.document, editor.events, editor.appCore, item.ID)
-	people.BookingSteps(editor.EditDiv, func() {
+	tripContext := item.TripName + " · " + item.FromDate.Format("2 Jan 2006") + " – " + item.ToDate.Format("2 Jan 2006")
+	people.BookingSteps(editor.EditDiv, tripContext, func() {
 		editor.CurrentRecord = item
 		editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 		editor.populateEditForm()

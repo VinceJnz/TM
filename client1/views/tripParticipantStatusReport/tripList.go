@@ -109,7 +109,7 @@ func (e *ItemEditor) populateItemList() {
 		e.detailLoads = append(e.detailLoads, scope)
 		page := &httpProcessor.Page{Limit: 50}
 		loaded := false
-		book := bookingView.New(e.document, e.events, e.appCore, bookingView.ParentData{ID: record.TripID, FromDate: record.TripFrom, ToDate: record.TripTo})
+		book := bookingView.New(e.document, e.events, e.appCore, bookingView.ParentData{ID: record.TripID, Name: record.TripName, FromDate: record.TripFrom, ToDate: record.TripTo})
 		book.Hide()
 		e.bookingEditors = append(e.bookingEditors, book)
 		details.Call("appendChild", book.Div)

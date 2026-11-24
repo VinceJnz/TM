@@ -600,7 +600,7 @@ func (editor *ItemEditor) populateItemList() {
 		}
 
 		// Create and add child views and buttons to Item
-		booking := bookingView.New(editor.document, editor.events, editor.appCore, bookingView.ParentData{ID: record.ID, FromDate: record.FromDate, ToDate: record.ToDate})
+		booking := bookingView.New(editor.document, editor.events, editor.appCore, bookingView.ParentData{ID: record.ID, Name: record.Name, FromDate: record.FromDate, ToDate: record.ToDate})
 
 		// Create a toggle child list button
 		bookingButton := editor.document.Call("createElement", "button")

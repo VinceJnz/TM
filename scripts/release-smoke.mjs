@@ -232,7 +232,7 @@ try {
   await waitUI("!!document.querySelector('#trip-details-1 form #itemVoucherCode') && !document.querySelector('#trip-details-1 form #itemBookingPrice')",'Trip List booking form did not offer an optional voucher with a calculated price');
   await send('Runtime.evaluate',{expression:"location.hash='/mybookings'"});
   await waitForPage('Items 1–100');
-  const memberBooking = "Array.from(document.querySelectorAll('#mainContent [id=\"myBookingsView.itemDiv\"]')).find(row=>row.textContent.includes('Notes:Member booking'))";
+  const memberBooking = "Array.from(document.querySelectorAll('#mainContent .tm-booking-card')).find(row=>row.querySelector('.tm-booking-notes')?.textContent.includes('Member booking') && !row.querySelector('.tm-booking-notes')?.textContent.includes('Other booking'))";
   const myBookingStep = "document.querySelector('#mainContent [id=\"myBookingsView.itemEditDiv\"]')";
   const createBooking = "Array.from(document.querySelectorAll('#mainContent button')).find(button=>button.textContent==='Create Booking')";
   await send('Runtime.evaluate',{expression:"window.__tripFetch=window.fetch;window.fetch=(url,options)=>{if(new URL(url,location.href).pathname.endsWith('/myBookings/trips')&&!window.__retryTrips){return new Promise(resolve=>{window.__failTrips=()=>{window.__retryTrips=true;resolve(new Response('Unavailable',{status:503}));};});}return window.__tripFetch(url,options);};"});
@@ -248,8 +248,10 @@ try {
   await send('Runtime.evaluate',{expression:`Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Continue to review').click()`});
   await waitUI(`(${myBookingStep})?.textContent.includes('SMOKE-FREE') && (${myBookingStep})?.textContent.includes('NZ$0.00')`,'review did not apply the saved voucher');
   await send('Runtime.evaluate',{expression:`Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Confirm booking').click()`});
-  await waitUI(`(${memberBooking})?.textContent.includes('Status:Confirmed')`,'zero-total booking was not confirmed');
+  await waitUI(`(${memberBooking})?.querySelector('.tm-booking-status')?.textContent==='Confirmed'`,'zero-total booking was not confirmed');
   await waitUI(`Array.from((${memberBooking})?.querySelectorAll('button')||[]).map(button=>button.textContent).join(',')==='View People'`,'confirmed booking still offered draft actions');
+  await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('summary').click();(${memberBooking}).querySelector('.tm-booking-actions button').click()`});
+  await waitUI(`(${memberBooking})?.querySelector('details[open] .tm-booking-participant')?.getClientRects().length>0`,'confirmed booking did not reveal its participants');
   await waitUI("document.querySelector('#statusOutput > [role=status]')?.textContent==='Booking confirmed.'",'booking result was not announced');
   assert(requests.some(url=>url.endsWith('/bookings/checkout/confirm/1')), 'zero-total confirmation request missing');
   assert(!requests.some(url=>url.includes('/bookings/checkout/create/')), 'zero-total booking opened Stripe checkout');
@@ -269,37 +271,56 @@ try {
   await clickBooking('Add person');
   const personInput = `(${tripBooking}).querySelector('#itemPerson')`;
   await waitUI(`!!${personInput}`,'participant questionnaire did not load');
+  await waitUI(`(${tripBooking}).querySelector('.tm-booking-context')?.textContent.includes('Synthetic trip')`,'trip context was lost in the people step');
   await waitUI(`(${tripBooking}).textContent.includes('What equipment do you need?')`,'published question did not appear on participant form');
+  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await waitUI(`(() => {
+    const form = ${personInput}.closest('form');
+    const grid = form.querySelector('.tm-booking-fields');
+    return getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).length === 1
+      && form.getBoundingClientRect().right <= innerWidth + 1;
+  })()`,'participant fields did not fit the mobile viewport');
+  await send('Emulation.clearDeviceMetricsOverride');
   const typePerson = value => send('Runtime.evaluate',{expression:`(() => { const input = ${personInput}; input.focus(); input.value = ${JSON.stringify(value)}; input.dispatchEvent(new Event('input', {bubbles:true})); })()`});
-  const selectPerson = async () => {
-    await waitUI(`(${tripBooking}).querySelector('#itemPerson-matches [role=option]')?.textContent.includes('Other Member')`,'typing did not find a participant');
+  const selectPerson = async (name = 'Other Member') => {
+    await waitUI(`(${tripBooking}).querySelector('#itemPerson-matches [role=option]')?.textContent.includes(${JSON.stringify(name)})`,'typing did not find a participant');
     for (const key of ['ArrowDown', 'Enter']) {
       await send('Input.dispatchKeyEvent',{type:'keyDown',key});
       await send('Input.dispatchKeyEvent',{type:'keyUp',key});
     }
-    await waitUI(`${personInput}.value.includes('Other Member') && ${personInput}.getAttribute('aria-expanded')==='false' && ${personInput}.validity.valid`,'keyboard did not select the participant');
+    await waitUI(`${personInput}.value.includes(${JSON.stringify(name)}) && ${personInput}.getAttribute('aria-expanded')==='false' && ${personInput}.validity.valid`,'keyboard did not select the participant');
   };
   await typePerson('Other Member');
   await selectPerson();
   await typePerson('Other Mem');
   await waitUI(`!${personInput}.validity.valid`,'editing the name left the previous selection valid');
   await selectPerson();
-  await send('Runtime.evaluate',{expression:`(() => {
+  const fillParticipant = name => send('Runtime.evaluate',{expression:`(() => {
     const form = ${personInput}.closest('form');
-    const values = ['Other Member', '0200000000', 'Synthetic address', 'Test Contact', '0200000001', 'None'];
-    form.querySelectorAll('.tm-participant-field input').forEach((field, i) => field.value = values[i]);
+    const values = [${JSON.stringify(name)}, '0200000000', 'Synthetic address', 'None', 'Test Contact', '0200000001'];
+    const fields = Array.from(form.querySelectorAll('.tm-participant-group')).slice(0, 2)
+      .flatMap(group => Array.from(group.querySelectorAll('.tm-participant-field input, .tm-participant-field textarea')));
+    fields.forEach((field, i) => field.value = values[i]);
     const [membership, needsTransport, offersTransport] = form.querySelectorAll('.tm-participant-field select');
     membership.value = 'member';
     needsTransport.value = 'no';
     offersTransport.value = 'yes';
   })()`});
-  await clickBooking('Submit');
+  await fillParticipant('Other Member');
+  await clickBooking('Save participant');
   await waitUI(`(${tripBooking})?.textContent.includes('Other Member') && !(${tripBooking}).querySelector('#itemPerson')`,'participant was not saved');
+  await clickBooking('Add another person');
+  await waitUI(`!!${personInput}`,'second participant form did not load');
+  await typePerson('Smoke Member');
+  await selectPerson('Smoke Member');
+  await fillParticipant('Smoke Member');
+  await clickBooking('Save participant');
+  await waitUI(`(${tripBooking}).querySelectorAll('.tm-booking-participant').length === 2 && !${personInput}`,'second participant was not saved');
   await clickBooking('Back to booking details');
   await waitUI(`(${tripBooking}).querySelector('#itemNotes')?.value===''`,'Back did not restore the booking with blank notes');
   await clickBooking('Save and continue');
   await clickBooking('Continue to review');
-  await waitUI(`(${tripBooking})?.textContent.includes('Step 3 of 4') && (${tripBooking})?.textContent.includes('Other Member')`,'review did not show the saved participant');
+  await waitUI(`(${tripBooking})?.textContent.includes('Step 3 of 4') && (${tripBooking})?.textContent.includes('Other Member') && (${tripBooking})?.textContent.includes('Smoke Member')`,'review did not show both saved participants');
   await clickBooking('Back to people');
   await clickBooking('Continue to review');
   await clickBooking('Continue to payment');

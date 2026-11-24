@@ -239,6 +239,10 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
 - The bootstrap loads the base theme before the component styles. The schedule
   filter panel and sign-in card use the shared surface, border, and radius
   settings, and both inherit the base font.
+- My Bookings uses the shared card styling for trip names, dates, status,
+  participant count and total. Secondary actions and participant access sit
+  inside each booking's disclosure. The guided booking steps retain the trip
+  summary and share a responsive layout with the grouped participant form.
 - Migration 0035 adds participant snapshots and `trip_answers` to
   `at_booking_people`. Trip types provide default questions and organizers can
   publish trip-specific revisions. Participant saves lock the trip and booking,

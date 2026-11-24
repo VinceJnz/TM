@@ -86,6 +86,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Load required dropdown data before rendering edit forms. Cancel obsolete loads on hide or reset and expose a retry on failure. Use the shared status announcement for operation results even when the message history is collapsed.
 - In My Bookings, load Trip choices through the paginated `GET /myBookings/trips` lookup when opening the form. It uses the My Bookings read grant and returns only trip IDs, names, and dates. Show load failures and retries in the form. Retain participant viewing for locked bookings. Payment history keeps ordinary booking and participant mutations locked even after a full refund.
 - Keep Make Booking's Add Person picker as a single input with keyboard- and pointer-selectable suggestions. Use the booking-scoped lookup, debounce typing, and cancel superseded searches. Keep the selected person ID separate from the display text, clear it when the text changes, and require a valid selection before submission.
+- Use the shared booking card, field grid, and action styles for My Bookings and the participant form. Keep participant fields grouped by purpose, present the trip and dates through the guided steps, and retain read-only participant viewing on locked bookings.
 
 ## Docker and configuration
 

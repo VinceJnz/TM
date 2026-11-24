@@ -232,25 +232,28 @@ func (editor *ItemEditor) renderEditForm(questionnaire api.Questionnaire, detail
 	}
 	editor.EditDiv.Set("innerHTML", "") // Clear existing content
 	form := viewHelpers.Form(editor.SubmitItemEdit, editor.document, "editForm")
+	form.Set("className", "tm-participant-form")
 
 	var localObjs UI
 
 	lookup := "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL + "/lookup"
 	localObjs.PersonID, editor.UiComponents.PersonID, editor.closePicker = editor.Children.PeopleSelector.NewPersonAutocomplete(
-		editor.CurrentRecord.PersonID, editor.CurrentRecord.Person, "Person", "itemPerson", lookup,
+		editor.CurrentRecord.PersonID, editor.CurrentRecord.Person, "Select a person", "itemPerson", lookup,
 	)
+	localObjs.PersonID.Set("className", "tm-person-picker")
 	if details.Membership != "" && editor.CurrentRecord.ID > 0 {
 		localObjs.PersonID.Call("querySelector", "#itemPerson").Set("readOnly", true)
 	}
 
-	localObjs.Notes, editor.UiComponents.Notes = viewHelpers.StringEdit(editor.CurrentRecord.Notes, editor.document, "Other information or messages for the trip leader (optional)", "text", "itemNotes")
-
 	form.Call("appendChild", localObjs.PersonID)
 	editor.readDetails = editor.participantFields(form, questionnaire, details)
-	form.Call("appendChild", localObjs.Notes)
+	editor.UiComponents.Notes = editor.labelledField(form, "Message for the trip leader (optional)", "textarea")
+	editor.UiComponents.Notes.Set("id", "itemNotes")
+	editor.UiComponents.Notes.Set("maxLength", 4000)
+	editor.UiComponents.Notes.Set("value", editor.CurrentRecord.Notes)
 
 	// Create submit button
-	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
+	submitBtn := viewHelpers.SubmitButton(editor.document, "Save participant", "submitEditBtn")
 	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 
 	// Append elements to form
@@ -447,7 +450,12 @@ func (editor *ItemEditor) populateItemList() {
 
 	// Add New Item button
 	if !editor.ReadOnly {
-		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add person", "addNewItemButton")
+		label := "Add person"
+		if len(editor.Records) > 0 {
+			label = "Add another person"
+		}
+		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, label, "addNewItemButton")
+		viewHelpers.StyleButtonSecondary(addNewItemButton)
 		viewHelpers.Action(addNewItemButton, "POST")
 		editor.ListDiv.Call("appendChild", addNewItemButton)
 	}
@@ -457,9 +465,17 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Create and add child views to Item
 		itemDiv := editor.document.Call("createElement", "div")
-		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("textContent", record.Person+" (Notes: "+record.Notes+")")
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		itemDiv.Set("id", "booking-participant-"+strconv.Itoa(record.ID))
+		itemDiv.Set("className", "tm-card tm-booking-participant")
+		name := editor.document.Call("createElement", "strong")
+		name.Set("textContent", record.Person)
+		itemDiv.Call("appendChild", name)
+		if record.Notes != "" {
+			notes := editor.document.Call("createElement", "p")
+			notes.Set("className", "tm-trip-meta tm-booking-notes")
+			notes.Set("textContent", record.Notes)
+			itemDiv.Call("appendChild", notes)
+		}
 
 		if !editor.ReadOnly && (record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookingPeople")) {
 			// Create an edit button

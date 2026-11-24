@@ -6,7 +6,14 @@ import (
 )
 
 // BookingSteps resumes a saved booking by ID, independently of the list page.
-func (editor *ItemEditor) BookingSteps(host js.Value, backToDetails func(), onCheckout func(string), onConfirmed func()) {
+func (editor *ItemEditor) BookingSteps(container js.Value, tripContext string, backToDetails func(), onCheckout func(string), onConfirmed func()) {
+	container.Set("textContent", "")
+	context := editor.document.Call("createElement", "p")
+	context.Set("className", "tm-booking-context")
+	context.Set("textContent", tripContext)
+	host := editor.document.Call("createElement", "section")
+	host.Set("className", "tm-card tm-booking-form")
+	container.Call("append", context, host)
 	var showPeople func()
 	showReview := func() {
 		host.Set("textContent", "")
