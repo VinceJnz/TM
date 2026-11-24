@@ -37,7 +37,7 @@ func (s Service) Mutate(ctx context.Context, actor int, scope string, id int, in
 	if err != nil {
 		return 0, err
 	}
-	if parent.BookingStatusID != int(models.Not_paid) || parent.StripeSessionID.Valid || (parent.OwnerID != actor && !strings.EqualFold(scope, "any")) {
+	if parent.BookingStatusID != int(models.Not_paid) || parent.StripeSessionID.Valid || parent.HasPaymentHistory || (parent.OwnerID != actor && !strings.EqualFold(scope, "any")) {
 		return 0, ErrLocked
 	}
 	if remove {

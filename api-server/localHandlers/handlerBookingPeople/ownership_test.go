@@ -74,4 +74,10 @@ func TestParticipantInsertChecksActualParentAtWriteTime(t *testing.T) {
 	if err := db.QueryRow(qryCreate, 1, 11, 1, "allowed", "own").Scan(&id); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec("INSERT INTO at_payments (id, booking_id) VALUES (1,11)"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(qryCreate, 1, 11, 1, "payment history", "own").Scan(&id); err != sql.ErrNoRows {
+		t.Fatalf("insert with payment history returned %v", err)
+	}
 }

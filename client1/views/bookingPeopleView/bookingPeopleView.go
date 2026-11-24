@@ -65,6 +65,7 @@ type children struct {
 }
 
 type ItemEditor struct {
+	ReadOnly       bool
 	appCore        *appCore.AppCore
 	client         *httpProcessor.Client
 	document       js.Value
@@ -366,9 +367,11 @@ func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add person", "addNewItemButton")
-	viewHelpers.Action(addNewItemButton, "POST")
-	editor.ListDiv.Call("appendChild", addNewItemButton)
+	if !editor.ReadOnly {
+		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add person", "addNewItemButton")
+		viewHelpers.Action(addNewItemButton, "POST")
+		editor.ListDiv.Call("appendChild", addNewItemButton)
+	}
 
 	for _, i := range editor.Records {
 		record := i // Capture loop value so button handlers use the correct record.
@@ -379,7 +382,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("textContent", record.Person+" (Notes: "+record.Notes+")")
 		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
 
-		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookingPeople") {
+		if !editor.ReadOnly && (record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookingPeople")) {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")

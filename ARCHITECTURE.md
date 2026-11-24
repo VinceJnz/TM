@@ -252,6 +252,15 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
 See [browser lifecycle](docs/frontend-lifecycle.md) and
 [the implementation/verification record](docs/authentication-ui-release-follow-up.md).
 
+### My Bookings form and draft actions
+
+My Bookings loads Trip choices when the booking form opens. The form waits for
+the lookup and shows loading, an empty result, or an in-view retry. Leaving or
+resetting the view cancels the lookup. The booking list uses the booking status,
+checkout session, and payment history to hide draft actions for locked bookings.
+Participants remain visible in read-only mode. The API enforces booking and
+participant write restrictions, including when a full refund leaves a zero balance.
+
 ## 6. Docker, runtime configuration and release operations
 
 Default [`Dockerfile.apibuild`](Dockerfile.apibuild)/Compose builds compile the frontend

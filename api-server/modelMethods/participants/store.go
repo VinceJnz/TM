@@ -33,7 +33,9 @@ func (s Store) Parent(ctx context.Context, tx *sqlx.Tx, id int) (models.Booking,
 	if err := tx.GetContext(ctx, &locked, "SELECT id FROM at_trips WHERE id=$1 FOR UPDATE", trip); err != nil {
 		return v, err
 	}
-	err := tx.GetContext(ctx, &v, `SELECT id,trip_id,owner_id,booking_status_id,stripe_session_id FROM at_bookings WHERE id=$1 FOR UPDATE`, id)
+	err := tx.GetContext(ctx, &v, `SELECT b.id,b.trip_id,b.owner_id,b.booking_status_id,b.stripe_session_id,
+		EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=b.id) AS has_payment_history
+		FROM at_bookings b WHERE b.id=$1 FOR UPDATE`, id)
 	if err == nil && v.TripID.Int64 != int64(trip) {
 		return v, models.ErrStaleRecord
 	}

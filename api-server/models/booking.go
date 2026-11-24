@@ -18,28 +18,29 @@ const (
 )
 
 type Booking struct {
-	ID              int                 `json:"id" db:"id"`
-	OwnerID         int                 `json:"owner_id" db:"owner_id"`
-	OwnerName       zero.String         `json:"owner_name" db:"owner_username"`
-	TripID          zero.Int            `json:"trip_id" db:"trip_id"`
-	Notes           string              `json:"notes" db:"notes"`
-	FromDate        time.Time           `json:"from_date" db:"from_date"`
-	ToDate          time.Time           `json:"to_date" db:"to_date"`
-	Participants    zero.Int            `json:"participants" db:"participants"`
-	GroupBookingID  zero.Int            `json:"group_booking_id" db:"group_booking_id"`
-	GroupBooking    zero.String         `json:"group_booking" db:"group_booking"`
-	BookingStatusID int                 `json:"booking_status_id" db:"booking_status_id"`
-	BookingStatus   string              `json:"booking_status" db:"status"`
-	BookingDate     zero.Time           `json:"booking_date" db:"booking_date"`
-	PaymentDate     zero.Time           `json:"payment_date" db:"payment_date"`
-	BookingPrice    decimal.NullDecimal `json:"booking_price" db:"booking_price"`
-	TripName        string              `json:"trip_name" db:"trip_name"`
-	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
-	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
-	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
-	Currency        zero.String         `json:"currency" db:"currency"`       // Currency code for the booking price
-	Created         time.Time           `json:"created" db:"created"`
-	Modified        time.Time           `json:"modified" db:"modified"`
+	HasPaymentHistory bool                `json:"has_payment_history" db:"has_payment_history"`
+	ID                int                 `json:"id" db:"id"`
+	OwnerID           int                 `json:"owner_id" db:"owner_id"`
+	OwnerName         zero.String         `json:"owner_name" db:"owner_username"`
+	TripID            zero.Int            `json:"trip_id" db:"trip_id"`
+	Notes             string              `json:"notes" db:"notes"`
+	FromDate          time.Time           `json:"from_date" db:"from_date"`
+	ToDate            time.Time           `json:"to_date" db:"to_date"`
+	Participants      zero.Int            `json:"participants" db:"participants"`
+	GroupBookingID    zero.Int            `json:"group_booking_id" db:"group_booking_id"`
+	GroupBooking      zero.String         `json:"group_booking" db:"group_booking"`
+	BookingStatusID   int                 `json:"booking_status_id" db:"booking_status_id"`
+	BookingStatus     string              `json:"booking_status" db:"status"`
+	BookingDate       zero.Time           `json:"booking_date" db:"booking_date"`
+	PaymentDate       zero.Time           `json:"payment_date" db:"payment_date"`
+	BookingPrice      decimal.NullDecimal `json:"booking_price" db:"booking_price"`
+	TripName          string              `json:"trip_name" db:"trip_name"`
+	BookingCost       decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
+	StripeSessionID   zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
+	AmountPaid        zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
+	Currency          zero.String         `json:"currency" db:"currency"`       // Currency code for the booking price
+	Created           time.Time           `json:"created" db:"created"`
+	Modified          time.Time           `json:"modified" db:"modified"`
 
 	PreserveBookingPrice bool    `json:"-" db:"-"`
 	VoucherInput         *string `json:"-" db:"-"`
@@ -86,31 +87,32 @@ type GroupBooking struct {
 }
 
 type MyBooking struct {
-	VoucherCode     string              `json:"voucher_code" db:"voucher_code"`
-	ID              int                 `json:"id" db:"id"`
-	OwnerID         int                 `json:"owner_id" db:"owner_id"`
-	Owner           zero.String         `json:"owner_name" db:"owner_name"`
-	TripID          zero.Int            `json:"trip_id" db:"trip_id"`
-	Notes           string              `json:"notes" db:"notes"`
-	FromDate        time.Time           `json:"from_date" db:"from_date"`
-	ToDate          time.Time           `json:"to_date" db:"to_date"`
-	Participants    zero.Int            `json:"participants" db:"participants"`
-	GroupBookingID  zero.Int            `json:"group_booking_id" db:"group_booking_id"`
-	GroupBooking    zero.String         `json:"group_booking" db:"group_booking"`
-	BookingStatusID int                 `json:"booking_status_id" db:"booking_status_id"`
-	BookingStatus   string              `json:"booking_status" db:"status"`
-	BookingDate     zero.Time           `json:"booking_date" db:"booking_date"`
-	PaymentDate     zero.Time           `json:"payment_date" db:"payment_date"`
-	BookingPrice    decimal.NullDecimal `json:"booking_price" db:"booking_price"`
-	TripName        string              `json:"trip_name" db:"trip_name"`
-	TripFromDate    time.Time           `json:"trip_from_date" db:"trip_from_date"`
-	TripToDate      time.Time           `json:"trip_to_date" db:"trip_to_date"`
-	BookingCost     decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
-	StripeSessionID zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
-	AmountPaid      zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
-	Currency        zero.String         `json:"currency" db:"currency"`       // Currency code for the booking price
-	Created         time.Time           `json:"created" db:"created"`
-	Modified        time.Time           `json:"modified" db:"modified"`
+	HasPaymentHistory bool                `json:"has_payment_history" db:"has_payment_history"`
+	VoucherCode       string              `json:"voucher_code" db:"voucher_code"`
+	ID                int                 `json:"id" db:"id"`
+	OwnerID           int                 `json:"owner_id" db:"owner_id"`
+	Owner             zero.String         `json:"owner_name" db:"owner_name"`
+	TripID            zero.Int            `json:"trip_id" db:"trip_id"`
+	Notes             string              `json:"notes" db:"notes"`
+	FromDate          time.Time           `json:"from_date" db:"from_date"`
+	ToDate            time.Time           `json:"to_date" db:"to_date"`
+	Participants      zero.Int            `json:"participants" db:"participants"`
+	GroupBookingID    zero.Int            `json:"group_booking_id" db:"group_booking_id"`
+	GroupBooking      zero.String         `json:"group_booking" db:"group_booking"`
+	BookingStatusID   int                 `json:"booking_status_id" db:"booking_status_id"`
+	BookingStatus     string              `json:"booking_status" db:"status"`
+	BookingDate       zero.Time           `json:"booking_date" db:"booking_date"`
+	PaymentDate       zero.Time           `json:"payment_date" db:"payment_date"`
+	BookingPrice      decimal.NullDecimal `json:"booking_price" db:"booking_price"`
+	TripName          string              `json:"trip_name" db:"trip_name"`
+	TripFromDate      time.Time           `json:"trip_from_date" db:"trip_from_date"`
+	TripToDate        time.Time           `json:"trip_to_date" db:"trip_to_date"`
+	BookingCost       decimal.NullDecimal `json:"booking_cost" db:"booking_cost"` // Calculated
+	StripeSessionID   zero.String         `json:"stripe_session_id" db:"stripe_session_id"`
+	AmountPaid        zero.Float          `json:"amount_paid" db:"amount_paid"` // Percentage of the total booking cost paid
+	Currency          zero.String         `json:"currency" db:"currency"`       // Currency code for the booking price
+	Created           time.Time           `json:"created" db:"created"`
+	Modified          time.Time           `json:"modified" db:"modified"`
 }
 
 type BookingPaymentInfo struct {

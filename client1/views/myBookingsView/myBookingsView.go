@@ -82,6 +82,7 @@ type ItemEditor struct {
 	RecordState   RecordState
 	Children      children
 	Page          httpProcessor.Page
+	tripLoad      httpProcessor.LoadScope
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -121,6 +122,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.tripLoad.Cancel()
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
 	editor.RecordState = RecordStateReloadRequired
@@ -144,6 +146,11 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.tripLoad.Cancel()
+	viewHelpers.Pending(editor.ListDiv, false)
+	if !editor.bookingFlow && editor.ItemState == viewHelpers.ItemStateNone {
+		editor.EditDiv.Set("innerHTML", "")
+	}
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -158,14 +165,45 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	if editor.ItemState == viewHelpers.ItemStateSaving {
 		return nil
 	}
-	editor.bookingFlow = true
-	editor.ListDiv.Set("hidden", true)
-	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
-	editor.CurrentRecord = TableData{}
-	editor.preselectNearestTripForAdd()
-
-	editor.populateEditForm()
+	editor.loadTripsAndOpen(TableData{}, viewHelpers.ItemStateAdding)
 	return nil
+}
+
+func (editor *ItemEditor) loadTripsAndOpen(record TableData, state viewHelpers.ItemState) {
+	ticket := editor.tripLoad.Start()
+	viewHelpers.Pending(editor.ListDiv, true)
+	editor.EditDiv.Set("innerHTML", "")
+	editor.EditDiv.Get("style").Set("display", "block")
+	status := editor.document.Call("createElement", "p")
+	status.Call("setAttribute", "role", "status")
+	status.Set("textContent", "Loading trips…")
+	editor.EditDiv.Call("appendChild", status)
+	go func() {
+		var trips []tripView.TableData
+		err := editor.client.RequestContext(ticket.Context, http.MethodGet, tripView.ApiURL, &trips, nil)
+		if !ticket.Finish(err) {
+			return
+		}
+		viewHelpers.Pending(editor.ListDiv, false)
+		if err != nil {
+			status.Call("remove")
+			viewHelpers.RenderRetry(editor.EditDiv, func() { editor.loadTripsAndOpen(record, state) })
+			return
+		}
+		if len(trips) == 0 {
+			status.Set("textContent", "No trips available.")
+			return
+		}
+		editor.Children.TripChooser.Records = trips
+		editor.CurrentRecord = record
+		if state == viewHelpers.ItemStateAdding {
+			editor.bookingFlow = true
+			editor.ListDiv.Set("hidden", true)
+			editor.preselectNearestTripForAdd()
+		}
+		editor.updateStateDisplay(state)
+		editor.populateEditForm()
+	}()
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)
@@ -535,9 +573,6 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
 		editor.RecordState = RecordStateCurrent
-		// Fetch child data
-		editor.Children.TripChooser.FetchItems()
-
 		localApiURL := ApiURL
 		go func() {
 			editor.client.PageRequest(&editor.Page,
@@ -575,7 +610,12 @@ func (editor *ItemEditor) refreshBookingRow(bookingID int) {
 		updatedExisting := false
 		for index := range editor.Records {
 			if editor.Records[index].ID == bookingID {
+				wasEditable := draftEditable(editor.Records[index])
 				editor.Records[index] = updated
+				if wasEditable != draftEditable(updated) {
+					editor.populateItemList()
+					return
+				}
 				updatedExisting = true
 				break
 			}
@@ -607,6 +647,10 @@ func (editor *ItemEditor) refreshBookingRow(bookingID int) {
 	}()
 }
 
+func draftEditable(record TableData) bool {
+	return record.BookingStatusID == 1 && record.StripeSessionID == "" && !record.HasPaymentHistory
+}
+
 func (editor *ItemEditor) populateItemList() {
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 	editor.RowSummaryDiv = map[int]js.Value{}
@@ -620,6 +664,7 @@ func (editor *ItemEditor) populateItemList() {
 	// Add New Item button
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Create Booking", "addNewItemButton")
 	viewHelpers.Action(addNewItemButton, "POST")
+	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
 	for _, i := range editor.Records {
@@ -627,6 +672,9 @@ func (editor *ItemEditor) populateItemList() {
 		bookingID := record.ID
 
 		bookingPeople := bookingPeopleView.New(editor.document, editor.events, editor.appCore, record.ID)
+		editable := draftEditable(record)
+		bookingPeople.ReadOnly = !editable
+		canManage := editable && (record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookings"))
 		bookingPeople.SetOnItemsChanged(func() {
 			editor.refreshBookingRow(bookingID)
 		})
@@ -640,16 +688,14 @@ func (editor *ItemEditor) populateItemList() {
 		editor.RowSummaryDiv[record.ID] = summaryDiv
 		itemDiv.Call("appendChild", summaryDiv)
 
-		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookings") {
+		if canManage {
 			// Create an edit button
 			editButton := editor.document.Call("createElement", "button")
 			editButton.Set("innerHTML", "Edit")
 			editButton.Set("className", "btn btn-secondary")
 			viewHelpers.Action(editButton, "PUT")
 			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
-				editor.CurrentRecord = record
-				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
-				editor.populateEditForm()
+				editor.loadTripsAndOpen(record, viewHelpers.ItemStateEditing)
 				return nil
 			})
 			itemDiv.Call("appendChild", editButton)
@@ -657,7 +703,10 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Create a toggle modify-people-list button
 		peopleButton := editor.document.Call("createElement", "button")
-		peopleButton.Set("innerHTML", "Manage People")
+		peopleButton.Set("textContent", "View People")
+		if editable {
+			peopleButton.Set("textContent", "Manage People")
+		}
 		peopleButton.Set("className", "btn btn-secondary")
 		domEvents.Listen(peopleButton, "click", func(this js.Value, args []js.Value) any {
 			bookingPeople.FetchItems()
@@ -666,12 +715,14 @@ func (editor *ItemEditor) populateItemList() {
 		})
 		itemDiv.Call("appendChild", peopleButton)
 
-		if record.OwnerID == editor.appCore.GetUser().UserID && record.BookingStatusID == 1 && editor.appCore.HasAccess("bookings", []string{"POST"}, []string{"own", "any"}) {
-			resume := viewHelpers.Button(func(js.Value, []js.Value) any {
-				editor.showBookingPeople(record)
-				return nil
-			}, editor.document, "Continue booking", "booking-continue-"+strconv.Itoa(record.ID))
-			itemDiv.Call("appendChild", resume)
+		if record.BookingStatusID == 1 && !record.HasPaymentHistory && record.OwnerID == editor.appCore.GetUser().UserID && editor.appCore.HasAccess("bookings", []string{"POST"}, []string{"own", "any"}) {
+			if editable {
+				resume := viewHelpers.Button(func(js.Value, []js.Value) any {
+					editor.showBookingPeople(record)
+					return nil
+				}, editor.document, "Continue booking", "booking-continue-"+strconv.Itoa(record.ID))
+				itemDiv.Call("appendChild", resume)
+			}
 			reviewButton, review := viewHelpers.BookingReview(editor.document, editor.client, record.ID,
 				func(url string) {
 					editor.CurrentRecord = record
@@ -686,7 +737,7 @@ func (editor *ItemEditor) populateItemList() {
 			itemDiv.Call("appendChild", review)
 		}
 
-		if record.OwnerID == editor.appCore.GetUser().UserID || editor.appCore.CanManageAny("bookings") {
+		if canManage {
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")
 			deleteButton.Set("innerHTML", "Delete")

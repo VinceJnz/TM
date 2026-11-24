@@ -81,6 +81,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Keep `main.wasm` paired with the `wasm_exec.js` supplied by the compiler that built it. Never hand-edit generated artifacts.
 - Check affected menus, forms, and capability-dependent actions when changing API contracts or permissions. Use action metadata and the shared pending helper to disable actions on rows being refreshed.
 - Load required dropdown data before rendering edit forms. Cancel obsolete loads on hide or reset and expose a retry on failure. Use the shared status announcement for operation results even when the message history is collapsed.
+- In My Bookings, load the Trip choices when opening the form and keep the form closed until the load succeeds. Show the load failure and retry in My Bookings. Retain participant viewing for locked bookings. Payment history keeps ordinary booking and participant mutations locked even after a full refund.
 - Keep Make Booking's Add Person picker as a single input with keyboard- and pointer-selectable suggestions. Use the booking-scoped lookup, debounce typing, and cancel superseded searches. Keep the selected person ID separate from the display text, clear it when the text changes, and require a valid selection before submission.
 
 ## Docker and configuration

@@ -177,6 +177,9 @@
               "null"
             ]
           },
+          "has_payment_history": {
+            "type": "boolean"
+          },
           "id": {
             "type": "integer"
           },
@@ -493,6 +496,9 @@
               "integer",
               "null"
             ]
+          },
+          "has_payment_history": {
+            "type": "boolean"
           },
           "id": {
             "type": "integer"
