@@ -231,6 +231,14 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   and cancels pending detail loads when the view is left. Its booking action
   stays disabled during a summary refresh. The legacy full report API remains
   compatible.
+- The member Trip List requests the `tripsReport` schedule view, which filters by
+  month overlap, type, and grade before paging by start date and ID. Its filter
+  values can be shared in the page URL. The filter options use the same report
+  capability as the schedule. Schedule summaries include display metadata and
+  descriptions, while participant records continue to load on expansion.
+- The bootstrap loads the base theme before the component styles. The schedule
+  filter panel and sign-in card use the shared surface, border, and radius
+  settings, and both inherit the base font.
 - Trip edit forms load difficulty, status, type, and cost-group options before
   rendering. The view cancels the lookup on hide or reset and offers Retry on failure.
 - Make Booking's Add Person form uses

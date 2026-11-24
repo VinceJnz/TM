@@ -112,7 +112,7 @@ try {
   }
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
   await send('Network.setCookie', {name: 'session', value: cookie.slice('session='.length), url: origin, secure: true, httpOnly: true, sameSite: 'Lax'});
-  await send('Page.navigate', {url: `${origin}/`});
+  await send('Page.navigate', {url: `${origin}/?month=2026-01`});
   let rendered = false;
   for (let i = 0; i < 120; i++) {
     const result = await send('Runtime.evaluate', {expression: `!!document.querySelector('#mainContent') && document.querySelector('#userDisplay')?.textContent.includes('Smoke Member') && window.TM_CONFIG?.apiBase === '${prefix}'`, returnByValue: true});
@@ -183,10 +183,13 @@ try {
   await send('Runtime.evaluate',{expression:"document.querySelector('#mainContent .tm-load-error button').click()"});
   let reportRendered=false;
   for(let i=0;i<120;i++){
-    const result=await send('Runtime.evaluate',{expression:"document.querySelector('#mainContent')?.textContent.includes('Trip Participant Status Report')",returnByValue:true});
+    const result=await send('Runtime.evaluate',{expression:"!!document.querySelector('#mainContent .tm-trip-row')",returnByValue:true});
     if(result.result?.value===true){reportRendered=true;break;}await delay(100);
   }
   assert(reportRendered,'Trip List participant report did not render in the browser');
+  await send('Runtime.evaluate',{expression:"const scheduleFilters=document.querySelector('.tm-schedule-filters');scheduleFilters.querySelectorAll('select')[1].value='1';scheduleFilters.requestSubmit();"});
+  await waitUI("new URLSearchParams(location.search).get('type')==='1' && !!document.querySelector('#trip-book-1:enabled')",'Trip List did not apply the type filter');
+  assert(requests.some(url=>url.includes('view=schedule')&&url.includes('month=2026-01')&&url.includes('type=1')),'combined month and type filters were not sent to the API');
   const disclosureIcon=await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent span')).some(span=>span.textContent===String.fromCharCode(0x25b6))",returnByValue:true});
   assert.equal(disclosureIcon.result?.value,true,'disclosure arrow rendered as corrupted text');
   assert(!requests.some(url=>url.includes('trip_id=')),'report eagerly fetched participant lists');

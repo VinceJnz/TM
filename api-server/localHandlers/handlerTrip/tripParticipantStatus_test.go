@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 )
 
 const reportFixture = `
@@ -24,6 +25,38 @@ ALTER TABLE at_bookings ADD COLUMN free_confirmed_at timestamptz;
 INSERT INTO at_booking_people VALUES (1, 10, 1), (2, 20, 2), (3, 30, 2);
 INSERT INTO st_users VALUES (1, 'First member', true), (2, 'Second member', false);
 `
+
+func TestScheduleFiltersBeforePagingAndIncludesOverlappingTrips(t *testing.T) {
+	db := testdb.Open(t, `
+		CREATE TABLE et_trip_type (id int, type text);
+		CREATE TABLE et_trip_difficulty (id int, level text);
+		CREATE TABLE et_trip_status (id int, status text);
+		CREATE TABLE at_trips (
+			id int, trip_name text, from_date date, to_date date, max_participants int,
+			trip_type_id int, difficulty_level_id int, trip_status_id int, location text, description text
+		);
+		INSERT INTO et_trip_type VALUES (1, 'Walk'), (2, 'Cycle');
+		INSERT INTO et_trip_difficulty VALUES (1, 'Easy'), (2, 'Hard');
+		INSERT INTO et_trip_status VALUES (1, 'Open');
+		INSERT INTO at_trips VALUES
+			(1, 'Later walk', '2026-11-12', '2026-11-12', 10, 1, 1, 1, NULL, NULL),
+			(2, 'Cycling', '2026-11-01', '2026-11-01', 10, 2, 1, 1, NULL, NULL),
+			(3, 'Hard walk', '2026-11-02', '2026-11-02', 10, 1, 2, 1, NULL, NULL),
+			(4, 'Overlapping walk', '2026-10-31', '2026-11-01', 10, 1, 1, 1, NULL, 'Overnight'),
+			(5, 'December walk', '2026-12-01', '2026-12-01', 10, 1, 1, 1, NULL, NULL);
+	`)
+	store := tripreport.Store{DB: db}
+	month := time.Date(2026, time.November, 1, 0, 0, 0, 0, time.UTC)
+	filter := tripreport.ScheduleFilter{Month: &month, TypeID: 1, GradeID: 1}
+	first, more, err := store.Schedule(context.Background(), filter, 1, 0)
+	if err != nil || !more || len(first) != 1 || first[0].TripID != 4 || first[0].Grade != "Easy" {
+		t.Fatalf("unexpected first schedule page: %v, more=%v, err=%v", first, more, err)
+	}
+	last, more, err := store.Schedule(context.Background(), filter, 1, 1)
+	if err != nil || more || len(last) != 1 || last[0].TripID != 1 {
+		t.Fatalf("unexpected last schedule page: %v, more=%v, err=%v", last, more, err)
+	}
+}
 
 func TestTripSummariesAndLazyRosterAreBounded(t *testing.T) {
 	db := testdb.Open(t, reportFixture)

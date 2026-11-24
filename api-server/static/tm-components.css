@@ -20,6 +20,29 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .tm-menu-toggle { background: transparent; border: 0; color: inherit; cursor: pointer; }
 
+.tm-schedule-filters {
+ display: flex;
+ flex-wrap: wrap;
+ align-items: end;
+ gap: .75rem;
+ padding: 1rem;
+ margin-block: 1rem;
+ border: 1px solid var(--tm-border);
+ border-radius: var(--tm-panel-radius);
+ background: var(--tm-surface);
+}
+.tm-schedule-filters label { display: grid; gap: .35rem; }
+.tm-trip-row { display: flex; align-items: center; gap: 1rem; }
+.tm-trip-row .tm-disclosure { min-width: 0; overflow-wrap: anywhere; }
+.tm-trip-row strong { font-size: 1.15rem; }
+.tm-trip-meta { display: block; color: var(--tm-text-subtle); margin-block: .2rem; }
+.tm-trip-description { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+ .tm-schedule-filters { align-items: stretch; }
+ .tm-schedule-filters label { flex: 1 1 8rem; }
+ .tm-trip-row { flex-direction: column; align-items: stretch; gap: .5rem; }
+}
+
 .person-autocomplete-matches { max-height: 12rem; overflow: auto; border: 1px solid var(--tm-border); border-radius: 4px; background: var(--tm-surface); }
 .person-autocomplete-matches [role=option] { padding: .4rem .6rem; overflow-wrap: anywhere; cursor: pointer; }
 .person-autocomplete-matches [role=option]:hover,

@@ -42,7 +42,14 @@ const (
 
 const ApiURL = "/tripsReport"
 
-type TableData = api.TripReportDTO
+type TableData struct {
+	api.TripReportDTO
+	Type        string `json:"type"`
+	Grade       string `json:"grade"`
+	Status      string `json:"status"`
+	Location    string `json:"location"`
+	Description string `json:"description"`
+}
 
 type UI struct {
 	Status js.Value
@@ -74,6 +81,7 @@ type ItemEditor struct {
 	Page           httpProcessor.Page
 	detailLoads    []*httpProcessor.LoadScope
 	bookingEditors []*bookingView.ItemEditor
+	filters        scheduleFilters
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -89,6 +97,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
+	editor.addScheduleFilters()
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")

@@ -1,4 +1,6 @@
 :root {
+	--tm-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--tm-panel-radius: .75rem;
 	--tm-bg: #f5f7fb;
 	--tm-surface: #ffffff;
 	--tm-surface-muted: #f0f3f9;
@@ -18,7 +20,7 @@ html, body {
 	height: 100%;
 	background: var(--tm-bg);
 	color: var(--tm-text);
-	font-family: Arial, sans-serif;
+	font-family: var(--tm-font);
 }
 
 .navbar {

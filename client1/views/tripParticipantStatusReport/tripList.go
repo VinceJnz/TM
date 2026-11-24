@@ -29,7 +29,14 @@ func (e *ItemEditor) FetchItems() {
 	viewHelpers.Pending(e.Div, true)
 	go func() {
 		var rows []TableData
-		err := e.client.PageRequestContext(ticket.Context, &page, http.MethodGet, ApiURL+"?view=trips", &rows, nil)
+		var options []filterOption
+		var err error
+		if !e.filters.loaded {
+			err = e.client.RequestContext(ticket.Context, http.MethodGet, ApiURL+"?view=filters", &options, nil)
+		}
+		if err == nil {
+			err = e.client.PageRequestContext(ticket.Context, &page, http.MethodGet, e.schedulePath(), &rows, nil)
+		}
 		if !ticket.Finish(err) {
 			return
 		}
@@ -40,6 +47,9 @@ func (e *ItemEditor) FetchItems() {
 			return
 		}
 		e.Page = page
+		if !e.filters.loaded {
+			e.setFilterOptions(options)
+		}
 		e.Records = rows
 		e.populateItemList()
 		viewHelpers.Pending(e.Div, false)
@@ -55,29 +65,44 @@ func (e *ItemEditor) populateItemList() {
 	e.detailLoads = nil
 	e.bookingEditors = nil
 	e.ListDiv.Set("innerHTML", "")
-	heading := e.document.Call("createElement", "h2")
-	heading.Set("textContent", "Trip Participant Status Report")
-	e.ListDiv.Call("appendChild", heading)
-	viewHelpers.EmptyState(e.ListDiv, len(e.Records))
+	if len(e.Records) == 0 {
+		empty := e.document.Call("createElement", "p")
+		empty.Set("className", "tm-empty")
+		empty.Set("textContent", "No trips match these filters.")
+		e.ListDiv.Call("appendChild", empty)
+	}
 	for _, item := range e.Records {
 		record := item
 		card := e.document.Call("createElement", "section")
-		card.Set("className", "tm-card")
+		card.Set("className", "tm-card tm-trip")
 		row := e.document.Call("createElement", "div")
-		row.Get("style").Set("display", "flex")
-		row.Get("style").Set("flexWrap", "wrap")
+		row.Set("className", "tm-trip-row")
 		toggle := e.document.Call("createElement", "button")
 		toggle.Set("type", "button")
 		toggle.Set("className", "tm-disclosure")
 		arrow := e.document.Call("createElement", "span")
 		arrow.Set("textContent", "\u25b6")
 		arrow.Call("setAttribute", "aria-hidden", "true")
-		toggle.Call("append", arrow, " "+record.TripName+" - "+record.TripFrom.Format(viewHelpers.Layout)+" to "+record.TripTo.Format(viewHelpers.Layout)+" | Capacity: "+strconv.Itoa(record.MaxParticipants))
+		title := e.document.Call("createElement", "strong")
+		title.Set("textContent", record.TripName)
+		dates := e.document.Call("createElement", "span")
+		dates.Set("className", "tm-trip-meta")
+		dates.Set("textContent", tripDates(record))
+		meta := e.document.Call("createElement", "span")
+		meta.Set("className", "tm-trip-meta")
+		meta.Set("textContent", tripMetadata(record))
+		toggle.Call("append", dates, arrow, " ", title, meta)
 		details := e.document.Call("createElement", "div")
 		details.Set("id", "trip-details-"+strconv.Itoa(record.TripID))
 		details.Set("hidden", true)
 		toggle.Call("setAttribute", "aria-controls", details.Get("id"))
 		toggle.Call("setAttribute", "aria-expanded", "false")
+		if record.Description != "" {
+			description := e.document.Call("createElement", "p")
+			description.Set("className", "tm-trip-description")
+			description.Set("textContent", record.Description)
+			details.Call("appendChild", description)
+		}
 		roster := e.document.Call("createElement", "div")
 		details.Call("appendChild", roster)
 		scope := &httpProcessor.LoadScope{}
@@ -118,7 +143,8 @@ func (e *ItemEditor) populateItemList() {
 			book.NewItemData(js.Null(), nil)
 			book.Display()
 			return nil
-		}, e.document, "Make Booking", "trip-book-"+strconv.Itoa(record.TripID))
+		}, e.document, "Book this trip", "trip-book-"+strconv.Itoa(record.TripID))
+		makeBooking.Set("className", "btn btn-primary")
 		viewHelpers.ActionFor(makeBooking, "bookings", "POST")
 		makeBooking.Set("hidden", !e.appCore.HasAccess("bookings", []string{"POST"}, []string{"own", "any"}))
 		row.Call("append", toggle, makeBooking)

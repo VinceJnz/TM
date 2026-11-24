@@ -73,6 +73,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## WASM frontend
 
+- In the member Trip List, keep the selected month, trip type, and grade in the schedule URL. Apply the filters to the full result before pagination. Keep participant rosters lazy and under the existing report access policy.
+
 - Keep browser code in `client1/`; preserve compatibility with both configured Go and TinyGo builds when changing shared frontend paths.
 - Use the existing view, event, and HTTP abstractions before adding alternatives. Keep validation that protects data integrity on the server as well as in the UI.
 - Release `js.Func` callbacks and remove event listeners when their owning view is destroyed. Handle fetch failures, response-body failures, and cancellation without leaving blocked waits.

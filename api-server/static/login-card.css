@@ -1,13 +1,11 @@
-/* GitHub-like login form layout */
 .auth-form-container {
   max-width: 400px;
   margin: 50px auto;
   padding: 20px;
-  background: #fff;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--tm-surface);
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-panel-radius);
+  box-shadow: var(--tm-shadow);
 }
 
 .auth-form-container h1 {
@@ -15,7 +13,7 @@
   font-weight: 600;
   margin: 0 0 24px 0;
   text-align: center;
-  color: #24292e;
+  color: var(--tm-text);
 }
 
 .auth-form {
@@ -29,7 +27,7 @@
 .auth-form a {
   display: block;
   text-align: center;
-  color: #0366d6;
+  color: var(--tm-primary);
   text-decoration: none;
   font-size: 12px;
   margin-top: 12px;
@@ -45,7 +43,7 @@
 }
 
 .or-separator {
-  color: #6a737d;
+  color: var(--tm-text-subtle);
   font-size: 12px;
   margin: 16px 0;
   position: relative;
@@ -58,7 +56,7 @@
   top: 50%;
   width: 48%;
   height: 1px;
-  background: #e1e4e8;
+  background: var(--tm-border);
 }
 
 .or-separator::before {
@@ -73,9 +71,9 @@
   width: 100%;
   margin-bottom: 8px;
   padding: 8px 12px;
-  background: #fafbfc;
-  border: 1px solid #d0d0d0;
-  color: #24292e;
+  background: var(--tm-surface);
+  border: 1px solid var(--tm-border);
+  color: var(--tm-text);
   cursor: pointer;
   border-radius: 4px;
   font-size: 14px;
@@ -83,6 +81,6 @@
 }
 
 .oauth-btn:hover {
-  background: #f3f4f6;
-  border-color: #c0c0c0;
+  background: var(--tm-surface-muted);
+  border-color: var(--tm-text-subtle);
 }

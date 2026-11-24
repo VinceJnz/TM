@@ -4,10 +4,10 @@ import (
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/tripreport"
 	"api-server/v2/models"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
@@ -40,12 +40,52 @@ func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 	var err error
 	store := tripreport.Store{DB: h.appConf.Db}
 	switch {
+	case r.URL.Query().Get("view") == "filters":
+		options, err := store.Filters(r.Context())
+		if err != nil {
+			helpers.WriteDataError(w, err)
+			return
+		}
+		helpers.WriteJSON(w, 200, options)
+		return
+	case r.URL.Query().Get("view") == "schedule":
+		query := r.URL.Query()
+		filter := tripreport.ScheduleFilter{}
+		for name, id := range map[string]*int{"type": &filter.TypeID, "grade": &filter.GradeID} {
+			if raw := query.Get(name); raw != "" {
+				n, err := strconv.ParseInt(raw, 10, 32)
+				if err != nil || n <= 0 {
+					helpers.WriteError(w, 400, "invalid_trip_filter", "Select a valid trip type or grade")
+					return
+				}
+				*id = int(n)
+			}
+		}
+		switch month := query.Get("month"); month {
+		case "past":
+			filter.Past = true
+		case "", "upcoming":
+			filter.Upcoming = true
+		default:
+			start, err := time.Parse("2006-01", month)
+			if err != nil || start.Year() < 1 {
+				helpers.WriteError(w, 400, "invalid_trip_filter", "Use YYYY-MM for the month")
+				return
+			}
+			filter.Month = &start
+		}
+		summaries, more, err := store.Schedule(r.Context(), filter, limit, offset)
+		if err != nil {
+			helpers.WriteDataError(w, err)
+			return
+		}
+		writeReportPage(w, limit, offset, more, summaries)
+		return
 	case r.URL.Query().Get("view") == "trips":
 		items, more, err = store.Trips(r.Context(), limit, offset)
 	case r.URL.Query().Get("trip_id") != "":
 		id, e := strconv.Atoi(r.URL.Query().Get("trip_id"))
 		if e != nil || id <= 0 {
-			err = errors.New("invalid trip")
 			helpers.WriteError(w, 400, "invalid_trip", "A positive trip ID is required")
 			return
 		}
@@ -57,6 +97,10 @@ func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteDataError(w, err)
 		return
 	}
+	writeReportPage(w, limit, offset, more, items)
+}
+
+func writeReportPage(w http.ResponseWriter, limit, offset int, more bool, items any) {
 	w.Header().Set("X-Page-Limit", strconv.Itoa(limit))
 	if more {
 		w.Header().Set("X-Next-Offset", strconv.Itoa(offset+limit))
