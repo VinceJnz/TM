@@ -9,6 +9,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-applicat
 docker compose --profile prod up -d --no-deps --force-recreate apiserver
 ```
 
+For each change made by codex:
+Make the changes, test, update AGENT and ARCHITECTURE documents, commit, push, delpoy to docker on my local workstation.
+
 
 ## Docker build
 
