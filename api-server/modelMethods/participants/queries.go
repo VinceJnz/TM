@@ -1,14 +1,14 @@
 package participants
 
 const (
-	qryGetAll = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	qryGetAll = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, COALESCE(bp.notes, '') AS notes, bp.created, bp.modified
 					FROM at_booking_people bp
 						JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id WHERE (b.owner_id=$1 OR LOWER($2)='any')`
-	qryGet = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	qryGet = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, COALESCE(bp.notes, '') AS notes, bp.created, bp.modified
 				FROM at_booking_people bp
 					JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id
 				WHERE bp.id = $1 AND (b.owner_id=$2 OR LOWER($3)='any')`
-	qryGetList = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, bp.notes, bp.created, bp.modified
+	qryGetList = `SELECT bp.id, bp.owner_id, bp.booking_id, bp.person_id, p.name as person_name, COALESCE(bp.notes, '') AS notes, bp.created, bp.modified
 				FROM at_booking_people bp
 					JOIN st_users p ON p.id=bp.person_id JOIN at_bookings b ON b.id=bp.booking_id
 				WHERE bp.booking_id = $1 AND (b.owner_id=$2 OR LOWER($3)='any')`

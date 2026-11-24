@@ -249,8 +249,11 @@ try {
   await waitUI(`(${myBookingStep})?.textContent.includes('SMOKE-FREE') && (${myBookingStep})?.textContent.includes('NZ$0.00')`,'review did not apply the saved voucher');
   await send('Runtime.evaluate',{expression:`Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Confirm booking').click()`});
   await waitUI(`(${memberBooking})?.querySelector('.tm-booking-status')?.textContent==='Confirmed'`,'zero-total booking was not confirmed');
+  await waitUI(`(${memberBooking})?.querySelector('.tm-booking-cost')?.textContent.includes('NZ$0.00')`,'confirmed booking did not show its final total');
   await waitUI(`Array.from((${memberBooking})?.querySelectorAll('button')||[]).map(button=>button.textContent).join(',')==='View People'`,'confirmed booking still offered draft actions');
-  await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('summary').click();(${memberBooking}).querySelector('.tm-booking-actions button').click()`});
+  await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('summary').click()`});
+  await waitUI(`(${memberBooking})?.querySelector('details')?.open`,'confirmed booking details did not open');
+  await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('.tm-booking-actions button').click()`});
   await waitUI(`(${memberBooking})?.querySelector('details[open] .tm-booking-participant')?.getClientRects().length>0`,'confirmed booking did not reveal its participants');
   await waitUI("document.querySelector('#statusOutput > [role=status]')?.textContent==='Booking confirmed.'",'booking result was not announced');
   assert(requests.some(url=>url.endsWith('/bookings/checkout/confirm/1')), 'zero-total confirmation request missing');

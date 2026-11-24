@@ -613,7 +613,11 @@ func (editor *ItemEditor) renderBookingSummary(root js.Value, record TableData) 
 	add("span", "tm-booking-status", record.BookingStatus)
 	dates := record.FromDate.Format("2 Jan 2006") + " – " + record.ToDate.Format("2 Jan 2006")
 	add("p", "tm-trip-meta", dates+" · Participants: "+strconv.Itoa(record.Participants))
-	add("p", "tm-booking-cost", "Booking total · NZ$"+record.BookingCost.StringFixedBank(2))
+	costLabel, cost := "Estimated cost", record.BookingCost
+	if record.BookingStatus == "Confirmed" || !record.BookingPrice.IsZero() {
+		costLabel, cost = "Booking total", record.BookingPrice
+	}
+	add("p", "tm-booking-cost", costLabel+" · NZ$"+cost.StringFixedBank(2))
 }
 
 func (editor *ItemEditor) refreshBookingRow(bookingID int) {
@@ -675,9 +679,6 @@ func (editor *ItemEditor) populateItemList() {
 	viewHelpers.Action(addNewItemButton, "POST")
 	toolbar.Call("appendChild", addNewItemButton)
 	editor.ListDiv.Call("appendChild", toolbar)
-	if len(editor.Records) == 0 {
-		viewHelpers.Feedback(editor.ListDiv, "You have no bookings yet.")
-	}
 
 	for _, i := range editor.Records {
 		record := i // Capture loop value so callbacks use the correct record.

@@ -14,9 +14,16 @@ import (
 )
 
 func TestParticipantOwnershipReadsAndForgedUpdate(t *testing.T) {
-	db := testdb.Open(t, testdb.Bookings)
+	db := testdb.Open(t, testdb.Bookings+`UPDATE at_booking_people SET notes=NULL WHERE id=111;`)
 	app := &appCore.Config{Db: db, SessionIDKey: "test-session"}
 	h := New(app)
+	own := mux.SetURLVars(httptest.NewRequest("GET", "/", nil), map[string]string{"id": "11"})
+	own = own.WithContext(context.WithValue(own.Context(), app.SessionIDKey, &models.Session{UserID: 1, AccessScope: "own"}))
+	response := httptest.NewRecorder()
+	h.GetList(response, own)
+	if response.Code != 200 || !strings.Contains(response.Body.String(), `"notes":""`) {
+		t.Fatalf("legacy participant notes: %d %s", response.Code, response.Body.String())
+	}
 	for _, scope := range []string{"own", "any"} {
 		for _, method := range []string{"all", "nested", "item"} {
 			id := "222"
