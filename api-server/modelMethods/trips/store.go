@@ -6,9 +6,21 @@ import (
 	"context"
 	"database/sql"
 	"github.com/jmoiron/sqlx"
+	"time"
 )
 
 type Store struct{ DB *sqlx.DB }
+
+type BookingChoice struct {
+	ID       int       `json:"id" db:"id"`
+	Name     string    `json:"trip_name" db:"trip_name"`
+	FromDate time.Time `json:"from_date" db:"from_date"`
+	ToDate   time.Time `json:"to_date" db:"to_date"`
+}
+
+func (s Store) BookingChoices(ctx context.Context, page resourcequery.Page) ([]BookingChoice, resourcequery.PageInfo, error) {
+	return resourcequery.SelectPage[BookingChoice](ctx, s.DB, page, `SELECT id,trip_name,from_date,to_date FROM at_trips`)
+}
 
 func (s Store) List(ctx context.Context, page resourcequery.Page) ([]models.Trip, resourcequery.PageInfo, error) {
 	return resourcequery.SelectPage[models.Trip](ctx, s.DB, page, qryGetAll)

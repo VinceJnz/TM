@@ -180,7 +180,7 @@ func (editor *ItemEditor) loadTripsAndOpen(record TableData, state viewHelpers.I
 	editor.EditDiv.Call("appendChild", status)
 	go func() {
 		var trips []tripView.TableData
-		err := editor.client.RequestContext(ticket.Context, http.MethodGet, tripView.ApiURL, &trips, nil)
+		err := editor.client.RequestContext(ticket.Context, http.MethodGet, ApiURL+"/trips", &trips, nil)
 		if !ticket.Finish(err) {
 			return
 		}
