@@ -400,7 +400,6 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		itemDiv.Set("textContent", "Cost category: "+record.Season+", "+record.MemberStatus+", "+record.UserAgeGroup+", $"+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" ")
-		itemDiv.Get("classList").Call("add", "tm-admin-record")
 
 		// Create an edit button
 		editButton := editor.document.Call("createElement", "button")
@@ -427,6 +426,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
 
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.ListDiv, &editor.Page, len(

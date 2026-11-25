@@ -476,7 +476,6 @@ func (editor *ItemEditor) populateItemList() {
 			viewHelpers.RecordField{Label: "Expiry", Value: expiryText},
 			viewHelpers.RecordField{Label: "Status", Value: activeText},
 		)
-		itemDiv.Get("classList").Call("add", "tm-admin-record")
 
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
@@ -504,6 +503,7 @@ func (editor *ItemEditor) populateItemList() {
 		})
 		itemDiv.Call("appendChild", deleteButton)
 
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.ListDiv,

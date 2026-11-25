@@ -593,7 +593,7 @@ func (editor *ItemEditor) populateItemList() {
 			viewHelpers.RecordField{Label: "Payment date", Value: record.PaymentDate.Format(viewHelpers.Layout)},
 			viewHelpers.RecordField{Label: "Method", Value: record.PaymentMethod},
 		)
-		itemDiv.Get("classList").Call("add", "tm-admin-record")
+
 		inlineFormHost := editor.document.Call("createElement", "div")
 		inlineFormHost.Set("className", "inline-record-form")
 		inlineFormHost.Get("style").Call("setProperty", "margin-top", "8px")
@@ -657,6 +657,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", openRefundsBtn)
 		itemDiv.Call("appendChild", addRefundBtn)
 		itemDiv.Call("appendChild", inlineFormHost)
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.

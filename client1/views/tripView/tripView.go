@@ -571,7 +571,6 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		itemDiv.Set("textContent", record.Name+" (Status:"+record.TripStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+")")
-		itemDiv.Get("classList").Call("add", "tm-admin-record")
 
 		if editor.canManageTrip(record) {
 			// Create an edit button
@@ -621,6 +620,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", bookingButton)
 		itemDiv.Call("appendChild", booking.Div)
 
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.ListDiv, &editor.Page,

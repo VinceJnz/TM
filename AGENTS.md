@@ -75,6 +75,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 ## WASM frontend
 
 - Use shared administration record, form, and disclosure styles. Label create actions with the record name. Keep Close page available and confirm before discarding edits.
+- Align administration rows to the shared content width and put row actions in a wrapping group. Check form spacing and row alignment at desktop and narrow widths in Chromium.
 
 - Use the shared member form and card styles for sign-in, registration, recovery, and profile forms. Reuse the booking field grid for paired controls, keep labels and validation associated with their controls, and preserve authentication and verification flows when changing presentation.
 

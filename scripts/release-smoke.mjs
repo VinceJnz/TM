@@ -453,6 +453,12 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Runtime.evaluate',{expression:"location.hash='/users'"});
   const deleteButton="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Delete'&&b.getClientRects().length>0)";
   await waitUI(`!!(${deleteButton})`,'account actions did not render');
+  await waitUI(`(() => {
+    const header = (${deleteButton}).closest('.tm-admin-record-header');
+    const label = header?.querySelector('.tm-disclosure')?.getBoundingClientRect();
+    const action = (${deleteButton}).getBoundingClientRect();
+    return !!label && label.right < action.left && label.top < action.bottom && action.top < label.bottom;
+  })()`,'desktop administration row actions do not align with the account label');
   await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Add user'&&b.getClientRects().length>0).click()"});
   await waitUI(`(() => {
     const age = document.querySelector('#itemAgeGroup');
@@ -462,6 +468,15 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
       member?.validity.valueMissing && status?.validity.valueMissing &&
       Array.from(status.options).some(option => option.value === '0');
   })()`, 'new account editor defaulted a status or lost the valid zero-valued status');
+  await waitUI(`(() => {
+    const form = document.querySelector('#itemAgeGroup').form;
+    const fields = [...form.children].filter(e=>e.matches('.input-group,.form-group'));
+    return getComputedStyle(form).display==='grid' &&
+      fields.some((field,i)=>fields.slice(i+1).some(other=>{
+        const a=field.getBoundingClientRect(), b=other.getBoundingClientRect();
+        return Math.abs(a.top-b.top)<2 && b.left>=a.right+8;
+      }));
+  })()`,'desktop account form does not have spaced field columns');
   await send('Runtime.evaluate',{expression:"document.querySelector('#itemAgeGroup').form.querySelector('#cancelEditBtn').click()"});
   await send('Runtime.evaluate',{expression:`(${deleteButton}).focus();(${deleteButton}).click()`});
   await waitUI("!!document.querySelector('dialog[open] textarea')",'accessible reason dialog did not open');
@@ -512,6 +527,12 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   const mobile=await send('Runtime.evaluate',{expression:"window.innerWidth===390&&!!document.querySelector('meta[name=viewport]')&&document.documentElement.scrollWidth<=window.innerWidth+1",returnByValue:true});
   assert.equal(mobile.result.value,true,'mobile viewport is not configured');
+  await waitUI(`(() => {
+    const header = (${disclosure}).closest('.tm-admin-record-header').getBoundingClientRect();
+    const close = document.querySelector('#closeAdminPage').getBoundingClientRect();
+    return header.left>=0 && header.right<=window.innerWidth &&
+      close.width<window.innerWidth/2 && document.documentElement.scrollWidth<=window.innerWidth+1;
+  })()`,'mobile system administration layout overflows or stretches the close button');
   assert.equal(exceptions.length,0,`browser exceptions: ${exceptions.join(', ')}`);
   console.log('Real-browser WASM, account forms, modal focus, keyboard and mobile checks passed');
 } finally {
