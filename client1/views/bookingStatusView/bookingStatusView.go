@@ -72,6 +72,7 @@ type ItemEditor struct {
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
+	rowEditor     viewHelpers.RowEditor
 	ListDiv       js.Value
 	ParentID      int
 	ViewState     ViewState
@@ -95,7 +96,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
+	editor.rowEditor.Mount(editor.Div, editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
@@ -112,6 +113,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.rowEditor.CloseIfInline()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.load.Cancel()
 	editor.RecordState = RecordStateReloadRequired
@@ -150,6 +152,9 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+	if editor.ItemState == ItemStateSaving || !editor.rowEditor.Open(js.Undefined(), this) {
+		return nil
+	}
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{}
 
@@ -220,6 +225,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
+	editor.rowEditor.Focus()
 
 	// Make sure the form is visible
 	editor.EditDiv.Get("style").Set("display", "block")
@@ -227,7 +233,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 func (editor *ItemEditor) resetEditForm() {
 	// Clear existing content
-	editor.EditDiv.Set("innerHTML", "")
+	editor.rowEditor.Close(true)
 
 	// Reset CurrentItem
 	editor.CurrentRecord = TableData{}
@@ -348,6 +354,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	editor.rowEditor.CloseIfInline()
 	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
 	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
@@ -370,6 +377,9 @@ func (editor *ItemEditor) populateItemList() {
 		editButton.Set("className", "btn btn-secondary")
 		viewHelpers.Action(editButton, "PUT")
 		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
+			if editor.ItemState == ItemStateSaving || !editor.rowEditor.Open(itemDiv, editButton) {
+				return nil
+			}
 			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()

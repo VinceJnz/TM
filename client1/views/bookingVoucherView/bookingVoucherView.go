@@ -92,6 +92,7 @@ type ItemEditor struct {
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
+	rowEditor     viewHelpers.RowEditor
 	ListDiv       js.Value
 	ViewState     ViewState
 	RecordState   RecordState
@@ -112,7 +113,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
+	editor.rowEditor.Mount(editor.Div, editor.EditDiv)
 
 	editor.ListDiv = editor.document.Call("createElement", "div")
 	editor.ListDiv.Set("id", debugTag+"itemList")
@@ -122,6 +123,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.rowEditor.CloseIfInline()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.load.Cancel()
 	editor.RecordState = RecordStateReloadRequired
@@ -159,6 +161,9 @@ func (editor *ItemEditor) Display() {
 }
 
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+	if editor.ItemState == ItemStateSaving || !editor.rowEditor.Open(js.Undefined(), this) {
+		return nil
+	}
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{IsActive: true}
 	editor.populateEditForm()
@@ -232,6 +237,7 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.syncPricingModeInputs()
 
 	editor.EditDiv.Call("appendChild", form)
+	editor.rowEditor.Focus()
 	editor.EditDiv.Get("style").Set("display", "block")
 }
 
@@ -261,7 +267,7 @@ func (editor *ItemEditor) updatePricingModeInputs(this js.Value, p []js.Value) i
 }
 
 func (editor *ItemEditor) resetEditForm() {
-	editor.EditDiv.Set("innerHTML", "")
+	editor.rowEditor.Close(true)
 	editor.CurrentRecord = TableData{}
 	editor.UiComponents = UI{}
 	editor.updateStateDisplay(ItemStateNone)
@@ -359,7 +365,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, item.write()); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
 		editor.onCompletionMsg(err.Error())
-		viewHelpers.ConflictReload(editor.Div, err, func() {
+		viewHelpers.ConflictReload(editor.EditDiv, err, func() {
 			editor.resetEditForm()
 			editor.RecordState = RecordStateReloadRequired
 			editor.FetchItems()
@@ -441,6 +447,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	editor.rowEditor.CloseIfInline()
 	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
 	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.ListDiv.Set("innerHTML", "")
@@ -482,6 +489,9 @@ func (editor *ItemEditor) populateItemList() {
 		editButton.Set("className", "btn btn-secondary")
 		viewHelpers.Action(editButton, "PUT")
 		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
+			if editor.ItemState == ItemStateSaving || !editor.rowEditor.Open(itemDiv, editButton) {
+				return nil
+			}
 			editor.CurrentRecord = record
 			editor.updateStateDisplay(ItemStateEditing)
 			editor.populateEditForm()

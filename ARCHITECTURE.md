@@ -207,6 +207,10 @@ credential status is grouped by provider.
 Administration screens use a centered content width, responsive field columns,
 and separate record summaries and action groups. The browser smoke test checks
 alignment and overflow using rendered geometry.
+The shared `RowEditor` moves a view's single edit container beneath the selected
+record and returns it to its original location for Add. Moving the container
+keeps validation, capability checks, stale-record recovery, and lookup retries
+with the active edit. Browser coverage checks inline placement and focus.
 
 Administrative record selectors restore IDs after populating their options. A missing required choice leaves the form invalid, an unset optional choice displays **Not set**, and an unavailable saved choice requires operator action before submission. Zero remains a valid ID for account and member statuses. The user lookup reapplies selection after search results replace its options. Payment and refund forms load their choices asynchronously before rendering and cancel obsolete loads. They preserve known booking or payment references, including current references outside the lookup results. My Bookings retains its deliberate new-draft trip preselection and restores the trip for existing drafts.
 

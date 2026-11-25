@@ -12,8 +12,9 @@ import (
 
 func (e *ItemEditor) openQuestionnaire(trip TableData) {
 	e.editLoad.Cancel()
+	viewHelpers.Pending(e.Div, false)
 	ticket := e.questionLoad.Start()
-	e.EditDiv.Set("innerHTML", "")
+	e.EditDiv.Set("textContent", "Loading booking questions…")
 	e.EditDiv.Get("style").Set("display", "block")
 	path := ApiURL + "/" + strconv.Itoa(trip.ID) + "/questionnaire"
 	go func() {
@@ -22,6 +23,7 @@ func (e *ItemEditor) openQuestionnaire(trip TableData) {
 		if !ticket.Finish(err) {
 			return
 		}
+		e.EditDiv.Set("textContent", "")
 		if err != nil {
 			viewHelpers.RenderRetry(e.EditDiv, func() { e.openQuestionnaire(trip) })
 			return
@@ -111,7 +113,7 @@ func (e *ItemEditor) renderQuestionnaire(trip TableData, path string, questionna
 	}, e.document, "Add question", "")
 	cancel := viewHelpers.Button(func(js.Value, []js.Value) any {
 		e.questionLoad.Cancel()
-		e.EditDiv.Set("innerHTML", "")
+		e.rowEditor.Close(true)
 		return nil
 	}, e.document, "Cancel", "")
 	publish := viewHelpers.SubmitButton(e.document, "Publish questions", "")
@@ -150,10 +152,11 @@ func (e *ItemEditor) renderQuestionnaire(trip TableData, path string, questionna
 				e.onCompletionMsg("Questions could not be published. Check the fields or reopen the editor to load the current revision.")
 				return
 			}
-			e.EditDiv.Set("innerHTML", "")
+			e.rowEditor.Close(true)
 			e.onCompletionMsg("Booking questions published.")
 		}()
 		return nil
 	})
 	e.EditDiv.Call("appendChild", form)
+	e.rowEditor.Focus()
 }

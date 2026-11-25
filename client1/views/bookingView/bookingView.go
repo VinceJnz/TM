@@ -68,6 +68,7 @@ type ItemEditor struct {
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
+	rowEditor     viewHelpers.RowEditor
 	ListDiv       js.Value
 	ParentData    ParentData
 	ViewState     ViewState
@@ -100,7 +101,8 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 		editor.resetEditForm()
 		js.Global().Get("location").Set("hash", "/mybookings")
 	})
-	editor.Div.Call("append", editor.backToList, editor.EditDiv)
+	editor.Div.Call("appendChild", editor.backToList)
+	editor.rowEditor.Mount(editor.Div, editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
@@ -119,6 +121,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.rowEditor.CloseIfInline()
 	editor.backToList.Set("hidden", true)
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
@@ -157,6 +160,9 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
+	if editor.ItemState == viewHelpers.ItemStateSaving || !editor.rowEditor.Open(js.Undefined(), this) {
+		return nil
+	}
 	if editor.ItemState == viewHelpers.ItemStateSaving {
 		return nil
 	}
@@ -242,6 +248,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
+	editor.rowEditor.Focus()
 
 	// Make sure the form is visible
 	editor.EditDiv.Get("style").Set("display", "block")
@@ -252,7 +259,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
 	// Clear existing content
-	editor.EditDiv.Set("innerHTML", "")
+	editor.rowEditor.Close(true)
 
 	// Reset CurrentItem
 	editor.CurrentRecord = TableData{}
@@ -475,6 +482,7 @@ func (editor *ItemEditor) refreshBookingRow(bookingID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	editor.rowEditor.CloseIfInline()
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 	editor.RowSummaryDiv = map[int]js.Value{}
 
@@ -508,6 +516,9 @@ func (editor *ItemEditor) populateItemList() {
 			editButton.Set("className", "btn btn-secondary")
 			viewHelpers.Action(editButton, "PUT")
 			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
+				if editor.ItemState == viewHelpers.ItemStateSaving || !editor.rowEditor.Open(itemDiv, editButton) {
+					return nil
+				}
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 				editor.populateEditForm()
@@ -538,8 +549,10 @@ func (editor *ItemEditor) populateItemList() {
 		})
 		itemDiv.Call("appendChild", peopleButton)
 		if record.OwnerID == editor.appCore.GetUser().UserID && record.BookingStatusID == 1 && editor.appCore.HasAccess("bookings", []string{"POST"}, []string{"own", "any"}) {
-			resume := viewHelpers.Button(func(js.Value, []js.Value) any {
-				editor.showBookingPeople(record)
+			resume := viewHelpers.Button(func(trigger js.Value, _ []js.Value) any {
+				if editor.ItemState != viewHelpers.ItemStateSaving && editor.rowEditor.Open(js.Undefined(), trigger) {
+					editor.showBookingPeople(record)
+				}
 				return nil
 			}, editor.document, "Continue booking", "booking-continue-"+strconv.Itoa(record.ID))
 			itemDiv.Call("appendChild", resume)
@@ -552,9 +565,11 @@ func (editor *ItemEditor) populateItemList() {
 					editor.FetchItems()
 				})
 			itemDiv.Call("appendChild", reviewButton)
+			review.Call("setAttribute", "data-tm-row-related", "")
 			itemDiv.Call("appendChild", review)
 		}
 
+		bookingPeople.Div.Call("setAttribute", "data-tm-row-related", "")
 		itemDiv.Call("appendChild", bookingPeople.Div)
 
 		editor.ListDiv.Call("appendChild", itemDiv)

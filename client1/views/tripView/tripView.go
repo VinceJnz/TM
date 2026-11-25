@@ -72,6 +72,7 @@ type ItemEditor struct {
 	UiComponents  UI
 	Div           js.Value
 	EditDiv       js.Value
+	rowEditor     viewHelpers.RowEditor
 	ListDiv       js.Value
 	ParentID      int
 	ViewState     ViewState
@@ -99,7 +100,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
+	editor.rowEditor.Mount(editor.Div, editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
@@ -128,6 +129,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.rowEditor.CloseIfInline()
 	editor.editLoad.Cancel()
 	editor.questionLoad.Cancel()
 	viewHelpers.Pending(editor.Div, false)
@@ -167,6 +169,9 @@ func (editor *ItemEditor) Display() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
+	if editor.ItemState == viewHelpers.ItemStateSaving || !editor.rowEditor.Open(js.Undefined(), this) {
+		return nil
+	}
 	editor.questionLoad.Cancel()
 	date := time.Now().Truncate(24 * time.Hour)
 	editor.openEdit(TableData{
@@ -181,6 +186,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 func (editor *ItemEditor) openEdit(record TableData, state viewHelpers.ItemState) {
 	editor.questionLoad.Cancel()
 	ticket := editor.editLoad.Start()
+	editor.EditDiv.Set("textContent", "Loading trip fields…")
 	viewHelpers.Pending(editor.Div, true)
 	go func() {
 		lookups, err := editor.loadEditLookups(ticket.Context)
@@ -189,6 +195,7 @@ func (editor *ItemEditor) openEdit(record TableData, state viewHelpers.ItemState
 		}
 		viewHelpers.Pending(editor.Div, false)
 		if err != nil {
+			editor.EditDiv.Set("textContent", "")
 			editor.EditDiv.Get("style").Set("display", "block")
 			viewHelpers.RenderRetry(editor.EditDiv, func() { editor.openEdit(record, state) })
 			return
@@ -350,6 +357,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
+	editor.rowEditor.Focus()
 
 	// Make sure the form is visible
 	editor.EditDiv.Get("style").Set("display", "block")
@@ -357,7 +365,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 func (editor *ItemEditor) resetEditForm() {
 	// Clear existing content
-	editor.EditDiv.Set("innerHTML", "")
+	editor.rowEditor.Close(true)
 
 	// Reset CurrentItem
 	editor.CurrentRecord = TableData{}
@@ -459,7 +467,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 		if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, api.TripPayload(item)); err != nil {
 			editor.updateStateDisplay(viewHelpers.ItemStateEditing)
 			editor.onCompletionMsg("Change failed; please retry. " + err.Error())
-			viewHelpers.ConflictReload(editor.Div, err, func() { editor.resetEditForm(); editor.RecordState = RecordStateReloadRequired; editor.FetchItems() })
+			viewHelpers.ConflictReload(editor.EditDiv, err, func() { editor.resetEditForm(); editor.RecordState = RecordStateReloadRequired; editor.FetchItems() })
 			return
 		}
 		editor.resetEditForm()
@@ -548,6 +556,11 @@ func (editor *ItemEditor) canManageTrip(record TableData) bool {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	if editor.rowEditor.CloseIfInline() {
+		editor.editLoad.Cancel()
+		editor.questionLoad.Cancel()
+		viewHelpers.Pending(editor.Div, false)
+	}
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	if !editor.canCreateTrips() {
@@ -579,12 +592,16 @@ func (editor *ItemEditor) populateItemList() {
 			editButton.Set("className", "btn btn-secondary")
 			viewHelpers.Action(editButton, "PUT")
 			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
-				editor.openEdit(record, viewHelpers.ItemStateEditing)
+				if editor.ItemState != viewHelpers.ItemStateSaving && editor.rowEditor.Open(itemDiv, editButton) {
+					editor.openEdit(record, viewHelpers.ItemStateEditing)
+				}
 				return nil
 			})
 			itemDiv.Call("appendChild", editButton)
-			questions := viewHelpers.Button(func(js.Value, []js.Value) any {
-				editor.openQuestionnaire(record)
+			questions := viewHelpers.Button(func(trigger js.Value, _ []js.Value) any {
+				if editor.ItemState != viewHelpers.ItemStateSaving && editor.rowEditor.Open(itemDiv, trigger) {
+					editor.openQuestionnaire(record)
+				}
 				return nil
 			}, editor.document, "Booking questions", "trip-questions-"+strconv.Itoa(record.ID))
 			viewHelpers.Action(questions, "PUT")

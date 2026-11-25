@@ -74,6 +74,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## WASM frontend
 
+- Show existing-record editors directly under the selected administration row. Keep Add at the top of the list, keep lookup failures and retries with the selected row, and return focus to its action on Cancel. Shared editors must confirm before replacing unsaved edits.
+
 - Use shared administration record, form, and disclosure styles. Label create actions with the record name. Keep Close page available and confirm before discarding edits.
 - Align administration rows to the shared content width and put row actions in a wrapping group. Check form spacing and row alignment at desktop and narrow widths in Chromium.
 

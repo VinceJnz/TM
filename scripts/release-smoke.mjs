@@ -424,10 +424,9 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
     assert.equal(conflict.status, 409, 'security group edit should conflict');
     assert.equal(JSON.parse(conflict.body).error.code, 'stale_record');
   }
-  assert.equal((await request(groupPath, 'DELETE', undefined, adminCookie)).status, 200);
   await send('Network.setCookie',{name:'session',value:adminCookie.slice('session='.length),url:origin,secure:true,httpOnly:true,sameSite:'Lax'});
   await send('Page.navigate',{url:`${origin}/`});
-  async function waitUI(expression,message){for(let i=0;i<120;i++){const value=await send('Runtime.evaluate',{expression,returnByValue:true});if(value.result?.value===true)return;await delay(100);}const diagnostic=await send('Runtime.evaluate',{expression:"JSON.stringify({active:document.activeElement.outerHTML,disclosures:Array.from(document.querySelectorAll('.tm-disclosure')).map(e=>({html:e.outerHTML,visible:!!e.getClientRects().length,disabled:e.disabled})),writes:window.__accountWrites,invalid:Array.from(document.querySelectorAll('input,select,textarea')).filter(e=>e.getClientRects().length&&!e.validity.valid).map(e=>({id:e.id,message:e.validationMessage})),feedback:Array.from(document.querySelectorAll('.tm-feedback')).map(e=>e.textContent)})",returnByValue:true});assert.fail(message+' '+diagnostic.result?.value+' exceptions='+exceptions.join(','));}
+  async function waitUI(expression,message){for(let i=0;i<120;i++){const value=await send('Runtime.evaluate',{expression,returnByValue:true});if(value.result?.value===true)return;await delay(100);}const diagnostic=await send('Runtime.evaluate',{expression:"JSON.stringify({active:document.activeElement.outerHTML,disclosures:Array.from(document.querySelectorAll('.tm-disclosure')).map(e=>({html:e.outerHTML,visible:!!e.getClientRects().length,disabled:e.disabled})),writes:window.__accountWrites,invalid:Array.from(document.querySelectorAll('input,select,textarea')).filter(e=>e.getClientRects().length&&!e.validity.valid).map(e=>({id:e.id,message:e.validationMessage})),feedback:Array.from(document.querySelectorAll('.tm-feedback')).map(e=>e.textContent)})",returnByValue:true});assert.fail(message+' '+diagnostic.result?.value+' exceptions='+exceptions.join(',')+' console='+browserConsole.slice(-24).join(' | '));}
   await waitUI("document.querySelector('#userDisplay')?.textContent.includes('Smoke Administrator')",'admin UI did not load');
   await send('Runtime.evaluate',{expression:"location.hash='/payments'"});
   const addPayment="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Add Payment Record'&&b.getClientRects().length>0&&!b.disabled)";
@@ -524,6 +523,39 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',nativeVirtualKeyCode:13,windowsVirtualKeyCode:13});
   await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
   await waitUI("document.activeElement.getAttribute('aria-expanded')==='true'",'keyboard disclosure failed');
+  const tripCard = "Array.from(document.querySelectorAll('.tm-admin-record')).find(row=>row.getClientRects().length&&row.textContent.includes('Synthetic trip'))";
+  await send('Runtime.evaluate',{expression:"location.hash='/trips'"});
+  await waitUI(`!!(${tripCard})?.querySelector('button[data-tm-action=PUT]:not([hidden])')`,'admin trip edit action did not render');
+  await send('Runtime.evaluate',{expression:`(${tripCard}).querySelector('button[data-tm-action=PUT]').click()`});
+  await waitUI(`(() => {
+    const row = (${tripCard});
+    const host = row?.querySelector(':scope > .tm-admin-inline-edit');
+    return !!host?.querySelector('form') && host.contains(document.activeElement) &&
+      host.getBoundingClientRect().top >= row.firstElementChild.getBoundingClientRect().bottom;
+  })()`,'trip editor or focus was not placed under its record');
+  await send('Runtime.evaluate',{expression:`(${tripCard}).querySelector('#cancelEditBtn').click()`});
+  await waitUI(`!(${tripCard})?.querySelector('form') && document.activeElement===(${tripCard})?.querySelector('button[data-tm-action=PUT]')`,'trip Cancel did not close the editor and restore row focus');
+  await send('Runtime.evaluate',{expression:"location.hash='/securitygroup'"});
+  await waitUI(`!!(${disclosure})`,'security groups did not reopen');
+  const groupEdit = `(${disclosure}).closest('.tm-admin-record-header').querySelector('button[data-tm-action=PUT]')`;
+  await send('Runtime.evaluate',{expression:`(${groupEdit}).click()`});
+  await waitUI(`!!(${groupEdit}).closest('.tm-card').querySelector(':scope > .tm-admin-inline-edit > form')`,'security group editor was not placed under its record');
+  await send('Runtime.evaluate',{expression:`(${groupEdit}).closest('.tm-card').querySelector('#cancelEditBtn').click()`});
+  await waitUI(`document.activeElement===(${groupEdit})`,'security group Cancel did not restore row focus');
+  const savedGroup = "Array.from(document.querySelectorAll('[id=\"securityGroupView.groupCard\"]')).find(row=>row.getClientRects().length&&row.querySelector('.tm-disclosure strong')?.textContent==='Updated smoke group')";
+  await waitUI(`!!(${savedGroup})`,'synthetic security group row was missing');
+  await send('Runtime.evaluate',{expression:`(${savedGroup}).querySelector('button[data-tm-action=PUT]').click()`});
+  await waitUI(`!!(${savedGroup}).querySelector(':scope > .tm-admin-inline-edit form')`,'lower security group row did not open its inline form');
+  await send('Runtime.evaluate',{expression:`(() => {
+    const form = (${savedGroup}).querySelector(':scope > .tm-admin-inline-edit form');
+    form.querySelector('#itemName').value = 'Inline save smoke group';
+    form.querySelector('#itemDescription').value = 'Verified inline save';
+    form.requestSubmit();
+  })()`});
+  await waitUI("Array.from(document.querySelectorAll('.tm-disclosure strong')).some(e=>e.getClientRects().length&&e.textContent==='Inline save smoke group')",'inline security group save did not refresh the row');
+  const savedRecord = JSON.parse((await request(groupPath,'GET',undefined,adminCookie)).body)[0];
+  assert.equal(savedRecord.name,'Inline save smoke group','inline save updated the wrong security group');
+  assert.equal((await request(groupPath,'DELETE',undefined,adminCookie)).status,200);
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   const mobile=await send('Runtime.evaluate',{expression:"window.innerWidth===390&&!!document.querySelector('meta[name=viewport]')&&document.documentElement.scrollWidth<=window.innerWidth+1",returnByValue:true});
   assert.equal(mobile.result.value,true,'mobile viewport is not configured');

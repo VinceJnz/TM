@@ -84,6 +84,7 @@ type ItemEditor struct {
 	UiComponents UI
 	Div          js.Value
 	EditDiv      js.Value
+	rowEditor    viewHelpers.RowEditor
 	ListDiv      js.Value
 	StateDiv     js.Value
 	ParentID     int
@@ -112,7 +113,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for displaying the editor
 	editor.EditDiv = document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
+	editor.rowEditor.Mount(editor.Div, editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = document.Call("createElement", "div")
@@ -137,6 +138,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.rowEditor.CloseIfInline()
 	editor.detailsLoad.Cancel()
 	editor.RecordState = RecordStateReloadRequired
 	editor.resetEditForm()
@@ -184,6 +186,9 @@ func (editor *ItemEditor) notifyItemsChanged() {
 
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
+	if editor.ItemState == ItemStateSaving || !editor.rowEditor.Open(js.Undefined(), this) {
+		return nil
+	}
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{} // Clears current item
 
@@ -201,7 +206,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
 	ticket := editor.detailsLoad.Start()
-	editor.EditDiv.Set("innerHTML", "")
+	editor.EditDiv.Set("textContent", "Loading participant details…")
 	editor.EditDiv.Get("style").Set("display", "block")
 	record := editor.CurrentRecord
 	go func() {
@@ -216,6 +221,7 @@ func (editor *ItemEditor) populateEditForm() {
 			return
 		}
 		if err != nil {
+			editor.EditDiv.Set("textContent", "")
 			viewHelpers.RenderRetry(editor.EditDiv, editor.populateEditForm)
 			return
 		}
@@ -264,6 +270,7 @@ func (editor *ItemEditor) renderEditForm(questionnaire api.Questionnaire, detail
 
 	// Append form to editor div
 	editor.EditDiv.Call("appendChild", form)
+	editor.rowEditor.Focus()
 
 	// Make sure the form is visible
 	editor.EditDiv.Get("style").Set("display", "block")
@@ -277,7 +284,7 @@ func (editor *ItemEditor) resetEditForm() {
 		editor.closePicker = nil
 	}
 	// Clear existing content
-	editor.EditDiv.Set("innerHTML", "")
+	editor.rowEditor.Close(true)
 
 	// Reset CurrentItem
 	editor.CurrentRecord = TableData{}
@@ -450,6 +457,9 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 }
 
 func (editor *ItemEditor) populateItemList() {
+	if editor.rowEditor.CloseIfInline() {
+		editor.detailsLoad.Cancel()
+	}
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
 	// Add New Item button
@@ -488,6 +498,9 @@ func (editor *ItemEditor) populateItemList() {
 			editButton.Set("className", "btn btn-secondary")
 			viewHelpers.Action(editButton, "PUT")
 			domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) interface{} {
+				if editor.ItemState == ItemStateSaving || !editor.rowEditor.Open(itemDiv, editButton) {
+					return nil
+				}
 				editor.CurrentRecord = record
 				editor.updateStateDisplay(ItemStateEditing)
 				editor.populateEditForm()
