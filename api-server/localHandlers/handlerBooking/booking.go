@@ -5,6 +5,7 @@ import (
 	service "api-server/v2/app/services/bookings"
 	"api-server/v2/localHandlers/helpers"
 	store "api-server/v2/modelMethods/bookings"
+	"api-server/v2/modelMethods/tripreport"
 	"api-server/v2/models"
 	"errors"
 	"github.com/gorilla/mux"
@@ -56,7 +57,25 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request, trip, id int) {
 		return
 	}
 	if h.personal && trip == 0 && id == 0 {
-		items, info, err := h.store.ListMy(r.Context(), session.UserID, page)
+		query := r.URL.Query()
+		if query.Get("view") == "filters" {
+			items, err := (tripreport.Store{DB: h.appConf.Db}).Filters(r.Context())
+			if err != nil {
+				helpers.WriteDataError(w, err)
+				return
+			}
+			helpers.WriteJSON(w, http.StatusOK, items)
+			return
+		}
+		defaultPeriod := ""
+		if query.Get("view") == "schedule" {
+			defaultPeriod = "past"
+		}
+		filter, valid := helpers.ReadScheduleFilter(w, query, defaultPeriod)
+		if !valid {
+			return
+		}
+		items, info, err := h.store.ListMy(r.Context(), session.UserID, page, filter)
 		if err != nil {
 			helpers.WriteDataError(w, err)
 			return

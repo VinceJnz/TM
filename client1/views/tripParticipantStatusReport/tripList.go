@@ -29,13 +29,13 @@ func (e *ItemEditor) FetchItems() {
 	viewHelpers.Pending(e.Div, true)
 	go func() {
 		var rows []TableData
-		var options []filterOption
+		var options []viewHelpers.ScheduleFilterOption
 		var err error
-		if !e.filters.loaded {
+		if !e.filters.Loaded {
 			err = e.client.RequestContext(ticket.Context, http.MethodGet, ApiURL+"?view=filters", &options, nil)
 		}
 		if err == nil {
-			err = e.client.PageRequestContext(ticket.Context, &page, http.MethodGet, e.schedulePath(), &rows, nil)
+			err = e.client.PageRequestContext(ticket.Context, &page, http.MethodGet, e.filters.Path(ApiURL), &rows, nil)
 		}
 		if !ticket.Finish(err) {
 			return
@@ -47,8 +47,8 @@ func (e *ItemEditor) FetchItems() {
 			return
 		}
 		e.Page = page
-		if !e.filters.loaded {
-			e.setFilterOptions(options)
+		if !e.filters.Loaded {
+			e.filters.SetOptions(options)
 		}
 		e.Records = rows
 		e.populateItemList()

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
@@ -49,31 +48,11 @@ func (h *Handler) GetParticipantStatus(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteJSON(w, 200, options)
 		return
 	case r.URL.Query().Get("view") == "schedule":
-		query := r.URL.Query()
-		filter := tripreport.ScheduleFilter{ActorID: session.UserID}
-		for name, id := range map[string]*int{"type": &filter.TypeID, "grade": &filter.GradeID} {
-			if raw := query.Get(name); raw != "" {
-				n, err := strconv.ParseInt(raw, 10, 32)
-				if err != nil || n <= 0 {
-					helpers.WriteError(w, 400, "invalid_trip_filter", "Select a valid trip type or grade")
-					return
-				}
-				*id = int(n)
-			}
+		filter, valid := helpers.ReadScheduleFilter(w, r.URL.Query(), "upcoming")
+		if !valid {
+			return
 		}
-		switch month := query.Get("month"); month {
-		case "past":
-			filter.Past = true
-		case "", "upcoming":
-			filter.Upcoming = true
-		default:
-			start, err := time.Parse("2006-01", month)
-			if err != nil || start.Year() < 1 {
-				helpers.WriteError(w, 400, "invalid_trip_filter", "Use YYYY-MM for the month")
-				return
-			}
-			filter.Month = &start
-		}
+		filter.ActorID = session.UserID
 		summaries, more, err := store.Schedule(r.Context(), filter, limit, offset)
 		if err != nil {
 			helpers.WriteDataError(w, err)

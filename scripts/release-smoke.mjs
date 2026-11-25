@@ -47,6 +47,19 @@ assert.equal(bookings.status, 200);
 assert.equal(JSON.parse(bookings.body).length, 100, 'collection was not bounded');
 assert(JSON.parse(bookings.body).every(item => item.owner_id === 1), 'another member booking was exposed');
 assert.equal(bookings.headers['x-next-offset'], '100');
+const pastBookings = await request(`${prefix}/myBookings?view=schedule&limit=1`, 'GET', undefined, cookie);
+assert.equal(pastBookings.status, 200);
+assert.deepEqual(JSON.parse(pastBookings.body).map(row=>row.id), [1]);
+assert.equal(pastBookings.headers['x-next-offset'], '1');
+const filteredBookings = await request(`${prefix}/myBookings?view=schedule&month=2026-01&type=1&limit=1&offset=1`, 'GET', undefined, cookie);
+assert.equal(filteredBookings.status, 200);
+assert.deepEqual(JSON.parse(filteredBookings.body).map(row=>row.id), [3], 'filter pagination included another member’s booking');
+const unmatchedBookings = await request(`${prefix}/myBookings?view=schedule&month=2026-01&type=1&grade=999999`, 'GET', undefined, cookie);
+assert.equal(unmatchedBookings.status, 200);
+assert.deepEqual(JSON.parse(unmatchedBookings.body), []);
+const upcomingBookings = await request(`${prefix}/myBookings?view=schedule&month=upcoming`, 'GET', undefined, cookie);
+assert.equal(upcomingBookings.status, 200);
+assert.deepEqual(JSON.parse(upcomingBookings.body), []);
 const lookup = await request(`${prefix}/bookings/1/bookingPeople/lookup?q=Other%20Member`, 'GET', undefined, cookie);
 assert.equal(lookup.status, 200);
 const lookupPeople = JSON.parse(lookup.body);
@@ -219,7 +232,7 @@ try {
     if(result.result?.value===true){reportRendered=true;break;}await delay(100);
   }
   assert(reportRendered,'Trip List participant report did not render in the browser');
-  await send('Runtime.evaluate',{expression:"const scheduleFilters=document.querySelector('.tm-schedule-filters');scheduleFilters.querySelectorAll('select')[1].value='1';scheduleFilters.requestSubmit();"});
+  await send('Runtime.evaluate',{expression:"const scheduleFilters=Array.from(document.querySelectorAll('.tm-schedule-filters')).find(form=>form.getClientRects().length>0);scheduleFilters.querySelectorAll('select')[1].value='1';scheduleFilters.requestSubmit();"});
   await waitUI("new URLSearchParams(location.search).get('type')==='1' && !!document.querySelector('#trip-book-1:enabled')",'Trip List did not apply the type filter');
   assert(requests.some(url=>url.includes('view=schedule')&&url.includes('month=2026-01')&&url.includes('type=1')),'combined month and type filters were not sent to the API');
   const disclosureIcon=await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent span')).some(span=>span.textContent===String.fromCharCode(0x25b6))",returnByValue:true});
@@ -252,6 +265,13 @@ try {
   await waitUI("!!document.querySelector('#trip-details-1 form #itemVoucherCode') && !document.querySelector('#trip-details-1 form #itemBookingPrice')",'Trip List booking form did not offer an optional voucher with a calculated price');
   await send('Runtime.evaluate',{expression:"location.hash='/mybookings'"});
   await waitForPage('Items 1–100');
+  const visibleScheduleFilters = "Array.from(document.querySelectorAll('.tm-schedule-filters')).find(form=>form.getClientRects().length>0)";
+  await waitUI(`(${visibleScheduleFilters})?.querySelector('select')?.value==='past'`,'My Bookings did not default to past trips');
+  await send('Runtime.evaluate',{expression:`(() => { const form = ${visibleScheduleFilters}; form.querySelector('select').value='upcoming'; form.querySelector('select').dispatchEvent(new Event('change')); form.requestSubmit(); })()`});
+  await waitUI("document.querySelector('[id=\"myBookingsView.itemListDiv\"]')?.textContent.includes('No bookings match these filters.')",'upcoming filter did not update the booking list');
+  await send('Runtime.evaluate',{expression:`(() => { const form = ${visibleScheduleFilters}; form.querySelector('select').value='past'; form.querySelector('select').dispatchEvent(new Event('change')); form.requestSubmit(); })()`});
+  await waitForPage('Items 1–100');
+  assert(requests.some(url=>url.includes('/myBookings?') && url.includes('month=past') && url.includes('view=schedule')), 'My Bookings did not send the past filter');
   const memberBooking = "Array.from(document.querySelectorAll('#mainContent .tm-booking-card')).find(row=>row.querySelector('.tm-booking-notes')?.textContent.includes('Member booking') && !row.querySelector('.tm-booking-notes')?.textContent.includes('Other booking'))";
   const myBookingStep = "document.querySelector('#mainContent [id=\"myBookingsView.itemEditDiv\"]')";
   const createBooking = "Array.from(document.querySelectorAll('#mainContent button')).find(button=>button.textContent==='Create Booking')";
@@ -269,7 +289,7 @@ try {
   await waitUI(`(${myBookingStep})?.textContent.includes('SMOKE-FREE') && (${myBookingStep})?.textContent.includes('NZ$0.00')`,'review did not apply the saved voucher');
   const returnToBookings = "Array.from(document.querySelectorAll('#mainContent button')).find(button=>button.textContent==='Back to My Bookings' && !button.hidden)";
   await send('Runtime.evaluate',{expression:`(${returnToBookings}).click()`});
-  const resumeMemberBooking = `Array.from((${memberBooking})?.querySelectorAll('button')||[]).find(button=>button.textContent==='Continue booking' && button.getClientRects().length>0)`;
+  const resumeMemberBooking = `Array.from((${memberBooking})?.querySelectorAll('button')||[]).find(button=>button.textContent==='Continue booking' && !button.disabled && button.getClientRects().length>0)`;
   await waitUI(`!!(${resumeMemberBooking})`,'return to My Bookings did not preserve the saved draft');
   await send('Runtime.evaluate',{expression:`(${resumeMemberBooking}).click(); Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Back to booking details').click()`});
   await waitUI(`(${myBookingStep})?.querySelector('#itemTripID')?.selectedOptions[0]?.textContent.includes('Synthetic trip')`,'Back did not restore the saved trip');
@@ -295,8 +315,8 @@ try {
     await waitUI(`!!(${button}) && !(${button}).disabled`,`booking action missing: ${label}`);
     await send('Runtime.evaluate',{expression:`(${button}).click()`});
   }
-  await send('Runtime.evaluate',{expression:"location.hash='/tripsreport'"});
-  await waitUI("document.querySelector('#pageTitle')?.textContent==='Trip List' && document.querySelector('#trip-book-1')?.getClientRects().length>0 && !document.querySelector('#trip-book-1').disabled",'Trip List booking action did not reappear');
+  await send('Runtime.evaluate',{expression:"window.__previousTripBook=document.querySelector('#trip-book-1');location.hash='/tripsreport'"});
+  await waitUI("document.querySelector('#pageTitle')?.textContent==='Trip List' && document.querySelector('#trip-book-1')?.getClientRects().length>0 && !document.querySelector('#trip-book-1').disabled && document.querySelector('#trip-book-1')!==window.__previousTripBook && !document.querySelector('#trip-book-1').closest('[aria-busy=true]')",'Trip List booking action did not reappear');
   await send('Runtime.evaluate',{expression:"document.querySelector('#trip-book-1').click()"});
   await waitUI(`(${tripBooking})?.querySelector('#itemNotes')?.getClientRects().length>0`,'new booking details did not appear');
   await clickBooking('Save and continue');
@@ -533,7 +553,7 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await waitUI("document.activeElement.getAttribute('aria-expanded')==='true'",'keyboard disclosure failed');
   const tripCard = "Array.from(document.querySelectorAll('.tm-admin-record')).find(row=>row.getClientRects().length&&row.textContent.includes('Synthetic trip'))";
   await send('Runtime.evaluate',{expression:"location.hash='/trips'"});
-  await waitUI(`!!(${tripCard})?.querySelector('button[data-tm-action=PUT]:not([hidden])')`,'admin trip edit action did not render');
+  await waitUI(`!!(${tripCard})?.querySelector('button[data-tm-action=PUT]:not([hidden]):not(:disabled)')`,'admin trip edit action did not render');
   await send('Runtime.evaluate',{expression:`(${tripCard}).querySelector('button[data-tm-action=PUT]').click()`});
   await waitUI(`(() => {
     const row = (${tripCard});
@@ -543,9 +563,10 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   })()`,'trip editor or focus was not placed under its record');
   await send('Runtime.evaluate',{expression:`(${tripCard}).querySelector('#cancelEditBtn').click()`});
   await waitUI(`!(${tripCard})?.querySelector('form') && document.activeElement===(${tripCard})?.querySelector('button[data-tm-action=PUT]')`,'trip Cancel did not close the editor and restore row focus');
-  await send('Runtime.evaluate',{expression:"location.hash='/securitygroup'"});
-  await waitUI(`!!(${disclosure})`,'security groups did not reopen');
+  await send('Runtime.evaluate',{expression:"window.__previousGroup=document.querySelector('[id=\"securityGroupView.groupCard\"] .tm-disclosure');location.hash='/securitygroup'"});
+  await waitUI(`!!(${disclosure}) && (${disclosure})!==window.__previousGroup`,'security groups did not reopen');
   const groupEdit = `(${disclosure}).closest('.tm-admin-record-header').querySelector('button[data-tm-action=PUT]')`;
+  await waitUI(`(${groupEdit})?.disabled===false`,'security group edit action was not enabled');
   await send('Runtime.evaluate',{expression:`(${groupEdit}).click()`});
   await waitUI(`!!(${groupEdit}).closest('.tm-card').querySelector(':scope > .tm-admin-inline-edit > form')`,'security group editor was not placed under its record');
   await send('Runtime.evaluate',{expression:`(${groupEdit}).closest('.tm-card').querySelector('#cancelEditBtn').click()`});

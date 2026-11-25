@@ -3,6 +3,7 @@ package bookings
 import (
 	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/modelMethods/resourcequery"
+	"api-server/v2/modelMethods/tripreport"
 	"api-server/v2/models"
 	"context"
 	"database/sql"
@@ -28,8 +29,8 @@ func (s Store) List(ctx context.Context, actor int, any bool, trip, id int, page
 	}
 	return resourcequery.SelectPage[models.Booking](ctx, s.DB, page, qryGetAll, actor, scope(any))
 }
-func (s Store) ListMy(ctx context.Context, actor int, page resourcequery.Page) ([]models.MyBooking, resourcequery.PageInfo, error) {
-	return resourcequery.SelectPage[models.MyBooking](ctx, s.DB, page, myListQuery, actor)
+func (s Store) ListMy(ctx context.Context, actor int, page resourcequery.Page, filter tripreport.ScheduleFilter) ([]models.MyBooking, resourcequery.PageInfo, error) {
+	return resourcequery.SelectPage[models.MyBooking](ctx, s.DB, page, myListQuery, append(filter.Args(), actor)...)
 }
 
 type Bounds struct{ From, To time.Time }

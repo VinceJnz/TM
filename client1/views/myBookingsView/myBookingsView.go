@@ -82,6 +82,9 @@ type ItemEditor struct {
 	RecordState   RecordState
 	Children      children
 	Page          httpProcessor.Page
+	filters       viewHelpers.ScheduleFilters
+	filterForm    js.Value
+	listLoad      httpProcessor.LoadScope
 	tripLoad      httpProcessor.LoadScope
 	backToList    js.Value
 }
@@ -112,6 +115,10 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
 	editor.ListDiv.Set("id", debugTag+"itemListDiv")
+	editor.filterForm = editor.filters.Mount(document, editor.Div, "", "booking_", "past", func() {
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+	})
 	editor.Div.Call("appendChild", editor.ListDiv)
 
 	// Store supplied parent value
@@ -126,10 +133,12 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.listLoad.Cancel()
 	editor.tripLoad.Cancel()
 	editor.backToList.Set("hidden", true)
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
+	editor.filterForm.Set("hidden", false)
 	editor.RecordState = RecordStateReloadRequired
 	editor.RowSummaryDiv = map[int]js.Value{}
 	editor.EditDiv.Set("innerHTML", "")
@@ -151,6 +160,8 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.listLoad.Cancel()
+	editor.RecordState = RecordStateReloadRequired
 	editor.tripLoad.Cancel()
 	viewHelpers.Pending(editor.ListDiv, false)
 	if !editor.bookingFlow && editor.ItemState == viewHelpers.ItemStateNone {
@@ -217,6 +228,7 @@ func (editor *ItemEditor) loadTripsAndOpen(record TableData, state viewHelpers.I
 		if state == viewHelpers.ItemStateAdding {
 			editor.bookingFlow = true
 			editor.ListDiv.Set("hidden", true)
+			editor.filterForm.Set("hidden", true)
 			editor.preselectNearestTripForAdd()
 		}
 		editor.updateStateDisplay(state)
@@ -306,6 +318,7 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.backToList.Set("hidden", true)
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
+	editor.filterForm.Set("hidden", false)
 	// Clear existing content
 	editor.EditDiv.Set("innerHTML", "")
 
@@ -531,7 +544,8 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 	}
 	editor.resetEditForm()
 
-	editor.refreshBookingRow(item.ID)
+	editor.RecordState = RecordStateReloadRequired
+	editor.FetchItems()
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	editor.onCompletionMsg("Item record updated successfully")
 }
@@ -556,6 +570,7 @@ func (editor *ItemEditor) showBookingPeople(item TableData) {
 	editor.backToList.Set("hidden", false)
 	editor.bookingFlow = true
 	editor.ListDiv.Set("hidden", true)
+	editor.filterForm.Set("hidden", true)
 	editor.CurrentRecord = item
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)
 	people := bookingPeopleView.New(editor.document, editor.events, editor.appCore, item.ID)
@@ -572,44 +587,45 @@ func (editor *ItemEditor) showBookingPeople(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	var records []TableData
-	success := func(err error) {
-		if records != nil {
-			editor.Records = records
-		} else {
-			editor.Records = []TableData{}
-			log.Println(debugTag + "FetchItems()1 records == nil")
+	if editor.RecordState != RecordStateReloadRequired {
+		return
+	}
+	editor.RecordState = RecordStateCurrent
+	ticket := editor.listLoad.Start()
+	page := editor.Page.Snapshot()
+	path := editor.filters.Path(ApiURL)
+	viewHelpers.Pending(editor.ListDiv, true)
+	go func() {
+		var records []TableData
+		var options []viewHelpers.ScheduleFilterOption
+		var err error
+		if !editor.filters.Loaded {
+			err = editor.client.RequestContext(ticket.Context, http.MethodGet, ApiURL+"?view=filters", &options, nil)
 		}
+		if err == nil {
+			err = editor.client.PageRequestContext(ticket.Context, &page, http.MethodGet, path, &records, nil)
+		}
+		if !ticket.Finish(err) {
+			return
+		}
+		viewHelpers.Pending(editor.ListDiv, false)
+		if err != nil {
+			editor.RecordState = RecordStateReloadRequired
+			viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
+			return
+		}
+		if !editor.filters.Loaded {
+			editor.filters.SetOptions(options)
+		}
+		editor.Page = page
+		editor.Records = records
 		editor.populateItemList()
-		if len(editor.Records) == 0 {
+		if len(records) == 0 {
 			message := editor.document.Call("createElement", "p")
-			message.Set("textContent", "You have no bookings yet.")
+			message.Set("textContent", "No bookings match these filters.")
 			editor.ListDiv.Call("appendChild", message)
 		}
-		editor.updateStateDisplay(viewHelpers.ItemStateNone)
-	}
-
-	fail := func(err error) {
-		log.Printf(debugTag+"FetchItems() failed: %v", err)
-		editor.Records = []TableData{}
-		editor.populateItemList()
-		message := editor.document.Call("createElement", "p")
-		message.Set("textContent", "Could not load your bookings.")
-		editor.ListDiv.Call("appendChild", message)
-		editor.RecordState = RecordStateReloadRequired
-		editor.updateStateDisplay(viewHelpers.ItemStateNone)
-	}
-
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.updateStateDisplay(viewHelpers.ItemStateFetching)
-		editor.RecordState = RecordStateCurrent
-		localApiURL := ApiURL
-		go func() {
-			editor.client.PageRequest(&editor.Page,
-
-				http.MethodGet, localApiURL, &records, nil, success, fail)
-		}()
-	}
+	}()
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {

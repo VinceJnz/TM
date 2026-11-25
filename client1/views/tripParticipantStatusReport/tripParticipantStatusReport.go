@@ -82,7 +82,7 @@ type ItemEditor struct {
 	Page           httpProcessor.Page
 	detailLoads    []*httpProcessor.LoadScope
 	bookingEditors []*bookingView.ItemEditor
-	filters        scheduleFilters
+	filters        viewHelpers.ScheduleFilters
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -98,7 +98,11 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for the item editor
 	editor.Div = editor.document.Call("createElement", "div")
 	editor.Div.Set("id", debugTag+"Div")
-	editor.addScheduleFilters()
+	editor.filters.Mount(editor.document, editor.Div, "Trip schedule", "", "month", func() {
+		editor.cancelLoads()
+		editor.RecordState = RecordStateReloadRequired
+		editor.FetchItems()
+	})
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")

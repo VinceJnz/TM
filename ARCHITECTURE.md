@@ -305,6 +305,13 @@ See [browser lifecycle](docs/frontend-lifecycle.md) and
 
 ### My Bookings form and draft actions
 
+My Bookings shares the Trip List period, month, trip type, and grade controls.
+It defaults to Past trips and saves its selections separately in the URL under
+the `booking_` prefix. The `/myBookings` schedule view applies the shared trip date
+and classification predicates to the member's own bookings before pagination.
+Filter options use the My Bookings read capability. New filter selections reset
+pagination, and leaving the view cancels pending list requests.
+
 My Bookings loads Trip choices when the booking form opens. The bounded
 `GET /myBookings/trips` route uses the `myBookings` read capability and returns
 trip IDs, names, and dates for trips with both dates set. New, Edit, and Back to booking details share the
