@@ -13,6 +13,7 @@ type ParticipantWrite struct {
 }
 
 type ParticipantDetails struct {
+	QuestionnaireTripID   int                        `json:"questionnaire_trip_id,omitempty" db:"-"`
 	Name                  string                     `json:"submitted_name" db:"submitted_name"`
 	Mobile                string                     `json:"mobile_phone" db:"mobile_phone"`
 	Address               string                     `json:"home_address" db:"home_address"`

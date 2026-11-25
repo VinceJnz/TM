@@ -83,6 +83,7 @@ type ItemEditor struct {
 	Children      children
 	Page          httpProcessor.Page
 	tripLoad      httpProcessor.LoadScope
+	backToList    js.Value
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -103,7 +104,10 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
+	editor.backToList = viewHelpers.BookingReturn(document, editor.EditDiv, func() bool {
+		return editor.ItemState == viewHelpers.ItemStateSaving
+	}, editor.returnToBookings)
+	editor.Div.Call("append", editor.backToList, editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
@@ -123,6 +127,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 
 func (editor *ItemEditor) ResetView() {
 	editor.tripLoad.Cancel()
+	editor.backToList.Set("hidden", true)
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
 	editor.RecordState = RecordStateReloadRequired
@@ -171,6 +176,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 
 func (editor *ItemEditor) loadTripsAndOpen(record TableData, state viewHelpers.ItemState) {
 	ticket := editor.tripLoad.Start()
+	editor.backToList.Set("hidden", false)
 	viewHelpers.Pending(editor.ListDiv, true)
 	editor.EditDiv.Set("innerHTML", "")
 	editor.EditDiv.Get("style").Set("display", "block")
@@ -189,6 +195,18 @@ func (editor *ItemEditor) loadTripsAndOpen(record TableData, state viewHelpers.I
 			status.Call("remove")
 			viewHelpers.RenderRetry(editor.EditDiv, func() { editor.loadTripsAndOpen(record, state) })
 			return
+		}
+		if record.TripID > 0 {
+			found := false
+			for _, trip := range trips {
+				if trip.ID == record.TripID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				trips = append(trips, tripView.TableData{ID: record.TripID, Name: record.TripName, FromDate: record.FromDate, ToDate: record.ToDate})
+			}
 		}
 		if len(trips) == 0 {
 			status.Set("textContent", "No trips available.")
@@ -275,7 +293,17 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.EditDiv.Get("style").Set("display", "block")
 }
 
+func (editor *ItemEditor) returnToBookings() {
+	editor.cleanupEventListeners()
+	editor.resetEditForm()
+	editor.RecordState = RecordStateReloadRequired
+	editor.FetchItems()
+}
+
 func (editor *ItemEditor) resetEditForm() {
+	editor.tripLoad.Cancel()
+	viewHelpers.Pending(editor.ListDiv, false)
+	editor.backToList.Set("hidden", true)
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
 	// Clear existing content
@@ -525,6 +553,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) showBookingPeople(item TableData) {
+	editor.backToList.Set("hidden", false)
 	editor.bookingFlow = true
 	editor.ListDiv.Set("hidden", true)
 	editor.CurrentRecord = item
@@ -532,9 +561,7 @@ func (editor *ItemEditor) showBookingPeople(item TableData) {
 	people := bookingPeopleView.New(editor.document, editor.events, editor.appCore, item.ID)
 	tripContext := item.TripName + " · " + item.FromDate.Format("2 Jan 2006") + " – " + item.ToDate.Format("2 Jan 2006")
 	people.BookingSteps(editor.EditDiv, tripContext, func() {
-		editor.CurrentRecord = item
-		editor.updateStateDisplay(viewHelpers.ItemStateEditing)
-		editor.populateEditForm()
+		editor.loadTripsAndOpen(item, viewHelpers.ItemStateEditing)
 	}, func(url string) { editor.CurrentRecord = item; editor.openPaymentPage(url) }, func() {
 		editor.resetEditForm()
 
@@ -597,7 +624,7 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 		editor.RecordState = RecordStateReloadRequired
 		editor.FetchItems()
 		editor.updateStateDisplay(viewHelpers.ItemStateNone)
-		editor.onCompletionMsg("Item record deleted successfully")
+		editor.onCompletionMsg("Draft booking cancelled.")
 	}()
 }
 
@@ -769,17 +796,19 @@ func (editor *ItemEditor) populateItemList() {
 			reviewPanel = review
 		}
 
-		if canManage {
+		if canManage && editor.appCore.HasAccess("myBookings", []string{"DELETE"}, []string{"own", "any"}) {
 			// Create a delete button
 			deleteButton := editor.document.Call("createElement", "button")
-			deleteButton.Set("innerHTML", "Delete")
+			deleteButton.Set("textContent", "Cancel draft")
 			deleteButton.Set("className", "btn btn-danger")
 			viewHelpers.Action(deleteButton, "DELETE")
 			domEvents.Listen(deleteButton, "click", func(this js.Value, args []js.Value) any {
-				editor.deleteItem(record.ID)
+				if js.Global().Call("confirm", "Cancel and delete this draft booking?").Bool() {
+					editor.deleteItem(record.ID)
+				}
 				return nil
 			})
-			actions.Call("appendChild", deleteButton)
+			itemDiv.Call("appendChild", deleteButton)
 		}
 
 		if reviewPanel.Truthy() {

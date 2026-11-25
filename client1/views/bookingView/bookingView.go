@@ -61,6 +61,7 @@ type ItemEditor struct {
 	events        *eventProcessor.EventProcessor
 	CurrentRecord TableData
 	bookingFlow   bool
+	backToList    js.Value
 	ItemState     viewHelpers.ItemState
 	Records       []TableData
 	RowSummaryDiv map[int]js.Value
@@ -93,7 +94,13 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	// Create a div for displaying the editor
 	editor.EditDiv = editor.document.Call("createElement", "div")
 	editor.EditDiv.Set("id", debugTag+"itemEditDiv")
-	editor.Div.Call("appendChild", editor.EditDiv)
+	editor.backToList = viewHelpers.BookingReturn(document, editor.EditDiv, func() bool {
+		return editor.ItemState == viewHelpers.ItemStateSaving
+	}, func() {
+		editor.resetEditForm()
+		js.Global().Get("location").Set("hash", "/mybookings")
+	})
+	editor.Div.Call("append", editor.backToList, editor.EditDiv)
 
 	// Create a div for displaying the list
 	editor.ListDiv = editor.document.Call("createElement", "div")
@@ -112,6 +119,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.backToList.Set("hidden", true)
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
 	editor.bookings.Invalidate()
@@ -153,6 +161,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 		return nil
 	}
 	editor.bookingFlow = true
+	editor.backToList.Set("hidden", false)
 	editor.ListDiv.Set("hidden", true)
 	editor.updateStateDisplay(viewHelpers.ItemStateAdding)
 	editor.CurrentRecord = TableData{}
@@ -239,6 +248,7 @@ func (editor *ItemEditor) populateEditForm() {
 }
 
 func (editor *ItemEditor) resetEditForm() {
+	editor.backToList.Set("hidden", true)
 	editor.bookingFlow = false
 	editor.ListDiv.Set("hidden", false)
 	// Clear existing content
@@ -348,6 +358,7 @@ func (editor *ItemEditor) AddItem(item TableData) {
 
 func (editor *ItemEditor) showBookingPeople(item TableData) {
 	editor.bookingFlow = true
+	editor.backToList.Set("hidden", false)
 	editor.ListDiv.Set("hidden", true)
 	editor.CurrentRecord = item
 	editor.updateStateDisplay(viewHelpers.ItemStateNone)

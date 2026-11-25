@@ -19,9 +19,10 @@ type Mailer interface {
 	SendMail(string, string, string) (bool, error)
 }
 type Service struct {
-	Store      store.Store
-	Email      Mailer
-	ActorEmail string
+	Store           store.Store
+	Email           Mailer
+	ActorEmail      string
+	AllowTripChange bool
 }
 
 func (s Service) Save(ctx context.Context, actor int, any bool, operation string, input models.Booking) (result models.Booking, commandErr error) {
@@ -44,22 +45,32 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 	}
 	defer tx.Rollback()
 	var bounds store.Bounds
+	tripChanged := false
+
+	var previousTripID int
 	if operation == "create" {
 		bounds, err = s.Store.LockTrip(ctx, tx, int(input.TripID.Int64))
 		input.OwnerID = actor
 	} else {
 		target := 0
-		if any && operation == "update" {
+		if (any || s.AllowTripChange) && operation == "update" {
 			target = int(input.TripID.Int64)
+			if input.TripID.Valid && target <= 0 {
+				return input, ErrValidation
+			}
 		}
 		var current models.Booking
 		current, bounds, err = s.Store.Lock(ctx, tx, input.ID, target)
+		previousTripID = int(current.TripID.Int64)
+		tripChanged = target > 0 && target != previousTripID
 		if err == nil && !any && current.OwnerID != actor {
 			return input, sql.ErrNoRows
 		}
 		if !any {
 			input.OwnerID = current.OwnerID
-			input.TripID = current.TripID
+			if !s.AllowTripChange || !input.TripID.Valid {
+				input.TripID = current.TripID
+			}
 		}
 		if !any || input.PreserveBookingPrice {
 			input.BookingPrice = current.BookingPrice
@@ -69,7 +80,7 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 	if err != nil {
 		return input, err
 	}
-	if operation != "delete" && (input.FromDate.IsZero() || input.ToDate.IsZero() || !input.ToDate.After(input.FromDate) || input.FromDate.Before(bounds.From) || input.ToDate.After(bounds.To) || (input.BookingPrice.Valid && input.BookingPrice.Decimal.IsNegative())) {
+	if operation != "delete" && (bounds.From.IsZero() || bounds.To.IsZero() || input.FromDate.IsZero() || input.ToDate.IsZero() || !input.ToDate.After(input.FromDate) || input.FromDate.Before(bounds.From) || input.ToDate.After(bounds.To) || (input.BookingPrice.Valid && input.BookingPrice.Decimal.IsNegative())) {
 		return input, ErrValidation
 	}
 	if input.VoucherInput != nil {
@@ -90,6 +101,9 @@ func (s Service) Save(ctx context.Context, actor int, any bool, operation string
 		input.ID, err = s.Store.Create(ctx, tx, actor, input)
 	case "update":
 		err = s.Store.Update(ctx, tx, actor, any, input)
+		if err == nil && tripChanged {
+			err = s.Store.ResetTripAnswers(ctx, tx, input.ID, previousTripID)
+		}
 	case "delete":
 		err = s.Store.Delete(ctx, tx, actor, any, input.ID)
 	default:

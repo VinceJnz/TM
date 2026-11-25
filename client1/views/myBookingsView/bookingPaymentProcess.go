@@ -69,6 +69,10 @@ func (p *ItemEditor) windowMessage(this js.Value, args []js.Value) interface{} {
 	}
 
 	event := args[0]
+	if event.Get("origin").String() != js.Global().Get("location").Get("origin").String() ||
+		!event.Get("source").Equal(p.Children.PaymentState.paymentWindow) {
+		return nil
+	}
 	data := event.Get("data")
 	if data.IsUndefined() || data.IsNull() {
 		return nil
@@ -92,7 +96,7 @@ func (p *ItemEditor) windowMessage(this js.Value, args []js.Value) interface{} {
 	}
 	p.paymentWindowDestroy()
 
-	if status == "complete" {
+	if status == "complete" || status == "cancelled" {
 		if p.bookingFlow {
 			p.resetEditForm()
 		}

@@ -235,18 +235,18 @@ func (editor *ItemEditor) renderEditForm(questionnaire api.Questionnaire, detail
 	form.Set("className", "tm-participant-form")
 
 	var localObjs UI
+	var fillPerson func(userView.PersonMatch)
 
 	lookup := "/bookings/" + strconv.Itoa(editor.ParentID) + ApiURL + "/lookup"
 	localObjs.PersonID, editor.UiComponents.PersonID, editor.closePicker = editor.Children.PeopleSelector.NewPersonAutocomplete(
-		editor.CurrentRecord.PersonID, editor.CurrentRecord.Person, "Select a person", "itemPerson", lookup,
+		editor.CurrentRecord.PersonID, editor.CurrentRecord.Person, "Select a person", "itemPerson", lookup, func(person userView.PersonMatch) {
+			fillPerson(person)
+		},
 	)
 	localObjs.PersonID.Set("className", "tm-person-picker")
-	if details.Membership != "" && editor.CurrentRecord.ID > 0 {
-		localObjs.PersonID.Call("querySelector", "#itemPerson").Set("readOnly", true)
-	}
 
 	form.Call("appendChild", localObjs.PersonID)
-	editor.readDetails = editor.participantFields(form, questionnaire, details)
+	editor.readDetails, fillPerson = editor.participantFields(form, questionnaire, details)
 	editor.UiComponents.Notes = editor.labelledField(form, "Message for the trip leader (optional)", "textarea")
 	editor.UiComponents.Notes.Set("id", "itemNotes")
 	editor.UiComponents.Notes.Set("maxLength", 4000)
@@ -309,8 +309,10 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 	// Use CurrentRecord snapshot for async calls to avoid later UI mutations affecting payload.
 	switch editor.ItemState {
 	case ItemStateEditing:
+		editor.EditDiv.Call("setAttribute", "data-booking-request", "")
 		go editor.UpdateItem(editor.CurrentRecord)
 	case ItemStateAdding:
+		editor.EditDiv.Call("setAttribute", "data-booking-request", "")
 		go editor.AddItem(editor.CurrentRecord)
 	default:
 		editor.onCompletionMsg("Invalid item state for submission")
@@ -327,6 +329,7 @@ func (editor *ItemEditor) cancelItemEdit(this js.Value, p []js.Value) interface{
 
 // UpdateItem updates an existing item record in the item list
 func (editor *ItemEditor) UpdateItem(item TableData) {
+	defer editor.EditDiv.Call("removeAttribute", "data-booking-request")
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := editor.client.Request(http.MethodPut, ApiURL+"/"+strconv.Itoa(item.ID), nil, &item); err != nil {
 		editor.updateStateDisplay(ItemStateEditing)
@@ -344,6 +347,7 @@ func (editor *ItemEditor) UpdateItem(item TableData) {
 
 // AddItem adds a new item to the item list
 func (editor *ItemEditor) AddItem(item TableData) {
+	defer editor.EditDiv.Call("removeAttribute", "data-booking-request")
 	editor.updateStateDisplay(ItemStateSaving)
 	if err := editor.client.Request(http.MethodPost, ApiURL, nil, &item); err != nil {
 		editor.updateStateDisplay(ItemStateAdding)

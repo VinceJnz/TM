@@ -44,6 +44,14 @@ func (s Service) Mutate(ctx context.Context, actor int, scope string, id int, in
 	if remove {
 		err = s.Store.Delete(ctx, tx, actor, scope, id)
 	} else {
+		if id > 0 {
+			if err := s.Store.PrepareReplacement(ctx, tx, id, input.PersonID, input.Details != nil); err != nil {
+				if errors.Is(err, store.ErrReplacementDetails) {
+					return 0, ErrValidation
+				}
+				return 0, err
+			}
+		}
 		id, err = s.Store.Save(ctx, tx, actor, scope, id, input)
 	}
 	if err != nil {
@@ -59,7 +67,8 @@ func (s Service) Mutate(ctx context.Context, actor int, scope string, id int, in
 		if err != nil {
 			return 0, err
 		}
-		if details.QuestionnaireRevision != current.Revision {
+		if (details.QuestionnaireTripID != 0 && details.QuestionnaireTripID != trip) ||
+			details.QuestionnaireRevision != current.Revision {
 			return 0, models.ErrStaleRecord
 		}
 		if err := current.ValidateAnswers(details.Answers, true); err != nil {
@@ -72,7 +81,7 @@ func (s Service) Mutate(ctx context.Context, actor int, scope string, id int, in
 			}
 			details.QuestionnaireRevision = current.Revision
 		}
-		if err := s.Store.SaveDetails(ctx, tx, id, details); err != nil {
+		if err := s.Store.SaveDetails(ctx, tx, id, trip, details); err != nil {
 			return 0, err
 		}
 	}

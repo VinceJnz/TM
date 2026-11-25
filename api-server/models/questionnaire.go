@@ -19,6 +19,7 @@ type Question struct {
 }
 
 type Questionnaire struct {
+	TripID    int        `json:"trip_id,omitempty"`
 	Revision  int        `json:"revision"`
 	Questions []Question `json:"questions"`
 }

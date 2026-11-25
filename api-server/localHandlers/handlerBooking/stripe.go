@@ -148,8 +148,10 @@ func writeBookingCheckoutError(w http.ResponseWriter, err error) {
 		helpers.WriteError(w, http.StatusConflict, "capacity_unavailable", "The trip has insufficient space for this booking.")
 	case errors.Is(err, paymentLedger.ErrParticipantDetails):
 		helpers.WriteError(w, http.StatusConflict, "participant_details_required", "Complete the required details for each participant before continuing.")
+	case errors.Is(err, paymentLedger.ErrBookingPricing):
+		helpers.WriteError(w, http.StatusConflict, "booking_pricing_unavailable", "Pricing is unavailable for this booking. Ask the trip organiser to check the rates for the selected participants.")
 	default:
-		helpers.WriteError(w, http.StatusConflict, "checkout_unavailable", "Could not prepare this booking. Check the participants and try again.")
+		helpers.WriteDataError(w, err)
 	}
 }
 

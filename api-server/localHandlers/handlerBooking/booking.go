@@ -95,7 +95,7 @@ func (h *Handler) write(w http.ResponseWriter, r *http.Request, operation string
 			return
 		}
 	}
-	command := service.Service{Store: h.store}
+	command := service.Service{Store: h.store, AllowTripChange: h.personal}
 	if h.personal {
 		command.Email = h.appConf.EmailService()
 		command.ActorEmail = session.Email

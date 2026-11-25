@@ -11,6 +11,7 @@ import (
 )
 
 var ErrVoucherUnavailable = errors.New("voucher is invalid or expired")
+var ErrBookingPricing = errors.New("trip pricing is unavailable for this booking")
 var ErrQuoteChanged = errors.New("booking total changed")
 
 const activeVoucher = `v.is_active IS TRUE
@@ -52,6 +53,7 @@ func bookingTotalAt(ctx context.Context, tx *sqlx.Tx, bookingID int, effectiveAt
 		JOIN st_users u ON u.id=p.person_id
 		LEFT JOIN at_trip_costs c ON c.trip_cost_group_id=t.trip_cost_group_id AND c.member_status_id=u.member_status_id AND c.user_age_group_id=u.user_age_group_id
 		WHERE b.id=$1 GROUP BY b.id HAVING COUNT(p.id)=COUNT(c.id)
+			AND COUNT(p.id)=COUNT(DISTINCT p.id)
 	)
 	SELECT price.voucher_code, price.base,
 		CASE WHEN price.voucher_code='' THEN price.base
@@ -102,7 +104,13 @@ func ReviewBooking(ctx context.Context, db *sqlx.DB, bookingID, owner int) (Book
 		if err := requireParticipantDetails(ctx, tx, bookingID); err != nil {
 			return review, err
 		}
+		if len(review.Participants) == 0 {
+			return review, ErrParticipantDetails
+		}
 		review.AmountMinor, err = bookingTotal(ctx, tx, bookingID)
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, ErrInvalidPayment) {
+			return review, ErrBookingPricing
+		}
 	}
 	if err != nil {
 		return review, err

@@ -11,6 +11,33 @@ import (
 	"time"
 )
 
+// BookingReturn keeps the list action available while the booking step contents change.
+func BookingReturn(doc, editor js.Value, saving func() bool, back func()) js.Value {
+	button := Button(func(js.Value, []js.Value) any {
+		if saving() || !editor.Call("querySelector", "[data-booking-request]").IsNull() {
+			return nil
+		}
+		if !editor.Call("querySelector", "form[data-booking-dirty]").IsNull() &&
+			!js.Global().Call("confirm", "Discard unsaved changes and return to My Bookings?").Bool() {
+			return nil
+		}
+		back()
+		return nil
+	}, doc, "Back to My Bookings", "")
+	StyleButtonSecondary(button)
+	button.Set("hidden", true)
+	markDirty := func(_ js.Value, args []js.Value) any {
+		form := args[0].Get("target").Call("closest", "form")
+		if !form.IsNull() {
+			form.Call("setAttribute", "data-booking-dirty", "")
+		}
+		return nil
+	}
+	domEvents.Listen(editor, "input", markDirty)
+	domEvents.Listen(editor, "change", markDirty)
+	return button
+}
+
 func BookingReview(doc js.Value, client *httpProcessor.Client, id int, onCheckout func(string), onConfirmed func(), backToPeople ...func()) (js.Value, js.Value) {
 	panel := doc.Call("createElement", "div")
 	panel.Call("setAttribute", "aria-live", "polite")
@@ -88,10 +115,12 @@ func BookingReview(doc js.Value, client *httpProcessor.Client, id int, onCheckou
 			action = Button(func(js.Value, []js.Value) any {
 				action.Set("disabled", true)
 				reviewButton.Set("disabled", true)
+				panel.Call("setAttribute", "data-booking-request", "")
 				if guided {
 					actionBack.Set("disabled", true)
 				}
 				go func() {
+					defer panel.Call("removeAttribute", "data-booking-request")
 					var err error
 					if review.AmountMinor == 0 {
 						err = client.Request(http.MethodPost, checkout+"confirm"+path, nil, nil)

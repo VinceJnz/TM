@@ -18,11 +18,17 @@ func (s Store) Lookup(ctx context.Context, query string, id int) ([]resourcequer
 
 func (s Store) BookingPeopleLookup(ctx context.Context, query string, id, bookingID, viewer int, scope string) ([]resourcequery.UserOption, error) {
 	items := []resourcequery.UserOption{}
-	err := s.DB.SelectContext(ctx, &items, `SELECT id,name FROM st_users
-		WHERE (id=$3 OR user_account_hidden IS NOT TRUE)
-		AND (($2>0 AND id=$2) OR ($2=0 AND length($1)>=2 AND strpos(lower(name),lower($1))>0))
+	err := s.DB.SelectContext(ctx, &items, `SELECT u.id,u.name,COALESCE(u.member_code,'') AS member_code,
+		CASE lower(trim(m.status))
+			WHEN 'member' THEN 'member' WHEN 'ttc member' THEN 'member'
+			WHEN 'non-member' THEN 'non_member' WHEN 'non member' THEN 'non_member'
+			WHEN 'affiliated member' THEN 'affiliated_member' ELSE '' END AS membership
+		FROM st_users u LEFT JOIN et_member_status m ON m.id=u.member_status_id
+		WHERE (u.id=$3 OR user_account_hidden IS NOT TRUE OR ($2>0 AND EXISTS(
+			SELECT 1 FROM at_booking_people p WHERE p.booking_id=$4 AND p.person_id=u.id)))
+		AND (($2>0 AND u.id=$2) OR ($2=0 AND length($1)>=2 AND strpos(lower(name),lower($1))>0))
 		AND EXISTS(SELECT 1 FROM at_bookings WHERE id=$4 AND (owner_id=$3 OR lower($5)='any'))
-		ORDER BY id LIMIT 25`, query, id, viewer, bookingID, scope)
+		ORDER BY u.id LIMIT 25`, query, id, viewer, bookingID, scope)
 	return items, err
 }
 

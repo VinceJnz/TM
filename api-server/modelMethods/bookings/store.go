@@ -35,9 +35,9 @@ func (s Store) ListMy(ctx context.Context, actor int, page resourcequery.Page) (
 type Bounds struct{ From, To time.Time }
 
 func (s Store) LockTrip(ctx context.Context, tx *sqlx.Tx, id int) (Bounds, error) {
-	var bounds Bounds
-	err := tx.QueryRowContext(ctx, `SELECT from_date,to_date FROM at_trips WHERE id=$1 FOR UPDATE`, id).Scan(&bounds.From, &bounds.To)
-	return bounds, err
+	var from, to sql.NullTime
+	err := tx.QueryRowContext(ctx, `SELECT from_date,to_date FROM at_trips WHERE id=$1 FOR UPDATE`, id).Scan(&from, &to)
+	return Bounds{From: from.Time, To: to.Time}, err
 }
 
 // Lock parent trips in canonical order before locking the booking. Recheck the
@@ -66,7 +66,7 @@ func (s Store) Lock(ctx context.Context, tx *sqlx.Tx, id, target int) (models.Bo
 		}
 	}
 	var current models.Booking
-	err := tx.GetContext(ctx, &current, `SELECT id,owner_id,trip_id,notes,from_date,to_date,booking_price,voucher_code FROM at_bookings WHERE id=$1 FOR UPDATE`, id)
+	err := tx.GetContext(ctx, &current, `SELECT id,owner_id,trip_id,COALESCE(notes,'') AS notes,from_date,to_date,booking_price,voucher_code FROM at_bookings WHERE id=$1 FOR UPDATE`, id)
 	if err == nil && int(current.TripID.Int64) != oldTrip {
 		err = paymentLedger.ErrConcurrentChange
 	}
@@ -94,7 +94,20 @@ func (s Store) Update(ctx context.Context, tx *sqlx.Tx, actor int, any bool, inp
 	if any {
 		return changed(tx.ExecContext(ctx, qryUpdateAdmin, input.ID, input.OwnerID, input.TripID, input.Notes, input.FromDate, input.ToDate, input.BookingPrice, input.VoucherCode))
 	}
-	return changed(tx.ExecContext(ctx, qryUpdate, input.ID, actor, "own", input.Notes, input.FromDate, input.ToDate, input.VoucherCode))
+	return changed(tx.ExecContext(ctx, qryUpdate, input.ID, actor, input.TripID, input.Notes, input.FromDate, input.ToDate, input.VoucherCode))
+}
+
+// ResetTripAnswers archives answers under the previous trip and revision before clearing them.
+func (s Store) ResetTripAnswers(ctx context.Context, tx *sqlx.Tx, bookingID, previousTrip int) error {
+	_, err := tx.ExecContext(ctx, `UPDATE at_booking_people
+		SET trip_answer_history = COALESCE((
+			SELECT jsonb_object_agg(CASE WHEN position(':' in key)=0 THEN $2::text || ':' || key ELSE key END, value)
+			FROM jsonb_each(trip_answer_history)
+		), '{}'::jsonb) || CASE WHEN questionnaire_revision IS NULL THEN '{}'::jsonb
+			ELSE jsonb_build_object($2::text || ':' || questionnaire_revision::text, trip_answers) END,
+			questionnaire_revision = NULL, trip_answers = '{}'::jsonb
+		WHERE booking_id = $1`, bookingID, previousTrip)
+	return err
 }
 
 func (s Store) ValidVoucher(ctx context.Context, tx *sqlx.Tx, code string) (bool, error) {

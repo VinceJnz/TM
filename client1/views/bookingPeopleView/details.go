@@ -2,12 +2,13 @@ package bookingPeopleView
 
 import (
 	"client1/v2/app/api"
+	"client1/v2/views/userView"
 	"encoding/json"
 	"strings"
 	"syscall/js"
 )
 
-func (e *ItemEditor) participantFields(form js.Value, questionnaire api.Questionnaire, details api.ParticipantDetails) func() *api.ParticipantDetails {
+func (e *ItemEditor) participantFields(form js.Value, questionnaire api.Questionnaire, details api.ParticipantDetails) (func() *api.ParticipantDetails, func(userView.PersonMatch)) {
 	identity := e.fieldGroup(form, "Participant details", "")
 	emergency := e.fieldGroup(form, "Emergency contact", "Choose someone who is not on the trip.")
 	type field struct {
@@ -47,29 +48,67 @@ func (e *ItemEditor) participantFields(form js.Value, questionnaire api.Question
 	membership.Call("appendChild", e.option("affiliated_member", "Affiliated member"))
 	membership.Set("value", details.Membership)
 	membership.Set("required", true)
+	memberCode := e.labelledField(identity, "Membership number", "input")
+	memberCode.Set("readOnly", true)
+	membership.Get("parentElement").Call("after", memberCode.Get("parentElement"))
 
+	var questionFields js.Value
+	selectedPerson := e.CurrentRecord.PersonID
 	readers := make(map[string]func() any, len(questionnaire.Questions))
 	if len(questionnaire.Questions) > 0 {
 		questions := e.fieldGroup(form, "Trip questions", "")
+		questionFields = questions
 		for _, question := range questionnaire.Questions {
 			readers[question.Key] = e.questionField(questions, question, details.Answers[question.Key])
 		}
 	}
 	return func() *api.ParticipantDetails {
-		for index, item := range fields {
-			*item.target = strings.TrimSpace(inputs[index].Get("value").String())
-		}
-		details.Membership = membership.Get("value").String()
-		details.QuestionnaireRevision = questionnaire.Revision
-		details.Answers = make(map[string]json.RawMessage, len(readers))
-		for key, read := range readers {
-			if answer := read(); answer != nil {
-				raw, _ := json.Marshal(answer)
-				details.Answers[key] = raw
+			for index, item := range fields {
+				*item.target = strings.TrimSpace(inputs[index].Get("value").String())
+			}
+			details.Membership = membership.Get("value").String()
+			details.QuestionnaireTripID = questionnaire.TripID
+			details.QuestionnaireRevision = questionnaire.Revision
+			details.Answers = make(map[string]json.RawMessage, len(readers))
+			for key, read := range readers {
+				if answer := read(); answer != nil {
+					raw, _ := json.Marshal(answer)
+					details.Answers[key] = raw
+				}
+			}
+			return &details
+		}, func(person userView.PersonMatch) {
+			memberCode.Set("value", person.MemberCode)
+			if person.ID == 0 {
+				return
+			}
+			if person.MemberCode == "" {
+				memberCode.Set("value", "Not recorded")
+			}
+			if person.ID == selectedPerson {
+				if membership.Get("value").String() == "" {
+					membership.Set("value", person.Membership)
+				}
+				return
+			}
+			selectedPerson = person.ID
+			for _, input := range inputs {
+				input.Set("value", "")
+			}
+			inputs[0].Set("value", person.Name)
+			membership.Set("value", person.Membership)
+			if questionFields.Truthy() {
+				controls := questionFields.Call("querySelectorAll", "input,select,textarea")
+				for i := 0; i < controls.Length(); i++ {
+					control := controls.Index(i)
+					if control.Get("type").String() == "checkbox" || control.Get("type").String() == "radio" {
+						control.Set("checked", false)
+					} else {
+						control.Set("value", "")
+					}
+				}
 			}
 		}
-		return &details
-	}
 }
 
 func (e *ItemEditor) fieldGroup(parent js.Value, title, hint string) js.Value {

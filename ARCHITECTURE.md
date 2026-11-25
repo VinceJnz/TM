@@ -254,8 +254,10 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   Revised answers retain a copy of the previous revision's responses. The booking
   people endpoint serves details within existing booking scope. A separate
   report endpoint checks that the requester owns the trip before returning details.
-  Once details are recorded, changing the participant or booking trip requires
-  removing the affected participant records before entering the new details.
+  Editable drafts support changing the trip or replacing a participant. Trip
+  changes keep the roster, archive answers with their trip and revision, and
+  clear the active answers. Participant replacements require fresh details and
+  discard the prior person's answers from the replacement record.
 - New bookings require complete participant fields and required trip answers
   during review, new checkout preparation, and free confirmation. Existing
   bookings and already-open checkout attempts retain their original path.
@@ -271,11 +273,12 @@ generated WASM or the compiler-supplied `wasm_exec.js`.
   supplies `GET /bookings/{id}/bookingPeople/lookup` and validates the separately
   stored person ID before saving. The endpoint searches display names and returns
   up to 25 matches, subject to booking access and person visibility. The picker
-  searches after two characters and a 250 ms pause. It uses `domEvents.Timeout`
+  fills the selected account's full name, membership category, and read-only
+  member number. It searches after two characters and a 250 ms pause. It uses `domEvents.Timeout`
   for the delay and `LoadScope` with `RequestContext` to cancel superseded requests
   and discard late responses. Users can select by keyboard or pointer. Editing
-  the text clears the ID. Existing participants use their saved display name,
-  with lookup by ID if the name is missing.
+  the text clears the ID. Existing participants keep their saved form details,
+  and an ID lookup supplies the current membership number.
 - Test compiler-sensitive code in both builds. A real TinyGo startup failure was caught
   during the conflict changes. The current code uses typed error unwrapping and direct
   JSON destination pointers instead of introducing unsupported reflection paths.
@@ -287,11 +290,17 @@ See [browser lifecycle](docs/frontend-lifecycle.md) and
 
 My Bookings loads Trip choices when the booking form opens. The bounded
 `GET /myBookings/trips` route uses the `myBookings` read capability and returns
-trip IDs, names, and dates. The form shows loading, an empty result, or an
-in-view retry. Leaving or resetting the view cancels the lookup. The booking
+trip IDs, names, and dates for trips with both dates set. New, Edit, and Back to booking details share the
+lookup. Saved drafts open on their current trip. The form shows loading,
+an empty result, or an in-view retry. Leaving or resetting the view cancels the lookup. The booking
 list uses the booking status,
 checkout session, and payment history to hide draft actions for locked bookings.
-Participants remain visible in read-only mode. The API enforces booking and
+Cancel draft confirms before using the booking delete endpoint. Back to My
+Bookings returns to the list from each guided step, preserves saved work, and
+confirms before discarding form edits. A hosted checkout cancellation returns
+to the list and refreshes booking status. Review reports unavailable pricing
+separately from missing participant details. Participants remain visible in
+read-only mode. The API enforces booking and
 participant write restrictions, including when a full refund leaves a zero balance.
 
 ## 6. Docker, runtime configuration and release operations

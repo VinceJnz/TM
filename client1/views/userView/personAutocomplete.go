@@ -12,13 +12,15 @@ import (
 	"unicode/utf8"
 )
 
-type personMatch struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Username string `json:"username"`
+type PersonMatch struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Username   string `json:"username"`
+	MemberCode string `json:"member_code"`
+	Membership string `json:"membership"`
 }
 
-func (person personMatch) label() string {
+func (person PersonMatch) label() string {
 	if person.Username != "" {
 		return person.Name + " (" + person.Username + ")"
 	}
@@ -27,7 +29,7 @@ func (person personMatch) label() string {
 
 // NewPersonAutocomplete returns the field, its selected ID, and a function
 // that closes the suggestions and cancels pending work.
-func (editor *ItemEditor) NewPersonAutocomplete(id int, name, label, htmlID, lookupURL string) (js.Value, js.Value, func()) {
+func (editor *ItemEditor) NewPersonAutocomplete(id int, name, label, htmlID, lookupURL string, onSelection func(PersonMatch)) (js.Value, js.Value, func()) {
 	doc := editor.document
 	field := doc.Call("createElement", "fieldset")
 	field.Set("className", "input-group")
@@ -54,7 +56,7 @@ func (editor *ItemEditor) NewPersonAutocomplete(id int, name, label, htmlID, loo
 	const selectMessage = "Select a person from the suggestions."
 	var loads httpProcessor.LoadScope
 	var cancelDelay func()
-	var matches []personMatch
+	var matches []PersonMatch
 	active := -1
 	closeList := func() {
 		if cancelDelay != nil {
@@ -70,16 +72,17 @@ func (editor *ItemEditor) NewPersonAutocomplete(id int, name, label, htmlID, loo
 		input.Call("removeAttribute", "aria-activedescendant")
 		status.Set("textContent", "")
 	}
-	choose := func(person personMatch) {
+	choose := func(person PersonMatch) {
 		input.Set("value", person.label())
 		selectedID.Set("value", strconv.Itoa(person.ID))
 		input.Call("setCustomValidity", "")
 		closeList()
+		onSelection(person)
 	}
 	load := func(query string, prefill bool) {
 		ticket := loads.Start()
 		go func() {
-			var people []personMatch
+			var people []PersonMatch
 			err := editor.client.RequestContext(ticket.Context, http.MethodGet, lookupURL+query, &people, nil)
 			if !ticket.Finish(err) || !field.Get("isConnected").Bool() {
 				return
@@ -116,6 +119,7 @@ func (editor *ItemEditor) NewPersonAutocomplete(id int, name, label, htmlID, loo
 	domEvents.Listen(input, "input", func(js.Value, []js.Value) any {
 		closeList()
 		selectedID.Set("value", "")
+		onSelection(PersonMatch{})
 		input.Call("setCustomValidity", selectMessage)
 		query := strings.TrimSpace(input.Get("value").String())
 		if utf8.RuneCountInString(query) < 2 {
@@ -185,7 +189,7 @@ func (editor *ItemEditor) NewPersonAutocomplete(id int, name, label, htmlID, loo
 		closeList()
 		return nil
 	})
-	if id > 0 && name == "" {
+	if id > 0 {
 		cancelDelay = domEvents.Timeout(func(js.Value, []js.Value) any {
 			if field.Get("isConnected").Bool() {
 				load("?id="+strconv.Itoa(id), true)

@@ -1,6 +1,6 @@
 package bookings
 
-const myListQuery = `SELECT atb.id,atb.owner_id,atb.trip_id,atb.notes,atb.from_date,atb.to_date,atb.booking_status_id,atb.created,atb.modified,atb.booking_date,atb.group_booking_id,atb.booking_price,atb.payment_date,atb.amount_paid,atb.currency,atb.stripe_session_id, atb.voucher_code, EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=atb.id) AS has_payment_history,
+const myListQuery = `SELECT atb.id,atb.owner_id,atb.trip_id,COALESCE(atb.notes,'') AS notes,atb.from_date,atb.to_date,atb.booking_status_id,atb.created,atb.modified,atb.booking_date,atb.group_booking_id,atb.booking_price,atb.payment_date,atb.amount_paid,atb.currency,atb.stripe_session_id, atb.voucher_code, EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=atb.id) AS has_payment_history,
 				CASE WHEN atb.free_confirmed_at IS NOT NULL AND atb.booking_status_id=3 THEN 'Confirmed' ELSE ebs.status END AS status, COUNT(stu.name) as participants,
 				SUM(attc.amount) * (EXTRACT(EPOCH FROM (atb.to_date - atb.from_date)) / 86400) as booking_cost,
 				--SUM(attc.amount) AS booking_cost,

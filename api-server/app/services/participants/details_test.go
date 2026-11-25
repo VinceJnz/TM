@@ -1,10 +1,13 @@
 package participants
 
 import (
+	bookingService "api-server/v2/app/services/bookings"
 	"api-server/v2/internal/testdb"
 	"api-server/v2/migrations"
+	bookingStore "api-server/v2/modelMethods/bookings"
 	"api-server/v2/modelMethods/participants"
 	"api-server/v2/modelMethods/paymentLedger"
+	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/modelMethods/trips"
 	"api-server/v2/models"
 	"context"
@@ -12,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestQuestionnaireRevisionAndParticipantDetails(t *testing.T) {
@@ -60,8 +64,9 @@ func TestQuestionnaireRevisionAndParticipantDetails(t *testing.T) {
 	}
 	replacement := input
 	replacement.PersonID = 3
-	if _, err := service.Mutate(ctx, 2, "own", participant, replacement, false); !errors.Is(err, sql.ErrNoRows) {
-		t.Fatalf("participant details could be reassigned to another person: %v", err)
+	replacement.Details = nil
+	if _, err := service.Mutate(ctx, 2, "own", participant, replacement, false); !errors.Is(err, ErrValidation) {
+		t.Fatalf("participant replaced without fresh details: %v", err)
 	}
 	if _, err := people.Details(ctx, participant, 3, "own", false); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("unrelated user could read private details: %v", err)
@@ -83,5 +88,54 @@ func TestQuestionnaireRevisionAndParticipantDetails(t *testing.T) {
 	}
 	if _, err := paymentLedger.ReviewBooking(ctx, db, 1, 2); !errors.Is(err, paymentLedger.ErrParticipantDetails) {
 		t.Fatalf("checkout review accepted incomplete current answers: %v", err)
+	}
+	fresh := *input.Details
+	fresh.Name = "Other"
+	fresh.QuestionnaireRevision = q.Revision
+	fresh.Answers = map[string]json.RawMessage{"stayed_before": json.RawMessage("true"), "equipment": json.RawMessage("false")}
+	replacement.Details = &fresh
+	if _, err := service.Mutate(ctx, 2, "own", participant, replacement, false); err != nil {
+		t.Fatalf("replace participant with fresh details: %v", err)
+	}
+	record, err := people.Get(ctx, 2, "own", participant)
+	if err != nil || record.PersonID != 3 {
+		t.Fatalf("replacement person was not saved: %+v %v", record, err)
+	}
+	saved, err = people.Details(ctx, participant, 2, "own", false)
+	if err != nil || saved.Name != "Other" || string(saved.Answers["stayed_before"]) != "true" {
+		t.Fatalf("replacement details were not saved: %+v %v", saved, err)
+	}
+	if _, err := paymentLedger.ReviewBooking(ctx, db, 1, 2); !errors.Is(err, paymentLedger.ErrBookingPricing) {
+		t.Fatalf("missing trip rate was not reported: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO at_trips (id,owner_id,trip_name,trip_type_id,trip_status_id,max_participants,from_date,to_date)
+			VALUES (2,1,'New trip',1,2,10,'2026-12-01','2026-12-03')`); err != nil {
+		t.Fatal(err)
+	}
+	choices, _, err := tripStore.BookingChoices(ctx, resourcequery.Page{Limit: 10})
+	if err != nil || len(choices) != 1 || choices[0].ID != 2 {
+		t.Fatalf("trip lookup should skip the undated trip: %+v %v", choices, err)
+	}
+	bookings := bookingService.Service{Store: bookingStore.Store{DB: db}, AllowTripChange: true}
+	change := models.Booking{ID: 1, FromDate: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC),
+		ToDate: time.Date(2026, 12, 2, 0, 0, 0, 0, time.UTC)}
+	change.TripID.Int64, change.TripID.Valid = 2, true
+	if _, err := bookings.Save(ctx, 2, false, "update", change); err != nil {
+		t.Fatalf("change draft trip: %v", err)
+	}
+	var archived bool
+	if err := db.Get(&archived, `SELECT questionnaire_revision IS NULL AND trip_answers='{}'::jsonb
+		AND trip_answer_history->'1:2'->>'equipment'='false' FROM at_booking_people WHERE id=$1`, participant); err != nil || !archived {
+		t.Fatalf("old answers were not archived with the previous trip: %v, %v", archived, err)
+	}
+	stored, err := people.Questionnaire(ctx, 1, 2, "own")
+	if err != nil || stored.TripID != 2 {
+		t.Fatalf("booking did not move to the selected trip: %+v %v", stored, err)
+	}
+	if _, err := bookings.Save(ctx, 2, false, "delete", models.Booking{ID: 1}); err != nil {
+		t.Fatalf("cancel draft with a participant: %v", err)
+	}
+	if _, err := people.Get(ctx, 2, "own", participant); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("cancelled draft kept participant row: %v", err)
 	}
 }

@@ -257,6 +257,16 @@ try {
   await send('Runtime.evaluate',{expression:`Array.from((${memberBooking}).querySelectorAll('button')).find(button=>button.textContent==='Continue booking').click()`});
   await send('Runtime.evaluate',{expression:`Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Continue to review').click()`});
   await waitUI(`(${myBookingStep})?.textContent.includes('SMOKE-FREE') && (${myBookingStep})?.textContent.includes('NZ$0.00')`,'review did not apply the saved voucher');
+  const returnToBookings = "Array.from(document.querySelectorAll('#mainContent button')).find(button=>button.textContent==='Back to My Bookings' && !button.hidden)";
+  await send('Runtime.evaluate',{expression:`(${returnToBookings}).click()`});
+  const resumeMemberBooking = `Array.from((${memberBooking})?.querySelectorAll('button')||[]).find(button=>button.textContent==='Continue booking' && button.getClientRects().length>0)`;
+  await waitUI(`!!(${resumeMemberBooking})`,'return to My Bookings did not preserve the saved draft');
+  await send('Runtime.evaluate',{expression:`(${resumeMemberBooking}).click(); Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Back to booking details').click()`});
+  await waitUI(`(${myBookingStep})?.querySelector('#itemTripID')?.selectedOptions[0]?.textContent.includes('Synthetic trip')`,'Back did not restore the saved trip');
+  await send('Runtime.evaluate',{expression:`(${returnToBookings}).click()`});
+  await waitUI(`!!(${resumeMemberBooking})`,'return from booking details did not restore the list');
+  await send('Runtime.evaluate',{expression:`(${resumeMemberBooking}).click(); Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Continue to review').click()`});
+  await waitUI(`(${myBookingStep})?.textContent.includes('NZ$0.00')`,'review did not reload after returning to My Bookings');
   await send('Runtime.evaluate',{expression:`Array.from((${myBookingStep}).querySelectorAll('button')).find(button=>button.textContent==='Confirm booking').click()`});
   await waitUI(`(${memberBooking})?.querySelector('.tm-booking-status')?.textContent==='Confirmed'`,'zero-total booking was not confirmed');
   await waitUI(`(${memberBooking})?.querySelector('.tm-booking-cost')?.textContent.includes('NZ$0.00')`,'confirmed booking did not show its final total');
@@ -305,6 +315,12 @@ try {
   };
   await typePerson('Other Member');
   await selectPerson();
+  await waitUI(`(() => {
+    const form = ${personInput}.form;
+    const number = form.querySelector('input[readonly]');
+    return form.querySelector('.tm-participant-group input').value === 'Other Member'
+      && form.querySelector('.tm-participant-group select').value === 'member' && !!number?.value;
+  })()`,'participant identity and read-only membership number did not populate');
   await typePerson('Other Mem');
   await waitUI(`!${personInput}.validity.valid`,'editing the name left the previous selection valid');
   await selectPerson();
@@ -312,7 +328,7 @@ try {
     const form = ${personInput}.closest('form');
     const values = [${JSON.stringify(name)}, '0200000000', 'Synthetic address', 'None', 'Test Contact', '0200000001'];
     const fields = Array.from(form.querySelectorAll('.tm-participant-group')).slice(0, 2)
-      .flatMap(group => Array.from(group.querySelectorAll('.tm-participant-field input, .tm-participant-field textarea')));
+      .flatMap(group => Array.from(group.querySelectorAll('.tm-participant-field input:not([readonly]), .tm-participant-field textarea')));
     fields.forEach((field, i) => field.value = values[i]);
     const [membership, needsTransport, offersTransport] = form.querySelectorAll('.tm-participant-field select');
     membership.value = 'member';

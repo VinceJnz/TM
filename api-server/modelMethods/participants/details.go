@@ -5,6 +5,7 @@ import (
 	"api-server/v2/models"
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -17,7 +18,9 @@ func (s Store) Questionnaire(ctx context.Context, booking, actor int, scope stri
 	if err != nil {
 		return models.Questionnaire{}, err
 	}
-	return trips.Questionnaire(ctx, s.DB, trip, 0)
+	questionnaire, err := trips.Questionnaire(ctx, s.DB, trip, 0)
+	questionnaire.TripID = trip
+	return questionnaire, err
 }
 
 func (s Store) Details(ctx context.Context, participant, actor int, scope string, leader bool) (models.ParticipantDetails, error) {
@@ -62,7 +65,31 @@ func (s Store) Details(ctx context.Context, participant, actor int, scope string
 	return row.ParticipantDetails, nil
 }
 
-func (s Store) SaveDetails(ctx context.Context, tx *sqlx.Tx, participant int, input models.ParticipantDetails) error {
+var ErrReplacementDetails = errors.New("replacement requires fresh participant details")
+
+// PrepareReplacement clears answers before saving a replacement's details.
+func (s Store) PrepareReplacement(ctx context.Context, tx *sqlx.Tx, participant, person int, hasDetails bool) error {
+	var row struct {
+		Person     int  `db:"person_id"`
+		HasDetails bool `db:"has_details"`
+	}
+	if err := tx.GetContext(ctx, &row, `SELECT person_id, submitted_name IS NOT NULL AS has_details
+		FROM at_booking_people WHERE id=$1 FOR UPDATE`, participant); err != nil {
+		return err
+	}
+	if row.Person == person || (!row.HasDetails && !hasDetails) {
+		return nil
+	}
+	if !hasDetails {
+		return ErrReplacementDetails
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE at_booking_people
+		SET questionnaire_revision=NULL, trip_answers='{}'::jsonb, trip_answer_history='{}'::jsonb
+		WHERE id=$1`, participant)
+	return err
+}
+
+func (s Store) SaveDetails(ctx context.Context, tx *sqlx.Tx, participant, trip int, input models.ParticipantDetails) error {
 	if input.Answers == nil {
 		input.Answers = map[string]json.RawMessage{}
 	}
@@ -75,10 +102,10 @@ func (s Store) SaveDetails(ctx context.Context, tx *sqlx.Tx, participant int, in
 		SET submitted_name=$2, mobile_phone=$3, home_address=$4, membership_category=$5,
 			emergency_contact_name=$6, emergency_contact_phone=$7, dietary_requirements=$8,
 			trip_answer_history=CASE WHEN questionnaire_revision IS NOT NULL AND questionnaire_revision<>$9
-				THEN trip_answer_history || jsonb_build_object(questionnaire_revision::text, trip_answers)
+				THEN trip_answer_history || jsonb_build_object($11::text || ':' || questionnaire_revision::text, trip_answers)
 				ELSE trip_answer_history END,
 			questionnaire_revision=NULLIF($9, 0), trip_answers=$10::jsonb
 		WHERE id=$1`, participant, input.Name, input.Mobile, input.Address, input.Membership,
-		input.EmergencyName, input.EmergencyPhone, input.Dietary, input.QuestionnaireRevision, string(raw))
+		input.EmergencyName, input.EmergencyPhone, input.Dietary, input.QuestionnaireRevision, string(raw), trip)
 	return changed(result, err)
 }

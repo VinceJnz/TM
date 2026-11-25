@@ -6,9 +6,11 @@ import (
 )
 
 type UserOption struct {
-	ID       int    `json:"id" db:"id"`
-	Name     string `json:"name" db:"name"`
-	Username string `json:"username" db:"username"`
+	ID         int    `json:"id" db:"id"`
+	Name       string `json:"name" db:"name"`
+	Username   string `json:"username" db:"username"`
+	MemberCode string `json:"member_code,omitempty" db:"member_code"`
+	Membership string `json:"membership,omitempty" db:"membership"`
 }
 
 // UserOptions returns bounded selector fields, never account data.

@@ -19,7 +19,7 @@ type BookingChoice struct {
 }
 
 func (s Store) BookingChoices(ctx context.Context, page resourcequery.Page) ([]BookingChoice, resourcequery.PageInfo, error) {
-	return resourcequery.SelectPage[BookingChoice](ctx, s.DB, page, `SELECT id,trip_name,from_date,to_date FROM at_trips`)
+	return resourcequery.SelectPage[BookingChoice](ctx, s.DB, page, `SELECT id,trip_name,from_date,to_date FROM at_trips WHERE from_date IS NOT NULL AND to_date IS NOT NULL`)
 }
 
 func (s Store) List(ctx context.Context, page resourcequery.Page) ([]models.Trip, resourcequery.PageInfo, error) {

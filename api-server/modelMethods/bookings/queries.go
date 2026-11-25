@@ -43,8 +43,7 @@ const (
 	qryCreate      = `INSERT INTO at_bookings (owner_id,trip_id,notes,from_date,to_date,booking_status_id,voucher_code) VALUES ($1,$2,$3,$4,$5,1,$6) RETURNING id`
 	qryUpdateAdmin = `UPDATE at_bookings SET (owner_id,trip_id,notes,from_date,to_date,booking_price,voucher_code)=($2,$3,$4,$5,$6,$7,$8)
 		WHERE id=$1 AND booking_status_id=1 AND stripe_session_id IS NULL
-		AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)
-		AND (trip_id=$3 OR NOT EXISTS (SELECT 1 FROM at_booking_people p WHERE p.booking_id=at_bookings.id AND p.submitted_name IS NOT NULL))`
-	qryUpdate = `UPDATE at_bookings SET (notes,from_date,to_date,voucher_code)=($4,$5,$6,$7) WHERE id=$1 AND (owner_id=$2 OR LOWER($3)='any') AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)`
+		AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)`
+	qryUpdate = `UPDATE at_bookings SET (trip_id,notes,from_date,to_date,voucher_code)=($3,$4,$5,$6,$7) WHERE id=$1 AND owner_id=$2 AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)`
 	qryDelete = `DELETE FROM at_bookings WHERE id=$1 AND (owner_id=$2 OR LOWER($3)='any') AND booking_status_id=1 AND stripe_session_id IS NULL AND NOT EXISTS (SELECT 1 FROM at_payments p WHERE p.booking_id=at_bookings.id)`
 )

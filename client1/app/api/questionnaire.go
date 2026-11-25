@@ -11,11 +11,13 @@ type Question struct {
 }
 
 type Questionnaire struct {
+	TripID    int        `json:"trip_id,omitempty"`
 	Revision  int        `json:"revision"`
 	Questions []Question `json:"questions"`
 }
 
 type ParticipantDetails struct {
+	QuestionnaireTripID   int                        `json:"questionnaire_trip_id,omitempty"`
 	Name                  string                     `json:"submitted_name"`
 	Mobile                string                     `json:"mobile_phone"`
 	Address               string                     `json:"home_address"`
