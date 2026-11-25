@@ -199,6 +199,12 @@ grant other users' booking mutations, broader account reads or finance administr
 
 ## 5. WASM frontend and UI conventions
 
+Administrator and System Administrator screens share administration styles in
+`tm-components.css`. The main view owns Close page and returns to the preceding
+application route, falling back to Home. Visible edited forms require confirmation
+before closing. Payment and refund lists use labelled summaries, and gateway
+credential status is grouped by provider.
+
 Administrative record selectors restore IDs after populating their options. A missing required choice leaves the form invalid, an unset optional choice displays **Not set**, and an unavailable saved choice requires operator action before submission. Zero remains a valid ID for account and member statuses. The user lookup reapplies selection after search results replace its options. Payment and refund forms load their choices asynchronously before rendering and cancel obsolete loads. They preserve known booking or payment references, including current references outside the lookup results. My Bookings retains its deliberate new-draft trip preselection and restores the trip for existing drafts.
 
 The client uses Go/TinyGo plus `syscall/js`, not a separate SPA framework. Runtime

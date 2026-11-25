@@ -20,6 +20,48 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .tm-menu-toggle { background: transparent; border: 0; color: inherit; cursor: pointer; }
 
+.tm-admin-close {
+	display: block;
+	margin-inline-start: auto;
+	margin-block-end: .75rem;
+}
+.tm-admin-close[hidden] { display: none; }
+.tm-admin { min-width: 0; }
+.tm-admin-record {
+	border: 1px solid var(--tm-border);
+	border-radius: 8px;
+	background: var(--tm-surface);
+	margin-block: .5rem;
+	padding: .75rem;
+	overflow-wrap: anywhere;
+}
+.tm-admin-record > .btn { margin: .25rem .25rem .25rem 0; }
+.tm-admin-record-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+	gap: .4rem .75rem;
+	margin: 0 0 .5rem;
+}
+.tm-admin-record-fields dt { color: var(--tm-text-subtle); }
+.tm-admin-record-fields dd { margin: 0; font-weight: 600; }
+.tm-admin form:not(.tm-dialog form) {
+	box-sizing: border-box;
+	max-width: 64rem;
+	padding: clamp(.75rem, 2vw, 1.25rem);
+	margin-block: .75rem;
+	border: 1px solid var(--tm-border);
+	border-radius: 8px;
+	background: var(--tm-surface);
+}
+.tm-admin form :is(fieldset, .input-group) { min-width: 0; }
+.tm-admin form :is(input, textarea, select) { box-sizing: border-box; max-width: 100%; font: inherit; }
+.tm-admin form label { overflow-wrap: anywhere; }
+.tm-admin-record-header { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.tm-admin-record-header .tm-disclosure { min-width: min(100%, 12rem); overflow-wrap: anywhere; }
+.tm-admin-provider { margin-block: .75rem; overflow-wrap: anywhere; }
+.tm-admin-provider h3 { margin-top: 0; }
+.tm-admin-provider .btn { margin: .25rem .25rem .25rem 0; }
+
 .tm-schedule-filters {
  display: flex;
  flex-wrap: wrap;

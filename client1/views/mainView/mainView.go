@@ -82,6 +82,7 @@ type viewElements struct {
 	mainContent  js.Value
 	statusOutput js.Value
 	pageTitle    js.Value
+	closeAdmin   js.Value
 	userDisplay  js.Value
 	myProfileBtn js.Value
 }
@@ -149,6 +150,8 @@ type View struct {
 	CurrentRecord       TableData
 	ItemState           viewHelpers.ItemStateView //viewHelpers.ItemState
 	activeMenuTitle     string
+	adminReturnHash     string
+	activeHash          string
 	profileReturnTitle  string
 	childElements       map[string]editorElement
 	menuButtons         map[string]buttonElement
@@ -213,6 +216,13 @@ func (v *View) Setup() {
 	v.elements.mainContent.Set("id", "mainContent")
 	v.elements.mainContent.Set("className", "main")
 	newBody.Call("appendChild", v.elements.mainContent)
+	v.elements.closeAdmin = viewHelpers.Button(func(js.Value, []js.Value) any {
+		go v.closeAdminPage()
+		return nil
+	}, v.document, "Close page", "closeAdminPage")
+	v.elements.closeAdmin.Set("className", "btn btn-secondary tm-admin-close")
+	v.elements.closeAdmin.Set("hidden", true)
+	v.elements.mainContent.Call("appendChild", v.elements.closeAdmin)
 
 	// Add the menu icon to the navbar
 	menuIcon := v.document.Call("createElement", "button")
@@ -243,6 +253,7 @@ func (v *View) Setup() {
 	// Add the pageTitle to the navbar
 	v.elements.pageTitle = v.document.Call("createElement", "div")
 	v.elements.pageTitle.Set("id", "pageTitle")
+	v.elements.pageTitle.Set("tabIndex", -1)
 	v.elements.navbar.Call("appendChild", v.elements.pageTitle)
 
 	// Add the topmenu to the navbar
@@ -412,6 +423,19 @@ func (v *View) AddViewItem(title, ApiURL string, menuAction bool, element editor
 	v.menuButtons[buttonName] = buttonElement{button: fetchBtn, defaultDisplay: defaultDisplay, section: section}
 	menu.Call("appendChild", fetchBtn) // Append the button to the side menu
 	if element != nil {
+		if section == menuSectionAdmin || section == menuSectionSysadmin {
+			root := element.GetDiv()
+			root.Get("classList").Call("add", "tm-admin")
+			for _, event := range []string{"input", "change"} {
+				domEvents.Listen(root, event, func(_ js.Value, args []js.Value) any {
+					form := args[0].Get("target").Call("closest", "form")
+					if form.Truthy() {
+						form.Call("setAttribute", "data-admin-dirty", "")
+					}
+					return nil
+				})
+			}
+		}
 		v.elements.mainContent.Call("appendChild", element.GetDiv()) // Append the new element div to the main content
 	}
 }
@@ -606,9 +630,48 @@ func (v *View) hideAllChildViews() {
 	}
 }
 
+func (v *View) closeAdminPage() {
+	activeTitle := v.activeMenuTitle
+	root := v.childElements[activeTitle].GetDiv()
+	forms := root.Call("querySelectorAll", "form[data-admin-dirty]")
+	for i := 0; i < forms.Length(); i++ {
+		if forms.Index(i).Call("getClientRects").Length() > 0 {
+			if !viewHelpers.Confirm(root, "Discard unsaved changes and close this page?") || v.activeMenuTitle != activeTitle {
+				return
+			}
+			break
+		}
+	}
+
+	target := v.adminReturnHash
+	title := v.titleByRoute[normalizeHashRoute(target)]
+	button, exists := v.menuTitles[title]
+	if target == "" || title == "" || !v.canFetchViewData(title) || (exists && button.Get("style").Get("display").String() == "none") {
+		target = "#/"
+	}
+	v.adminReturnHash = ""
+	js.Global().Get("history").Call("replaceState", js.Null(), "", target)
+	v.applyRouteFromLocation()
+	v.adminReturnHash = ""
+	v.elements.pageTitle.Call("focus")
+}
+
 func (v *View) navigateTo(PageTitle string, menuAction bool, element editorElement, updateRoute bool) {
 	v.closeSideMenu() // onclick, close the side menu
 	if menuAction {   // Some menu items do nothing else
+		section := v.menuSectionsByTitle[PageTitle]
+		administration := section == menuSectionAdmin || section == menuSectionSysadmin
+		location := js.Global().Get("location")
+		if administration && v.activeMenuTitle != PageTitle {
+			v.adminReturnHash = v.activeHash
+			if updateRoute {
+				v.adminReturnHash = location.Get("hash").String()
+			}
+		}
+		v.elements.closeAdmin.Set("hidden", !administration)
+		if current := v.childElements[v.activeMenuTitle]; current != nil {
+			viewHelpers.CancelDialogs(current.GetDiv())
+		}
 		// Defensive hide to avoid stale views being visible after auth/menu transitions.
 		v.hideAllChildViews()
 		v.activeMenuTitle = PageTitle                      // Set new menu choice
@@ -625,6 +688,7 @@ func (v *View) navigateTo(PageTitle string, menuAction bool, element editorEleme
 		if updateRoute {
 			v.updateRoute(PageTitle)
 		}
+		v.activeHash = location.Get("hash").String()
 	}
 }
 

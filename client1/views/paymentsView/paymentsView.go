@@ -552,7 +552,6 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 
 func (editor *ItemEditor) populateItemList() {
 	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
-	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.clearActiveRowHighlight()
 	editor.ListDiv.Set("innerHTML", "")
 
@@ -588,12 +587,13 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		desc := "Booking " + strconv.Itoa(record.BookingID) +
-			" | Amount " + strconv.FormatFloat(record.Amount, 'f', 2, 64) +
-			" | Date " + record.PaymentDate.Format(viewHelpers.Layout) +
-			" | Method " + record.PaymentMethod
-		itemDiv.Set("textContent", desc)
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		viewHelpers.AdminRecordFields(itemDiv,
+			viewHelpers.RecordField{Label: "Booking", Value: strconv.Itoa(record.BookingID)},
+			viewHelpers.RecordField{Label: "Amount", Value: strconv.FormatFloat(record.Amount, 'f', 2, 64)},
+			viewHelpers.RecordField{Label: "Payment date", Value: record.PaymentDate.Format(viewHelpers.Layout)},
+			viewHelpers.RecordField{Label: "Method", Value: record.PaymentMethod},
+		)
+		itemDiv.Get("classList").Call("add", "tm-admin-record")
 		inlineFormHost := editor.document.Call("createElement", "div")
 		inlineFormHost.Set("className", "inline-record-form")
 		inlineFormHost.Get("style").Call("setProperty", "margin-top", "8px")
@@ -632,7 +632,7 @@ func (editor *ItemEditor) populateItemList() {
 		})
 
 		openRefundsBtn := editor.document.Call("createElement", "button")
-		openRefundsBtn.Set("innerHTML", "Open Refunds")
+		openRefundsBtn.Set("innerHTML", "View refunds")
 		openRefundsBtn.Set("className", "btn btn-secondary")
 		viewHelpers.ActionFor(openRefundsBtn, "refunds", "GET")
 		domEvents.Listen(openRefundsBtn, "click", func(this js.Value, args []js.Value) any {
@@ -642,7 +642,7 @@ func (editor *ItemEditor) populateItemList() {
 		})
 
 		addRefundBtn := editor.document.Call("createElement", "button")
-		addRefundBtn.Set("innerHTML", "Add Refund")
+		addRefundBtn.Set("innerHTML", "Add refund")
 		addRefundBtn.Set("className", "btn btn-secondary")
 		viewHelpers.ActionFor(addRefundBtn, "refunds", "POST")
 		domEvents.Listen(addRefundBtn, "click", func(this js.Value, args []js.Value) any {

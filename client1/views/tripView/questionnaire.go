@@ -88,11 +88,13 @@ func (e *ItemEditor) renderQuestionnaire(trip TableData, path string, questionna
 		setOptions()
 		remove := viewHelpers.Button(func(js.Value, []js.Value) any {
 			row.Call("remove")
+			form.Call("setAttribute", "data-admin-dirty", "")
 			return nil
 		}, e.document, "Remove question", "")
 		up := viewHelpers.Button(func(js.Value, []js.Value) any {
 			if previous := row.Get("previousElementSibling"); previous.Truthy() {
 				rows.Call("insertBefore", row, previous)
+				form.Call("setAttribute", "data-admin-dirty", "")
 			}
 			return nil
 		}, e.document, "Move earlier", "")
@@ -104,6 +106,7 @@ func (e *ItemEditor) renderQuestionnaire(trip TableData, path string, questionna
 	}
 	add := viewHelpers.Button(func(js.Value, []js.Value) any {
 		addQuestion(api.Question{})
+		form.Call("setAttribute", "data-admin-dirty", "")
 		return nil
 	}, e.document, "Add question", "")
 	cancel := viewHelpers.Button(func(js.Value, []js.Value) any {

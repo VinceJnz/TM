@@ -445,7 +445,7 @@ func (editor *ItemEditor) populateItemList() {
 	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.ListDiv.Set("innerHTML", "")
 
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add booking voucher", "addNewItemButton")
 
 	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
@@ -470,8 +470,13 @@ func (editor *ItemEditor) populateItemList() {
 		if record.ExpiryDate != nil {
 			expiryText = "Expires: " + record.ExpiryDate.Format(viewHelpers.Layout)
 		}
-		itemDiv.Set("textContent", "Code: "+record.Code+" ("+pricingText+", "+expiryText+", "+activeText+")")
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		viewHelpers.AdminRecordFields(itemDiv,
+			viewHelpers.RecordField{Label: "Code", Value: record.Code},
+			viewHelpers.RecordField{Label: "Pricing", Value: pricingText},
+			viewHelpers.RecordField{Label: "Expiry", Value: expiryText},
+			viewHelpers.RecordField{Label: "Status", Value: activeText},
+		)
+		itemDiv.Get("classList").Call("add", "tm-admin-record")
 
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")

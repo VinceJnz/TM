@@ -367,8 +367,8 @@ func (editor *ItemEditor) populateItemList() {
 	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
-	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	// Create action
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add trip cost group", "addNewItemButton")
 	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
@@ -381,7 +381,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		itemDiv.Set("textContent", "Cost group: "+record.Description)
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		itemDiv.Get("classList").Call("add", "tm-admin-record")
 
 		// Create an edit button
 		editButton := editor.document.Call("createElement", "button")
@@ -407,7 +407,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		// Create a toggle modify-booking-list button
 		costItemButton := editor.document.Call("createElement", "button")
-		costItemButton.Set("innerHTML", "Cost Item")
+		costItemButton.Set("innerHTML", "Trip costs")
 		costItemButton.Set("className", "btn btn-secondary")
 		domEvents.Listen(costItemButton, "click", func(this js.Value, args []js.Value) interface{} {
 			tripCostItem.FetchItems()

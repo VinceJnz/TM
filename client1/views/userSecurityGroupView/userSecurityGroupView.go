@@ -394,7 +394,7 @@ func (editor *ItemEditor) populateItemList() {
 
 	// Add New Item button (only if ParentID is set)
 	if editor.ParentID > 0 {
-		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add Security Group", "addNewItemButton")
+		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add security group membership", "addNewItemButton")
 		viewHelpers.Action(addNewItemButton, "POST")
 		editor.ListDiv.Call("appendChild", addNewItemButton)
 	}

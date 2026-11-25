@@ -352,8 +352,8 @@ func (editor *ItemEditor) populateItemList() {
 	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
-	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	// Create action
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add resource", "addNewItemButton")
 	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 

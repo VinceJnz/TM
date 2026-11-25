@@ -554,8 +554,8 @@ func (editor *ItemEditor) populateItemList() {
 	editor.nestedLoads = nil
 	editor.ListDiv.Set("innerHTML", "") // Clear existing content
 
-	// Add New Item button
-	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+	// Create action
+	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add user", "addNewItemButton")
 	viewHelpers.Action(addNewItemButton, "POST")
 	editor.ListDiv.Call("appendChild", addNewItemButton)
 
@@ -567,9 +567,7 @@ func (editor *ItemEditor) populateItemList() {
 		userCard.Set("className", "tm-card")
 
 		headerDiv := editor.document.Call("createElement", "div")
-		headerDiv.Get("style").Call("setProperty", "display", "flex")
-		headerDiv.Get("style").Call("setProperty", "align-items", "center")
-		headerDiv.Get("style").Call("setProperty", "gap", "8px")
+		headerDiv.Set("className", "tm-admin-record-header")
 
 		toggleIndicator := editor.document.Call("createElement", "span")
 		toggleIndicator.Set("textContent", "\u25b6")

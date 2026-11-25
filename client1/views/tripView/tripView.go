@@ -559,8 +559,8 @@ func (editor *ItemEditor) populateItemList() {
 	}
 
 	if editor.canCreateTrips() {
-		// Add New Item button
-		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add New Item", "addNewItemButton")
+		// Create action
+		addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add trip", "addNewItemButton")
 		viewHelpers.Action(addNewItemButton, "POST")
 		editor.ListDiv.Call("appendChild", addNewItemButton)
 	}
@@ -571,7 +571,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
 		itemDiv.Set("textContent", record.Name+" (Status:"+record.TripStatus+", From:"+record.FromDate.Format(viewHelpers.Layout)+" - To:"+record.ToDate.Format(viewHelpers.Layout)+", Participants:"+strconv.Itoa(record.Participants)+")")
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		itemDiv.Get("classList").Call("add", "tm-admin-record")
 
 		if editor.canManageTrip(record) {
 			// Create an edit button

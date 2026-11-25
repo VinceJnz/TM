@@ -150,24 +150,24 @@ func (e *ItemEditor) load(activity, message string) {
 
 func (e *ItemEditor) render(status CertStatus) {
 	e.addReloadButton()
-	e.add(e.content, "h3", "Gmail")
-	e.add(e.content, "p", "Sender: "+status.EmailAddr)
-	e.add(e.content, "p", "Client: "+configured(status.GmailLoaded))
-	e.add(e.content, "p", fileStatus("Token file", status.TokenExists, status.TokenModified))
-	e.add(e.content, "p", fileStatus("OAuth client file", status.SecretExists, status.SecretModified))
+	gmail := e.providerPanel("Gmail")
+	e.add(gmail, "p", "Sender: "+status.EmailAddr)
+	e.add(gmail, "p", "Client: "+configured(status.GmailLoaded))
+	e.add(gmail, "p", fileStatus("Token file", status.TokenExists, status.TokenModified))
+	e.add(gmail, "p", fileStatus("OAuth client file", status.SecretExists, status.SecretModified))
 	if status.GmailTokenExpiry != nil {
-		e.add(e.content, "p", "Saved access token expires: "+status.GmailTokenExpiry.UTC().Format("2006-01-02 15:04 UTC"))
+		e.add(gmail, "p", "Saved access token expires: "+status.GmailTokenExpiry.UTC().Format("2006-01-02 15:04 UTC"))
 	}
 
 	if e.app.HasAccess("gmailcert", []string{"put"}, []string{"any"}) {
 		if status.GmailRefreshAvailable {
-			e.button(e.content, "Refresh Gmail token", func() {
+			e.button(gmail, "Refresh Gmail token", func() {
 				e.update(ApiURL+"/refresh", nil)
 			})
 		}
 		if status.CanReconnect {
-			link := e.add(e.content, "p", "")
-			e.button(e.content, "Reconnect Gmail", func() {
+			link := e.add(gmail, "p", "")
+			e.button(gmail, "Reconnect Gmail", func() {
 				var result struct {
 					URL     string `json:"url"`
 					Message string `json:"message"`
@@ -182,21 +182,28 @@ func (e *ItemEditor) render(status CertStatus) {
 				})
 			})
 		} else {
-			e.add(e.content, "p", "To enable reconnection, configure the Gmail credential paths and register the GMAIL_RENEW_REDIRECT_URL callback in Google Cloud.")
+			e.add(gmail, "p", "To enable reconnection, configure the Gmail credential paths and register the GMAIL_RENEW_REDIRECT_URL callback in Google Cloud.")
 		}
-		advanced := e.add(e.content, "details", "")
+		advanced := e.add(gmail, "details", "")
 		e.add(advanced, "summary", "Replace Gmail credential files")
 		e.upload(advanced, "OAuth client JSON", "secret")
 		e.upload(advanced, "Token JSON", "token")
 	}
 
-	e.add(e.content, "h3", "Stripe")
-	e.add(e.content, "p", "API client: "+configured(status.StripeLoaded))
-	e.add(e.content, "p", "Webhook signing secret: "+configured(status.StripeWebhookConfigured))
-	e.add(e.content, "p", "Rotate credentials in Stripe Dashboard, update PAYMENT_KEY or STRIPE_WEBHOOK_SECRET in deployment settings, and restart the API.")
-	e.add(e.content, "h3", "Google sign-in")
-	e.add(e.content, "p", "OAuth client: "+configured(status.GoogleSignInLoaded))
-	e.add(e.content, "p", "Rotate the OAuth client secret in Google Cloud, update GOOGLE_CLIENT_SECRET in deployment settings, and restart the API.")
+	stripe := e.providerPanel("Stripe")
+	e.add(stripe, "p", "API client: "+configured(status.StripeLoaded))
+	e.add(stripe, "p", "Webhook signing secret: "+configured(status.StripeWebhookConfigured))
+	e.add(stripe, "p", "Rotate credentials in Stripe Dashboard, update PAYMENT_KEY or STRIPE_WEBHOOK_SECRET in deployment settings, and restart the API.")
+	google := e.providerPanel("Google sign-in")
+	e.add(google, "p", "OAuth client: "+configured(status.GoogleSignInLoaded))
+	e.add(google, "p", "Rotate the OAuth client secret in Google Cloud, update GOOGLE_CLIENT_SECRET in deployment settings, and restart the API.")
+}
+
+func (e *ItemEditor) providerPanel(title string) js.Value {
+	panel := e.add(e.content, "section", "")
+	panel.Set("className", "tm-card tm-admin-provider")
+	e.add(panel, "h3", title)
+	return panel
 }
 
 func (e *ItemEditor) upload(parent js.Value, title, kind string) {

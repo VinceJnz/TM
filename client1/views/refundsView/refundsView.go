@@ -549,9 +549,14 @@ func (editor *ItemEditor) deleteItem(itemID int) {
 
 func (editor *ItemEditor) populateItemList() {
 	defer viewHelpers.ResourceActions(editor.ListDiv, editor.appCore, ApiURL, "")
-	defer viewHelpers.EmptyState(editor.ListDiv, len(editor.Records))
 	editor.clearActiveRowHighlight()
 	editor.ListDiv.Set("innerHTML", "")
+
+	if editor.ContextPayID > 0 {
+		context := editor.document.Call("createElement", "p")
+		context.Set("textContent", "Refunds for payment "+strconv.Itoa(editor.ContextPayID))
+		editor.ListDiv.Call("appendChild", context)
+	}
 
 	addNewItemButton := viewHelpers.Button(editor.NewItemData, editor.document, "Add Refund Record", "addNewItemButton")
 
@@ -585,12 +590,13 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		desc := "Payment " + strconv.Itoa(record.PaymentID) +
-			" | Amount " + strconv.FormatFloat(record.Amount, 'f', 2, 64) +
-			" | Date " + record.RefundDate.Format(viewHelpers.Layout) +
-			" | Reason " + record.Reason
-		itemDiv.Set("textContent", desc)
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		viewHelpers.AdminRecordFields(itemDiv,
+			viewHelpers.RecordField{Label: "Payment", Value: strconv.Itoa(record.PaymentID)},
+			viewHelpers.RecordField{Label: "Amount", Value: strconv.FormatFloat(record.Amount, 'f', 2, 64)},
+			viewHelpers.RecordField{Label: "Refund date", Value: record.RefundDate.Format(viewHelpers.Layout)},
+			viewHelpers.RecordField{Label: "Reason", Value: record.Reason},
+		)
+		itemDiv.Get("classList").Call("add", "tm-admin-record")
 		inlineFormHost := editor.document.Call("createElement", "div")
 		inlineFormHost.Set("className", "inline-record-form")
 		inlineFormHost.Get("style").Call("setProperty", "margin-top", "8px")

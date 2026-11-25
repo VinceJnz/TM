@@ -437,10 +437,23 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
     select.getClientRects().length > 0 && select.options.length > 1 &&
     select.value === '' && select.validity.valueMissing)`,
   'new payment silently selected a booking');
+  await send('Runtime.evaluate',{expression:`(() => {
+    const select = Array.from(document.querySelectorAll('#itemBookingID')).find(e=>e.getClientRects().length);
+    select.selectedIndex = 1;
+    select.dispatchEvent(new Event('change', {bubbles:true}));
+    document.querySelector('#closeAdminPage').click();
+  })()`});
+  await waitUI("!!document.querySelector('dialog[open]')",'closing an edited admin page did not require confirmation');
+  await send('Runtime.evaluate',{expression:"document.querySelector('dialog[open] #tm-dialog-cancel').click()"});
+  await waitUI("location.hash==='#/payments' && !document.querySelector('dialog[open]')",'cancelling close left the payment page');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#closeAdminPage').click()"});
+  await waitUI("!!document.querySelector('dialog[open]')",'second close did not require confirmation');
+  await send('Runtime.evaluate',{expression:"document.querySelector('dialog[open] button[type=submit]').click()"});
+  await waitUI("location.hash==='#/' && document.querySelector('#closeAdminPage').hidden",'closing Payments did not return to Home');
   await send('Runtime.evaluate',{expression:"location.hash='/users'"});
   const deleteButton="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Delete'&&b.getClientRects().length>0)";
   await waitUI(`!!(${deleteButton})`,'account actions did not render');
-  await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Add New Item'&&b.getClientRects().length>0).click()"});
+  await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Add user'&&b.getClientRects().length>0).click()"});
   await waitUI(`(() => {
     const age = document.querySelector('#itemAgeGroup');
     const member = document.querySelector('#itemMemberStatus');
