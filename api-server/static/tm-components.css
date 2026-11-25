@@ -5,6 +5,7 @@
 .tm-empty { padding: 1rem; color: var(--tm-text-subtle); }
 .tm-card { border: 1px solid var(--tm-border); border-radius: 8px; padding: .75rem; margin-bottom: .5rem; background: var(--tm-surface); }
 .tm-disclosure { flex: 1; border: 0; background: transparent; color: inherit; text-align: left; padding: .5rem; cursor: pointer; }
+.tm-disclosure-indicator { display: inline-block; width: 1rem; margin-inline-end: .35rem; color: var(--tm-text-subtle); font-size: .8em; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--tm-primary); outline-offset: 2px; }
 [aria-busy=true] { cursor: progress; }
 @media(max-width:600px) {

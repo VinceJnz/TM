@@ -508,6 +508,10 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await waitUI("document.querySelectorAll('form[id^=inlineEditForm_]').length===0",'confirmed reload did not discard stale forms');
   const users = "Array.from(document.querySelectorAll('#mainContent .tm-disclosure')).filter(b=>b.textContent.includes('Smoke Member')||b.textContent.includes('Other Member'))";
   await waitUI(`${users}.length===2`,'member disclosures did not load');
+  await send('Runtime.evaluate',{expression:`${users}[0].querySelector('.tm-disclosure-indicator').click()`});
+  await waitUI(`${users}[0].getAttribute('aria-expanded')==='true'`,'user triangle did not expand the row');
+  await send('Runtime.evaluate',{expression:`${users}[0].querySelector('.tm-disclosure-indicator').click()`});
+  await waitUI(`${users}[0].getAttribute('aria-expanded')==='false'`,'user triangle did not collapse the row');
   await send('Runtime.evaluate',{expression:`${users}.forEach(button=>button.click())`});
   const membershipEdits = "Array.from(document.querySelectorAll('[id=\"userSecurityGroupView.itemListDiv\"] button')).filter(b=>b.textContent==='Edit'&&b.getClientRects().length>0)";
   await waitUI(`${membershipEdits}.length===2`,'membership edit actions did not load');
@@ -519,6 +523,10 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Runtime.evaluate',{expression:"window.fetch=window.__accountFetch;location.hash='/securitygroup'"});
   const disclosure="Array.from(document.querySelectorAll('[id=\"securityGroupView.groupCard\"] .tm-disclosure')).find(b=>b.getClientRects().length>0)";
   await waitUI(`!!(${disclosure})`,'semantic disclosure missing');
+  await send('Runtime.evaluate',{expression:`(${disclosure}).querySelector('.tm-disclosure-indicator').click()`});
+  await waitUI(`(${disclosure}).getAttribute('aria-expanded')==='true'`,'security group triangle did not expand the row');
+  await send('Runtime.evaluate',{expression:`(${disclosure}).querySelector('.tm-disclosure-indicator').click()`});
+  await waitUI(`(${disclosure}).getAttribute('aria-expanded')==='false'`,'security group triangle did not collapse the row');
   await send('Runtime.evaluate',{expression:`(${disclosure}).focus()`});
   await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',nativeVirtualKeyCode:13,windowsVirtualKeyCode:13});
   await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});

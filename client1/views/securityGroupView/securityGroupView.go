@@ -410,12 +410,7 @@ func (editor *ItemEditor) populateItemList() {
 		toggleIndicator := editor.document.Call("createElement", "span")
 		toggleIndicator.Set("textContent", "\u25b6")
 		toggleIndicator.Call("setAttribute", "aria-hidden", "true")
-		viewHelpers.SetStyles(toggleIndicator, map[string]string{
-			"font-size": "0.8em",
-			"color":     "#4f647a",
-			"width":     "12px",
-		})
-		headerDiv.Call("appendChild", toggleIndicator)
+		toggleIndicator.Set("className", "tm-disclosure-indicator")
 
 		groupName := editor.document.Call("createElement", "button")
 		groupName.Set("type", "button")
@@ -427,6 +422,7 @@ func (editor *ItemEditor) populateItemList() {
 			"color":     "#1d2f45",
 			"flex-grow": "1",
 		})
+		groupName.Call("prepend", toggleIndicator)
 		headerDiv.Call("appendChild", groupName)
 
 		// Edit button
