@@ -11,7 +11,13 @@ docker compose --profile prod up -d --no-deps --force-recreate apiserver
 
 For each change made by codex:
 Make the changes, test, update AGENT and ARCHITECTURE documents, commit, push.
-Once all the change are complete delpoy to docker on my local workstation.
+Once all the change are complete deploy to docker on my local workstation.
+
+
+For a delayed start, use the following but make sure you get the Session/Chat id then close the session in VS Code.
+
+`Start-Sleep -Seconds 10800; codex exec resume 01a21103-b964-79b2-8e5c-485835051c61 "Continue the outstanding work."`
+
 
 ## Docker build
 
