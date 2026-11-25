@@ -49,7 +49,10 @@ assert(JSON.parse(bookings.body).every(item => item.owner_id === 1), 'another me
 assert.equal(bookings.headers['x-next-offset'], '100');
 const lookup = await request(`${prefix}/bookings/1/bookingPeople/lookup?q=Other%20Member`, 'GET', undefined, cookie);
 assert.equal(lookup.status, 200);
-assert.deepEqual(JSON.parse(lookup.body), [{id: 2, name: 'Other Member', username: ''}]);
+const lookupPeople = JSON.parse(lookup.body);
+const memberCode = lookupPeople[0]?.member_code;
+assert(typeof memberCode === 'string' && memberCode.length > 0, 'booking lookup did not return the member code');
+assert.deepEqual(lookupPeople, [{id: 2, name: 'Other Member', username: '', member_code: memberCode, membership: 'member'}]);
 const otherLookup = await request(`${prefix}/bookings/2/bookingPeople/lookup?q=Other%20Member`, 'GET', undefined, cookie);
 assert.equal(otherLookup.status, 200);
 assert.deepEqual(JSON.parse(otherLookup.body), [], 'another member booking opened a participant lookup');
@@ -319,7 +322,7 @@ try {
     const form = ${personInput}.form;
     const number = form.querySelector('input[readonly]');
     return form.querySelector('.tm-participant-group input').value === 'Other Member'
-      && form.querySelector('.tm-participant-group select').value === 'member' && !!number?.value;
+      && form.querySelector('.tm-participant-group select').value === 'member' && number?.value === ${JSON.stringify(memberCode)};
   })()`,'participant identity and read-only membership number did not populate');
   await typePerson('Other Mem');
   await waitUI(`!${personInput}.validity.valid`,'editing the name left the previous selection valid');
