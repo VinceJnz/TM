@@ -6,6 +6,7 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -22,7 +23,7 @@ type RegistrationData struct {
 	Address        string    `json:"address,omitempty"`
 	BirthDate      time.Time `json:"birth_date,omitempty"`
 	UserAgeGroupID int64     `json:"user_age_group_id,omitempty"`
-	AccountHidden  bool      `json:"account_hidden,omitempty"`
+	AccountHidden  bool      `json:"account_hidden"`
 }
 
 type viewElements struct {
@@ -34,16 +35,17 @@ type viewElements struct {
 // - In parent window: Shows button to start OAuth, opens popup and waits for completion
 // - In popup window: Detects callback, shows form, submits, and closes
 type Process struct {
-	appCore       *appCore.AppCore
-	client        *httpProcessor.Client
-	document      js.Value
-	events        *eventProcessor.EventProcessor
-	Elements      viewElements
-	isPopup       bool
-	isVisible     bool
-	msgHandler    js.Func
-	msgHandlerSet bool
-	timers        []func()
+	appCore         *appCore.AppCore
+	client          *httpProcessor.Client
+	document        js.Value
+	events          *eventProcessor.EventProcessor
+	Elements        viewElements
+	isPopup         bool
+	isVisible       bool
+	msgHandler      js.Func
+	msgHandlerSet   bool
+	timers          []func()
+	cancelAgeGroups func()
 }
 
 // New creates a new OAuth registration process view that implements editorElement interface
@@ -163,7 +165,7 @@ func (p *Process) handleLoginComplete() {
 			"status": "success",
 		}
 		opener := js.Global().Get("window").Get("opener")
-		opener.Call("postMessage", payload, "*")
+		opener.Call("postMessage", payload, js.Global().Get("location").Get("origin"))
 	}
 
 	// Close popup after delay
@@ -284,13 +286,14 @@ func (p *Process) showRegistrationFormInPopup() {
 
 	// Info message
 	info := doc.Call("createElement", "p")
-	info.Set("textContent", "Please provide additional information to complete your registration.")
+	info.Set("textContent", "Complete your Trip Manager profile. An administrator must activate a new account before you can sign in.")
 	info.Set("className", "tm-trip-meta")
 	container.Call("appendChild", info)
 
 	// Status message div
 	statusDiv := doc.Call("createElement", "div")
 	statusDiv.Set("id", "statusMessage")
+	statusDiv.Call("setAttribute", "role", "status")
 	viewHelpers.SetStyleProperty(statusDiv, "marginBottom", "15px")
 	container.Call("appendChild", statusDiv)
 
@@ -300,20 +303,24 @@ func (p *Process) showRegistrationFormInPopup() {
 	form.Set("className", "tm-member-form")
 
 	// Username field
-	usernameFieldset, usernameInput := viewHelpers.StringEdit("", doc, "Username (required)", "text", "username")
+	usernameFieldset, usernameInput := viewHelpers.StringEdit("", doc, "Username (3–50 characters)", "text", "username")
 	usernameInput.Set("required", true)
 	usernameInput.Set("minLength", 3)
-	usernameInput.Set("maxLength", 20)
+	usernameInput.Set("maxLength", 50)
+	usernameInput.Set("autocomplete", "username")
 	usernameInput.Set("placeholder", "Choose a username")
 	form.Call("appendChild", usernameFieldset)
 
 	// Address field (optional)
 	addressFieldset, addressInput := viewHelpers.StringEdit("", doc, "Address (optional)", "text", "address")
 	addressInput.Set("placeholder", "Your address")
+	addressInput.Set("autocomplete", "street-address")
 	form.Call("appendChild", addressFieldset)
 
 	// Birth date field
 	birthDateFieldset, birthDateInput := viewHelpers.StringEdit("", doc, "Birth Date", "date", "birth_date")
+	birthDateInput.Set("required", true)
+	birthDateInput.Set("autocomplete", "bday")
 	form.Call("appendChild", birthDateFieldset)
 
 	// Age group dropdown
@@ -326,12 +333,13 @@ func (p *Process) showRegistrationFormInPopup() {
 	ageGroupSelect := doc.Call("createElement", "select")
 	ageGroupSelect.Set("id", "user_age_group_id")
 	placeholderOpt := doc.Call("createElement", "option")
-	placeholderOpt.Set("value", "0")
+	placeholderOpt.Set("value", "")
 	placeholderOpt.Set("textContent", "-- Select Age Group --")
 	ageGroupSelect.Call("appendChild", placeholderOpt)
+	ageGroupSelect.Set("required", true)
 	ageGroupFieldset.Call("appendChild", ageGroupSelect)
 	form.Call("appendChild", ageGroupFieldset)
-	p.populateAgeGroupsDropdown(ageGroupSelect)
+	_, p.cancelAgeGroups = viewHelpers.LoadRegistrationAgeGroups(doc, ageGroupSelect, p.client)
 
 	// Account hidden checkbox
 	checkboxFieldset, accountHiddenInput := viewHelpers.AccountPrivacyEdit(doc, false, "account_hidden")
@@ -343,7 +351,11 @@ func (p *Process) showRegistrationFormInPopup() {
 	submitBtn.Set("type", "submit")
 	submitBtn.Set("className", "btn btn-primary")
 	submitBtn.Set("textContent", "Complete registration")
-	form.Call("appendChild", viewHelpers.FormButtonRow(doc, submitBtn))
+	restart := doc.Call("createElement", "a")
+	restart.Set("href", p.client.Endpoint(ApiURL+"/login"))
+	restart.Set("textContent", "Continue with Google again")
+	restart.Set("hidden", true)
+	form.Call("append", viewHelpers.FormButtonRow(doc, submitBtn), restart)
 	domEvents.
 
 		// Handle form submission
@@ -351,7 +363,9 @@ func (p *Process) showRegistrationFormInPopup() {
 			if len(args) > 0 {
 				args[0].Call("preventDefault")
 			}
-			p.handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn)
+			if !submitBtn.Get("disabled").Bool() {
+				p.handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn, restart)
+			}
 			return nil
 		})
 
@@ -362,15 +376,15 @@ func (p *Process) showRegistrationFormInPopup() {
 }
 
 // handleFormSubmit processes the registration form submission
-func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn js.Value) {
+func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, ageGroupSelect, accountHiddenInput, statusDiv, submitBtn, restart js.Value) {
 	// Disable submit button
 	submitBtn.Set("disabled", true)
 	submitBtn.Set("textContent", "Saving...")
 
 	// Collect form data
 	username := usernameInput.Get("value").String()
-	if len(username) < 3 || len(username) > 20 {
-		p.showStatus(statusDiv, "Username must be 3-20 characters", "error")
+	if len(username) < 3 || len(username) > 50 {
+		p.showStatus(statusDiv, "Username must be 3–50 characters", "error")
 		submitBtn.Set("disabled", false)
 		submitBtn.Set("textContent", "Complete registration")
 		return
@@ -414,90 +428,63 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 		return
 	}
 
-	log.Printf("%v Submitting registration data: username=%s", debugTag, username)
-
+	var account struct {
+		Status int `json:"user_account_status_id"`
+	}
+	onFailure := func(err error) {
+		p.showStatus(statusDiv, err.Error(), "error")
+		var apiError *httpProcessor.APIError
+		if errors.As(err, &apiError) && apiError.Code == "registration_expired" {
+			restart.Set("hidden", false)
+			restart.Call("focus")
+			return
+		}
+		submitBtn.Set("disabled", false)
+		submitBtn.Set("textContent", "Complete registration")
+	}
 	// Submit to backend
-	p.client.NewRequest(
+	go p.client.NewRequest(
 		http.MethodPost,
 		ApiURL+"/complete-registration",
-		nil,
+		&account,
 		&regData,
 		func(err error) {
 			// Success callback
 			if err != nil {
-				log.Printf("%v Registration failed: %v", debugTag, err)
-				p.showStatus(statusDiv, "Registration failed: "+err.Error(), "error")
-				submitBtn.Set("disabled", false)
-				submitBtn.Set("textContent", "Complete registration")
+				onFailure(err)
 				return
 			}
 
-			log.Printf("%v Registration successful", debugTag)
-			p.showStatus(statusDiv, "Registration complete! Closing window...", "success")
+			// AccountActive is status 2 in the existing user response.
+			const accountActive = 2
+			messageStatus := "success"
+			message := "Your profile is complete."
+			if account.Status != accountActive {
+				messageStatus = "pending_approval"
+				message = "Registration complete. You can sign in with Google after an administrator activates your account."
+			}
+			p.showStatus(statusDiv, message, "success")
+			form := submitBtn.Call("closest", "form")
+			form.Set("hidden", true)
+			closeButton := viewHelpers.Button2(func() any {
+				js.Global().Call("close")
+				return nil
+			}, p.document, "Close window", "closeRegistration")
+			form.Call("after", closeButton)
+			closeButton.Call("focus")
 
 			// Notify parent window
 			if !js.Global().Get("window").Get("opener").IsNull() {
 				payload := map[string]any{
-					"type":     "registrationComplete",
-					"status":   "success",
-					"username": username,
+					"type":   "registrationComplete",
+					"status": messageStatus,
 				}
 				opener := js.Global().Get("window").Get("opener")
-				opener.Call("postMessage", payload, "*")
+				opener.Call("postMessage", payload, js.Global().Get("location").Get("origin"))
 			}
-
-			// Close popup after delay
-			p.timers = append(p.timers, domEvents.Timeout(func(this js.Value, args []js.Value) any {
-				js.Global().Get("window").Call("close")
-				return nil
-			}, 1500))
 		},
-		func(err error) {
-			// Failure callback
-			log.Printf("%v Registration error: %v", debugTag, err)
-			p.showStatus(statusDiv, "Registration error: "+err.Error(), "error")
-			submitBtn.Set("disabled", false)
-			submitBtn.Set("textContent", "Complete registration")
-		},
+		onFailure,
 	)
-}
-
-func (p *Process) populateAgeGroupsDropdown(selectElement js.Value) {
-	if p.client == nil {
-		log.Printf("%vpopulateAgeGroupsDropdown: client is nil", debugTag)
-		return
-	}
-
-	pfetch := js.Global().Call("fetch", p.client.Endpoint("/userAgeGroups"), map[string]any{
-		"method":      "GET",
-		"credentials": "include",
-	})
-	domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
-		resp := args[0]
-		if !resp.Get("ok").Bool() {
-			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
-			return nil
-		}
-
-		jsonP := resp.Call("json")
-		domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
-			data := args[0]
-			length := data.Get("length").Int()
-			for i := 0; i < length; i++ {
-				item := data.Index(i)
-				id := item.Get("id").Int()
-				name := item.Get("age_group").String()
-
-				opt := p.document.Call("createElement", "option")
-				opt.Set("value", id)
-				opt.Set("textContent", name)
-				selectElement.Call("appendChild", opt)
-			}
-			return nil
-		})
-
-		return nil
-	})
 }
 
 // showStatus displays a status message
@@ -524,6 +511,9 @@ func (p *Process) showStatus(statusDiv js.Value, message string, messageType str
 
 // Destroy releases resources
 func (p *Process) Destroy() {
+	if p.cancelAgeGroups != nil {
+		p.cancelAgeGroups()
+	}
 	for _, cancel := range p.timers {
 		cancel()
 	}

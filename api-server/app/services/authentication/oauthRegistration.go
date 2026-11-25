@@ -10,7 +10,7 @@ import (
 )
 
 func (s Service) CompleteOAuthRegistration(ctx context.Context, id int, u models.User, proof string) (int, error) {
-	if len(strings.TrimSpace(u.Username)) < 3 || len(u.Username) > 20 || len(u.Address.String) > 255 || !u.BirthDate.Valid || u.UserAgeGroupID.Int64 <= 0 {
+	if len(strings.TrimSpace(u.Username)) < 3 || len(u.Username) > 50 || len(u.Address.String) > 255 || !u.BirthDate.Valid || u.UserAgeGroupID.Int64 <= 0 {
 		return 0, ErrRegistration
 	}
 	tx, err := s.Store.DB.BeginTxx(ctx, nil)
@@ -47,7 +47,7 @@ func (s Service) CompleteOAuthRegistration(ctx context.Context, id int, u models
 	if id <= 0 {
 		u.ID = 0
 		u.Password.Valid = false
-		u.AccountStatusID.SetValid(int64(models.AccountNew))
+		u.AccountStatusID.SetValid(int64(models.AccountVerified))
 		id, err = s.Store.InsertUser(ctx, tx, u)
 	} else {
 		current, e := s.Store.RegistrationUser(ctx, tx, id)

@@ -318,8 +318,8 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	requestedUsername := strings.TrimSpace(req.Username)
 	// Validate username if provided
 	if requestedUsername != "" {
-		if len(requestedUsername) < 3 || len(requestedUsername) > 20 {
-			http.Error(w, "invalid username", http.StatusBadRequest)
+		if len(requestedUsername) < 3 || len(requestedUsername) > 50 {
+			http.Error(w, "username must be between 3 and 50 characters", http.StatusBadRequest)
 			return
 		}
 		existing, err := dbAuthTemplate.UserNameReadQryContext(r.Context(), debugTag+"CompleteRegistration:check ", h.appConf.Db, requestedUsername)
@@ -340,9 +340,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	} else {
 		oauthStateToken, err = h.findOAuthStateToken(r)
 		if err != nil {
-			log.Printf("%vCompleteRegistration() no valid authentication found, redirecting to OAuth login: %v", debugTag, err)
-			loginURL := h.appConf.Settings.APIprefix + "/auth/oauth/login"
-			http.Redirect(w, r, loginURL, http.StatusFound)
+			handlerHelpers.WriteError(w, http.StatusForbidden, "registration_expired", "Your Google signup session expired. Continue with Google again.")
 			return
 		}
 

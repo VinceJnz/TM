@@ -404,8 +404,57 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await waitUI("document.querySelector('#loginForm.tm-member-form')?.getClientRects().length>0",'styled sign-in form did not render');
   await send('Runtime.evaluate',{expression:"document.querySelector('.tm-member-recovery summary').click()"});
   await waitUI("document.querySelector('#resetEmail')?.getClientRects().length>0 && document.querySelector('#resetCode')?.closest('form')?.classList.contains('tm-member-form')",'password recovery forms did not use the shared layout');
+  await send('Runtime.evaluate',{expression:`(() => {
+    const originalFetch = window.fetch;
+    let ageLoads = 0;
+    window.registrationRequests = [];
+    window.restoreSignupFetch = () => { window.fetch = originalFetch; };
+    window.fetch = (url, options) => {
+      const path = new URL(url, location.href).pathname;
+      const json = (data, status) => Promise.resolve(new Response(JSON.stringify(data), {status, headers:{'Content-Type':'application/json'}}));
+      if (path.endsWith('/userAgeGroups') && ++ageLoads === 1) return json({}, 503);
+      if (path.endsWith('/auth/register')) {
+        const payload = JSON.parse(options.body);
+        window.registrationRequests.push([payload.email, payload.user_account_hidden]);
+        return json({}, 202);
+      }
+      if (path.endsWith('/auth/verify-registration')) {
+        return JSON.parse(options.body).email === 'updated@example.test' ? json({}, 201) : json({}, 403);
+      }
+      return originalFetch(url, options);
+    };
+  })()`});
   await send('Runtime.evaluate',{expression:"document.querySelector('.auth-form a').click()"});
-  await waitUI("document.querySelector('#regForm.tm-member-form')?.getClientRects().length>0 && document.querySelector('label[for=regToken]')?.textContent==='Email verification code'",'styled registration form did not render');
+  await waitUI("document.querySelector('#regForm.tm-member-form')?.getClientRects().length>0 && !document.querySelector('#regToken') && document.querySelector('label[for=regAccountHidden]')?.textContent.includes('trip reports')",'styled signup details did not render');
+  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await waitUI("document.querySelector('#regForm').scrollWidth <= document.querySelector('#regForm').clientWidth",'signup details overflowed the mobile layout');
+  await waitUI("document.querySelector('#regAgeGroup-retry')?.getClientRects().length>0",'signup age-group failure did not offer retry');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#regAgeGroup-retry').click()"});
+  await waitUI("document.querySelector('#regAgeGroup')?.options.length>1 && !document.querySelector('#regAgeGroup').disabled",'signup age-group retry did not populate choices');
+  await send('Runtime.evaluate',{expression:`(() => {
+    const values = {regUsername:'synthetic-signup',regEmail:'original@example.test',regName:'Signup Test',regPassword:'synthetic-test-password',regBirthDate:'2000-01-01'};
+    for (const [id,value] of Object.entries(values)) document.getElementById(id).value = value;
+    document.querySelector('#regAgeGroup').selectedIndex = 1;
+    document.querySelector('#regAccountHidden').checked = true;
+    document.querySelector('#regSubmit').click();
+  })()`});
+  await waitUI("document.querySelector('#regVerifyForm')?.textContent.includes('original@example.test') && document.querySelector('#regForm').hidden",'signup did not open the code step');
+  await waitUI("document.querySelector('#regVerifyForm').scrollWidth <= document.querySelector('#regVerifyForm').clientWidth",'code form overflowed the mobile layout');
+  await send('Emulation.clearDeviceMetricsOverride');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#regResend').click()"});
+  await waitUI("window.registrationRequests.length===2 && document.querySelector('#regVerifyForm').textContent.includes('Another code was sent')",'signup resend did not complete');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#regChangeEmail').click(); document.querySelector('#regEmail').value='updated@example.test'; document.querySelector('#regSubmit').click()"});
+  await waitUI("document.querySelector('#regVerifyForm')?.textContent.includes('updated@example.test') && window.registrationRequests.every(r=>r[1]===true)",'correcting the email did not preserve signup details');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#regToken').value='synthetic-code'; document.querySelector('#verSubmit').click()"});
+  await waitUI("document.querySelector('.auth-form').textContent.includes('administrator activates your account') && !document.querySelector('#loginForm')",'signup did not show pending approval');
+  await send('Runtime.evaluate',{expression:`(() => {
+    window.restoreSignupFetch();
+    const originalOpen = window.open;
+    window.open = () => null;
+    document.querySelector('.oauth-btn').click();
+    window.open = originalOpen;
+  })()`});
+  await waitUI("document.querySelector('.oauth-options').textContent.includes('blocked the Google window')",'blocked Google popup did not provide recovery');
   const popup = await send('Page.addScriptToEvaluateOnNewDocument',{source:"if (new URLSearchParams(location.search).has('oauth-register')) Object.defineProperty(window,'opener',{value:{}})"});
   await send('Page.navigate',{url:`${origin}/?oauth-register=true`});
   await waitUI("document.querySelector('.tm-member-popup #registrationForm.tm-member-form')?.getClientRects().length>0 && document.querySelector('#submitBtn')?.textContent==='Complete registration'",'Google completion form did not use the shared layout');

@@ -22,12 +22,13 @@ import (
 // A small database/sql test connection exercises the actual registration handlers
 // and persistence helpers without a live database or an additional dependency.
 type registrationDB struct {
-	data         string
-	token        string
-	passwordHash string
-	failSave     bool
-	tokenDeleted bool
-	userCreated  bool
+	data          string
+	token         string
+	passwordHash  string
+	accountHidden bool
+	failSave      bool
+	tokenDeleted  bool
+	userCreated   bool
 }
 
 func (db *registrationDB) Connect(context.Context) (driver.Conn, error) { return db, nil }
@@ -86,6 +87,7 @@ func (db *registrationDB) QueryContext(_ context.Context, query string, args []d
 		}, nil
 	case strings.HasPrefix(query, "INSERT INTO st_users"):
 		db.passwordHash, _ = args[7].Value.(string)
+		db.accountHidden, _ = args[9].Value.(bool)
 		db.userCreated = true
 		return &registrationRows{[]string{"id"}, []driver.Value{int64(42)}}, nil
 	case strings.Contains(query, "FROM st_users"):
@@ -126,7 +128,7 @@ func TestRegistrationFlowPersistsOnlyHashAndDoesNotLogSecrets(t *testing.T) {
 	const password = "registration-flow-password"
 	response := httptest.NewRecorder()
 	h.Register(response, httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(
-		`{"username":"test-user","name":"Test User","email":"user@example.test","user_password":"`+password+`","user_birth_date":"1990-01-01T00:00:00Z","user_age_group_id":1}`)))
+		`{"username":"test-user","name":"Test User","email":"user@example.test","user_password":"`+password+`","user_birth_date":"1990-01-01T00:00:00Z","user_age_group_id":1,"user_account_hidden":true}`)))
 	if response.Code != http.StatusAccepted {
 		t.Fatalf("register returned %d: %s", response.Code, response.Body.String())
 	}
@@ -148,6 +150,9 @@ func TestRegistrationFlowPersistsOnlyHashAndDoesNotLogSecrets(t *testing.T) {
 	}
 	if !db.userCreated || db.passwordHash != hash || !db.tokenDeleted {
 		t.Fatal("verification did not create user with original hash and consume token")
+	}
+	if !db.accountHidden {
+		t.Fatal("account insert lost the requested privacy preference")
 	}
 	for _, secret := range []string{password, hash, db.token} {
 		if secret == "" || strings.Contains(logs.String(), secret) || strings.Contains(response.Body.String(), secret) {

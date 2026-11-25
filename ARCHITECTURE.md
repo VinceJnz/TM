@@ -179,6 +179,14 @@ Email signup uses a details form followed by a code form. Resend stages the
 same submitted details through the registration endpoint. Changing the
 email returns to the details form, and verification checks the current email
 when the client supplies it. Successful verification enters the approval state.
+Both signup forms use a retryable age-group lookup and explain the approval
+requirement. New Google accounts enter the verified state pending administrator
+activation. The Google popup reports approval separately from sign-in. The
+parent checks the session before switching to signed-in mode. An expired
+continuation returns a restart action to the popup.
+Signup collects both birth date and age group because the configured age
+bands can overlap. The server checks the applicant's selected group against
+the date of birth.
 Linking changes only identity fields and checks current account state. Enrollment
 updates only permitted profile fields with concurrency checks; it must not overwrite
 passwords or administrative activation decisions.

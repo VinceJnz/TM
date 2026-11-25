@@ -4,13 +4,25 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/gateways/oAuthGateway/oAuthGateway"
 	"api-server/v2/internal/testdb"
+	"api-server/v2/models"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"golang.org/x/oauth2"
 )
+
+func TestCompleteRegistrationWithoutContinuationOffersRestart(t *testing.T) {
+	h := New(&appCore.Config{})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/complete-registration", strings.NewReader("{}"))
+	h.CompleteRegistration(w, r)
+	if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "registration_expired") || w.Header().Get("Location") != "" {
+		t.Fatalf("missing restart response: %d %s", w.Code, w.Body.String())
+	}
+}
 
 func TestCallbackRejectsMissingOrMismatchedBrowserCookie(t *testing.T) {
 	for _, value := range []string{"", "another-browser"} {
@@ -89,5 +101,29 @@ func TestOAuthPKCEAndSingleUseState(t *testing.T) {
 	}
 	if callback(cookie.Value).Code != 403 || exchanges != 1 {
 		t.Fatal("OAuth callback was replayable")
+	}
+	if _, err := db.Exec("CREATE TABLE et_user_age_groups (id int PRIMARY KEY, age_group text); INSERT INTO et_user_age_groups VALUES (1, 'life')"); err != nil {
+		t.Fatal(err)
+	}
+	complete := httptest.NewRequest(http.MethodPost, "/complete-registration",
+		strings.NewReader(`{"username":"synthetic-google-member","birth_date":"2000-01-01","user_age_group_id":1,"account_hidden":true}`))
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "oauth-registration" {
+			complete.AddCookie(c)
+		}
+	}
+	result := httptest.NewRecorder()
+	h.CompleteRegistration(result, complete)
+	if result.Code != http.StatusOK {
+		t.Fatalf("complete registration: %d %s", result.Code, result.Body.String())
+	}
+	var status int
+	if err := db.Get(&status, "SELECT user_account_status_id FROM st_users WHERE username='synthetic-google-member'"); err != nil || status != int(models.AccountVerified) {
+		t.Fatalf("expected verified account awaiting activation, got %d (%v)", status, err)
+	}
+	for _, c := range result.Result().Cookies() {
+		if c.Name == "session" {
+			t.Fatal("pending account got a sign-in session")
+		}
 	}
 }

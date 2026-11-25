@@ -1,10 +1,8 @@
 package basicAuthLoginView
 
 import (
-	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
-	"log"
 	"strconv"
 	"strings"
 	"syscall/js"
@@ -286,9 +284,10 @@ func (editor *ItemEditor) regForm() js.Value {
 	ageGroupSelect.Set("className", "form-control")
 	// Add placeholder option
 	placeholderOpt := editor.document.Call("createElement", "option")
-	placeholderOpt.Set("value", "0")
+	placeholderOpt.Set("value", "")
 	placeholderOpt.Set("innerHTML", "-- Select Age Group --")
 	ageGroupSelect.Call("appendChild", placeholderOpt)
+	ageGroupSelect.Set("required", true)
 	regAgeGroupObj.Call("appendChild", ageGroupSelect)
 
 	regHiddenObj, regHiddenInp := viewHelpers.AccountPrivacyEdit(editor.document, false, "regAccountHidden")
@@ -305,7 +304,7 @@ func (editor *ItemEditor) regForm() js.Value {
 	regForm.Call("append", status, viewHelpers.FormButtonRow(editor.document, submit))
 
 	// Fetch and populate age groups dropdown
-	editor.populateAgeGroupsDropdown(ageGroupSelect)
+	editor.loadAgeGroups, editor.cancelAgeGroups = viewHelpers.LoadRegistrationAgeGroups(editor.document, ageGroupSelect, editor.client)
 
 	return regForm
 }
@@ -339,44 +338,3 @@ func (editor *ItemEditor) loginForm() js.Value {
 }
 
 // populateAgeGroupsDropdown fetches age groups from the API and populates the dropdown
-func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value) {
-	if editor.client == nil {
-		log.Printf("%vpopulateAgeGroupsDropdown: client is nil", debugTag)
-		return
-	}
-
-	// Use a direct fetch for age groups
-	pfetch := js.Global().Call("fetch", "/api/v1/userAgeGroups", map[string]any{
-		"method":      "GET",
-		"credentials": "include",
-	})
-	domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
-		resp := args[0]
-		if !resp.Get("ok").Bool() {
-			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
-			return nil
-		}
-
-		jsonP := resp.Call("json")
-		domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
-			data := args[0]
-
-			// Data should be an array of age groups
-			length := data.Get("length").Int()
-			for i := 0; i < length; i++ {
-				item := data.Index(i)
-				id := item.Get("id").Int()
-				name := item.Get("age_group").String()
-
-				// Create option element
-				opt := editor.document.Call("createElement", "option")
-				opt.Set("value", id)
-				opt.Set("textContent", name)
-				selectElement.Call("appendChild", opt)
-			}
-			return nil
-		})
-
-		return nil
-	})
-}

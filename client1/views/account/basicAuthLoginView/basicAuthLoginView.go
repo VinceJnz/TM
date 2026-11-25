@@ -125,7 +125,10 @@ type ItemEditor struct {
 	msgHandler           js.Func
 	msgHandlerSet        bool
 	oauthMessageReceived bool
+	oauthPopup           js.Value
 	removePasswordReset  func()
+	loadAgeGroups        func()
+	cancelAgeGroups      func()
 }
 
 func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appCore.AppCore) *ItemEditor {
@@ -171,12 +174,9 @@ func (editor *ItemEditor) setupOAuthPopupMessageListener() {
 		}
 
 		evt := args[0]
-		origin := evt.Get("origin")
-		if origin.Truthy() {
-			expected := js.Global().Get("location").Get("origin").String()
-			if origin.String() != expected {
-				return nil
-			}
+		expected := js.Global().Get("location").Get("origin").String()
+		if evt.Get("origin").String() != expected || !editor.oauthPopup.Truthy() || !evt.Get("source").Equal(editor.oauthPopup) {
+			return nil
 		}
 
 		data := evt.Get("data")
@@ -195,25 +195,15 @@ func (editor *ItemEditor) setupOAuthPopupMessageListener() {
 		}
 
 		statusVal := data.Get("status")
-		if statusVal.Truthy() && statusVal.String() != "success" {
+		if statusVal.String() == "pending_approval" && msgType == "registrationComplete" {
+			editor.oauthMessageReceived = true
+			editor.showRegistrationComplete("Your Google account is verified. You can sign in after an administrator activates your Trip Manager account.")
 			return nil
 		}
-
-		name := "authenticated"
-		if nameVal := data.Get("name"); nameVal.Truthy() && nameVal.Type() == js.TypeString {
-			if s := nameVal.String(); s != "" {
-				name = s
-			}
+		if statusVal.String() == "success" {
+			editor.oauthMessageReceived = true
+			editor.fallbackCheckOAuthSession()
 		}
-		if usernameVal := data.Get("username"); usernameVal.Truthy() && usernameVal.Type() == js.TypeString && name == "authenticated" {
-			if s := usernameVal.String(); s != "" {
-				name = s
-			}
-		}
-
-		log.Printf("%s received OAuth popup completion message (%s), triggering loginComplete", debugTag, msgType)
-		editor.oauthMessageReceived = true
-		editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLoginComplete, DebugTag: debugTag, Data: name})
 		return nil
 	})
 
@@ -222,6 +212,7 @@ func (editor *ItemEditor) setupOAuthPopupMessageListener() {
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.clearAgeGroupLookup()
 	editor.clearPasswordReset()
 	editor.Elements.EditDiv.Set("innerHTML", "")
 	editor.Elements.ListDiv.Set("innerHTML", "")
@@ -242,6 +233,9 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	if editor.cancelAgeGroups != nil {
+		editor.cancelAgeGroups()
+	}
 	editor.Elements.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
 }
@@ -249,6 +243,17 @@ func (editor *ItemEditor) Hide() {
 func (editor *ItemEditor) Display() {
 	editor.Elements.Div.Get("style").Call("setProperty", "display", "block")
 	editor.ViewState = ViewStateBlock
+	if editor.loadAgeGroups != nil {
+		editor.loadAgeGroups()
+	}
+}
+
+func (editor *ItemEditor) clearAgeGroupLookup() {
+	if editor.cancelAgeGroups != nil {
+		editor.cancelAgeGroups()
+		editor.cancelAgeGroups = nil
+		editor.loadAgeGroups = nil
+	}
 }
 
 func (editor *ItemEditor) onCompletionMsg(Msg string) {
@@ -257,6 +262,7 @@ func (editor *ItemEditor) onCompletionMsg(Msg string) {
 
 // populateEditForm populates the item edit form with the current item's data
 func (editor *ItemEditor) populateEditForm() {
+	editor.clearAgeGroupLookup()
 	editor.clearPasswordReset()
 	editor.Elements.EditDiv.Set("innerHTML", "") // Clear existing content
 
@@ -293,13 +299,26 @@ func (editor *ItemEditor) populateEditForm() {
 	loginButton := editor.document.Call("createElement", "button")
 	loginButton.Set("innerHTML", "Continue with Google")
 	loginButton.Set("className", "btn btn-primary oauth-btn")
+	oauthStatus := editor.document.Call("createElement", "p")
+	oauthStatus.Call("setAttribute", "role", "status")
 	domEvents.Listen(loginButton, "click", func(this js.Value, args []js.Value) any {
+		if editor.oauthPopup.Truthy() && !editor.oauthPopup.Get("closed").Bool() {
+			editor.oauthPopup.Call("focus")
+			return nil
+		}
+		oauthStatus.Set("textContent", "")
 		editor.oauthMessageReceived = false
-		popup := js.Global().Call("open", "/api/v1/auth/oauth/login", "oauth", "width=600,height=800")
+		popup := js.Global().Call("open", editor.client.Endpoint(ApiURL+"/oauth/login"), "oauth", "width=600,height=800")
+		if !popup.Truthy() {
+			oauthStatus.Set("textContent", "Your browser blocked the Google window. Allow pop-ups for this site, then try again.")
+			return nil
+		}
+		editor.oauthPopup = popup
 		editor.startOAuthPopupCloseWatcher(popup)
 		return nil
 	})
 	oauthContainer.Call("appendChild", loginButton)
+	oauthContainer.Call("appendChild", oauthStatus)
 
 	container.Call("appendChild", oauthContainer)
 	editor.Elements.EditDiv.Get("style").Set("display", "block")
@@ -375,6 +394,7 @@ func (editor *ItemEditor) fallbackCheckOAuthSession() {
 }
 
 func (editor *ItemEditor) renderForm(mode string) {
+	editor.clearAgeGroupLookup()
 	editor.clearPasswordReset()
 	editor.authMode = mode
 	editor.UiComponents = UI{}
@@ -419,6 +439,7 @@ func (editor *ItemEditor) renderForm(mode string) {
 }
 
 func (editor *ItemEditor) showRegistrationComplete(message string) {
+	editor.clearAgeGroupLookup()
 	editor.authMode = "registrationComplete"
 	editor.UiComponents = UI{}
 	editor.CurrentRecord = TableData{}
