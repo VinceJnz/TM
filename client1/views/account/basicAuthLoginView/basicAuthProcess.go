@@ -37,115 +37,126 @@ func (editor *ItemEditor) setLoginIdentifierFields(identifier string) string {
 	return identifier
 }
 
-// handleRegisterSubmit submits {username,email,password,name,address,birthdate,age_group_id} to /auth/register
-func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) any {
-	if len(args) > 0 {
-		args[0].Call("preventDefault")
+func (editor *ItemEditor) submitRegistration(details, submit, status js.Value) {
+	if submit.Get("disabled").Bool() {
+		return
 	}
-
-	editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
-	editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
-	editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
-	editor.CurrentRecord.Address = editor.UiComponents.Address.Get("value").String()
-	editor.CurrentRecord.BirthDate = editor.UiComponents.BirthDate.Get("value").String()
-	ageGroupIDStr := editor.UiComponents.UserAgeGroupID.Get("value").String()
-	if ageGroupIDStr != "" && ageGroupIDStr != "0" {
-		if ageGroupID, err := strconv.ParseInt(ageGroupIDStr, 10, 64); err == nil {
-			editor.CurrentRecord.UserAgeGroupID = ageGroupID
-		}
+	fields := editor.UiComponents
+	ageGroup, _ := strconv.ParseInt(fields.UserAgeGroupID.Get("value").String(), 10, 64)
+	if ageGroup <= 0 {
+		status.Set("textContent", "Select an age group to continue.")
+		fields.UserAgeGroupID.Call("focus")
+		return
 	}
-
-	if editor.CurrentRecord.Username == "" || editor.CurrentRecord.Password == "" || editor.CurrentRecord.Email == "" || editor.CurrentRecord.Name == "" {
-		js.Global().Call("alert", "username, email, password, and full name required")
-		return nil
-	}
-	if editor.CurrentRecord.BirthDate == "" {
-		js.Global().Call("alert", "birth date required")
-		return nil
-	}
-	if editor.CurrentRecord.UserAgeGroupID <= 0 {
-		js.Global().Call("alert", "age group required")
-		return nil
-	}
-
-	// Build registration payload with only the fields the API expects.
-	// Parse the date using shared layout and send RFC3339 for zero.Time decoding on API side.
-	birthDateStr := editor.CurrentRecord.BirthDate
-	parsedBirthDate, err := time.Parse(viewHelpers.Layout, birthDateStr)
+	birthDate, err := time.Parse(viewHelpers.Layout, fields.BirthDate.Get("value").String())
 	if err != nil {
-		js.Global().Call("alert", "invalid birth date format; expected "+viewHelpers.Layout)
-		return nil
+		status.Set("textContent", "Enter a valid birth date.")
+		fields.BirthDate.Call("focus")
+		return
 	}
-	birthDateRFC3339 := parsedBirthDate.Format(time.RFC3339)
-
-	regPayload := RegistrationPayload{
-		Username:       editor.CurrentRecord.Username,
-		Password:       editor.CurrentRecord.Password,
-		Email:          editor.CurrentRecord.Email,
-		Name:           editor.CurrentRecord.Name,
-		Address:        editor.CurrentRecord.Address,
-		BirthDate:      birthDateRFC3339,
-		UserAgeGroupID: editor.CurrentRecord.UserAgeGroupID,
-		AccountHidden:  editor.UiComponents.AccountHidden.Get("checked").Bool(),
+	password := fields.Password.Get("value").String()
+	if len(password) < 8 || len(password) > 72 {
+		status.Set("textContent", "Enter a password between 8 and 72 bytes.")
+		fields.Password.Call("focus")
+		return
 	}
-
-	editor.client.NewRequest("POST", ApiURL+"/register", nil, regPayload,
-		func(err error) {
-			if err != nil {
-				js.Global().Call("alert", "registration failed: "+err.Error())
-				return
-			}
-			if editor.UiComponents.Token.Truthy() {
-				editor.UiComponents.Token.Set("disabled", false)
-				editor.UiComponents.Token.Call("focus")
-			}
-			js.Global().Call("alert", "verification token sent to your email")
-		},
-		func(err error) {
-			js.Global().Call("alert", "registration error: "+err.Error())
-		})
-	return nil
+	payload := RegistrationPayload{
+		Username:       strings.TrimSpace(fields.Username.Get("value").String()),
+		Email:          strings.TrimSpace(fields.Email.Get("value").String()),
+		Name:           strings.TrimSpace(fields.Name.Get("value").String()),
+		Password:       password,
+		Address:        fields.Address.Get("value").String(),
+		BirthDate:      birthDate.Format(time.RFC3339),
+		UserAgeGroupID: ageGroup,
+		AccountHidden:  fields.AccountHidden.Get("checked").Bool(),
+	}
+	submit.Set("disabled", true)
+	fieldset := details.Get("firstElementChild")
+	fieldset.Set("disabled", true)
+	status.Set("textContent", "Sending your verification code…")
+	go func() {
+		err := editor.client.Request("POST", ApiURL+"/register", nil, payload)
+		if !details.Get("isConnected").Bool() {
+			return
+		}
+		submit.Set("disabled", false)
+		fieldset.Set("disabled", false)
+		if err != nil {
+			status.Set("textContent", err.Error())
+			return
+		}
+		status.Set("textContent", "")
+		editor.registrationVerification(details, payload)
+	}()
 }
 
-// handleVerifyRegistration posts token (and username/email if needed) to /auth/verify-registration
-func (editor *ItemEditor) handleVerifyRegistration(this js.Value, args []js.Value) any {
-	if len(args) > 0 {
+func (editor *ItemEditor) registrationVerification(details js.Value, payload RegistrationPayload) {
+	doc := editor.document
+	codeField, code := viewHelpers.StringEdit("", doc, "Email verification code", "text", "regToken")
+	code.Set("required", true)
+	code.Set("autocomplete", "one-time-code")
+	status := doc.Call("createElement", "p")
+	status.Call("setAttribute", "role", "status")
+	instructions := doc.Call("createElement", "p")
+	instructions.Set("textContent", "Enter the code sent to "+payload.Email+". The code expires after 24 hours.")
+
+	var verifyForm, verify, resend, change js.Value
+	setPending := func(pending bool) {
+		verify.Set("disabled", pending)
+		resend.Set("disabled", pending)
+		change.Set("disabled", pending)
+	}
+	run := func(path string, body any, pendingText string, success func()) {
+		setPending(true)
+		status.Set("textContent", pendingText)
+		go func() {
+			err := editor.client.Request("POST", ApiURL+path, nil, body)
+			if !verifyForm.Get("isConnected").Bool() {
+				return
+			}
+			setPending(false)
+			if err != nil {
+				status.Set("textContent", err.Error())
+				return
+			}
+			success()
+		}()
+	}
+
+	verifyForm = viewHelpers.Form(func(_ js.Value, args []js.Value) any {
 		args[0].Call("preventDefault")
-	}
-
-	//editor.CurrentRecord.Username = editor.UiComponents.Username.Get("value").String()
-	//editor.CurrentRecord.Email = editor.UiComponents.Email.Get("value").String()
-	//editor.CurrentRecord.Name = editor.UiComponents.Name.Get("value").String()
-	//editor.CurrentRecord.Password = editor.UiComponents.Password.Get("value").String()
-	editor.CurrentRecord.Token = editor.UiComponents.Token.Get("value").String()
-
-	if editor.CurrentRecord.Token == "" {
-		js.Global().Call("alert", "verification token required")
-		return nil
-	}
-
-	payload := map[string]string{
-		"token": editor.CurrentRecord.Token,
-	}
-
-	editor.client.NewRequest("POST", ApiURL+"/verify-registration", nil, payload,
-		func(err error) {
-			if err != nil {
-				js.Global().Call("alert", "verification failed: "+err.Error())
-				return
-			}
-			// Account verified and pending approval - display login page
-			editor.renderForm("login")
-			js.Global().Call("alert", "account verified and pending admin approval\nYou can now log in with your credentials")
-		},
-		func(err error) {
-			js.Global().Call("alert", "verification error: "+err.Error())
+		value := strings.TrimSpace(code.Get("value").String())
+		if verify.Get("disabled").Bool() || value == "" {
+			return nil
+		}
+		run("/verify-registration", map[string]string{"token": value, "email": payload.Email}, "Verifying code…", func() {
+			editor.showRegistrationComplete("Your email is verified. You can sign in after an administrator activates your account.")
 		})
-	return nil
+		return nil
+	}, doc, "regVerifyForm")
+	verifyForm.Set("className", "tm-member-form")
+	verify = viewHelpers.SubmitButton(doc, "Verify email", "verSubmit")
+	resend = viewHelpers.Button2(func() any {
+		run("/register", payload, "Sending another code…", func() {
+			status.Set("textContent", "Another code was sent to "+payload.Email+".")
+			code.Call("focus")
+		})
+		return nil
+	}, doc, "Resend code", "regResend")
+	change = viewHelpers.Button2(func() any {
+		verifyForm.Call("remove")
+		details.Set("hidden", false)
+		editor.Elements.Title.Set("textContent", "Create an account")
+		editor.UiComponents.Email.Call("focus")
+		return nil
+	}, doc, "Change email", "regChangeEmail")
+	verifyForm.Call("append", instructions, codeField, status, viewHelpers.FormButtonRow(doc, verify, resend, change))
+	details.Set("hidden", true)
+	editor.Elements.AuthDiv.Call("insertBefore", verifyForm, details.Get("nextSibling"))
+	editor.Elements.Title.Set("textContent", "Verify your email")
+	code.Call("focus")
 }
 
-// handleLoginWithPassword submits {username/email,password} to /auth/login-password
 func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value) any {
 	if len(args) > 0 {
 		args[0].Call("preventDefault")
@@ -225,15 +236,43 @@ func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) any {
 }
 
 func (editor *ItemEditor) regForm() js.Value {
-	// registration form
-	regForm := viewHelpers.Form(editor.handleRegisterSubmit, editor.document, "regForm")
+	status := editor.document.Call("createElement", "p")
+	status.Call("setAttribute", "role", "status")
+	submit := viewHelpers.SubmitButton(editor.document, "Send verification code", "regSubmit")
+	var regForm js.Value
+	regForm = viewHelpers.Form(func(_ js.Value, args []js.Value) any {
+		args[0].Call("preventDefault")
+		editor.submitRegistration(regForm, submit, status)
+		return nil
+	}, editor.document, "regForm")
 	regForm.Set("className", "tm-member-form")
+	fields := editor.document.Call("createElement", "fieldset")
+	fields.Set("className", "tm-member-form tm-registration-details")
+	regForm.Call("appendChild", fields)
+	intro := editor.document.Call("createElement", "p")
+	intro.Set("textContent", "Verify your email to create your account. An administrator must activate it before you can sign in.")
+	fields.Call("appendChild", intro)
 	regUserObj, regUserInp := viewHelpers.StringEdit("", editor.document, "Username", "text", "regUsername")
 	regEmailObj, regEmailInp := viewHelpers.StringEdit("", editor.document, "Email", "email", "regEmail")
 	regNameObj, regNameInp := viewHelpers.StringEdit("", editor.document, "Full Name", "text", "regName")
 	regPassObj, regPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "regPassword")
-	regAddressObj, regAddressInp := viewHelpers.StringEdit("", editor.document, "Address", "text", "regAddress")
+	regAddressObj, regAddressInp := viewHelpers.StringEdit("", editor.document, "Address (optional)", "text", "regAddress")
 	regBirthObj, regBirthInp := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "regBirthDate")
+	for _, input := range []js.Value{regUserInp, regEmailInp, regNameInp, regPassInp, regBirthInp} {
+		input.Set("required", true)
+	}
+	regUserInp.Set("autocomplete", "username")
+	regEmailInp.Set("autocomplete", "email")
+	regNameInp.Set("autocomplete", "name")
+	regPassInp.Set("autocomplete", "new-password")
+	regAddressInp.Set("autocomplete", "street-address")
+	regBirthInp.Set("autocomplete", "bday")
+	regUserInp.Set("minLength", 3)
+	regUserInp.Set("maxLength", 50)
+	regPassInp.Set("minLength", 8)
+	regPassInp.Set("maxLength", 72)
+	regUserObj.Get("firstElementChild").Set("textContent", "Username (3–50 characters)")
+	regPassObj.Get("firstElementChild").Set("textContent", "Password (8–72 bytes)")
 
 	// Create age group dropdown
 	regAgeGroupObj := editor.document.Call("createElement", "div")
@@ -254,10 +293,6 @@ func (editor *ItemEditor) regForm() js.Value {
 
 	regHiddenObj, regHiddenInp := viewHelpers.AccountPrivacyEdit(editor.document, false, "regAccountHidden")
 
-	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "Email verification code", "text", "regToken")
-	regTokenInp.Set("autocomplete", "one-time-code")
-	regTokenInp.Set("disabled", true)
-
 	editor.UiComponents.Username = regUserInp
 	editor.UiComponents.Email = regEmailInp
 	editor.UiComponents.Name = regNameInp
@@ -266,68 +301,11 @@ func (editor *ItemEditor) regForm() js.Value {
 	editor.UiComponents.BirthDate = regBirthInp
 	editor.UiComponents.UserAgeGroupID = ageGroupSelect
 	editor.UiComponents.AccountHidden = regHiddenInp
-	editor.UiComponents.Token = regTokenInp
-
-	regForm.Call("appendChild", regUserObj)
-	regForm.Call("appendChild", regEmailObj)
-	regForm.Call("appendChild", regNameObj)
-	regForm.Call("appendChild", regPassObj)
-	regForm.Call("appendChild", regAddressObj)
-	regForm.Call("appendChild", regBirthObj)
-	regForm.Call("appendChild", regAgeGroupObj)
-	regForm.Call("appendChild", regHiddenObj)
-	regForm.Call("appendChild", regTokenObj)
-
-	regActions := viewHelpers.ActionGroup(
-		editor.document,
-		"regActions",
-		viewHelpers.SubmitButton(editor.document, "Register", "regSubmit"),
-		viewHelpers.Button(editor.handleVerifyRegistration, editor.document, "Verify Registration", "verSubmit"),
-	)
-	regActions.Set("className", "input-group form-button-row")
-	regForm.Call("appendChild", regActions)
+	fields.Call("append", regUserObj, regEmailObj, regNameObj, regPassObj, regAddressObj, regBirthObj, regAgeGroupObj, regHiddenObj)
+	regForm.Call("append", status, viewHelpers.FormButtonRow(editor.document, submit))
 
 	// Fetch and populate age groups dropdown
 	editor.populateAgeGroupsDropdown(ageGroupSelect)
-
-	return regForm
-}
-
-func (editor *ItemEditor) regForm_old() js.Value {
-	// registration form
-	regForm := viewHelpers.Form(editor.handleRegisterSubmit, editor.document, "regForm")
-	regUserObj, regUserInp := viewHelpers.StringEdit("", editor.document, "Username", "text", "regUsername")
-	regEmailObj, regEmailInp := viewHelpers.StringEdit("", editor.document, "Email", "email", "regEmail")
-	regPassObj, regPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "regPassword")
-	regNameObj, regNameInp := viewHelpers.StringEdit("", editor.document, "Full Name", "text", "regName")
-	regAddressObj, regAddressInp := viewHelpers.StringEdit("", editor.document, "Address", "text", "regAddress")
-	regBirthObj, regBirthInp := viewHelpers.StringEdit("", editor.document, "Birth Date", "date", "regBirthDate")
-	regHiddenObj, regHiddenInp := viewHelpers.BooleanEdit(false, editor.document, "Account Hidden", "checkbox", "regAccountHidden")
-	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "OTP Token", "text", "regToken")
-	regTokenInp.Set("disabled", true)
-	editor.UiComponents.Username = regUserInp
-	editor.UiComponents.Email = regEmailInp
-	editor.UiComponents.Password = regPassInp
-	editor.UiComponents.Name = regNameInp
-	editor.UiComponents.Address = regAddressInp
-	editor.UiComponents.BirthDate = regBirthInp
-	editor.UiComponents.AccountHidden = regHiddenInp
-	editor.UiComponents.Token = regTokenInp
-	regForm.Call("appendChild", regUserObj)
-	regForm.Call("appendChild", regEmailObj)
-	regForm.Call("appendChild", regPassObj)
-	regForm.Call("appendChild", regNameObj)
-	regForm.Call("appendChild", regAddressObj)
-	regForm.Call("appendChild", regBirthObj)
-	regForm.Call("appendChild", regHiddenObj)
-	regForm.Call("appendChild", regTokenObj)
-	regActions := viewHelpers.ActionGroup(
-		editor.document,
-		"regActions",
-		viewHelpers.SubmitButton(editor.document, "Register", "regSubmit"),
-		viewHelpers.Button(editor.handleVerifyRegistration, editor.document, "Verify Registration", "verSubmit"),
-	)
-	regForm.Call("appendChild", regActions)
 
 	return regForm
 }

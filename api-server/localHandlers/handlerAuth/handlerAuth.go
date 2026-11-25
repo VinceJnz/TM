@@ -243,6 +243,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	var payload struct {
 		Token string `json:"token"`
+		Email string `json:"email"`
 	}
 	if err := handlerHelpers.DecodeJSONBody(r, &payload); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -254,7 +255,7 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).Register(r.Context(), payload.Token)
+	userID, err := (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).Register(r.Context(), payload.Token, strings.TrimSpace(payload.Email))
 	if err != nil {
 		switch {
 		case errors.Is(err, authService.ErrToken):

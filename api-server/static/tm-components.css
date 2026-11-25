@@ -163,6 +163,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .tm-member-facts { display: flex; flex-wrap: wrap; column-gap: 1.25rem; margin-bottom: 1rem; }
 .tm-member-facts p { margin: .25rem 0; }
 .tm-member-form { display: grid; gap: .85rem; min-width: 0; }
+.tm-registration-details { margin: 0; padding: 0; border: 0; }
+.tm-member-form .input-group > p { grid-column: 2; margin: 0; }
 .tm-member-form > .input-group, .tm-member-form > .form-group,
 .tm-member-form .tm-booking-fields > .input-group {
  margin: 0; padding: 0; border: 0; background: transparent; min-width: 0;

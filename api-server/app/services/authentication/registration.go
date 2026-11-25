@@ -42,7 +42,7 @@ func (s Service) DiscardRegistration(ctx context.Context, proof string) error {
 
 // Register atomically consumes the proof and inserts the account. Transient
 // database failures roll back the proof too, so the same browser can retry.
-func (s Service) Register(ctx context.Context, proof string) (int, error) {
+func (s Service) Register(ctx context.Context, proof, expectedEmail string) (int, error) {
 	tx, err := s.Store.DB.BeginTxx(ctx, nil)
 	if err != nil {
 		return 0, err
@@ -61,6 +61,9 @@ func (s Service) Register(ctx context.Context, proof string) (int, error) {
 	user, err := DecodePendingRegistration(token.SessionData.String)
 	if err != nil {
 		return 0, ErrRegistration
+	}
+	if expectedEmail != "" && !strings.EqualFold(user.Email.String, expectedEmail) {
+		return 0, ErrToken
 	}
 	address, err := mail.ParseAddress(user.Email.String)
 	if err != nil || address.Address != user.Email.String || len(user.Email.String) > 254 || strings.TrimSpace(user.Name) == "" {

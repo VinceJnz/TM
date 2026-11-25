@@ -175,6 +175,10 @@ The browser submits signup data without logging the registration payload.
 Email signup stages the selected account privacy preference with the hashed
 profile. Verification copies it into the existing account column. The shared
 checkbox describes trip report redaction and booking name search visibility.
+Email signup uses a details form followed by a code form. Resend stages the
+same submitted details through the registration endpoint. Changing the
+email returns to the details form, and verification checks the current email
+when the client supplies it. Successful verification enters the approval state.
 Linking changes only identity fields and checks current account state. Enrollment
 updates only permitted profile fields with concurrency checks; it must not overwrite
 passwords or administrative activation decisions.

@@ -83,6 +83,7 @@ type UI struct {
 }
 
 type viewElements struct {
+	Title    js.Value
 	Div      js.Value
 	EditDiv  js.Value
 	ListDiv  js.Value
@@ -267,6 +268,7 @@ func (editor *ItemEditor) populateEditForm() {
 	// Add title
 	title := editor.document.Call("createElement", "h1")
 	title.Set("innerHTML", "Sign in to TM")
+	editor.Elements.Title = title
 	container.Call("appendChild", title)
 
 	// Create form container
@@ -381,6 +383,7 @@ func (editor *ItemEditor) renderForm(mode string) {
 		editor.Elements.AuthDiv.Set("innerHTML", "")
 	}
 	if mode == "register" {
+		editor.Elements.Title.Set("textContent", "Create an account")
 		editor.Elements.AuthDiv.Call("appendChild", editor.regForm())
 		// Add link to login
 		link := editor.document.Call("createElement", "a")
@@ -391,10 +394,12 @@ func (editor *ItemEditor) renderForm(mode string) {
 				args[0].Call("preventDefault")
 			}
 			editor.renderForm("login")
+			editor.UiComponents.Username.Call("focus")
 			return nil
 		})
 		editor.Elements.AuthDiv.Call("appendChild", link)
 	} else {
+		editor.Elements.Title.Set("textContent", "Sign in to TM")
 		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
 		editor.Elements.AuthDiv.Call("appendChild", editor.passwordResetForm())
 		// Add link to register
@@ -406,10 +411,29 @@ func (editor *ItemEditor) renderForm(mode string) {
 				args[0].Call("preventDefault")
 			}
 			editor.renderForm("register")
+			editor.UiComponents.Username.Call("focus")
 			return nil
 		})
 		editor.Elements.AuthDiv.Call("appendChild", link)
 	}
+}
+
+func (editor *ItemEditor) showRegistrationComplete(message string) {
+	editor.authMode = "registrationComplete"
+	editor.UiComponents = UI{}
+	editor.CurrentRecord = TableData{}
+	editor.Elements.Title.Set("textContent", "Registration complete")
+	editor.Elements.AuthDiv.Set("textContent", "")
+	status := editor.document.Call("createElement", "p")
+	status.Call("setAttribute", "role", "status")
+	status.Set("textContent", message)
+	back := viewHelpers.Button2(func() any {
+		editor.renderForm("login")
+		editor.UiComponents.Username.Call("focus")
+		return nil
+	}, editor.document, "Back to sign in", "regBackToLogin")
+	editor.Elements.AuthDiv.Call("append", status, back)
+	back.Call("focus")
 }
 
 func (editor *ItemEditor) resetEditForm() {

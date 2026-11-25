@@ -24,7 +24,7 @@ func TestRegistrationFailurePreservesProofForRetry(t *testing.T) {
 	if _, err = db.Exec(`ALTER TABLE st_users ADD CONSTRAINT synthetic_failure CHECK(username<>'blocked')`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.Register(ctx, "proof"); err == nil {
+	if _, err = s.Register(ctx, "proof", "member@example.test"); err == nil {
 		t.Fatal("insertion failure ignored")
 	}
 	var count int
@@ -34,10 +34,13 @@ func TestRegistrationFailurePreservesProofForRetry(t *testing.T) {
 	if _, err = db.Exec(`ALTER TABLE st_users DROP CONSTRAINT synthetic_failure`); err != nil {
 		t.Fatal(err)
 	}
-	if id, err := s.Register(ctx, "proof"); err != nil || id <= 0 {
+	if _, err := s.Register(ctx, "proof", "other@example.test"); !errors.Is(err, ErrToken) {
+		t.Fatal("proof accepted for a different email", err)
+	}
+	if id, err := s.Register(ctx, "proof", "member@example.test"); err != nil || id <= 0 {
 		t.Fatal(id, err)
 	}
-	if _, err = s.Register(ctx, "proof"); !errors.Is(err, ErrToken) {
+	if _, err = s.Register(ctx, "proof", ""); !errors.Is(err, ErrToken) {
 		t.Fatal("proof replay accepted", err)
 	}
 }
