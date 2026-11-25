@@ -310,12 +310,17 @@ Keep toolchain versions/digests aligned; do not upgrade them incidentally.
 | `TM_API_DATA_SOURCE` | Explicit Compose override for runtime `DATA_SOURCE`; otherwise Compose supplies `DB_*` |
 | `TM_DB_SSLMODE` | Compose sets DB_SSLMODE for the DB_* fallback. The local default is disable. Set verify-full and configure a trusted CA for remote PostgreSQL. |
 | `TRUSTED_PROXY_CIDRS` | Deliberate trust boundary for forwarding headers |
-| `EMAIL_REDIRECT_ALL` / `EMAIL_REDIRECT_TO` | Redirect application mail to one defined inbox; Compose uses corresponding `TM_` inputs |
+| `DEV_MODE` / `EMAIL_DEV_MODE_ADDR` | Development mode routes all application email to one required inbox; Compose reads both from `api-server/.env` |
 | `STRIPE_TEST_MODE` | Requires configured test credentials and rejects live provider responses/events; it does not convert live keys |
 
-Production disables development authentication defaults. Test flags are separate
-deployment choices; production deployment validation rejects enabled/ambiguous test
-settings. Never read out or commit real env files, credentials or tokens for documentation.
+Development mode requires exactly one valid inbox at startup. The shared
+mailer and the Gmail gateway enforce that destination for authentication,
+password resets and notification delivery, including after Gmail reconnection.
+New Stripe Checkout sessions also use the development inbox as the customer
+email. With development mode disabled, the API uses registered recipients and
+requires the development inbox setting to be empty. Production deployment
+validation also requires explicit false values for both development and Stripe
+test mode. Never read out or commit real env files, credentials or tokens for documentation.
 
 The final API image runs as UID 10001 with read-only filesystem, temporary `/tmp`,
 dropped capabilities and runtime-mounted credentials. PostgreSQL 17 uses its own data

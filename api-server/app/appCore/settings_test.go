@@ -14,7 +14,7 @@ func TestRuntimeEnvironmentDoesNotRequireBakedDotEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Chdir(workingDir)
-	for name, value := range map[string]string{"HOST": "localhost", "HTTP_PORT": "8085", "HTTPS_PORT": "8086", "CORE_ORIGINS": "https://localhost:8086", "API_PATH_PREFIX": "/api/v1", "DATA_SOURCE": "synthetic-test-dsn", "APP_TITLE": "Test", "DEV_MODE": "false", "EMAIL_DEBUG_ADDR": "", "CERT_OPTION": "0"} {
+	for name, value := range map[string]string{"HOST": "localhost", "HTTP_PORT": "8085", "HTTPS_PORT": "8086", "CORE_ORIGINS": "https://localhost:8086", "API_PATH_PREFIX": "/api/v1", "DATA_SOURCE": "synthetic-test-dsn", "APP_TITLE": "Test", "DEV_MODE": "false", "EMAIL_DEV_MODE_ADDR": "", "CERT_OPTION": "0"} {
 		t.Setenv(name, value)
 	}
 	var s settings

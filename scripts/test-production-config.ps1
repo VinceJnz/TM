@@ -1,13 +1,13 @@
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'release-policy.ps1')
-$good=@{DEV_MODE='false';EMAIL_DEBUG_ADDR='';EMAIL_REDIRECT_ALL='false';EMAIL_REDIRECT_TO='';STRIPE_TEST_MODE='false'}
+$good=@{DEV_MODE='false';EMAIL_DEV_MODE_ADDR='';STRIPE_TEST_MODE='false'}
 Assert-ProductionEnvironment $good
-foreach($entry in @(@('DEV_MODE','true'),@('EMAIL_DEBUG_ADDR','synthetic@example.test'),@('EMAIL_REDIRECT_ALL','true'),@('EMAIL_REDIRECT_TO','synthetic@example.test'),@('STRIPE_TEST_MODE','true'))) {
+foreach($entry in @(@('DEV_MODE','true'),@('EMAIL_DEV_MODE_ADDR','synthetic@example.test'),@('STRIPE_TEST_MODE','true'))) {
  $bad=$good.Clone();$bad[$entry[0]]=$entry[1];$rejected=$false
  try { Assert-ProductionEnvironment $bad } catch {$rejected=$true}
  if(!$rejected){throw 'Unsafe production configuration accepted.'}
 }
-foreach($flag in @('EMAIL_REDIRECT_ALL','STRIPE_TEST_MODE')) {
+foreach($flag in @('DEV_MODE','STRIPE_TEST_MODE')) {
  foreach($value in @('TRUE','1','t','invalid','')) {
   $bad=$good.Clone();$bad[$flag]=$value;$rejected=$false
   try { Assert-ProductionEnvironment $bad } catch {$rejected=$true}
@@ -27,10 +27,10 @@ try {
    [IO.File]::WriteAllText((Join-Path $fixture $file),'services: {}')
   } else { Copy-Item -LiteralPath (Join-Path $root $file) -Destination $fixture }
  }
- [IO.File]::WriteAllLines($composeEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',('TM_RELEASE_API_IMAGE=registry.example.test/tm@sha256:'+('a'*64)), 'TM_DEV_MODE=false','TM_STRIPE_TEST_MODE=false','TM_EMAIL_REDIRECT_ALL=false','TM_EMAIL_REDIRECT_TO=wrong@example.test'))
+ [IO.File]::WriteAllLines($composeEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',('TM_RELEASE_API_IMAGE=registry.example.test/tm@sha256:'+('a'*64)), 'TM_DEV_MODE=false','TM_STRIPE_TEST_MODE=false','TM_EMAIL_DEV_MODE_ADDR=wrong@example.test'))
  foreach($mode in 'true','false') {
   $recipient=if ($mode -eq 'true') {'synthetic@example.test'} else {''}
-  [IO.File]::WriteAllLines($apiEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',('TM_RELEASE_API_IMAGE=registry.example.test/tm@sha256:'+('a'*64)),"DEV_MODE=$mode","STRIPE_TEST_MODE=$mode","EMAIL_REDIRECT_ALL=$mode","EMAIL_REDIRECT_TO=$recipient",'EMAIL_DEBUG_ADDR='))
+  [IO.File]::WriteAllLines($apiEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',('TM_RELEASE_API_IMAGE=registry.example.test/tm@sha256:'+('a'*64)),"DEV_MODE=$mode","STRIPE_TEST_MODE=$mode","EMAIL_DEV_MODE_ADDR=$recipient"))
   foreach($overlay in '','docker-compose.dev.yml','docker-compose.release.yml') {
    $arguments=@('--env-file',$apiEnv,'--project-directory',$fixture)
    if ($overlay) { $arguments+=@('-f',(Join-Path $fixture 'docker-compose.yml'),'-f',(Join-Path $fixture $overlay)) }
@@ -40,7 +40,7 @@ try {
    foreach($name in 'apiserver','apiserver-interactive','apiserver-debug') {
     $environment=$services.$name.environment
     if ($environment.TM_DB_PASSWORD) { throw "Database owner password entered $name" }
-    if($environment.DEV_MODE -cne $mode -or $environment.STRIPE_TEST_MODE -cne $mode -or $environment.EMAIL_REDIRECT_ALL -cne $mode -or [string]$environment.EMAIL_REDIRECT_TO -cne $recipient) {
+    if($environment.DEV_MODE -cne $mode -or $environment.STRIPE_TEST_MODE -cne $mode -or [string]$environment.EMAIL_DEV_MODE_ADDR -cne $recipient) {
      throw "$name did not use its provider settings from api-server/.env"
     }
    }

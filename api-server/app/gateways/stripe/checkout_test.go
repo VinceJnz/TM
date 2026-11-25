@@ -55,8 +55,10 @@ func TestCheckoutProviderContractAndCancellation(t *testing.T) {
 	gateway := NewFromKey("sk_test_synthetic-contract", attempt.Domain, true)
 	gateway.RecipientOverride = "tester@example.test"
 	sdk.Key = "sk_live_synthetic-other-instance"
-	for i := 0; i < 2; i++ {
-		created, err := gateway.Create(context.Background(), attempt)
+	for _, email := range []string{attempt.Email, ""} {
+		checkoutAttempt := attempt
+		checkoutAttempt.Email = email
+		created, err := gateway.Create(context.Background(), checkoutAttempt)
 		if err != nil || created.ID != "cs_synthetic" {
 			t.Fatal(created, err)
 		}

@@ -36,11 +36,11 @@ func (g *Gateway) Create(ctx context.Context, a paymentLedger.Attempt) (checkout
 	params := &stripe.CheckoutSessionParams{
 		LineItems: []*stripe.CheckoutSessionLineItemParams{{PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{Currency: stripe.String("nzd"), UnitAmount: stripe.Int64(a.Amount), ProductData: product}, Quantity: stripe.Int64(1)}},
 		Mode:      stripe.String("payment"), ExpiresAt: stripe.Int64(a.Expires.Unix()), SuccessURL: stripe.String(a.Domain + "/bookings/checkout/success/" + strconv.Itoa(a.BookingID)), CancelURL: stripe.String(a.Domain + "/bookings/checkout/cancel/" + strconv.Itoa(a.BookingID)), InvoiceCreation: &stripe.CheckoutSessionInvoiceCreationParams{Enabled: stripe.Bool(true)}}
-	if a.Email != "" {
-		email := a.Email
-		if g.RecipientOverride != "" {
-			email = g.RecipientOverride
-		}
+	email := a.Email
+	if g.RecipientOverride != "" {
+		email = g.RecipientOverride
+	}
+	if email != "" {
 		params.CustomerEmail = stripe.String(email)
 	}
 	params.Context = ctx

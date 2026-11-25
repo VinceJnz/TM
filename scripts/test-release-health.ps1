@@ -37,7 +37,7 @@ $releaseImage='registry.example.test/tm@sha256:'+('a'*64)
 try {
     New-Item -ItemType Directory -Path $apiDirectory -Force | Out-Null
     foreach ($file in $files) { Copy-Item -LiteralPath (Join-Path $root $file) -Destination $fixture }
-    [IO.File]::WriteAllLines($apiEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',"TM_RELEASE_API_IMAGE=$releaseImage",'DEV_MODE=false','EMAIL_REDIRECT_ALL=false','STRIPE_TEST_MODE=false'))
+    [IO.File]::WriteAllLines($apiEnv,[string[]]@('TM_API_DB_PASSWORD=synthetic-api','TM_DB_PASSWORD=synthetic-db',"TM_RELEASE_API_IMAGE=$releaseImage",'DEV_MODE=false','STRIPE_TEST_MODE=false'))
     $configuration = & docker compose --env-file $apiEnv --project-directory $fixture -f (Join-Path $fixture $files[0]) -f (Join-Path $fixture $files[1]) --profile prod config --format json
     if ($LASTEXITCODE -ne 0) { throw 'Synthetic release configuration failed.' }
     $api=($configuration | ConvertFrom-Json).services.apiserver

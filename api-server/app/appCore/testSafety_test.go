@@ -12,9 +12,9 @@ func (m *capturedMailer) SendMail(to, subject, body string) (bool, error) {
 	return true, nil
 }
 func (m *capturedMailer) RenewURL() string { return "" }
-func TestExplicitTestSafetyFlagsAndAllMailPaths(t *testing.T) {
-	t.Setenv("EMAIL_REDIRECT_ALL", "true")
-	t.Setenv("EMAIL_REDIRECT_TO", "tester@example.test")
+func TestDevelopmentMailUsesOnlyConfiguredInbox(t *testing.T) {
+	t.Setenv("DEV_MODE", "true")
+	t.Setenv("EMAIL_DEV_MODE_ADDR", "tester@example.test")
 	t.Setenv("STRIPE_TEST_MODE", "true")
 	s := settings{PaymentKey: "sk_test_synthetic"}
 	if err := s.loadTestSafety(); err != nil {
@@ -41,12 +41,16 @@ func TestExplicitTestSafetyFlagsAndAllMailPaths(t *testing.T) {
 		t.Fatal("renewed mailer escaped redirect")
 	}
 	for _, recipient := range []string{"", "a@example.test,b@example.test", "a@example.test\r\nBcc: real@example.test"} {
-		t.Setenv("EMAIL_REDIRECT_TO", recipient)
+		t.Setenv("EMAIL_DEV_MODE_ADDR", recipient)
 		if err := s.loadTestSafety(); err == nil {
 			t.Fatal("unsafe redirect accepted")
 		}
+		app.Settings = s
+		if app.EmailService() != nil {
+			t.Fatal("mailer available with invalid development recipient")
+		}
 	}
-	t.Setenv("EMAIL_REDIRECT_TO", "tester@example.test")
+	t.Setenv("EMAIL_DEV_MODE_ADDR", "tester@example.test")
 	s.PaymentKey = "sk_live_synthetic"
 	if err := s.loadTestSafety(); err == nil {
 		t.Fatal("live Stripe key accepted")
@@ -54,5 +58,25 @@ func TestExplicitTestSafetyFlagsAndAllMailPaths(t *testing.T) {
 	t.Setenv("STRIPE_TEST_MODE", "invalid")
 	if err := s.loadTestSafety(); err == nil {
 		t.Fatal("invalid flag accepted")
+	}
+}
+
+func TestProductionMailUsesRequestedInbox(t *testing.T) {
+	t.Setenv("DEV_MODE", "false")
+	t.Setenv("STRIPE_TEST_MODE", "false")
+	t.Setenv("EMAIL_DEV_MODE_ADDR", "tester@example.test")
+	app := New(false)
+	if err := app.Settings.loadTestSafety(); err == nil {
+		t.Fatal("development recipient accepted outside development mode")
+	}
+	t.Setenv("EMAIL_DEV_MODE_ADDR", "")
+	if err := app.Settings.loadTestSafety(); err != nil {
+		t.Fatal(err)
+	}
+	m := &capturedMailer{}
+	app.SetEmailService(m)
+	app.EmailService().SendMail("registered@example.test", "synthetic", "synthetic")
+	if m.to != "registered@example.test" {
+		t.Fatal("production recipient was overridden")
 	}
 }

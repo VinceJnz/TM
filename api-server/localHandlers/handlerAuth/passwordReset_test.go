@@ -50,40 +50,59 @@ func (resetTestMailbox) RenewURL() string { return "" }
 
 func TestPasswordResetFromEmailToNewPassword(t *testing.T) {
 	t.Run("registered inbox", func(t *testing.T) {
-		testPasswordResetFromEmail(t, false, "member@example.test")
+		testPasswordResetFromEmail(t, "", "member@example.test")
 	})
 	t.Run("development debug inbox", func(t *testing.T) {
-		testPasswordResetFromEmail(t, true, "debug@example.test")
+		testPasswordResetFromEmail(t, "debug@example.test", "member@example.test", "other@example.test")
 	})
 }
 
-func testPasswordResetFromEmail(t *testing.T, devMode bool, expectedRecipient string) {
+func testPasswordResetFromEmail(t *testing.T, debugRecipient string, accountEmails ...string) {
 	t.Helper()
 	db := testdb.Open(t, testdb.Auth)
-	if _, err := db.Exec(`INSERT INTO st_users (email, user_account_status_id, user_password)
-		VALUES ('member@example.test', $1, 'old-hash')`, models.AccountActive); err != nil {
-		t.Fatal(err)
+	for _, email := range accountEmails {
+		if _, err := db.Exec(`INSERT INTO st_users (email, user_account_status_id, user_password)
+			VALUES ($1, $2, 'old-hash')`, email, models.AccountActive); err != nil {
+			t.Fatal(err)
+		}
 	}
 	mailbox := make(resetTestMailbox, 1)
 	router := mux.NewRouter()
 	conf := &appCore.Config{Db: db, EmailSvc: mailbox}
-	conf.Settings.DevMode = devMode
-	conf.Settings.PasswordResetTestEmail = "member@example.test"
-	if devMode {
-		conf.Settings.EmailDebugAddr = expectedRecipient
-	}
+	conf.Settings.DevMode = debugRecipient != ""
+	conf.Settings.EmailDevModeAddr = debugRecipient
 	New(conf).RegisterRoutesPublic(router, "/auth")
-	if devMode {
-		blocked := httptest.NewRecorder()
-		router.ServeHTTP(blocked, httptest.NewRequest(http.MethodPost, "/auth/forgot-password",
-			strings.NewReader(`{"email":"other@example.test"}`)))
-		if blocked.Code != http.StatusServiceUnavailable {
-			t.Fatalf("expected debug delivery to be blocked for an unconfigured email, got %d", blocked.Code)
+	for _, email := range accountEmails {
+		t.Run(email, func(t *testing.T) {
+			expectedRecipient := email
+			if debugRecipient != "" {
+				expectedRecipient = debugRecipient
+			}
+			requestPasswordReset(t, router, mailbox, email, expectedRecipient)
+		})
+	}
+	for _, email := range accountEmails {
+		var hash string
+		if err := db.Get(&hash, "SELECT user_password FROM st_users WHERE email = $1", email); err != nil {
+			t.Fatal(err)
 		}
+		if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(resetTestPassword)); err != nil {
+			t.Fatalf("new password did not match the stored hash for %s", email)
+		}
+	}
+}
+
+const resetTestPassword = "synthetic-new-password"
+
+func requestPasswordReset(t *testing.T, router *mux.Router, mailbox resetTestMailbox, email, expectedRecipient string) {
+	t.Helper()
+	payload, err := json.Marshal(map[string]string{"email": email})
+	if err != nil {
+		t.Fatal(err)
 	}
 	request := httptest.NewRecorder()
 	router.ServeHTTP(request, httptest.NewRequest(http.MethodPost, "/auth/forgot-password",
-		strings.NewReader(`{"email":"member@example.test"}`)))
+		bytes.NewReader(payload)))
 	if request.Code != http.StatusAccepted {
 		t.Fatalf("code request returned %d", request.Code)
 	}
@@ -102,8 +121,7 @@ func testPasswordResetFromEmail(t *testing.T, devMode bool, expectedRecipient st
 	if strings.Contains(request.Body.String(), code) {
 		t.Fatal("reset code appeared in the API response")
 	}
-	const password = "synthetic-new-password"
-	payload, err := json.Marshal(map[string]string{"code": code, "password": password})
+	payload, err = json.Marshal(map[string]string{"code": code, "password": resetTestPassword})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,12 +129,5 @@ func testPasswordResetFromEmail(t *testing.T, devMode bool, expectedRecipient st
 	router.ServeHTTP(reset, httptest.NewRequest(http.MethodPost, "/auth/reset-password", bytes.NewReader(payload)))
 	if reset.Code != http.StatusNoContent {
 		t.Fatalf("password reset returned %d", reset.Code)
-	}
-	var hash string
-	if err := db.Get(&hash, "SELECT user_password FROM st_users"); err != nil {
-		t.Fatal(err)
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)); err != nil {
-		t.Fatal("new password did not match the stored hash")
 	}
 }

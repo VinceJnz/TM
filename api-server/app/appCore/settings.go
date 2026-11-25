@@ -6,17 +6,13 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type settings struct {
 	RequiredIntegrations               []string
-	EmailRedirectAll                   bool
-	EmailRedirectTo                    string
 	StripeTestMode                     bool
-	emailRedirectConfigured            bool
 	NotificationDeliveredRetentionDays int
 	NotificationOrphanRetentionDays    int
 	AppTitle                           string `json:"AppTitle"`
@@ -44,11 +40,9 @@ type settings struct {
 	ClientRedirectURL                  string `json:"ClientRedirectURL"`
 	GmailRenewRedirect                 string `json:"GmailRenewRedirect"`
 	GmailAuthCode                      string `json:"GmailAuthCode"`
-	EmailDebugAddr                     string `json:"EmailDebugAddr"`
+	EmailDevModeAddr                   string `json:"EmailDevModeAddr"`
 	AdminNotifyGroup                   string `json:"AdminNotifyGroup"`
 	DevMode                            bool   `json:"DevMode"`
-
-	PasswordResetTestEmail string `json:"-"`
 }
 
 func (s *settings) SaveJson() error {
@@ -135,14 +129,11 @@ func (s *settings) LoadEnv() error {
 	s.ClientRedirectURL = os.Getenv("CLIENT_REDIRECT_URL")
 	s.GmailRenewRedirect = os.Getenv("GMAIL_RENEW_REDIRECT_URL")
 	s.GmailAuthCode = os.Getenv("GMAIL_AUTH_CODE")
-	s.EmailDebugAddr = os.Getenv("EMAIL_DEBUG_ADDR")
-	s.PasswordResetTestEmail = strings.TrimSpace(os.Getenv("PASSWORD_RESET_TEST_EMAIL"))
 	s.AdminNotifyGroup = os.Getenv("ADMIN_NOTIFY_GROUP")
 	s.RequiredIntegrations, err = parseRequiredIntegrations(os.Getenv("REQUIRED_INTEGRATIONS"))
 	if err != nil {
 		return err
 	}
-	s.DevMode = os.Getenv("DEV_MODE") == "true"
 	s.AppTitle = os.Getenv("APP_TITLE")
 	s.NotificationDeliveredRetentionDays, err = retentionDays("NOTIFICATION_DELIVERED_RETENTION_DAYS", 90)
 	if err != nil {

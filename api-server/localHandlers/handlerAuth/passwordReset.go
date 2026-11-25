@@ -31,11 +31,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mailer := h.appConf.EmailService()
-	debugRecipient := h.appConf.Settings.EmailRecipientOverride()
-	// Only the debug inbox itself and the explicitly configured test account
-	// may use the debug inbox for password resets.
-	if mailer == nil || (debugRecipient != "" && !strings.EqualFold(debugRecipient, email) &&
-		!strings.EqualFold(h.appConf.Settings.PasswordResetTestEmail, email)) {
+	if mailer == nil {
 		handlerHelpers.WriteError(w, http.StatusServiceUnavailable, "auth_unavailable", "Password reset email is unavailable.")
 		return
 	}
@@ -57,9 +53,6 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 				log.Print("password reset code creation failed")
 			}
 			return
-		}
-		if debugRecipient != "" {
-			recipient = debugRecipient
 		}
 		const subject = "Reset your Trip Manager password"
 		message := "Enter this code in the Forgot password form. It expires in 15 minutes.\n\n" + code +

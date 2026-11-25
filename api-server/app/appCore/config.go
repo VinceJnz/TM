@@ -135,7 +135,11 @@ func (c *Config) EmailService() EmailService {
 	if c.EmailSvc == nil {
 		return nil
 	}
-	if recipient := c.Settings.EmailRecipientOverride(); recipient != "" {
+	if c.Settings.DevMode {
+		recipient := c.Settings.EmailRecipientOverride()
+		if !validSingleEmail(recipient) {
+			return nil
+		}
 		return redirectedMailer{base: c.EmailSvc, recipient: recipient}
 	}
 	return c.EmailSvc

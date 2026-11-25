@@ -26,12 +26,11 @@ permits changes.
 
 ## Testing password reset in development
 
-In the API environment file, set `DEV_MODE=true`, set `EMAIL_DEBUG_ADDR` to an
-inbox you can access, and set `PASSWORD_RESET_TEST_EMAIL` to the registered
-email of one active test account with a password. Recreate the API container
-and enter the test account's email in **Forgot password?**. The code goes to
-the debug inbox and resets the test account's password. Other account emails
-cannot use this redirect. The setting applies only in development mode.
+In the test API environment file, set `DEV_MODE=true` and
+`EMAIL_DEV_MODE_ADDR` to an inbox you can access.
+Recreate the API container and enter the registered email of any active test
+account with a password in **Forgot password?**. The code goes to the test
+inbox and applies to the account whose email you entered.
 
 ## API Info
 

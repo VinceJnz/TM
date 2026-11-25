@@ -21,11 +21,8 @@ func flagValue(name string, fallback bool) (bool, error) {
 	return v, nil
 }
 func (s *settings) EmailRecipientOverride() string {
-	if s.EmailRedirectAll {
-		return s.EmailRedirectTo
-	}
-	if !s.emailRedirectConfigured && s.DevMode {
-		return s.EmailDebugAddr
+	if s.DevMode {
+		return s.EmailDevModeAddr
 	}
 	return ""
 }
@@ -35,15 +32,11 @@ func validSingleEmail(value string) bool {
 }
 func (s *settings) loadTestSafety() error {
 	var err error
-	s.emailRedirectConfigured = strings.TrimSpace(os.Getenv("EMAIL_REDIRECT_ALL")) != ""
-	s.EmailRedirectAll, err = flagValue("EMAIL_REDIRECT_ALL", s.DevMode && s.EmailDebugAddr != "")
+	s.DevMode, err = flagValue("DEV_MODE", false)
 	if err != nil {
 		return err
 	}
-	s.EmailRedirectTo = strings.TrimSpace(os.Getenv("EMAIL_REDIRECT_TO"))
-	if s.EmailRedirectTo == "" && s.EmailRedirectAll {
-		s.EmailRedirectTo = strings.TrimSpace(s.EmailDebugAddr)
-	}
+	s.EmailDevModeAddr = strings.TrimSpace(os.Getenv("EMAIL_DEV_MODE_ADDR"))
 	s.StripeTestMode, err = flagValue("STRIPE_TEST_MODE", s.DevMode)
 	if err != nil {
 		return err
@@ -51,11 +44,11 @@ func (s *settings) loadTestSafety() error {
 	return s.validateTestSafety()
 }
 func (s *settings) validateTestSafety() error {
-	if s.EmailRedirectAll && !validSingleEmail(s.EmailRedirectTo) {
-		return fmt.Errorf("EMAIL_REDIRECT_ALL requires one valid EMAIL_REDIRECT_TO address")
+	if s.DevMode && !validSingleEmail(s.EmailDevModeAddr) {
+		return fmt.Errorf("DEV_MODE requires one valid EMAIL_DEV_MODE_ADDR address")
 	}
-	if !s.EmailRedirectAll && s.EmailRedirectTo != "" {
-		return fmt.Errorf("EMAIL_REDIRECT_TO requires EMAIL_REDIRECT_ALL=true")
+	if !s.DevMode && s.EmailDevModeAddr != "" {
+		return fmt.Errorf("EMAIL_DEV_MODE_ADDR requires DEV_MODE=true")
 	}
 	if s.StripeTestMode && s.PaymentKey != "" && !strings.HasPrefix(s.PaymentKey, "sk_test_") && !strings.HasPrefix(s.PaymentKey, "rk_test_") {
 		return fmt.Errorf("STRIPE_TEST_MODE requires a Stripe test secret/restricted key")
