@@ -10,8 +10,8 @@ docker compose --profile prod up -d --no-deps --force-recreate apiserver
 ```
 
 For each change made by codex:
-Make the changes, test, update AGENT and ARCHITECTURE documents, commit, push, delpoy to docker on my local workstation.
-
+Make the changes, test, update AGENT and ARCHITECTURE documents, commit, push.
+Once all the change are complete delpoy to docker on my local workstation.
 
 ## Docker build
 
