@@ -55,6 +55,7 @@ type UI struct {
 }
 
 type ItemEditor struct {
+	editLoad httpProcessor.LoadScope
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -103,6 +104,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.editLoad.Cancel()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
@@ -124,6 +126,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.editLoad.Cancel()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -135,14 +138,14 @@ func (editor *ItemEditor) Display() {
 }
 
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
-	editor.clearActiveRowHighlight()
+	editor.resetEditForm()
 	editor.FormHost = editor.EditDiv
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{
 		BookingID:   editor.ContextBookID,
 		PaymentDate: time.Now(),
 	}
-	editor.populateEditForm()
+	editor.loadBookingOptions()
 	return nil
 }
 
@@ -202,12 +205,13 @@ func (editor *ItemEditor) setActiveRowHighlight(row js.Value) {
 }
 
 func (editor *ItemEditor) openRecord(record TableData, readOnly bool, host js.Value) {
+	editor.resetEditForm()
 	editor.CurrentRecord = record
 	editor.ReadOnlyMode = readOnly
 	editor.FormHost = host
 	editor.setActiveRowHighlight(host.Get("parentElement"))
 	editor.updateStateDisplay(ItemStateEditing)
-	editor.populateEditForm()
+	editor.loadBookingOptions()
 }
 
 func (editor *ItemEditor) toggleReadOnlyRecord(record TableData, host js.Value, row js.Value) {
@@ -224,9 +228,24 @@ func (editor *ItemEditor) setFieldReadOnly(field js.Value) {
 }
 
 func (editor *ItemEditor) loadBookingOptions() {
-	var options []viewHelpers.BookingDropdownOption
-	editor.client.NewRequest(http.MethodGet, "/bookings", &options, nil)
-	editor.BookingOptions = options
+	ticket := editor.editLoad.Start()
+	host := editor.FormHost
+	host.Set("textContent", "Loading bookings…")
+	host.Get("style").Set("display", "block")
+	go func() {
+		var options []viewHelpers.BookingDropdownOption
+		err := editor.client.RequestContext(ticket.Context, http.MethodGet, "/bookings", &options, nil)
+		if !ticket.Finish(err) || !host.Get("isConnected").Bool() {
+			return
+		}
+		if err != nil && editor.CurrentRecord.BookingID == 0 {
+			host.Set("textContent", "")
+			viewHelpers.RenderRetry(host, editor.loadBookingOptions)
+			return
+		}
+		editor.BookingOptions = options
+		editor.populateEditForm()
+	}()
 }
 
 func (editor *ItemEditor) bookingCostByID(bookingID int) (float64, bool) {
@@ -288,7 +307,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	editor.loadBookingOptions()
 	localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.BookingDropdown(editor.document, editor.BookingOptions, editor.CurrentRecord.BookingID, "Booking ID", "itemBookingID")
 
 	paymentDateText := ""
@@ -361,6 +379,7 @@ func (editor *ItemEditor) populateEditForm() {
 }
 
 func (editor *ItemEditor) resetEditForm() {
+	editor.editLoad.Cancel()
 	if !editor.FormHost.IsUndefined() && !editor.FormHost.IsNull() {
 		editor.FormHost.Set("innerHTML", "")
 	}

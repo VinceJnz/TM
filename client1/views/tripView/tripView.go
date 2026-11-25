@@ -169,7 +169,12 @@ func (editor *ItemEditor) Display() {
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
 	editor.questionLoad.Cancel()
 	date := time.Now().Truncate(24 * time.Hour)
-	editor.openEdit(TableData{FromDate: date, ToDate: date}, viewHelpers.ItemStateAdding)
+	editor.openEdit(TableData{
+		FromDate:     date,
+		ToDate:       date,
+		TripStatusID: viewHelpers.NoRecordSelection,
+		TripTypeID:   viewHelpers.NoRecordSelection,
+	}, viewHelpers.ItemStateAdding)
 	return nil
 }
 

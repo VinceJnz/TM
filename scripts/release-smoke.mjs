@@ -172,6 +172,13 @@ try {
     if(result.result?.value===true){formReady=true;break;}await delay(100);
   }
   assert(formReady,'trip edit form did not load');
+  await waitUI(`(() => {
+    const form = (${visibleName}).closest('form');
+    const difficulty = form.querySelector('#itemDifficultyID');
+    const costGroup = form.querySelector('#itemTripCostGroupID');
+    return difficulty.value === '0' && difficulty.selectedOptions[0].textContent === 'Not set' &&
+      costGroup.value === '1';
+  })()`, 'trip editor did not distinguish unset difficulty from the saved cost group');
   await waitUI("document.querySelector('label[for=tripDescription]')?.textContent === 'Description' && !!document.querySelector('textarea#tripDescription')", 'trip editor has no labelled Description field');
   await send('Runtime.evaluate',{expression:`window.__tmWriteFetch=window.fetch;window.__tmWriteFailures=0;window.fetch=(url,options)=>{if(String(url).includes('/trips/1')&&options?.method==='PUT'){window.__tmWriteFailures++;window.__tmTripDescription=JSON.parse(options.body).description;return Promise.resolve(new Response('synthetic conflict',{status:409}));}return window.__tmWriteFetch(url,options);};(${visibleName}).value='Preserve unsaved trip';document.querySelector('#tripDescription').value='Keep trip description';(${visibleName}).closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));`});
   let writeFailed=false;
@@ -422,9 +429,27 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Page.navigate',{url:`${origin}/`});
   async function waitUI(expression,message){for(let i=0;i<120;i++){const value=await send('Runtime.evaluate',{expression,returnByValue:true});if(value.result?.value===true)return;await delay(100);}const diagnostic=await send('Runtime.evaluate',{expression:"JSON.stringify({active:document.activeElement.outerHTML,disclosures:Array.from(document.querySelectorAll('.tm-disclosure')).map(e=>({html:e.outerHTML,visible:!!e.getClientRects().length,disabled:e.disabled})),writes:window.__accountWrites,invalid:Array.from(document.querySelectorAll('input,select,textarea')).filter(e=>e.getClientRects().length&&!e.validity.valid).map(e=>({id:e.id,message:e.validationMessage})),feedback:Array.from(document.querySelectorAll('.tm-feedback')).map(e=>e.textContent)})",returnByValue:true});assert.fail(message+' '+diagnostic.result?.value+' exceptions='+exceptions.join(','));}
   await waitUI("document.querySelector('#userDisplay')?.textContent.includes('Smoke Administrator')",'admin UI did not load');
+  await send('Runtime.evaluate',{expression:"location.hash='/payments'"});
+  const addPayment="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Add Payment Record'&&b.getClientRects().length>0&&!b.disabled)";
+  await waitUI(`!!(${addPayment})`,'payment creation did not load');
+  await send('Runtime.evaluate',{expression:`(${addPayment}).click()`});
+  await waitUI(`Array.from(document.querySelectorAll('#itemBookingID')).some(select =>
+    select.getClientRects().length > 0 && select.options.length > 1 &&
+    select.value === '' && select.validity.valueMissing)`,
+  'new payment silently selected a booking');
   await send('Runtime.evaluate',{expression:"location.hash='/users'"});
   const deleteButton="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Delete'&&b.getClientRects().length>0)";
   await waitUI(`!!(${deleteButton})`,'account actions did not render');
+  await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Add New Item'&&b.getClientRects().length>0).click()"});
+  await waitUI(`(() => {
+    const age = document.querySelector('#itemAgeGroup');
+    const member = document.querySelector('#itemMemberStatus');
+    const status = document.querySelector('#itemAccountStatus');
+    return age?.value === '0' && age.selectedOptions[0].textContent === 'Not set' &&
+      member?.validity.valueMissing && status?.validity.valueMissing &&
+      Array.from(status.options).some(option => option.value === '0');
+  })()`, 'new account editor defaulted a status or lost the valid zero-valued status');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#itemAgeGroup').form.querySelector('#cancelEditBtn').click()"});
   await send('Runtime.evaluate',{expression:`(${deleteButton}).focus();(${deleteButton}).click()`});
   await waitUI("!!document.querySelector('dialog[open] textarea')",'accessible reason dialog did not open');
   const dialogFocus=await send('Runtime.evaluate',{expression:"document.activeElement.tagName==='TEXTAREA'",returnByValue:true});

@@ -194,11 +194,9 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
 		optionElement.Set("text", item.Name)
-		if value == item.ID {
-			optionElement.Set("selected", true)
-		}
 		stateDropDown.Call("appendChild", optionElement)
 	}
+	viewHelpers.SelectRecord(stateDropDown, value, true)
 	fieldset.Call("appendChild", stateDropDown)
 
 	// Create an span element of error messages

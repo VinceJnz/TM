@@ -231,11 +231,9 @@ func (editor *ItemEditor) populateEditForm() {
 		opt := editor.document.Call("createElement", "option")
 		opt.Set("value", g.ID)
 		opt.Set("text", g.Name)
-		if g.ID == editor.CurrentRecord.GroupID {
-			opt.Set("selected", true)
-		}
 		groupSelect.Call("appendChild", opt)
 	}
+	viewHelpers.SelectRecord(groupSelect, editor.CurrentRecord.GroupID, true)
 	groupFieldset.Call("appendChild", groupSelect)
 	groupFieldset.Call("appendChild", viewHelpers.Span(editor.document, "itemGroup-error"))
 	editor.UiComponents.GroupID = groupSelect

@@ -96,7 +96,6 @@ func BookingDropdown(document js.Value, options []BookingDropdownOption, value i
 	label := Label(document, labelText, htmlID)
 	selectEl := document.Call("createElement", "select")
 	selectEl.Set("id", htmlID)
-	selectEl.Call("setAttribute", "required", "true")
 
 	selected := false
 	for _, item := range options {
@@ -123,7 +122,6 @@ func BookingDropdown(document js.Value, options []BookingDropdownOption, value i
 
 		optionEl.Set("text", strings.Join(parts, " | "))
 		if value == item.ID {
-			optionEl.Set("selected", true)
 			selected = true
 		}
 		selectEl.Call("appendChild", optionEl)
@@ -133,9 +131,9 @@ func BookingDropdown(document js.Value, options []BookingDropdownOption, value i
 		optionEl := document.Call("createElement", "option")
 		optionEl.Set("value", strconv.Itoa(value))
 		optionEl.Set("text", fmt.Sprintf("Booking %d (current)", value))
-		optionEl.Set("selected", true)
 		selectEl.Call("appendChild", optionEl)
 	}
+	SelectRecord(selectEl, value, true)
 
 	fieldset.Call("appendChild", label)
 	fieldset.Call("appendChild", selectEl)

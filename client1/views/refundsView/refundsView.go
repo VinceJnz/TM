@@ -61,6 +61,7 @@ type paymentOption struct {
 }
 
 type ItemEditor struct {
+	editLoad httpProcessor.LoadScope
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -111,6 +112,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.editLoad.Cancel()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
 	editor.EditDiv.Set("innerHTML", "")
@@ -132,6 +134,7 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
+	editor.editLoad.Cancel()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -143,11 +146,11 @@ func (editor *ItemEditor) Display() {
 }
 
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) any {
-	editor.clearActiveRowHighlight()
+	editor.resetEditForm()
 	editor.FormHost = editor.EditDiv
 	editor.updateStateDisplay(ItemStateAdding)
 	editor.CurrentRecord = TableData{PaymentID: editor.ContextPayID, RefundDate: time.Now()}
-	editor.populateEditForm()
+	editor.loadPaymentOptions()
 	return nil
 }
 
@@ -209,12 +212,13 @@ func (editor *ItemEditor) setActiveRowHighlight(row js.Value) {
 }
 
 func (editor *ItemEditor) openRecord(record TableData, readOnly bool, host js.Value) {
+	editor.resetEditForm()
 	editor.CurrentRecord = record
 	editor.ReadOnlyMode = readOnly
 	editor.FormHost = host
 	editor.setActiveRowHighlight(host.Get("parentElement"))
 	editor.updateStateDisplay(ItemStateEditing)
-	editor.populateEditForm()
+	editor.loadPaymentOptions()
 }
 
 func (editor *ItemEditor) toggleReadOnlyRecord(record TableData, host js.Value, row js.Value) {
@@ -231,9 +235,24 @@ func (editor *ItemEditor) setFieldReadOnly(field js.Value) {
 }
 
 func (editor *ItemEditor) loadPaymentOptions() {
-	var options []paymentOption
-	editor.client.NewRequest(http.MethodGet, "/payments", &options, nil)
-	editor.PaymentOptions = options
+	ticket := editor.editLoad.Start()
+	host := editor.FormHost
+	host.Set("textContent", "Loading payments…")
+	host.Get("style").Set("display", "block")
+	go func() {
+		var options []paymentOption
+		err := editor.client.RequestContext(ticket.Context, http.MethodGet, "/payments", &options, nil)
+		if !ticket.Finish(err) || !host.Get("isConnected").Bool() {
+			return
+		}
+		if err != nil && editor.CurrentRecord.PaymentID == 0 {
+			host.Set("textContent", "")
+			viewHelpers.RenderRetry(host, editor.loadPaymentOptions)
+			return
+		}
+		editor.PaymentOptions = options
+		editor.populateEditForm()
+	}()
 }
 
 func (editor *ItemEditor) newPaymentDropdown(value int, labelText, htmlID string) (js.Value, js.Value) {
@@ -243,7 +262,6 @@ func (editor *ItemEditor) newPaymentDropdown(value int, labelText, htmlID string
 	label := viewHelpers.Label(editor.document, labelText, htmlID)
 	selectEl := editor.document.Call("createElement", "select")
 	selectEl.Set("id", htmlID)
-	selectEl.Call("setAttribute", "required", "true")
 
 	selected := false
 	for _, item := range editor.PaymentOptions {
@@ -251,7 +269,6 @@ func (editor *ItemEditor) newPaymentDropdown(value int, labelText, htmlID string
 		optionEl.Set("value", strconv.Itoa(item.ID))
 		optionEl.Set("text", fmt.Sprintf("Payment %d (Booking %d)", item.ID, item.BookingID))
 		if value == item.ID {
-			optionEl.Set("selected", true)
 			selected = true
 		}
 		selectEl.Call("appendChild", optionEl)
@@ -261,9 +278,9 @@ func (editor *ItemEditor) newPaymentDropdown(value int, labelText, htmlID string
 		optionEl := editor.document.Call("createElement", "option")
 		optionEl.Set("value", strconv.Itoa(value))
 		optionEl.Set("text", fmt.Sprintf("Payment %d (current)", value))
-		optionEl.Set("selected", true)
 		selectEl.Call("appendChild", optionEl)
 	}
+	viewHelpers.SelectRecord(selectEl, value, true)
 
 	fieldset.Call("appendChild", label)
 	fieldset.Call("appendChild", selectEl)
@@ -292,7 +309,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	editor.loadPaymentOptions()
 	localObjs.PaymentID, editor.UiComponents.PaymentID = editor.newPaymentDropdown(editor.CurrentRecord.PaymentID, "Payment ID", "itemPaymentID")
 
 	refundDateText := ""
@@ -351,6 +367,7 @@ func (editor *ItemEditor) populateEditForm() {
 }
 
 func (editor *ItemEditor) resetEditForm() {
+	editor.editLoad.Cancel()
 	if !editor.FormHost.IsUndefined() && !editor.FormHost.IsNull() {
 		editor.FormHost.Set("innerHTML", "")
 	}
@@ -499,14 +516,14 @@ func (editor *ItemEditor) FetchItems() {
 			}
 			editor.Records = records
 			editor.populateItemList()
+			editor.updateStateDisplay(ItemStateNone)
 			if editor.ContextAction == "new" && !editor.ActionHandled {
 				editor.ActionHandled = true
 				editor.FormHost = editor.EditDiv
 				editor.updateStateDisplay(ItemStateAdding)
 				editor.CurrentRecord = TableData{PaymentID: editor.ContextPayID, RefundDate: time.Now()}
-				editor.populateEditForm()
+				editor.loadPaymentOptions()
 			}
-			editor.updateStateDisplay(ItemStateNone)
 		}()
 	}
 }

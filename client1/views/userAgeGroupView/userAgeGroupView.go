@@ -162,7 +162,7 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.populateEditForm()
 	return nil
 }
-func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (object, inputObj js.Value) {
+func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, required bool) (object, inputObj js.Value) {
 	// Create a div for displaying Dropdown
 	fieldset := editor.document.Call("createElement", "fieldset")
 	fieldset.Set("className", "input-group")
@@ -178,11 +178,9 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
 		optionElement.Set("text", item.AgeGroup)
-		if value == item.ID {
-			optionElement.Set("selected", true)
-		}
 		StateDropDown.Call("appendChild", optionElement)
 	}
+	viewHelpers.SelectRecord(StateDropDown, value, required)
 	fieldset.Call("appendChild", StateDropDown)
 
 	// Create an span element of error messages

@@ -2,8 +2,44 @@ package viewHelpers
 
 import (
 	"client1/v2/app/domEvents"
+	"strconv"
 	"syscall/js"
 )
+
+// NoRecordSelection represents an unchosen value even when 0 is a valid ID.
+const NoRecordSelection = -1
+
+// SelectRecord restores the requested ID after populating a record selector.
+// Optional fields use 0 for an intentionally unset value.
+func SelectRecord(selectEl js.Value, id int, required bool) {
+	doc := selectEl.Get("ownerDocument")
+	if !required {
+		unset := doc.Call("createElement", "option")
+		unset.Set("value", "0")
+		unset.Set("textContent", "Not set")
+		selectEl.Call("prepend", unset)
+	}
+
+	selectEl.Set("value", strconv.Itoa(id))
+	found := selectEl.Get("selectedIndex").Int() >= 0
+	missing := id > 0 && !found
+	selectEl.Set("required", required || missing)
+	if !required && !missing {
+		return
+	}
+
+	prompt := doc.Call("createElement", "option")
+	prompt.Set("value", "")
+	prompt.Set("textContent", "Select an option")
+	prompt.Set("disabled", true)
+	if missing {
+		prompt.Set("textContent", "Saved selection unavailable")
+	}
+	selectEl.Call("prepend", prompt)
+	if !found {
+		selectEl.Set("value", "")
+	}
+}
 
 const debugTag = "viewHelpers."
 

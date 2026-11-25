@@ -170,9 +170,10 @@ func (editor *ItemEditor) Display() {
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
-	editor.CurrentRecord = TableData{}
-
-	editor.CurrentRecord.TripCostGroupID = editor.ParentData.ID
+	editor.CurrentRecord = TableData{
+		TripCostGroupID: editor.ParentData.ID,
+		MemberStatusID:  viewHelpers.NoRecordSelection,
+	}
 
 	editor.populateEditForm()
 	return nil
@@ -197,7 +198,7 @@ func (editor *ItemEditor) populateEditForm() {
 
 	localObjs.UserStatusID, editor.UiComponents.UserStatusID = editor.Children.UserMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member", "itemUserStatusID")
 
-	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.UserAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemUserAgeGroupID")
+	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.UserAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemUserAgeGroupID", true)
 
 	localObjs.SeasonID, editor.UiComponents.SeasonID = editor.Children.Season.NewDropdown(editor.CurrentRecord.SeasonID, "Season", "itemSeasonID")
 

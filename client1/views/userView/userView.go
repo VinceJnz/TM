@@ -189,7 +189,10 @@ func (editor *ItemEditor) Display() {
 // NewItemData initializes a new item for adding
 func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 	editor.updateStateDisplay(ItemStateAdding)
-	editor.CurrentRecord = TableData{}
+	editor.CurrentRecord = TableData{
+		MemberStatusID:  viewHelpers.NoRecordSelection,
+		AccountStatusID: viewHelpers.NoRecordSelection,
+	}
 
 	editor.populateEditForm()
 	return nil
@@ -210,11 +213,9 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, looku
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
 		optionElement.Set("text", item.Name+" ("+item.Email+")")
-		if value == item.ID {
-			optionElement.Set("selected", true)
-		}
 		StateDropDown.Call("appendChild", optionElement)
 	}
+	viewHelpers.SelectRecord(StateDropDown, value, true)
 
 	// Create a label element
 	label := viewHelpers.Label(editor.document, labelText, htmlID)
@@ -247,7 +248,9 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, looku
 				if generation != requestGeneration {
 					return
 				}
-				selected := StateDropDown.Get("value").String()
+				if selected, err := strconv.Atoi(StateDropDown.Get("value").String()); err == nil {
+					value = selected
+				}
 				StateDropDown.Set("innerHTML", "")
 				for _, item := range options {
 					option := editor.document.Call("createElement", "option")
@@ -257,9 +260,9 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, looku
 						name += " (" + item.Username + ")"
 					}
 					option.Set("textContent", name)
-					option.Set("selected", strconv.Itoa(item.ID) == selected || item.ID == value)
 					StateDropDown.Call("appendChild", option)
 				}
+				viewHelpers.SelectRecord(StateDropDown, value, true)
 				status.Set("textContent", strconv.Itoa(len(options))+" matches (maximum 25)")
 			}, func(error) {
 				if generation == requestGeneration {
@@ -319,7 +322,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate")
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
-	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup")
+	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup", false)
 
 	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus")
 
@@ -755,7 +758,7 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(editor.CurrentRecord.BirthDate.Format(viewHelpers.Layout), editor.document, "Birth Date", "date", "itemBirthDate-"+strconv.Itoa(record.ID))
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
-	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup-"+strconv.Itoa(record.ID))
+	localObjs.UserAgeGroupID, editor.UiComponents.UserAgeGroupID = editor.Children.userAgeGroup.NewDropdown(editor.CurrentRecord.UserAgeGroupID, "Age Group", "itemAgeGroup-"+strconv.Itoa(record.ID), false)
 
 	localObjs.MemberStatusID, editor.UiComponents.MemberStatusID = editor.Children.userMemberStatus.NewDropdown(editor.CurrentRecord.MemberStatusID, "Member Status", "itemMemberStatus-"+strconv.Itoa(record.ID))
 
