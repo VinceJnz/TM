@@ -62,6 +62,17 @@ func BooleanEdit(value bool, document js.Value, labelText string, inputType stri
 	return fieldset, input
 }
 
+func AccountPrivacyEdit(document js.Value, hidden bool, id string) (js.Value, js.Value) {
+	field, input := BooleanEdit(hidden, document, "Hide my name in trip reports and booking searches", "checkbox", id)
+	hint := document.Call("createElement", "p")
+	hint.Set("id", id+"-hint")
+	hint.Set("className", "tm-trip-meta")
+	hint.Set("textContent", "Your place still appears in trip participant reports as “name hidden.” Other members won’t find you by name when adding someone to a booking. You can change this in My Profile.")
+	input.Call("setAttribute", "aria-describedby", id+"-hint")
+	field.Call("appendChild", hint)
+	return field, input
+}
+
 // ActionGroup creates a fieldset to group action buttons.
 func ActionGroup(document js.Value, htmlID string, children ...js.Value) js.Value {
 	fieldset := document.Call("createElement", "fieldset")

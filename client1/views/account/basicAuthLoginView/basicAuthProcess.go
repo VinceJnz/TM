@@ -252,7 +252,7 @@ func (editor *ItemEditor) regForm() js.Value {
 	ageGroupSelect.Call("appendChild", placeholderOpt)
 	regAgeGroupObj.Call("appendChild", ageGroupSelect)
 
-	regHiddenObj, regHiddenInp := viewHelpers.BooleanEdit(false, editor.document, "Hide My Details", "checkbox", "regAccountHidden")
+	regHiddenObj, regHiddenInp := viewHelpers.AccountPrivacyEdit(editor.document, false, "regAccountHidden")
 
 	regTokenObj, regTokenInp := viewHelpers.StringEdit("", editor.document, "Email verification code", "text", "regToken")
 	regTokenInp.Set("autocomplete", "one-time-code")

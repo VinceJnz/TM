@@ -43,8 +43,28 @@ func TestPendingRegistrationHashesPasswordBeforePersistence(t *testing.T) {
 	if user.Username != request.Username || user.Name != request.Name || user.Email != request.Email {
 		t.Fatal("registration profile did not survive persistence")
 	}
-	if user.ID != 0 || user.Provider.Valid || user.AccountStatusID.Valid || user.AccountHidden.Valid {
+	if user.ID != 0 || user.Provider.Valid || user.AccountStatusID.Valid {
 		t.Fatal("public registration populated administrative fields")
+	}
+	if !user.AccountHidden.Valid || !user.AccountHidden.Bool {
+		t.Fatal("registration lost the checked privacy preference")
+	}
+}
+
+func TestPendingRegistrationUncheckedPrivacyPreference(t *testing.T) {
+	hidden := false
+	request := registrationRequest{}
+	request.AccountHidden = &hidden
+	data, err := encodePendingRegistration(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	user, err := decodePendingRegistration(string(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !user.AccountHidden.Valid || user.AccountHidden.Bool {
+		t.Fatal("registration lost the unchecked privacy preference")
 	}
 }
 

@@ -172,7 +172,7 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.BirthDate, editor.UiComponents.BirthDate = viewHelpers.StringEdit(birthDateValue, editor.document, "Birth Date", "date", "profileBirthDate")
 	editor.UiComponents.BirthDate.Call("setAttribute", "required", "true")
 
-	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.BooleanEdit(editor.CurrentRecord.AccountHidden, editor.document, "Hide my profile in member listings", "checkbox", "profileHidden")
+	localObjs.AccountHidden, editor.UiComponents.AccountHidden = viewHelpers.AccountPrivacyEdit(editor.document, editor.CurrentRecord.AccountHidden, "profileHidden")
 
 	fields := editor.document.Call("createElement", "div")
 	fields.Set("className", "tm-booking-fields")

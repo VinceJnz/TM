@@ -17,6 +17,7 @@ type RegistrationProfile struct {
 	Address        zero.String `json:"user_address"`
 	BirthDate      zero.Time   `json:"user_birth_date"`
 	UserAgeGroupID zero.Int    `json:"user_age_group_id"`
+	AccountHidden  *bool       `json:"user_account_hidden,omitempty"`
 }
 
 type RegistrationRequest struct {
@@ -66,6 +67,9 @@ func DecodePendingRegistration(data string) (models.User, error) {
 	}
 	if pending.PasswordHash != "" {
 		user.Password.SetValid(pending.PasswordHash)
+	}
+	if pending.AccountHidden != nil {
+		user.AccountHidden.SetValid(*pending.AccountHidden)
 	}
 	return user, nil
 }

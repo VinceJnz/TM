@@ -172,6 +172,9 @@ bearer tokens are stored as digests. Preserve secure, HTTP-only, same-site cooki
 OAuth callback state is bound to the initiating browser, uses PKCE and is separate
 from registration continuation. Verified provider identity is required for linking.
 The browser submits signup data without logging the registration payload.
+Email signup stages the selected account privacy preference with the hashed
+profile. Verification copies it into the existing account column. The shared
+checkbox describes trip report redaction and booking name search visibility.
 Linking changes only identity fields and checks current account state. Enrollment
 updates only permitted profile fields with concurrency checks; it must not overwrite
 passwords or administrative activation decisions.

@@ -55,6 +55,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Apply the same logging rules in browser code. Signup diagnostics must omit the submitted profile and credentials.
 - Hash passwords before any persistence, including pending-registration data. Use explicit request/response DTOs so sensitive model fields cannot be serialized accidentally.
 - Stage the registration proof and hashed profile in one store write. Use the authentication service for login account lookup, password reset, and session revocation.
+- Preserve the applicant’s privacy checkbox in pending email registration and account creation. Use the shared privacy control in signups and My Profile.
 - Use the same authentication store to discard undelivered proofs by purpose, digest, and owner. Bound that cleanup when the request has already ended.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
 

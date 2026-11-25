@@ -334,7 +334,7 @@ func (p *Process) showRegistrationFormInPopup() {
 	p.populateAgeGroupsDropdown(ageGroupSelect)
 
 	// Account hidden checkbox
-	checkboxFieldset, accountHiddenInput := viewHelpers.BooleanEdit(false, doc, "Hide my account from public listings", "checkbox", "account_hidden")
+	checkboxFieldset, accountHiddenInput := viewHelpers.AccountPrivacyEdit(doc, false, "account_hidden")
 	form.Call("appendChild", checkboxFieldset)
 
 	// Submit button
