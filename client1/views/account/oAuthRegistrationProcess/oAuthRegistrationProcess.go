@@ -6,7 +6,6 @@ import (
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -433,8 +432,7 @@ func (p *Process) handleFormSubmit(usernameInput, addressInput, birthDateInput, 
 	}
 	onFailure := func(err error) {
 		p.showStatus(statusDiv, err.Error(), "error")
-		var apiError *httpProcessor.APIError
-		if errors.As(err, &apiError) && apiError.Code == "registration_expired" {
+		if apiError := httpProcessor.FindAPIError(err); apiError != nil && apiError.Code == "registration_expired" {
 			restart.Set("hidden", false)
 			restart.Call("focus")
 			return

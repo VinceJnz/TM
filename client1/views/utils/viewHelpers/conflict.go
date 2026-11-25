@@ -10,7 +10,7 @@ import (
 // A typed conflict gets an explicit discard-and-reload path. Failed edits remain
 // untouched until the user confirms, including other inline forms in the view.
 func ConflictReload(root js.Value, err error, reload func()) {
-	apiError := findAPIError(err)
+	apiError := httpProcessor.FindAPIError(err)
 	if apiError == nil || apiError.Code != "stale_record" {
 		return
 	}
@@ -32,19 +32,4 @@ func ConflictReload(root js.Value, err error, reload func()) {
 		return nil
 	})
 	root.Call("prepend", button)
-}
-
-// Avoid reflection-based errors.As: TinyGo does not support its interface checks.
-func findAPIError(err error) *httpProcessor.APIError {
-	for err != nil {
-		if typed, ok := err.(*httpProcessor.APIError); ok {
-			return typed
-		}
-		wrapped, ok := err.(interface{ Unwrap() error })
-		if !ok {
-			return nil
-		}
-		err = wrapped.Unwrap()
-	}
-	return nil
 }

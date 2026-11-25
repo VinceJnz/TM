@@ -8,7 +8,6 @@ import (
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/userView"
 	"client1/v2/views/utils/viewHelpers"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -371,8 +370,8 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) showSaveError(err error, item TableData) {
-	var apiError *httpProcessor.APIError
-	if !errors.As(err, &apiError) {
+	apiError := httpProcessor.FindAPIError(err)
+	if apiError == nil {
 		editor.onCompletionMsg("Change failed; please retry.")
 		return
 	}

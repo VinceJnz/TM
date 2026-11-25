@@ -90,6 +90,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - In the member Trip List, keep the selected month, trip type, and grade in the schedule URL. Apply the filters to the full result before pagination. Keep participant rosters lazy and under the existing report access policy.
 
 - Keep browser code in `client1/`; preserve compatibility with both configured Go and TinyGo builds when changing shared frontend paths.
+- Use `httpProcessor.FindAPIError` for typed API errors in WASM. The pinned TinyGo toolchain lacks the interface reflection needed by `errors.As`.
 - Use the existing view, event, and HTTP abstractions before adding alternatives. Keep validation that protects data integrity on the server as well as in the UI.
 - Release `js.Func` callbacks and remove event listeners when their owning view is destroyed. Handle fetch failures, response-body failures, and cancellation without leaving blocked waits.
 - Keep inline membership edits bound to their own record version and select element. Give each form unique control IDs and focus the select when opening it.

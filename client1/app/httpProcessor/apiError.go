@@ -12,6 +12,22 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string { return e.Message }
+
+// FindAPIError uses typed unwrapping so it works in both WASM compilers.
+func FindAPIError(err error) *APIError {
+	for err != nil {
+		if typed, ok := err.(*APIError); ok {
+			return typed
+		}
+		wrapped, ok := err.(interface{ Unwrap() error })
+		if !ok {
+			return nil
+		}
+		err = wrapped.Unwrap()
+	}
+	return nil
+}
+
 func responseError(status int, body []byte) error {
 	var v struct {
 		Error   json.RawMessage `json:"error"`
