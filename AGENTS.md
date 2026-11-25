@@ -52,6 +52,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Do not add permissions based only on role names or hardcoded group IDs when the capability model can express them.
 - Protected routes declare capability metadata with `CapabilityRoute` or `AddRouteGroup`; `handlerAuth.setRestResource` reads the matched route declaration. Use the authentication store for grant lookups. Test the canonical resource and session requirement on nested, custom, and alias routes.
 - Never log or return passwords, password hashes, session tokens, OTPs, OAuth codes, or secrets. Avoid logging complete user structs or authentication payloads.
+- Apply the same logging rules in browser code. Signup diagnostics must omit the submitted profile and credentials.
 - Hash passwords before any persistence, including pending-registration data. Use explicit request/response DTOs so sensitive model fields cannot be serialized accidentally.
 - Stage the registration proof and hashed profile in one store write. Use the authentication service for login account lookup, password reset, and session revocation.
 - Use the same authentication store to discard undelivered proofs by purpose, digest, and owner. Bound that cleanup when the request has already ended.

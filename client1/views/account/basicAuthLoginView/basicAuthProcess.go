@@ -90,7 +90,6 @@ func (editor *ItemEditor) handleRegisterSubmit(this js.Value, args []js.Value) a
 		AccountHidden:  editor.UiComponents.AccountHidden.Get("checked").Bool(),
 	}
 
-	log.Printf("%vhandleRegisterSubmit()1 Submitting registration for user: %+v", debugTag, regPayload)
 	editor.client.NewRequest("POST", ApiURL+"/register", nil, regPayload,
 		func(err error) {
 			if err != nil {
