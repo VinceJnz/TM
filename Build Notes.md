@@ -13,6 +13,9 @@ For each improvment/recommendation:
 Make the changes, test, update AGENT and ARCHITECTURE documents, commit, push.
 Once all the change are complete deploy to docker on my local workstation.
 
+Make sure the changes are complete and have been through: test, update AGENT and ARCHITECTURE documents, commit, push.
+Once all the change are complete deploy to docker on my local workstation.
+
 
 For a delayed start, use the following but make sure you get the Session/Chat id then close the session in VS Code.
 
