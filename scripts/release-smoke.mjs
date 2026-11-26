@@ -459,6 +459,48 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Page.navigate',{url:`${origin}/?oauth-register=true`});
   await waitUI("document.querySelector('.tm-member-popup #registrationForm.tm-member-form')?.getClientRects().length>0 && document.querySelector('#submitBtn')?.textContent==='Complete registration'",'Google completion form did not use the shared layout');
   await send('Page.removeScriptToEvaluateOnNewDocument',{identifier:popup.identifier});
+  await send('Page.navigate',{url:`${origin}/?smoke=password#/login-register`});
+  await waitUI("document.querySelector('#sendOtp')?.form.id==='loginForm' && document.querySelector('#verifyOtpBtn')?.form.id==='loginCodeForm'",'send and verify should submit separate forms');
+  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await waitUI("document.querySelector('#sendOtp').getBoundingClientRect().bottom < document.querySelector('#loginOtp').getBoundingClientRect().top && document.querySelector('#loginCodeForm').scrollWidth <= document.querySelector('#loginCodeForm').clientWidth",'sign-in actions did not fit in order on mobile');
+  await send('Emulation.clearDeviceMetricsOverride');
+  await send('Runtime.evaluate',{expression:`(() => {
+    const originalFetch = window.fetch;
+    window.fetch = (url, options) => {
+      if (String(url).endsWith('/auth/login-password')) {
+        const payload = JSON.parse(options.body);
+        window.passwordRequestValid = payload.email === 'synthetic@example.test' && payload.user_password === 'synthetic-test-password';
+        return Promise.resolve(new Response('{"status":"otp_sent"}', {status:202}));
+      }
+      return originalFetch(url, options);
+    };
+    document.querySelector('#loginUsername').value = 'synthetic@example.test';
+    document.querySelector('#loginPassword').value = 'synthetic-test-password';
+    document.querySelector('#sendOtp').click();
+  })()`});
+  await waitUI("window.passwordRequestValid && document.activeElement.id==='loginOtp'",'sending a password sign-in code did not focus verification');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#loginOtp').value='synthetic-password-otp'; document.querySelector('#verifyOtpBtn').click()"});
+  await waitUI("document.querySelector('#userDisplay')?.textContent.includes('Smoke Member')",'password code did not establish a browser session');
+  await send('Page.navigate',{url:`${origin}/?smoke=google#/login-register`});
+  await waitUI("document.querySelector('#userDisplay')?.textContent.includes('Smoke Member')",'password session did not survive reload');
+  await send('Network.deleteCookies',{name:'session',url:origin});
+  await send('Page.navigate',{url:`${origin}/?smoke=google-popup#/login-register`});
+  await waitUI("document.querySelector('.oauth-btn')?.getClientRects().length>0",'Google launcher did not render');
+  await send('Runtime.evaluate',{userGesture:true,expression:`(() => {
+    const originalFetch = window.fetch;
+    window.fetch = (url, options) => String(url).endsWith('/auth/menuUser/')
+      ? Promise.resolve(new Response('{"user_id":1,"name":"Synthetic Google Member"}',{status:200}))
+      : originalFetch(url, options);
+    const originalOpen = window.open;
+    window.open = () => {
+      const popup = originalOpen.call(window, 'about:blank', 'synthetic-google');
+      setTimeout(() => popup.eval("opener.postMessage({type:'loginComplete',status:'success'},location.origin === 'null' ? opener.location.origin : location.origin); close()"), 100);
+      return popup;
+    };
+    document.querySelector('.oauth-btn').click();
+    window.open = originalOpen;
+  })()`});
+  await waitUI("document.querySelector('#userDisplay')?.textContent.includes('Synthetic Google Member')",'Google popup completion did not trigger an asynchronous session check');
   const limitedLogin = await request(`${prefix}/auth/verify-otp`, 'POST', {token: 'synthetic-booking-otp'});
   assert.equal(limitedLogin.status, 200, 'booking member OTP login failed');
   const limitedCookie = limitedLogin.headers['set-cookie'].find(value=>value.startsWith('session=')).split(';')[0];

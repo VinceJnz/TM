@@ -1,7 +1,6 @@
 package basicAuthLoginView
 
 import (
-	"client1/v2/app/eventProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"strconv"
 	"strings"
@@ -155,84 +154,6 @@ func (editor *ItemEditor) registrationVerification(details js.Value, payload Reg
 	code.Call("focus")
 }
 
-func (editor *ItemEditor) handleLoginWithPassword(this js.Value, args []js.Value) any {
-	if len(args) > 0 {
-		args[0].Call("preventDefault")
-	}
-
-	userID := editor.setLoginIdentifierFields(editor.UiComponents.Username.Get("value").String())
-	password := editor.UiComponents.Password.Get("value").String()
-
-	if userID == "" {
-		js.Global().Call("alert", "enter username or email")
-		return nil
-	}
-	if password == "" {
-		js.Global().Call("alert", "password required")
-		return nil
-	}
-
-	tokenInput := editor.UiComponents.Token
-	payload := map[string]string{
-		"username": editor.CurrentRecord.Username, "email": editor.CurrentRecord.Email, "user_password": password,
-	}
-	go editor.client.NewRequest("POST", ApiURL+"/login-password", nil, payload,
-		func(err error) {
-			if err != nil {
-				js.Global().Call("alert", "password login failed: "+err.Error())
-				return
-			}
-			// signal to user and set method for verify
-			js.Global().Call("alert", "If the credentials are valid, an OTP has been sent to the email on the account")
-			if tokenInput.Get("isConnected").Bool() {
-				tokenInput.Call("focus")
-			}
-		},
-		func(err error) {
-			js.Global().Call("alert", "password login error: "+err.Error())
-		})
-	return nil
-}
-
-// handleVerifyOTP verifies the password-login code and triggers loginComplete on success.
-func (editor *ItemEditor) handleVerifyOTP(this js.Value, args []js.Value) any {
-	if len(args) > 0 {
-		args[0].Call("preventDefault")
-	}
-
-	token := strings.TrimSpace(editor.UiComponents.Token.Get("value").String())
-	remember := editor.UiComponents.Remember.Get("checked").Bool()
-
-	if token == "" {
-		js.Global().Call("alert", "OTP token required")
-		return nil
-	}
-
-	payload := map[string]any{"token": token, "remember_me": remember}
-	var resp map[string]any
-	go editor.client.NewRequest("POST", ApiURL+"/verify-password-otp", &resp, payload,
-		func(err error) {
-			if err != nil {
-				js.Global().Call("alert", "OTP verify failed: "+err.Error())
-				return
-			}
-			// notify app about login
-			name := "(user)"
-			if v := resp["name"]; v != nil {
-				if s, ok := v.(string); ok && s != "" {
-					name = s
-				}
-			}
-			if editor.events != nil {
-				editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeLoginComplete, DebugTag: "basicAuthLoginView", Data: name})
-			}
-		},
-		func(err error) {
-			js.Global().Call("alert", "OTP verification error: "+err.Error())
-		})
-	return nil
-}
-
 func (editor *ItemEditor) regForm() js.Value {
 	status := editor.document.Call("createElement", "p")
 	status.Call("setAttribute", "role", "status")
@@ -308,33 +229,3 @@ func (editor *ItemEditor) regForm() js.Value {
 
 	return regForm
 }
-
-func (editor *ItemEditor) loginForm() js.Value {
-	// login area (username/email + password -> send OTP -> verify)
-	loginForm := viewHelpers.Form(editor.handleLoginWithPassword, editor.document, "loginForm")
-	loginForm.Set("className", "tm-member-form")
-	loginUserObj, loginUserInp := viewHelpers.StringEdit("", editor.document, "Username or Email", "text", "loginUsername")
-	loginPassObj, loginPassInp := viewHelpers.StringEdit("", editor.document, "Password", "password", "loginPassword")
-	loginTokenObj, loginTokenInp := viewHelpers.StringEdit("", editor.document, "Sign-in code", "text", "loginOtp")
-	loginTokenInp.Set("autocomplete", "one-time-code")
-	editor.UiComponents.Username = loginUserInp
-	editor.UiComponents.Password = loginPassInp
-	editor.UiComponents.Token = loginTokenInp
-	loginForm.Call("appendChild", loginUserObj)
-	loginForm.Call("appendChild", loginPassObj)
-	loginForm.Call("appendChild", loginTokenObj)
-	rememberObj, rememberInp := viewHelpers.BooleanEdit(false, editor.document, "Remember me", "checkbox", "rememberMe")
-	editor.UiComponents.Remember = rememberInp
-	loginForm.Call("appendChild", rememberObj)
-	loginActions := viewHelpers.ActionGroup(
-		editor.document,
-		"loginActions",
-		viewHelpers.SubmitButton(editor.document, "Send sign-in code", "sendOtp"),
-		viewHelpers.Button(editor.handleVerifyOTP, editor.document, "Verify code", "verifyOtpBtn"),
-	)
-	loginActions.Set("className", "input-group form-button-row")
-	loginForm.Call("appendChild", loginActions)
-	return loginForm
-}
-
-// populateAgeGroupsDropdown fetches age groups from the API and populates the dropdown

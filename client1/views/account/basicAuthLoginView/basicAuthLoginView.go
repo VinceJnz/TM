@@ -365,7 +365,7 @@ func (editor *ItemEditor) fallbackCheckOAuthSession() {
 		Email  string `json:"email"`
 	}
 
-	editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil,
+	go editor.client.NewRequest(http.MethodGet, ApiURL+"/menuUser/", &menuUser, nil,
 		func(err error) {
 			if err != nil {
 				return
@@ -420,7 +420,7 @@ func (editor *ItemEditor) renderForm(mode string) {
 		editor.Elements.AuthDiv.Call("appendChild", link)
 	} else {
 		editor.Elements.Title.Set("textContent", "Sign in to TM")
-		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
+		editor.Elements.AuthDiv.Call("append", editor.loginForm(), editor.loginCodeForm())
 		editor.Elements.AuthDiv.Call("appendChild", editor.passwordResetForm())
 		// Add link to register
 		link := editor.document.Call("createElement", "a")
@@ -496,7 +496,7 @@ func (editor *ItemEditor) renderAuthForm(mode string) {
 		editor.Elements.AuthDiv.Set("innerHTML", "")
 	}
 	if mode == "login" {
-		editor.Elements.AuthDiv.Call("appendChild", editor.loginForm())
+		editor.Elements.AuthDiv.Call("append", editor.loginForm(), editor.loginCodeForm())
 		editor.Elements.AuthDiv.Call("appendChild", editor.passwordResetForm())
 		editor.setActiveButtons("showLogin", "showRegister", "showLogin")
 		return

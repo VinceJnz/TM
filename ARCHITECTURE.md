@@ -189,6 +189,8 @@ bands can overlap. The server checks the applicant's selected group against
 the date of birth.
 WASM views use the transport's typed API error unwrapping for recovery and
 validation feedback, which supports the Go and TinyGo clients.
+Password sign-in uses separate credential and code forms. Google popup
+messages and popup-close events initiate an asynchronous session lookup.
 Linking changes only identity fields and checks current account state. Enrollment
 updates only permitted profile fields with concurrency checks; it must not overwrite
 passwords or administrative activation decisions.
