@@ -84,12 +84,10 @@
   background: var(--tm-surface-muted);
   border-color: var(--tm-text-subtle);
 }
-.auth-form .tm-login-code-form {
-	margin-top: 1rem;
-	padding-top: 1rem;
-	border-top: 1px solid var(--tm-border);
+.auth-form #forgotPassword {
+  justify-self: start;
 }
 
-.auth-form form > [role="status"]:empty {
-	display: none;
+.auth-form [role="status"]:empty {
+  display: none;
 }

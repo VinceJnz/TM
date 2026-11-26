@@ -282,12 +282,15 @@ func (editor *ItemEditor) populateEditForm() {
 	editor.Elements.AuthDiv.Set("className", "auth-form")
 	container.Call("appendChild", editor.Elements.AuthDiv)
 
-	// Render initial login form
 	editor.renderForm("login")
+	editor.Elements.EditDiv.Get("style").Set("display", "block")
+}
 
+func (editor *ItemEditor) googleSignInOptions() js.Value {
 	// Add OAuth section
 	oauthContainer := editor.document.Call("createElement", "div")
 	oauthContainer.Set("className", "oauth-options")
+	editor.Elements.OauthDiv = oauthContainer
 
 	// "or" separator
 	orDiv := editor.document.Call("createElement", "div")
@@ -320,8 +323,7 @@ func (editor *ItemEditor) populateEditForm() {
 	oauthContainer.Call("appendChild", loginButton)
 	oauthContainer.Call("appendChild", oauthStatus)
 
-	container.Call("appendChild", oauthContainer)
-	editor.Elements.EditDiv.Get("style").Set("display", "block")
+	return oauthContainer
 }
 
 // startOAuthPopupCloseWatcher polls popup.closed and runs a fallback auth check
@@ -402,9 +404,17 @@ func (editor *ItemEditor) renderForm(mode string) {
 	if editor.Elements.AuthDiv.Truthy() {
 		editor.Elements.AuthDiv.Set("innerHTML", "")
 	}
+	if mode == "recovery" {
+		editor.Elements.Title.Set("textContent", "Reset your password")
+		editor.Elements.AuthDiv.Call("append", editor.passwordResetForm(), editor.backToSignIn("backFromRecovery"))
+		editor.Elements.AuthDiv.Call("querySelector", "#resetEmail").Call("focus")
+		return
+	}
+	editor.Elements.OauthDiv = editor.googleSignInOptions()
 	if mode == "register" {
 		editor.Elements.Title.Set("textContent", "Create an account")
 		editor.Elements.AuthDiv.Call("appendChild", editor.regForm())
+		editor.Elements.AuthDiv.Call("appendChild", editor.Elements.OauthDiv)
 		// Add link to login
 		link := editor.document.Call("createElement", "a")
 		link.Set("href", "#")
@@ -420,12 +430,12 @@ func (editor *ItemEditor) renderForm(mode string) {
 		editor.Elements.AuthDiv.Call("appendChild", link)
 	} else {
 		editor.Elements.Title.Set("textContent", "Sign in to TM")
-		editor.Elements.AuthDiv.Call("append", editor.loginForm(), editor.loginCodeForm())
-		editor.Elements.AuthDiv.Call("appendChild", editor.passwordResetForm())
+		editor.Elements.AuthDiv.Call("append", editor.passwordSignIn(), editor.Elements.OauthDiv)
 		// Add link to register
 		link := editor.document.Call("createElement", "a")
 		link.Set("href", "#")
-		link.Set("innerHTML", "New to TM? Create an account")
+		link.Set("id", "createAccountLink")
+		link.Set("textContent", "Create an account")
 		domEvents.Listen(link, "click", func(this js.Value, args []js.Value) any {
 			if len(args) > 0 {
 				args[0].Call("preventDefault")
@@ -438,6 +448,14 @@ func (editor *ItemEditor) renderForm(mode string) {
 	}
 }
 
+func (editor *ItemEditor) backToSignIn(id string) js.Value {
+	return viewHelpers.Button2(func() any {
+		editor.renderForm("login")
+		editor.UiComponents.Username.Call("focus")
+		return nil
+	}, editor.document, "Back to sign in", id)
+}
+
 func (editor *ItemEditor) showRegistrationComplete(message string) {
 	editor.clearAgeGroupLookup()
 	editor.authMode = "registrationComplete"
@@ -448,11 +466,7 @@ func (editor *ItemEditor) showRegistrationComplete(message string) {
 	status := editor.document.Call("createElement", "p")
 	status.Call("setAttribute", "role", "status")
 	status.Set("textContent", message)
-	back := viewHelpers.Button2(func() any {
-		editor.renderForm("login")
-		editor.UiComponents.Username.Call("focus")
-		return nil
-	}, editor.document, "Back to sign in", "regBackToLogin")
+	back := editor.backToSignIn("regBackToLogin")
 	editor.Elements.AuthDiv.Call("append", status, back)
 	back.Call("focus")
 }
@@ -488,21 +502,7 @@ func (editor *ItemEditor) setActiveButtons(activeID string, buttonIDs ...string)
 }
 
 func (editor *ItemEditor) renderAuthForm(mode string) {
-	editor.clearPasswordReset()
-	editor.authMode = mode
-	editor.UiComponents = UI{}
-	editor.CurrentRecord = TableData{}
-	if editor.Elements.AuthDiv.Truthy() {
-		editor.Elements.AuthDiv.Set("innerHTML", "")
-	}
-	if mode == "login" {
-		editor.Elements.AuthDiv.Call("append", editor.loginForm(), editor.loginCodeForm())
-		editor.Elements.AuthDiv.Call("appendChild", editor.passwordResetForm())
-		editor.setActiveButtons("showLogin", "showRegister", "showLogin")
-		return
-	}
-	editor.Elements.AuthDiv.Call("appendChild", editor.regForm())
-	editor.setActiveButtons("showRegister", "showRegister", "showLogin")
+	editor.renderForm(mode)
 }
 
 func (editor *ItemEditor) showBasicTab(this js.Value, args []js.Value) interface{} {

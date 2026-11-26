@@ -15,11 +15,8 @@ func (editor *ItemEditor) clearPasswordReset() {
 
 func (editor *ItemEditor) passwordResetForm() js.Value {
 	doc := editor.document
-	panel := doc.Call("createElement", "details")
+	panel := doc.Call("createElement", "div")
 	panel.Set("className", "tm-member-recovery")
-	summary := doc.Call("createElement", "summary")
-	summary.Set("textContent", "Forgot password?")
-	panel.Call("appendChild", summary)
 
 	sendForm := doc.Call("createElement", "form")
 	sendForm.Set("className", "tm-member-form")
@@ -33,6 +30,7 @@ func (editor *ItemEditor) passwordResetForm() js.Value {
 
 	resetForm := doc.Call("createElement", "form")
 	resetForm.Set("className", "tm-member-form")
+	resetForm.Set("hidden", true)
 	codeField, code := viewHelpers.StringEdit("", doc, "Reset code", "text", "resetCode")
 	code.Set("autocomplete", "one-time-code")
 	passwordField, password := viewHelpers.StringEdit("", doc, "New password", "password", "resetPassword")
@@ -51,6 +49,9 @@ func (editor *ItemEditor) passwordResetForm() js.Value {
 	panel.Call("appendChild", status)
 
 	submit := func(button js.Value, path string, payload map[string]string, success func(), failure string) {
+		if button.Get("disabled").Bool() {
+			return
+		}
 		if editor.client == nil {
 			status.Set("textContent", "Password reset is temporarily unavailable.")
 			return
@@ -73,6 +74,8 @@ func (editor *ItemEditor) passwordResetForm() js.Value {
 		args[0].Call("preventDefault")
 		submit(sendButton, "/forgot-password", map[string]string{"email": email.Get("value").String()}, func() {
 			status.Set("textContent", "If this address belongs to an eligible account, a reset code will be sent. Check your email.")
+			sendForm.Set("hidden", true)
+			resetForm.Set("hidden", false)
 			code.Call("focus")
 		}, "Could not request a reset code. Check the email address or try again shortly.")
 		return nil
@@ -91,10 +94,9 @@ func (editor *ItemEditor) passwordResetForm() js.Value {
 		submit(resetButton, "/reset-password", map[string]string{
 			"code": strings.TrimSpace(code.Get("value").String()), "password": newPassword,
 		}, func() {
-			resetForm.Call("reset")
-			editor.UiComponents.Password.Set("value", "")
-			editor.UiComponents.Token.Set("value", "")
-			status.Set("textContent", "Password reset. You can now sign in with your new password.")
+			editor.renderForm("login")
+			editor.Elements.AuthDiv.Call("querySelector", "[role=status]").Set("textContent", "Password reset. You can now sign in with your new password.")
+			editor.UiComponents.Username.Call("focus")
 		}, "Could not reset the password. Check the code or request a new one.")
 		return nil
 	})

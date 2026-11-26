@@ -402,8 +402,11 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   assert.equal((await request(`${prefix}/bookings`,'GET',undefined,cookie)).status,401,'revoked session remained valid');
   await send('Page.navigate',{url:`${origin}/#/login-register`});
   await waitUI("document.querySelector('#loginForm.tm-member-form')?.getClientRects().length>0",'styled sign-in form did not render');
-  await send('Runtime.evaluate',{expression:"document.querySelector('.tm-member-recovery summary').click()"});
-  await waitUI("document.querySelector('#resetEmail')?.getClientRects().length>0 && document.querySelector('#resetCode')?.closest('form')?.classList.contains('tm-member-form')",'password recovery forms did not use the shared layout');
+  await waitUI("document.querySelector('#loginCodeForm')?.hidden && !document.querySelector('#resetEmail') && document.querySelector('.oauth-btn')?.getClientRects().length>0",'initial login showed actions for a different step');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#forgotPassword').click()"});
+  await waitUI("document.querySelector('#resetEmail')?.getClientRects().length>0 && document.querySelector('#resetCode')?.closest('form')?.hidden && !document.querySelector('#loginForm')",'password recovery did not open a separate email step');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#backFromRecovery').click()"});
+  await waitUI("document.querySelector('#loginForm')?.getClientRects().length>0 && document.activeElement.id==='loginUsername'",'returning from recovery did not restore sign-in');
   await send('Runtime.evaluate',{expression:`(() => {
     const originalFetch = window.fetch;
     let ageLoads = 0;
@@ -451,6 +454,7 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
     window.restoreSignupFetch();
     const originalOpen = window.open;
     window.open = () => null;
+    document.querySelector('#regBackToLogin').click();
     document.querySelector('.oauth-btn').click();
     window.open = originalOpen;
   })()`});
@@ -462,14 +466,14 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Page.navigate',{url:`${origin}/?smoke=password#/login-register`});
   await waitUI("document.querySelector('#sendOtp')?.form.id==='loginForm' && document.querySelector('#verifyOtpBtn')?.form.id==='loginCodeForm'",'send and verify should submit separate forms');
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-  await waitUI("document.querySelector('#sendOtp').getBoundingClientRect().bottom < document.querySelector('#loginOtp').getBoundingClientRect().top && document.querySelector('#loginCodeForm').scrollWidth <= document.querySelector('#loginCodeForm').clientWidth",'sign-in actions did not fit in order on mobile');
-  await send('Emulation.clearDeviceMetricsOverride');
+  await waitUI("document.querySelector('#loginCodeForm').hidden && document.querySelector('#loginForm').scrollWidth <= document.querySelector('#loginForm').clientWidth",'credential step did not fit on mobile');
   await send('Runtime.evaluate',{expression:`(() => {
     const originalFetch = window.fetch;
     window.fetch = (url, options) => {
       if (String(url).endsWith('/auth/login-password')) {
         const payload = JSON.parse(options.body);
         window.passwordRequestValid = payload.email === 'synthetic@example.test' && payload.user_password === 'synthetic-test-password';
+        window.passwordCodeRequests = (window.passwordCodeRequests || 0) + 1;
         return Promise.resolve(new Response('{"status":"otp_sent"}', {status:202}));
       }
       return originalFetch(url, options);
@@ -479,6 +483,14 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
     document.querySelector('#sendOtp').click();
   })()`});
   await waitUI("window.passwordRequestValid && document.activeElement.id==='loginOtp'",'sending a password sign-in code did not focus verification');
+  await waitUI("document.querySelector('#loginForm').hidden && document.querySelector('.oauth-options').hidden && document.querySelector('#loginCodeForm').scrollWidth <= document.querySelector('#loginCodeForm').clientWidth",'verification did not replace the credentials on mobile');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#resendLoginCode').click()"});
+  await waitUI("window.passwordCodeRequests===2 && document.activeElement.id==='loginOtp' && !document.querySelector('#verifyOtpBtn').disabled",'resend did not return to verification');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#backFromLoginCode').click()"});
+  await waitUI("document.querySelector('#loginUsername').value==='synthetic@example.test' && document.querySelector('#loginPassword').value==='' && document.querySelector('#loginCodeForm').hidden",'back did not restore only the login identifier');
+  await send('Emulation.clearDeviceMetricsOverride');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#loginPassword').value='synthetic-test-password'; document.querySelector('#sendOtp').click()"});
+  await waitUI("window.passwordCodeRequests===3 && document.activeElement.id==='loginOtp'",'re-entering credentials did not reopen verification');
   await send('Runtime.evaluate',{expression:"document.querySelector('#loginOtp').value='synthetic-password-otp'; document.querySelector('#verifyOtpBtn').click()"});
   await waitUI("document.querySelector('#userDisplay')?.textContent.includes('Smoke Member')",'password code did not establish a browser session');
   await send('Page.navigate',{url:`${origin}/?smoke=google#/login-register`});

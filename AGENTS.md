@@ -57,7 +57,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Stage the registration proof and hashed profile in one store write. Use the authentication service for login account lookup, password reset, and session revocation.
 - Preserve the applicant’s privacy checkbox in pending email registration and account creation. Use the shared privacy control in signups and My Profile.
 - Keep email signup details and verification as distinct steps. Show the delivery address, allow resend and email correction, and explain administrator activation before sign-in.
-- Place password sign-in actions in separate forms for requesting and verifying a code. Start Google popup session checks asynchronously so the browser can resolve fetch.
+- Show password credentials, code verification, and password recovery one screen at a time. Offer resend and a return to sign-in from verification. Start Google popup session checks asynchronously so the browser can resolve fetch.
 - Show signup age-group lookup failures with a retry. Give a blocked or expired Google signup an explicit recovery action. Treat verified signup as awaiting activation and confirm a real session before refreshing the signed-in UI.
 - Use the same authentication store to discard undelivered proofs by purpose, digest, and owner. Bound that cleanup when the request has already ended.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
