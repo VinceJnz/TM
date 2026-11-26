@@ -189,6 +189,12 @@ requirement. New Google accounts enter the verified state pending administrator
 activation. The Google popup reports approval separately from sign-in. The
 parent checks the session before switching to signed-in mode. An expired
 continuation returns a restart action to the popup.
+
+The user administration list offers a confirmed approval email action for active
+accounts. The server checks the users POST grant and any scope, selects the
+recipient from the account, and queues one standard email per account. The
+notification worker handles delivery and retries.
+
 Signup collects both birth date and age group because the configured age
 bands can overlap. The server checks the applicant's selected group against
 the date of birth.

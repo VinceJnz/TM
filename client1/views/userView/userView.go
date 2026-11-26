@@ -607,6 +607,12 @@ func (editor *ItemEditor) populateItemList() {
 		})
 		headerDiv.Call("appendChild", deleteButton)
 
+		const activeAccountStatus = 2 // AccountActive in the account status API.
+		if record.AccountStatusID == activeAccountStatus && record.Email != "" &&
+			editor.appCore.HasAccess("users", []string{"POST"}, []string{"any"}) {
+			editor.addApprovalEmailAction(headerDiv, userCard, record.ID)
+		}
+
 		userCard.Call("appendChild", headerDiv)
 
 		// Child area under row: edit form + group list

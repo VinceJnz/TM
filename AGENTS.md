@@ -62,6 +62,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Use the same authentication store to discard undelivered proofs by purpose, digest, and owner. Bound that cleanup when the request has already ended.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
 - Compare usernames case-insensitively and preserve their stored capitalization. Migration 0036 enforces uniqueness across all account writes. Return a username-specific conflict for duplicate creates or edits.
+- Offer a confirmed approval email action on active accounts to administrators with the users POST grant and any scope. Queue the fixed message through the notification outbox and deduplicate requests per account.
 
 ## PostgreSQL and financial integrity
 

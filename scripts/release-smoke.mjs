@@ -575,6 +575,12 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Runtime.evaluate',{expression:"location.hash='/users'"});
   const deleteButton="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Delete'&&b.getClientRects().length>0)";
   await waitUI(`!!(${deleteButton})`,'account actions did not render');
+  const approvalButton="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Send approval email'&&b.getClientRects().length>0)";
+  await waitUI(`!!(${approvalButton})`,'approval email action did not render for administrators');
+  await send('Runtime.evaluate',{expression:`(${approvalButton}).click()`});
+  await waitUI("!!document.querySelector('dialog[open]')",'approval email confirmation did not open');
+  await send('Runtime.evaluate',{expression:"document.querySelector('dialog[open] button[type=submit]').click()"});
+  await waitUI("Array.from(document.querySelectorAll('#mainContent .tm-feedback')).some(e=>e.textContent==='Approval email queued.')",'approval email did not queue from the account row');
   await waitUI(`(() => {
     const header = (${deleteButton}).closest('.tm-admin-record-header');
     const label = header?.querySelector('.tm-disclosure')?.getBoundingClientRect();

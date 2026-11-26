@@ -21,6 +21,12 @@ type Service struct {
 	OrphanRetentionDays    int
 }
 
+func (s Service) QueueAccountApproval(ctx context.Context, id int) (bool, error) {
+	const subject = "Your Trip Manager account is approved"
+	const body = "Your Trip Manager account has been approved. You can now sign in to Trip Manager using the sign-in method you registered with.\n\nTrip Manager"
+	return s.Store.QueueAccountApproval(ctx, id, subject, body)
+}
+
 func (s Service) Batch(ctx context.Context, limit int) error {
 	if limit < 1 || limit > 10 {
 		return errors.New("notification batch must be 1..10")

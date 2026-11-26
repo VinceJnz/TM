@@ -3,12 +3,15 @@ package handlerUser
 import (
 	"api-server/v2/app/appCore"
 	service "api-server/v2/app/services/accounts"
+	"api-server/v2/app/services/notifications"
 	profiles "api-server/v2/app/services/profiles"
 	"api-server/v2/localHandlers/helpers"
 	store "api-server/v2/modelMethods/accounts"
+	notificationStore "api-server/v2/modelMethods/notifications"
 	profileStore "api-server/v2/modelMethods/profiles"
 	"api-server/v2/modelMethods/resourcequery"
 	"api-server/v2/models"
+	"database/sql"
 	"errors"
 	"github.com/gorilla/mux"
 
@@ -27,6 +30,28 @@ func (h *Handler) RegisterRoutes(r *mux.Router, path string) {
 	helpers.AddRouteGroup(r, path, h, "users")
 	helpers.CapabilityRoute(r, path+"/set-username", "users", h.SetUsername).Methods("POST")
 	helpers.CapabilityRoute(r, path+"/lookup", "users", h.Lookup).Methods("GET")
+	helpers.CapabilityRoute(r, path+"/{id:[0-9]+}/approval-email", "users", h.QueueApprovalEmail).Methods("POST")
+}
+
+func (h *Handler) QueueApprovalEmail(w http.ResponseWriter, r *http.Request) {
+	if h.actor(w, r) == 0 {
+		return
+	}
+	id := helpers.RouteID(w, r)
+	if id == 0 {
+		return
+	}
+	svc := notifications.Service{Store: notificationStore.Store{DB: h.appConf.Db}}
+	queued, err := svc.QueueAccountApproval(r.Context(), id)
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, notificationStore.ErrInvalidApprovalRecipient) {
+		helpers.WriteError(w, http.StatusConflict, "approval_email_unavailable", "The account must be active and have a valid email address.")
+		return
+	}
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteAcceptedJSON(w, map[string]bool{"queued": queued})
 }
 
 func (h *Handler) RegisterBookingPeopleLookup(r *mux.Router) {
