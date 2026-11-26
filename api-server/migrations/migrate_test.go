@@ -8,6 +8,13 @@ import (
 	"testing"
 )
 
+func TestLatestMatchesLastEmbeddedMigration(t *testing.T) {
+	names := Names()
+	if len(names) == 0 || names[len(names)-1] != Latest {
+		t.Fatalf("schema compatibility expects %q, embedded migrations are %v", Latest, names)
+	}
+}
+
 func TestRuntimeSchemaCompatibility(t *testing.T) {
 	db := testdb.Open(t, "")
 	ctx := context.Background()
@@ -101,14 +108,12 @@ func TestExistingDatabaseRequiresExplicitAdoption(t *testing.T) {
 }
 
 func TestAuditedAdoptionAndRestrictedRole(t *testing.T) {
-	db := testdb.Open(t, "")
+	baseline, err := files.ReadFile("0001_baseline.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := testdb.Open(t, string(baseline))
 	ctx := context.Background()
-	if err := Apply(ctx, db, false); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec("DROP TABLE schema_migrations"); err != nil {
-		t.Fatal(err)
-	}
 	if err := Apply(ctx, db, false); err == nil {
 		t.Fatal("implicit adoption accepted")
 	}
