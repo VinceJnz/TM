@@ -36,7 +36,7 @@ func (s Store) User(ctx context.Context, id int) (models.User, error) {
 }
 func (s Store) Username(ctx context.Context, name string) (models.User, error) {
 	var u models.User
-	err := s.DB.GetContext(ctx, &u, "SELECT "+userColumns+" FROM st_users WHERE username=$1", name)
+	err := s.DB.GetContext(ctx, &u, "SELECT "+userColumns+" FROM st_users WHERE lower(username)=lower($1)", name)
 	return u, err
 }
 func (s Store) Email(ctx context.Context, email string) (models.User, error) {

@@ -324,7 +324,7 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 		}
 		existing, err := dbAuthTemplate.UserNameReadQryContext(r.Context(), debugTag+"CompleteRegistration:check ", h.appConf.Db, requestedUsername)
 		if err == nil && existing.ID != userID {
-			http.Error(w, "username taken", http.StatusConflict)
+			handlerHelpers.WriteError(w, http.StatusConflict, "username_taken", "That username is already taken.")
 			return
 		}
 	}

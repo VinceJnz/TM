@@ -10,10 +10,19 @@ import (
 	"net/http"
 )
 
+func IsUsernameConflict(err error) bool {
+	var databaseError *pq.Error
+	return errors.As(err, &databaseError) && databaseError.Code == "23505" &&
+		(databaseError.Constraint == "users_username_unique" ||
+			databaseError.Constraint == "users_username_case_insensitive_unique")
+}
+
 func WriteDataError(w http.ResponseWriter, err error) {
 	code, kind, message := 500, "internal_error", "Internal server error"
 	var databaseError *pq.Error
 	switch {
+	case IsUsernameConflict(err):
+		code, kind, message = 409, "username_taken", "That username is already taken."
 	case errors.Is(err, models.ErrStaleRecord):
 		code, kind, message = 409, "stale_record", "This record changed. Reload it before saving your edits."
 	case errors.Is(err, sql.ErrNoRows):

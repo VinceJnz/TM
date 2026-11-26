@@ -61,6 +61,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Show signup age-group lookup failures with a retry. Give a blocked or expired Google signup an explicit recovery action. Treat verified signup as awaiting activation and confirm a real session before refreshing the signed-in UI.
 - Use the same authentication store to discard undelivered proofs by purpose, digest, and owner. Bound that cleanup when the request has already ended.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
+- Compare usernames case-insensitively and preserve their stored capitalization. Migration 0036 enforces uniqueness across all account writes. Return a username-specific conflict for duplicate creates or edits.
 
 ## PostgreSQL and financial integrity
 

@@ -1,6 +1,7 @@
 package basicAuthLoginView
 
 import (
+	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
 	"strconv"
 	"strings"
@@ -98,6 +99,12 @@ func (editor *ItemEditor) registrationVerification(details js.Value, payload Reg
 	instructions.Set("textContent", "Enter the code sent to "+payload.Email+". The code expires after 24 hours.")
 
 	var verifyForm, verify, resend, change js.Value
+	showDetails := func(focus js.Value) {
+		verifyForm.Call("remove")
+		details.Set("hidden", false)
+		editor.Elements.Title.Set("textContent", "Create an account")
+		focus.Call("focus")
+	}
 	setPending := func(pending bool) {
 		verify.Set("disabled", pending)
 		resend.Set("disabled", pending)
@@ -113,6 +120,11 @@ func (editor *ItemEditor) registrationVerification(details js.Value, payload Reg
 			}
 			setPending(false)
 			if err != nil {
+				if conflict := httpProcessor.FindAPIError(err); conflict != nil && conflict.Code == "username_taken" {
+					showDetails(editor.UiComponents.Username)
+					details.Call("querySelector", "#regDetailsStatus").Set("textContent", conflict.Message)
+					return
+				}
 				status.Set("textContent", err.Error())
 				return
 			}
@@ -141,10 +153,7 @@ func (editor *ItemEditor) registrationVerification(details js.Value, payload Reg
 		return nil
 	}, doc, "Resend code", "regResend")
 	change = viewHelpers.Button2(func() any {
-		verifyForm.Call("remove")
-		details.Set("hidden", false)
-		editor.Elements.Title.Set("textContent", "Create an account")
-		editor.UiComponents.Email.Call("focus")
+		showDetails(editor.UiComponents.Email)
 		return nil
 	}, doc, "Change email", "regChangeEmail")
 	verifyForm.Call("append", instructions, codeField, status, viewHelpers.FormButtonRow(doc, verify, resend, change))
@@ -156,6 +165,7 @@ func (editor *ItemEditor) registrationVerification(details js.Value, payload Reg
 
 func (editor *ItemEditor) regForm() js.Value {
 	status := editor.document.Call("createElement", "p")
+	status.Set("id", "regDetailsStatus")
 	status.Call("setAttribute", "role", "status")
 	submit := viewHelpers.SubmitButton(editor.document, "Send verification code", "regSubmit")
 	var regForm js.Value

@@ -22,7 +22,7 @@ func TestPasswordSignInSendsCodeAndCreatesSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO st_users (name, username, email, user_account_status_id, user_password)
-		VALUES ('Synthetic Member', 'member', 'member@example.test', $1, $2)`, models.AccountActive, string(hash)); err != nil {
+		VALUES ('Synthetic Member', 'Member', 'member@example.test', $1, $2)`, models.AccountActive, string(hash)); err != nil {
 		t.Fatal(err)
 	}
 	mailbox := make(resetTestMailbox, 1)
@@ -32,7 +32,7 @@ func TestPasswordSignInSendsCodeAndCreatesSession(t *testing.T) {
 	handler := New(conf)
 	response := httptest.NewRecorder()
 	handler.LoginWithPassword(response, httptest.NewRequest(http.MethodPost, "/auth/login-password",
-		strings.NewReader(`{"email":"member@example.test","user_password":"`+password+`"}`)))
+		strings.NewReader(`{"username":"mEmBeR","user_password":"`+password+`"}`)))
 	if response.Code != http.StatusAccepted {
 		t.Fatalf("password request returned %d", response.Code)
 	}

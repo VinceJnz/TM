@@ -122,6 +122,11 @@ See [API contracts](docs/api-contracts.md) and [pagination](docs/api-pagination.
   ledger entries when each entry declares a floor the binary supports. The migration
   runner still rejects unknown entries. Pre-0033 binaries require a coordinated cutover.
 
+Migration 0036 checks for capitalization conflicts and adds a unique index on
+`lower(username)`. Username login uses the same comparison, while account
+records retain their display capitalization. Apply the migration with an API
+cutover. Existing duplicates must be resolved before the migration can run.
+
 **Concurrency:** account/profile writes carry database versions from migration 0025.
 Migration 0029 extends this to trips, trip prices and trip price groups.
 Migration 0032 adds voucher and group booking versions with a default of 1 for

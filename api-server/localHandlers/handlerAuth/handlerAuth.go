@@ -200,7 +200,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	payload.Password = registrationRequest{}.Password
 	switch {
 	case errors.Is(err, authService.ErrUsernameTaken):
-		http.Error(w, "this username is already taken", http.StatusConflict)
+		handlerHelpers.WriteError(w, http.StatusConflict, "username_taken", "That username is already taken.")
 		return
 	case errors.Is(err, authService.ErrEmailTaken):
 		http.Error(w, "an account with this email address already exists", http.StatusConflict)
@@ -262,6 +262,8 @@ func (h *Handler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
 			handlerHelpers.WriteError(w, 403, "invalid_token", "Invalid or expired verification token")
 		case errors.Is(err, authService.ErrRegistration):
 			handlerHelpers.WriteError(w, 400, "invalid_registration", "Registration data is invalid; register again")
+		case handlerHelpers.IsUsernameConflict(err):
+			handlerHelpers.WriteDataError(w, err)
 		default:
 			handlerHelpers.WriteError(w, 500, "registration_failed", "Failed to create user account; please retry")
 		}
