@@ -264,6 +264,14 @@ The client uses Go/TinyGo plus `syscall/js`, not a separate SPA framework. Runti
 than a compiled localhost address. Browser code belongs in `client1/`; do not hand-edit
 generated WASM or the compiler-supplied `wasm_exec.js`.
 
+Both Docker build paths pass `-no-debug` to TinyGo. The API image packages
+`main.wasm` alongside its compiler-supplied runtime and generates
+`main.wasm.gz` from the selected artifact during the image build. The browser
+uses the existing `/main.wasm` URL. The static handler serves gzip when the
+request accepts it and uses the original WASM as the identity fallback. Both
+representations use `application/wasm`, vary by `Accept-Encoding`, and use
+separate content-based ETags for cache revalidation.
+
 - Use the existing transport/API adapters and generated contracts. The generated
   `finance_generated.go` and `finance.openapi.json` names are historical: they also
   cover booking, trip, pricing, account and security contracts.

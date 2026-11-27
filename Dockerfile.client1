@@ -34,7 +34,7 @@ COPY client1/ ./
 RUN mkdir -p /tmp/client1-out
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/tinygo \
-    tinygo build -o /tmp/client1-out/main.wasm -target wasm .
+    tinygo build -no-debug -o /tmp/client1-out/main.wasm -target wasm .
 RUN cp /usr/local/tinygo/targets/wasm_exec.js /tmp/client1-out/wasm_exec.js
 #RUN --mount=type=cache,target=/go/pkg/mod \
 #    --mount=type=cache,target=/root/.cache/tinygo \
