@@ -22,6 +22,11 @@ For a delayed start, use the following but make sure you get the Session/Chat id
 `Start-Sleep -Seconds 10800; codex exec resume 01a21103-b964-79b2-8e5c-485835051c61 "Continue the outstanding work."`
 
 
+To run the server
+
+`docker compose --env-file api-server/.env --profile prod up --build -d`
+
+
 ## Docker build
 
 Docker files can only refer to local files that are in the same folder or sub-folders of the docker file.
