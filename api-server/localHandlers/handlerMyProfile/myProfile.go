@@ -96,7 +96,7 @@ func (h *Handler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 		h.failure(w, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "session", Path: "/", Domain: h.appConf.Settings.Host, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1, Expires: time.Unix(1, 0)})
+	helpers.SetSessionCookie(w, r, h.appConf.Settings.Host, "", time.Time{})
 	helpers.WriteJSON(w, 200, map[string]bool{"reauthentication_required": true})
 }
 func (h *Handler) failure(w http.ResponseWriter, err error) {

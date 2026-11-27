@@ -173,6 +173,11 @@ creation are one transaction. OTP proof consumption, account checks and session
 creation are one transaction. Failed writes roll back proof consumption; successful
 proofs cannot be replayed. Passwords are hashed before pending-registration persistence;
 bearer tokens are stored as digests. Preserve secure, HTTP-only, same-site cookies.
+The session cookie is host-only. Browsers keep cookies for localhost and a LAN
+IP separate, even when both addresses connect to the same API. The shared session
+cookie helper also expires a matching legacy domain cookie during sign-in,
+logout, or verified email change. OAuth callback and continuation cookies follow
+the configured OAuth host.
 
 OAuth callback state is bound to the initiating browser, uses PKCE and is separate
 from registration continuation. Verified provider identity is required for linking.

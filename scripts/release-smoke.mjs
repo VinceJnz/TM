@@ -40,8 +40,12 @@ assert.equal((await request(`${prefix}/auth/login`, 'POST', {username: 'smoke-me
 assert.equal((await request(`${prefix}/auth/oauth/login`)).status, 503);
 const login = await request(`${prefix}/auth/verify-otp`, 'POST', {token: 'synthetic-release-otp'});
 assert.equal(login.status, 200, 'OTP login failed');
-const cookie = login.headers['set-cookie']?.find(item => item.startsWith('session='))?.split(';')[0];
-assert(cookie, 'login did not create a session');
+function sessionCookie(response) {
+  const issued = response.headers['set-cookie']?.find(value => /^session=[^;]/.test(value));
+  assert(issued && !/;\s*Domain=/i.test(issued), 'login did not issue a host-only session cookie');
+  return issued.split(';')[0];
+}
+const cookie = sessionCookie(login);
 const bookings = await request(`${prefix}/bookings`, 'GET', undefined, cookie);
 assert.equal(bookings.status, 200);
 assert.equal(JSON.parse(bookings.body).length, 100, 'collection was not bounded');
@@ -508,7 +512,7 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await waitUI("document.querySelector('#userDisplay')?.textContent.includes('Synthetic Google Member')",'Google popup completion did not trigger an asynchronous session check');
   const limitedLogin = await request(`${prefix}/auth/verify-otp`, 'POST', {token: 'synthetic-booking-otp'});
   assert.equal(limitedLogin.status, 200, 'booking member OTP login failed');
-  const limitedCookie = limitedLogin.headers['set-cookie'].find(value=>value.startsWith('session=')).split(';')[0];
+  const limitedCookie = sessionCookie(limitedLogin);
   assert.equal((await request(`${prefix}/trips`, 'GET', undefined, limitedCookie)).status, 403);
   assert.equal((await request(`${prefix}/myBookings/trips`)).status, 401);
   const bookingTrips = await request(`${prefix}/myBookings/trips?limit=1`, 'GET', undefined, limitedCookie);
@@ -525,7 +529,7 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await waitUI(`(${myBookingStep})?.textContent.includes('Step 2 of 4')`,'booking member could not save the booking');
   const adminLogin=await request(`${prefix}/auth/verify-otp`,'POST',{token:'synthetic-admin-otp'});
   assert.equal(adminLogin.status,200);
-  const adminCookie=adminLogin.headers['set-cookie'].find(value=>value.startsWith('session=')).split(';')[0];
+  const adminCookie=sessionCookie(adminLogin);
   const groupsPath = `${prefix}/securityGroup`;
   const createdGroup = await request(groupsPath, 'POST', {name: 'Smoke concurrency group'}, adminCookie);
   assert.equal(createdGroup.status, 201, 'security group creation failed');

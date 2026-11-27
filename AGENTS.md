@@ -61,6 +61,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Show signup age-group lookup failures with a retry. Give a blocked or expired Google signup an explicit recovery action. Treat verified signup as awaiting activation and confirm a real session before refreshing the signed-in UI.
 - Use the same authentication store to discard undelivered proofs by purpose, digest, and owner. Bound that cleanup when the request has already ended.
 - Preserve secure cookie attributes. Consume one-time authentication tokens atomically; bind OAuth state to the initiating browser and keep registration continuation separate from callback state.
+- Issue and clear the session cookie through the shared host-only helper. Browser sessions follow the HTTPS hostname or LAN IP used to open Trip Manager. Test from a LAN IP with `HOST=localhost` and verify that the menu request recognizes the session.
 - Compare usernames case-insensitively and preserve their stored capitalization. Migration 0036 enforces uniqueness across all account writes. Return a username-specific conflict for duplicate creates or edits.
 - Offer a confirmed approval email action on active accounts to administrators with the users POST grant and any scope. Queue the fixed message through the notification outbox and deduplicate requests per account.
 

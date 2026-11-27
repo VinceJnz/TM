@@ -27,6 +27,6 @@ func (h *Handler) verifyLoginOTP(w http.ResponseWriter, r *http.Request, name st
 		}
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "session", Value: raw, Path: "/", Domain: h.appConf.Settings.Host, Expires: expires, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	helpers.SetSessionCookie(w, r, h.appConf.Settings.Host, raw, expires)
 	helpers.WriteJSON(w, 200, map[string]any{"status": "logged_in", "user_id": user.ID, "username": user.Username, "email": user.Email.String, "name": user.Name})
 }

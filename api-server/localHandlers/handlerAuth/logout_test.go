@@ -28,8 +28,8 @@ func TestLogoutRequiresPostRevokesSessionAndExpiresCookie(t *testing.T) {
 	for _, tc := range []struct {
 		method, origin string
 		userID, status int
-	}{{"GET", "", 1, 405}, {"POST", "https://attacker.test", 1, 403}, {"POST", "https://localhost", 2, 503}, {"POST", "https://localhost", 1, 202}} {
-		r := httptest.NewRequest(tc.method, "https://localhost/auth/logout/", nil)
+	}{{"GET", "", 1, 405}, {"POST", "https://attacker.test", 1, 403}, {"POST", "https://192.168.1.6:8086", 2, 503}, {"POST", "https://192.168.1.6:8086", 1, 202}} {
+		r := httptest.NewRequest(tc.method, "https://192.168.1.6:8086/auth/logout/", nil)
 		r.AddCookie(cookie)
 		r.Header.Set("Origin", tc.origin)
 		r = r.WithContext(context.WithValue(r.Context(), app.SessionIDKey, &models.Session{UserID: tc.userID}))
@@ -44,7 +44,7 @@ func TestLogoutRequiresPostRevokesSessionAndExpiresCookie(t *testing.T) {
 			}
 		} else {
 			cleared := w.Result().Cookies()
-			if len(cleared) != 1 || cleared[0].MaxAge >= 0 || !cleared[0].Secure || !cleared[0].HttpOnly || cleared[0].SameSite != http.SameSiteLaxMode {
+			if len(cleared) != 1 || cleared[0].Domain != "" || cleared[0].Path != "/" || cleared[0].MaxAge >= 0 || !cleared[0].Secure || !cleared[0].HttpOnly || cleared[0].SameSite != http.SameSiteLaxMode {
 				t.Fatal(cleared)
 			}
 			if _, err = dbAuthTemplate.FindSessionToken("test", db, cookie.Value); err == nil {

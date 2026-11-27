@@ -6,7 +6,9 @@ import (
 	"api-server/v2/models"
 	"encoding/json"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +17,10 @@ import (
 )
 
 func TestPasswordSignInSendsCodeAndCreatesSession(t *testing.T) {
-	db := testdb.Open(t, testdb.Auth)
+	db := testdb.Open(t, testdb.Auth+`
+		CREATE TABLE st_group (id integer PRIMARY KEY, name text);
+		CREATE TABLE st_user_group (user_id integer, group_id integer);
+	`)
 	const password = "synthetic-sign-in-password"
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 	if err != nil {
@@ -27,6 +32,7 @@ func TestPasswordSignInSendsCodeAndCreatesSession(t *testing.T) {
 	}
 	mailbox := make(resetTestMailbox, 1)
 	conf := &appCore.Config{Db: db, EmailSvc: mailbox}
+	conf.Settings.Host = "localhost"
 	conf.Settings.DevMode = true
 	conf.Settings.EmailDevModeAddr = "debug@example.test"
 	handler := New(conf)
@@ -53,14 +59,35 @@ func TestPasswordSignInSendsCodeAndCreatesSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	response = httptest.NewRecorder()
-	handler.VerifyPasswordOTP(response, httptest.NewRequest(http.MethodPost, "/auth/verify-password-otp", strings.NewReader(string(payload))))
+	const lanOrigin = "https://192.168.1.6:8086"
+	verify := httptest.NewRequest(http.MethodPost, lanOrigin+"/auth/verify-password-otp", strings.NewReader(string(payload)))
+	handler.VerifyPasswordOTP(response, verify)
 	if response.Code != http.StatusOK {
 		t.Fatalf("code verification returned %d", response.Code)
 	}
-	for _, cookie := range response.Result().Cookies() {
-		if cookie.Name == "session" && cookie.Secure && cookie.HttpOnly && !cookie.Expires.IsZero() {
-			return
-		}
+	cookies := response.Result().Cookies()
+	if len(cookies) != 1 || cookies[0].Name != "session" || cookies[0].Domain != "" ||
+		cookies[0].Path != "/" || !cookies[0].Secure || !cookies[0].HttpOnly ||
+		cookies[0].SameSite != http.SameSiteLaxMode || cookies[0].Expires.IsZero() {
+		t.Fatal("verification did not issue a persistent, host-only secure session cookie")
 	}
-	t.Fatal("verification did not issue a persistent secure session cookie")
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jar.SetCookies(verify.URL, cookies)
+	menu := httptest.NewRequest(http.MethodGet, lanOrigin+"/auth/menuUser/", nil)
+	for _, cookie := range jar.Cookies(menu.URL) {
+		menu.AddCookie(cookie)
+	}
+	localhost := &url.URL{Scheme: "https", Host: "localhost:8086", Path: menu.URL.Path}
+	if len(jar.Cookies(localhost)) != 0 {
+		t.Fatal("LAN session was sent to localhost")
+	}
+	response = httptest.NewRecorder()
+	handler.MenuUserGet(response, menu)
+	var user models.MenuUser
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &user) != nil || user.UserID == 0 {
+		t.Fatal("the menu request did not recognize the LAN session")
+	}
 }

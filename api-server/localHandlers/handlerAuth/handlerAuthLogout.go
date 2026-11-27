@@ -1,6 +1,7 @@
 package handlerAuth
 
 import (
+	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/models"
 	"net/http"
 	"net/url"
@@ -34,7 +35,7 @@ func (h *Handler) AuthLogout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to close session", 503)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "session", Value: "", Path: "/", Domain: h.appConf.Settings.Host, MaxAge: -1, Expires: time.Unix(1, 0), Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	helpers.SetSessionCookie(w, r, h.appConf.Settings.Host, "", time.Time{})
 	w.WriteHeader(http.StatusAccepted)
 	_, _ = w.Write([]byte("User logged out."))
 }

@@ -13,6 +13,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -28,15 +30,37 @@ var (
 	ErrAuthUserInactive = errors.New("auth user inactive")
 )
 
-func CreateAndSetSessionCookie(ctx context.Context, debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
+func CreateAndSetSessionCookie(r *http.Request, debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
 	auth := authService.Service{Store: authStore.Store{DB: db}}
-	raw, err := auth.Issue(ctx, userID, host, "session", expiration, "")
+	raw, err := auth.Issue(r.Context(), userID, host, "session", expiration, "")
 	if err != nil {
 		log.Printf("%vCreateAndSetSessionCookie() failed to create session token: %v", debugStr, err)
 		return err
 	}
-	http.SetCookie(w, &http.Cookie{Name: "session", Value: raw, Path: "/", Domain: host, Expires: expiration, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	SetSessionCookie(w, r, host, raw, expiration)
 	return nil
+}
+
+// SetSessionCookie scopes the session to the host that served the response.
+// An empty token expires the browser session.
+func SetSessionCookie(w http.ResponseWriter, r *http.Request, legacyDomain, token string, expiration time.Time) {
+	cookie := http.Cookie{Name: "session", Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}
+	host := strings.ToLower((&url.URL{Host: r.Host}).Hostname())
+	domain := strings.TrimPrefix(strings.ToLower(legacyDomain), ".")
+	if domain != "" && (host == domain || strings.HasSuffix(host, "."+domain)) {
+		legacy := cookie
+		legacy.Domain = domain
+		legacy.MaxAge = -1
+		legacy.Expires = time.Unix(1, 0)
+		http.SetCookie(w, &legacy)
+	}
+	cookie.Value = token
+	cookie.Expires = expiration
+	if token == "" {
+		cookie.MaxAge = -1
+		cookie.Expires = time.Unix(1, 0)
+	}
+	http.SetCookie(w, &cookie)
 }
 
 func CreateNamedTokenAndSendEmail(

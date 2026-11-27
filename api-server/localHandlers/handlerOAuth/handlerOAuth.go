@@ -148,7 +148,7 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 			handlerHelpers.WriteInternalServerError(w, "failed to link account")
 			return
 		}
-		if err := handlerHelpers.CreateAndSetSessionCookie(r.Context(), debugTag, w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
+		if err := handlerHelpers.CreateAndSetSessionCookie(r, debugTag, w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
 			handlerHelpers.WriteInternalServerError(w, "failed to create session")
 			return
 		}
@@ -281,7 +281,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	userID := user.ID
 	// Create session cookie
 	if user.UserActive() {
-		if err := handlerHelpers.CreateAndSetSessionCookie(r.Context(), debugTag+"VerifyEmail:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
+		if err := handlerHelpers.CreateAndSetSessionCookie(r, debugTag+"VerifyEmail:", w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
 			log.Printf("%v failed to create session token: %v", debugTag, err)
 			handlerHelpers.WriteInternalServerError(w, "failed to create session")
 			return
