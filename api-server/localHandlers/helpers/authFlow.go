@@ -3,13 +3,10 @@ package helpers
 import (
 	authService "api-server/v2/app/services/authentication"
 	authStore "api-server/v2/modelMethods/authentication"
-	"api-server/v2/modelMethods/dbAuthTemplate"
-	"api-server/v2/models"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -23,12 +20,6 @@ import (
 type MailSender interface {
 	SendMail(to string, title string, message string) (bool, error)
 }
-
-var (
-	ErrAuthTokenInvalid = errors.New("auth token invalid")
-	ErrAuthUserNotFound = errors.New("auth user not found")
-	ErrAuthUserInactive = errors.New("auth user inactive")
-)
 
 func CreateAndSetSessionCookie(r *http.Request, debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
 	auth := authService.Service{Store: authStore.Store{DB: db}}
@@ -176,42 +167,4 @@ func SessionExpiryFromRememberMe(rememberMe bool) time.Time {
 	}
 
 	return time.Time{}
-}
-
-func ResolveUserIDFromSessionOrOAuthState(debugStr string, r *http.Request, db *sqlx.DB) int {
-	// Try 1: DB-backed session cookie
-	if sc, err := r.Cookie("session"); err == nil {
-		log.Printf("%vResolveUserIDFromSessionOrOAuthState() found session cookie", debugStr)
-		if dbToken, tokenErr := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugStr+"ResolveUserIDFromSessionOrOAuthState:session", db, sc.Value); tokenErr == nil {
-			log.Printf("%vResolveUserIDFromSessionOrOAuthState() using session for user %d", debugStr, dbToken.UserID)
-			return dbToken.UserID
-		}
-	}
-
-	return 0
-}
-
-func VerifyOTPTokenAndLoadUser(ctx context.Context, debugStr string, db *sqlx.DB, tokenName, tokenValue string, requireActive bool) (int, models.User, error) {
-	tok, err := dbAuthTemplate.ConsumeToken(ctx, db, tokenName, tokenValue)
-	if err != nil {
-		return 0, models.User{}, fmt.Errorf("%w: %v", ErrAuthTokenInvalid, err)
-	}
-
-	userID := tok.UserID
-	if userID == 0 {
-		return 0, models.User{}, ErrAuthTokenInvalid
-	}
-
-	user, err := dbAuthTemplate.UserReadQryContext(ctx, debugStr+"VerifyOTPTokenAndLoadUser:read", db, userID)
-	if err != nil {
-		return 0, models.User{}, fmt.Errorf("%w: %v", ErrAuthUserNotFound, err)
-	}
-
-	if requireActive && !user.UserActive() {
-		return 0, models.User{}, ErrAuthUserInactive
-	}
-
-	// Token was consumed atomically before account lookup.
-
-	return userID, user, nil
 }

@@ -473,6 +473,14 @@ and verification evidence. Their deployment observations are historical.
 | UI | Capability actions, conflict recovery, keyboard controls, cancellable rosters, status announcements, and reliable trip edit lookups |
 | Build/verification | Self-contained frontend/API build, compiler parity and artifact identity checks, deployment health wait, and expanded browser checks |
 
+Checkout status uses the checkout service to resolve the owned booking's Stripe
+session through the payment ledger and query Stripe through the gateway. Status
+checks are read-only. Google OAuth uses the authentication service and store for
+state, registration proofs, and session lookup, with provider exchange and
+identity retrieval in the gateway. HTTP handlers set cookies and redirects.
+Authentication rate limiting keeps request policy in middleware and records
+attempts atomically through the PostgreSQL authentication store.
+
 **Remaining limitations / follow-up candidates, not claims of completed work:**
 
 | Priority | Area | Guidance |

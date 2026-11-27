@@ -4,6 +4,7 @@ import (
 	"api-server/v2/internal/testdb"
 	"api-server/v2/modelMethods/paymentLedger"
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/jmoiron/sqlx"
 	"os"
@@ -139,5 +140,32 @@ func TestProviderSuccessThenPersistenceFailureCanRecover(t *testing.T) {
 	var count int
 	if err := db.Get(&count, "SELECT count(*) FROM at_payments"); err != nil || count != 1 {
 		t.Fatal(count, err)
+	}
+}
+
+func TestCheckReportsOnlyOwnedCheckout(t *testing.T) {
+	db := testdb.Open(t, `CREATE TABLE at_bookings(id int PRIMARY KEY, owner_id int, stripe_session_id text);
+		INSERT INTO at_bookings VALUES (11, 1, 'test-session'), (12, 1, NULL);`)
+	provider := &fakeProvider{sessions: []Session{{ID: "test-session", State: "complete", Amount: 1250}}}
+	service := New(db, provider)
+	checkedAt := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	service.Now = func() time.Time { return checkedAt }
+	ctx := context.Background()
+	if _, err := service.Check(ctx, 11, 2); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("other owner's checkout returned %v", err)
+	}
+	if _, err := service.Check(ctx, 12, 1); !errors.Is(err, ErrNoSession) {
+		t.Fatalf("booking without session returned %v", err)
+	}
+	if provider.lookups != 0 {
+		t.Fatal("provider called for an inaccessible or missing session")
+	}
+	result, err := service.Check(ctx, 11, 1)
+	if err != nil || result != (Status{State: "complete", Amount: 1250, CheckedAt: checkedAt}) {
+		t.Fatalf("unexpected status %+v, %v", result, err)
+	}
+	provider.sessions[0].ID = "different-session"
+	if _, err := service.Check(ctx, 11, 1); !errors.Is(err, paymentLedger.ErrInvalidPayment) {
+		t.Fatalf("mismatched provider session returned %v", err)
 	}
 }

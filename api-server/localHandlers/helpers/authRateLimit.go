@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"api-server/v2/modelMethods/authentication"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -17,6 +18,7 @@ import (
 // Counters live in PostgreSQL, so restarts and multiple API replicas do not
 // reset the budget. Never trust caller-controlled forwarding headers for IPs.
 func AuthRateLimit(db *sqlx.DB) func(http.Handler) http.Handler {
+	store := authentication.Store{DB: db}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := strings.TrimRight(r.URL.Path, "/")
@@ -72,8 +74,7 @@ func AuthRateLimit(db *sqlx.DB) func(http.Handler) http.Handler {
 			}
 			for _, key := range keys {
 				digest := sha256.Sum256([]byte(key.value + ":" + strconv.Itoa(key.seconds)))
-				var attempts int
-				err := db.GetContext(r.Context(), &attempts, `WITH expired AS (DELETE FROM st_auth_rate_limits WHERE window_start<CURRENT_TIMESTAMP-INTERVAL '2 hours') INSERT INTO st_auth_rate_limits(key_hash,window_start,attempts) VALUES($1,to_timestamp(floor(extract(epoch FROM CURRENT_TIMESTAMP)/$2::numeric)*$2::numeric),1) ON CONFLICT(key_hash,window_start) DO UPDATE SET attempts=st_auth_rate_limits.attempts+1 RETURNING attempts`, hex.EncodeToString(digest[:]), key.seconds)
+				attempts, err := store.RecordRateLimitAttempt(r.Context(), hex.EncodeToString(digest[:]), key.seconds)
 				if err != nil {
 					WriteError(w, 503, "auth_unavailable", "authentication temporarily unavailable")
 					return

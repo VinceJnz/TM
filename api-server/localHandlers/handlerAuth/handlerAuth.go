@@ -5,7 +5,7 @@ import (
 	authService "api-server/v2/app/services/authentication"
 	handlerHelpers "api-server/v2/localHandlers/helpers"
 	authStore "api-server/v2/modelMethods/authentication"
-	"api-server/v2/modelMethods/dbAuthTemplate"
+
 	"api-server/v2/models"
 	"context"
 	"errors"
@@ -389,7 +389,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	} else { // If there is a session cookie try to find it in the repository
 		//token, err = h.FindSessionToken(sessionToken.Value) //This succeeds if the cookie is in the DB and the user is current
-		token, err := dbAuthTemplate.FindSessionTokenContext(r.Context(), debugTag, h.appConf.Db, sessionToken.Value)
+		principal, err := (authService.Service{Store: authStore.Store{DB: h.appConf.Db}}).Session(r.Context(), sessionToken.Value)
 		//user.User.ID = user.Session.UserID
 		if err != nil { // could not find user sessionToken so user is not authorised
 			log.Print(debugTag + "SessionCheck invalid session")
@@ -398,7 +398,7 @@ func (h *Handler) SessionCheck(w http.ResponseWriter, r *http.Request) {
 			return
 		} else { //Session cookie found, get user details and return to client
 			//user, err = h.UserReadQry(token.UserID)
-			user, err = dbAuthTemplate.UserReadQryContext(r.Context(), debugTag+"Handler.AccountValidate ", h.appConf.Db, token.UserID)
+			user, err = (authStore.Store{DB: h.appConf.Db}).User(r.Context(), principal.ID)
 			if err != nil {
 				log.Print(debugTag + "SessionCheck user lookup failed")
 				w.WriteHeader(http.StatusInternalServerError)

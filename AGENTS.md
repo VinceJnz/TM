@@ -38,6 +38,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Preserve existing routes, JSON fields, and response shapes unless the task explicitly changes the contract. Check affected WASM callers when changing the API.
 - Register public endpoints deliberately. Keep application resources behind session authentication and capability checks.
 - Prefer the separation demonstrated by `localHandlers/handlerTripDifficulty` and `modelMethods/tripdifficulty`: handlers handle HTTP, stores handle SQL, and services own multi-step business rules where needed.
+- Simple resource handlers may call dedicated stores directly. Keep provider calls in gateways, checkout status coordination in the checkout service, and authentication rate-limit counter SQL in the authentication store.
 - Do not expand HTTP-aware generic SQL helpers into a second business-logic layer. Refactor incrementally within the touched feature.
 - Pass request context into database operations and external calls. Keep internal diagnostics out of client-facing errors.
 - For new or revised endpoints, use the shared JSON/error helpers where compatible with the existing contract. Validate IDs, body size, input values, and referenced records before mutation.
