@@ -303,7 +303,7 @@ func (v *ItemEditor) populateItemList() {
 		itemDiv.Set("id", debugTag+"itemDiv")
 		// Add call to interface that can be used for populating the itemDiv text
 		itemDiv.Set("textContent", record.ItemListText())
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid var(--tm-border);")
 
 		// Create an edit button
 		editButton := v.document.Call("createElement", "button")

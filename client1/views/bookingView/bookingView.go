@@ -502,7 +502,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid #ccc;")
+		itemDiv.Set("style", "cursor: pointer; margin: 5px; padding: 5px; border: 1px solid var(--tm-border);")
 
 		summaryDiv := editor.document.Call("createElement", "div")
 		summaryDiv.Set("textContent", editor.bookingSummaryText(record))

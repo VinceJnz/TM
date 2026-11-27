@@ -1,5 +1,5 @@
 .tm-dialog { max-width: min(32rem, calc(100vw - 2rem)); width: 100%; box-sizing: border-box; border: 1px solid var(--tm-border); border-radius: 12px; padding: 1.25rem; color: var(--tm-text); background: var(--tm-surface); }
-.tm-dialog::backdrop { background: rgb(0 0 0 / 45%); }
+.tm-dialog::backdrop { background: var(--tm-backdrop); }
 .tm-dialog textarea { width: 100%; box-sizing: border-box; min-height: 6rem; margin-top: .5rem; }
 .tm-feedback { padding: .75rem; border-left: 4px solid var(--tm-primary); background: var(--tm-surface-muted); margin: .5rem 0; }
 .tm-empty { padding: 1rem; color: var(--tm-text-subtle); }

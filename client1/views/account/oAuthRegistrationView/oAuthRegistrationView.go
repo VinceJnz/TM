@@ -262,13 +262,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	// Append elements to form
 	viewHelpers.StyleSubmitButton(submitBtn)
-	viewHelpers.SetStyles(submitBtn, map[string]string{
-		"backgroundColor": "#1d4ed8",
-		"color":           "#ffffff",
-		"border":          "1px solid #1e40af",
-		"fontWeight":      "700",
-		"boxShadow":       "0 10px 24px rgba(29, 78, 216, 0.22)",
-	})
 	viewHelpers.StyleButtonSecondary(cancelBtn)
 	buttonRow := viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
 	form.Call("appendChild", buttonRow)

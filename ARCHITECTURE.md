@@ -412,6 +412,10 @@ Immutable production image approval, monitoring and recovery are separate operat
 actions: see [release operations](docs/release-operations.md),
 [PostgreSQL upgrade](docs/postgres-upgrade.md) and [test-mode controls](docs/test-mode.md).
 
+## Shared browser theme
+
+The WASM shell and standalone content pages load the same base and component stylesheets. Shared CSS variables define branded controls, selection, overlays and report status colors.
+
 ## 7. Accepted decisions and reasons
 
 | ID | Decision | Reason / consequence |

@@ -567,7 +567,7 @@ func (editor *ItemEditor) populateItemList() {
 		errDiv := editor.document.Call("createElement", "div")
 		errDiv.Set("textContent", "Could not load refund records: "+editor.LastFetchError)
 		errDiv.Get("style").Call("setProperty", "margin", "10px 5px")
-		errDiv.Get("style").Call("setProperty", "color", "#b00020")
+		errDiv.Get("style").Call("setProperty", "color", "var(--tm-error-text)")
 		editor.ListDiv.Call("appendChild", errDiv)
 		return
 	}

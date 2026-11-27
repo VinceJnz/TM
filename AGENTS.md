@@ -81,6 +81,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## WASM frontend
 
+- Use shared theme variables for visual states in public pages and WASM views. Keep status labels and keyboard focus visible when changing colors.
+
 - Put the expansion triangle and item name inside the same disclosure button. Keep the triangle decorative for assistive technology and update the button's expanded state.
 
 - Show existing-record editors directly under the selected administration row. Keep Add at the top of the list, keep lookup failures and retries with the selected row, and return focus to its action on Cancel. Shared editors must confirm before replacing unsaved edits.

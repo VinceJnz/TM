@@ -160,13 +160,13 @@ type statusStyle struct {
 func participantStatusColors(status string) statusStyle {
 	switch status {
 	case "before_threshold_paid":
-		return statusStyle{background: "#eaf8ef", border: "#9ed7b3"}
+		return statusStyle{background: "var(--tm-success-bg)", border: "var(--tm-success-border)"}
 	case "before_threshold":
-		return statusStyle{background: "#fff4de", border: "#e8c57a"}
+		return statusStyle{background: "var(--tm-warning-bg)", border: "var(--tm-warning-border)"}
 	case "after_threshold":
-		return statusStyle{background: "#fdeaea", border: "#e3a0a0"}
+		return statusStyle{background: "var(--tm-error-bg)", border: "var(--tm-error-border)"}
 	default:
-		return statusStyle{background: "#eef3f8", border: "#c8d4e3"}
+		return statusStyle{background: "var(--tm-neutral-bg)", border: "var(--tm-neutral-border)"}
 	}
 }
 
