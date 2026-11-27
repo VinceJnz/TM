@@ -14,6 +14,24 @@
 	margin-inline-end: .4rem;
 }
 
+.tm-appearance-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+	gap: .75rem;
+}
+.tm-appearance-fields label { display: grid; align-content: start; gap: .25rem; min-width: 0; }
+.tm-appearance-fields input { max-width: 100%; }
+.tm-appearance-preview {
+	padding: 1rem;
+	background: var(--tm-bg);
+	color: var(--tm-text);
+	font-family: var(--tm-font);
+	border: 1px solid var(--tm-border);
+	border-radius: var(--tm-panel-radius);
+}
+.tm-appearance-preview .tm-card { margin-top: .75rem; }
+.tm-appearance-preview input { max-width: 100%; font-family: inherit; }
+
 .tm-dialog { max-width: min(32rem, calc(100vw - 2rem)); width: 100%; box-sizing: border-box; border: 1px solid var(--tm-border); border-radius: 12px; padding: 1.25rem; color: var(--tm-text); background: var(--tm-surface); }
 .tm-dialog::backdrop { background: var(--tm-backdrop); }
 .tm-dialog textarea { width: 100%; box-sizing: border-box; min-height: 6rem; margin-top: .5rem; }
@@ -40,6 +58,24 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 	object-fit: contain;
 	margin-inline-end: .4rem;
 }
+
+.tm-appearance-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+	gap: .75rem;
+}
+.tm-appearance-fields label { display: grid; align-content: start; gap: .25rem; min-width: 0; }
+.tm-appearance-fields input { max-width: 100%; }
+.tm-appearance-preview {
+	padding: 1rem;
+	background: var(--tm-bg);
+	color: var(--tm-text);
+	font-family: var(--tm-font);
+	border: 1px solid var(--tm-border);
+	border-radius: var(--tm-panel-radius);
+}
+.tm-appearance-preview .tm-card { margin-top: .75rem; }
+.tm-appearance-preview input { max-width: 100%; font-family: inherit; }
 
 .tm-dialog { padding: .75rem; }
  .tm-form-actions,.tm-card > div { flex-wrap:wrap; gap:.5rem; }

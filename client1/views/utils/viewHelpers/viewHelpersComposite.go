@@ -137,8 +137,8 @@ func StyleSubmitButton(button js.Value) {
 	SetStyles(button, map[string]string{
 		"width":           "100%",
 		"padding":         "12px",
-		"backgroundColor": "#4285f4",
-		"color":           "white",
+		"backgroundColor": "var(--tm-primary)",
+		"color":           "var(--tm-on-action)",
 		"border":          "none",
 		"borderRadius":    "4px",
 		"fontSize":        "16px",

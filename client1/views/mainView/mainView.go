@@ -9,6 +9,7 @@ import (
 	"client1/v2/views/accessScopeView"
 	"client1/v2/views/account/basicAuthLoginView"
 	"client1/v2/views/account/logoutView"
+	"client1/v2/views/appearanceView"
 	"client1/v2/views/bookingStatusView"
 	"client1/v2/views/bookingVoucherView"
 	"client1/v2/views/contentView"
@@ -119,6 +120,7 @@ func (v *View) buildAdminMenuItems() []menuItemSpec {
 func (v *View) buildSysadminMenuItems() []menuItemSpec {
 	return []menuItemSpec{
 		{title: "Access Level", apiURL: accessLevelView.ApiURL, element: accessLevelView.New(v.document, v.events, v.appCore)},
+		{title: "Appearance", apiURL: appearanceView.ApiURL, element: appearanceView.New(v.document, v.appCore)},
 		{title: "Access Scope", apiURL: accessScopeView.ApiURL, element: accessScopeView.New(v.document, v.events, v.appCore)},
 		{title: "Gateway Credentials", apiURL: gmailCertView.ApiURL, element: gmailCertView.New(v.document, v.events, v.appCore)},
 		{title: "Resource", apiURL: resourceView.ApiURL, element: resourceView.New(v.document, v.events, v.appCore)},

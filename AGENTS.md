@@ -81,6 +81,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## WASM frontend
 
+- Keep Appearance publication behind the dedicated siteAppearance any-scope capability. Validate typed settings and image uploads before appending a revision. Preserve the user's edit version on conflicts.
 - Load the published appearance stylesheet in all browser entry points. Keep the built-in appearance usable if the published settings are unavailable.
 - Use shared theme variables for visual states in public pages and WASM views. Keep status labels and keyboard focus visible when changing colors.
 

@@ -418,6 +418,8 @@ The WASM shell and standalone content pages load the same base and component sty
 
 Migration 0037 adds an append-only appearance revision table and grants appearance editing to groups with the security-grant update capability at any scope. Public styles and branding are served before WASM loads, with built-in defaults available when the store cannot be read. Coordinate the migration and API cutover because no compatibility floor is declared.
 
+System Administrator → Appearance previews branding locally and publishes validated settings through the `siteAppearance` capability. Publication records the actor and time and checks the version atomically. Restore defaults and restore previous publish new revisions, preserving the history. The browser reloads after successful publication.
+
 ## 7. Accepted decisions and reasons
 
 | ID | Decision | Reason / consequence |
