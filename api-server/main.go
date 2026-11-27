@@ -5,6 +5,7 @@ import (
 	"api-server/v2/app/httpserver"
 	"api-server/v2/localHandlers/handlerAccessLevel"
 	"api-server/v2/localHandlers/handlerAccessScope"
+	"api-server/v2/localHandlers/handlerAppearance"
 	"api-server/v2/localHandlers/handlerAuth"
 	"api-server/v2/localHandlers/handlerBooking"
 	"api-server/v2/localHandlers/handlerBookingPeople"
@@ -181,6 +182,8 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	handlerAccessScope.New(app).RegisterRoutes(protected, "/securityAccessScope")             // AccessScope routes
 	handlerAccessScope.New(app).RegisterRoutes(protected, "/securityAccessType")              // Legacy alias for AccessScope routes
 	handlerGmailCert.New(app).RegisterRoutes(protected, "/gmailcert")                         // Gmail cert management (Sys Admin only)
+
+	handlerAppearance.Register(app, r, protected)
 
 	// Static handlers
 	r.PathPrefix("/").Handler(httpserver.Static("./static"))

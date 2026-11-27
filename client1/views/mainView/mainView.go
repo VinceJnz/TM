@@ -241,11 +241,21 @@ func (v *View) Setup() {
 	v.elements.navbar.Call("appendChild", menuIcon)
 
 	appTitle := "Trip Manager"
+	brand := js.Global().Get("TM_BRAND")
+	if !brand.IsUndefined() && !brand.IsNull() {
+		appTitle = brand.Get("name").String()
+	}
 	brandClick := func() {
 		element := v.childElements["Home"]
 		v.navigateTo("Home", true, element, true)
 	}
 	v.elements.appBrand = viewHelpers.HRef(brandClick, v.document, appTitle, "appBrand")
+	if !brand.IsUndefined() && !brand.IsNull() && brand.Get("logo").Bool() {
+		image := v.document.Call("createElement", "img")
+		image.Set("alt", "")
+		image.Set("src", "/site-logo?v="+js.Global().Get("String").Invoke(brand.Get("version")).String())
+		v.elements.appBrand.Call("prepend", image)
+	}
 	v.elements.appBrand.Set("className", "menu-item")
 	v.elements.appBrand.Set("title", "Go to Home")
 	v.elements.navbar.Call("appendChild", v.elements.appBrand)

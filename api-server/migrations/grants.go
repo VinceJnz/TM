@@ -11,6 +11,7 @@ import (
 // Explicit capabilities: adding a table never silently grants runtime access.
 func runtimePolicy() map[string]string {
 	policy := map[string]string{}
+	policy["st_appearance_revision"] = "SELECT,INSERT"
 	for _, name := range strings.Fields(`at_booking_people at_bookings at_group_bookings at_trip_cost_groups at_trip_costs at_trips at_payments at_refunds at_booking_vouchers at_checkout_reservations et_access_level et_access_scope et_booking_status et_member_status et_resource et_seasons et_trip_difficulty et_trip_status et_trip_type et_user_account_status et_user_age_groups st_group st_group_resource st_token st_user_credentials st_user_group st_users st_auth_rate_limits st_email_changes`) {
 		policy[name] = "SELECT,INSERT,UPDATE,DELETE"
 	}

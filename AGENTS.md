@@ -81,6 +81,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## WASM frontend
 
+- Load the published appearance stylesheet in all browser entry points. Keep the built-in appearance usable if the published settings are unavailable.
 - Use shared theme variables for visual states in public pages and WASM views. Keep status labels and keyboard focus visible when changing colors.
 
 - Put the expansion triangle and item name inside the same disclosure button. Keep the triangle decorative for assistive technology and update the button's expanded state.

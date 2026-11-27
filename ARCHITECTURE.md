@@ -416,6 +416,8 @@ actions: see [release operations](docs/release-operations.md),
 
 The WASM shell and standalone content pages load the same base and component stylesheets. Shared CSS variables define branded controls, selection, overlays and report status colors.
 
+Migration 0037 adds an append-only appearance revision table and grants appearance editing to groups with the security-grant update capability at any scope. Public styles and branding are served before WASM loads, with built-in defaults available when the store cannot be read. Coordinate the migration and API cutover because no compatibility floor is declared.
+
 ## 7. Accepted decisions and reasons
 
 | ID | Decision | Reason / consequence |
