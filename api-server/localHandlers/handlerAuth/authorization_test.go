@@ -4,11 +4,9 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/internal/testdb"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -22,10 +20,7 @@ INSERT INTO st_users(id,name,username,email,user_account_status_id) VALUES(1,'Me
 INSERT INTO st_group VALUES(1,'Members');INSERT INTO st_user_group VALUES(1,1);
 INSERT INTO et_resource VALUES(1,'bookings');INSERT INTO et_access_level VALUES(1,'GET');INSERT INTO et_access_scope VALUES(1,'own');`)
 	h := New(&appCore.Config{Db: db, SessionIDKey: "test"})
-	cookie, err := dbAuthTemplate.CreateSessionToken("test", db, 1, "localhost", time.Now().Add(time.Hour))
-	if err != nil {
-		t.Fatal(err)
-	}
+	cookie := issueTestSession(t, h)
 	r := mux.NewRouter()
 	r.Use(h.RequireSessionAuth, h.RequireCapability)
 	helpers.CapabilityRoute(r, "/custom/v9/renamed-route", "bookings", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }).Methods("GET")
@@ -62,10 +57,7 @@ INSERT INTO st_group VALUES(1,'Members');INSERT INTO st_user_group VALUES(1,1);
 INSERT INTO et_resource VALUES(1,'tripsReport');INSERT INTO et_access_level VALUES(1,'GET');INSERT INTO et_access_scope VALUES(1,'own'),(2,'any');
 INSERT INTO st_group_resource VALUES(1,1,1,1);`)
 	h := New(&appCore.Config{Db: db, SessionIDKey: "test"})
-	cookie, err := dbAuthTemplate.CreateSessionToken("test", db, 1, "localhost", time.Now().Add(time.Hour))
-	if err != nil {
-		t.Fatal(err)
-	}
+	cookie := issueTestSession(t, h)
 	router := mux.NewRouter()
 	router.Use(h.RequireSessionAuth, h.RequireCapability)
 	helpers.CapabilityRoute(router, "/tripsReport", "tripsReport", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }).Methods("GET")
@@ -79,7 +71,7 @@ INSERT INTO st_group_resource VALUES(1,1,1,1);`)
 	if got := request(); got != 403 {
 		t.Fatalf("own grant reached global report: %d", got)
 	}
-	if _, err = db.Exec(`UPDATE st_group_resource SET access_scope_id=2`); err != nil {
+	if _, err := db.Exec(`UPDATE st_group_resource SET access_scope_id=2`); err != nil {
 		t.Fatal(err)
 	}
 	if got := request(); got != 204 {

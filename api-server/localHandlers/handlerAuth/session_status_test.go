@@ -3,12 +3,10 @@ package handlerAuth
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/internal/testdb"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 func TestAuthStatusReflectsSessionAndAccountState(t *testing.T) {
@@ -20,10 +18,7 @@ func TestAuthStatusReflectsSessionAndAccountState(t *testing.T) {
 	app := appCore.New(false)
 	app.Db = db
 	h := New(app)
-	cookie, err := dbAuthTemplate.CreateSessionToken("test", db, 1, "localhost", time.Now().Add(time.Hour))
-	if err != nil {
-		t.Fatal(err)
-	}
+	cookie := issueTestSession(t, h)
 
 	checkStatus := func(session *http.Cookie, authenticated bool) {
 		t.Helper()

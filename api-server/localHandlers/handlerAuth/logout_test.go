@@ -3,13 +3,11 @@ package handlerAuth
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/internal/testdb"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 func TestLogoutRequiresPostRevokesSessionAndExpiresCookie(t *testing.T) {
@@ -21,10 +19,7 @@ func TestLogoutRequiresPostRevokesSessionAndExpiresCookie(t *testing.T) {
 	app.Db = db
 	app.Settings.Host = "localhost"
 	h := New(app)
-	cookie, err := dbAuthTemplate.CreateSessionToken("test", db, 1, "localhost", time.Now().Add(time.Hour))
-	if err != nil {
-		t.Fatal(err)
-	}
+	cookie := issueTestSession(t, h)
 	for _, tc := range []struct {
 		method, origin string
 		userID, status int
@@ -39,7 +34,7 @@ func TestLogoutRequiresPostRevokesSessionAndExpiresCookie(t *testing.T) {
 			t.Fatal(tc, w.Code)
 		}
 		if tc.status != 202 {
-			if _, err = dbAuthTemplate.FindSessionToken("test", db, cookie.Value); err != nil {
+			if _, err := h.authentication().Session(context.Background(), cookie.Value); err != nil {
 				t.Fatal("safe request revoked session")
 			}
 		} else {
@@ -47,7 +42,7 @@ func TestLogoutRequiresPostRevokesSessionAndExpiresCookie(t *testing.T) {
 			if len(cleared) != 1 || cleared[0].Domain != "" || cleared[0].Path != "/" || cleared[0].MaxAge >= 0 || !cleared[0].Secure || !cleared[0].HttpOnly || cleared[0].SameSite != http.SameSiteLaxMode {
 				t.Fatal(cleared)
 			}
-			if _, err = dbAuthTemplate.FindSessionToken("test", db, cookie.Value); err == nil {
+			if _, err := h.authentication().Session(context.Background(), cookie.Value); err == nil {
 				t.Fatal("session retained")
 			}
 		}

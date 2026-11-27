@@ -3,9 +3,9 @@ package handlerAuth
 import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/internal/testdb"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +20,7 @@ import (
 func TestPasswordResetRoutesValidateRequests(t *testing.T) {
 	router := mux.NewRouter()
 	New(nil).RegisterRoutesPublic(router, "/auth")
-	code := dbAuthTemplate.GenerateSecureToken()
+	code := base64.RawURLEncoding.EncodeToString(make([]byte, 32))
 	for _, tc := range []struct {
 		path, body string
 		status     int

@@ -56,6 +56,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Treat UI capabilities as presentation only. Every protected operation must be authorized on the server.
 - Do not add permissions based only on role names or hardcoded group IDs when the capability model can express them.
 - Protected routes declare capability metadata with `CapabilityRoute` or `AddRouteGroup`; `handlerAuth.setRestResource` reads the matched route declaration. Use the authentication store for grant lookups. Test the canonical resource and session requirement on nested, custom, and alias routes.
+- Build authentication test fixtures through the current service and store. Keep regression coverage for token digests, purpose, expiry, single use, cancellation, and session revocation.
 - Never log or return passwords, password hashes, session tokens, OTPs, OAuth codes, or secrets. Avoid logging complete user structs or authentication payloads.
 - Apply the same logging rules in browser code. Signup diagnostics must omit the submitted profile and credentials.
 - Hash passwords before any persistence, including pending-registration data. Use explicit request/response DTOs so sensitive model fields cannot be serialized accidentally.

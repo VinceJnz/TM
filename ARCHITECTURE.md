@@ -14,9 +14,8 @@ if this guide drifts; update the guide when resolving that drift.
   PostgreSQL. A microservice or JavaScript-framework rewrite is not an agreed goal.
 - HTTP handlers own transport; stores own SQL; services coordinate business rules
   and transactions. Read-only handlers may call a store directly.
-- Ordinary resources have largely migrated to stores/services. Core authentication
-  now has its own service/store too. Legacy compatibility helpers remain; do not
-  assume every function under `dbAuthTemplate` is migrated or unused.
+- Ordinary resources have largely migrated to stores/services. Authentication
+  handlers and tests use the authentication service and store.
 - Checkout/refunds already use services, gateways and transactional ledger commands.
   Do not move their writes into generic CRUD.
 - Authorization is a **resource + HTTP method + access scope** grant through groups.
@@ -217,14 +216,13 @@ Password reset and logout use the authentication service and store. Reset still
 consumes the proof, changes the password and invalidates sessions transactionally.
 Login account lookup and legacy login-token issuance use the same service. The
 registration proof and hashed profile are inserted together, and failed delivery
-discards the pending proof. `dbAuthTemplate` retains compatibility entry points.
+discards the pending proof.
 OTP delivery cleanup also uses the authentication service and scopes deletion to
 the issued proof and its account. OAuth session issuance uses the same token store.
 
 Permissions are grants through user groups for a resource, HTTP method and scope.
 The protected middleware reads grants through the
 [authentication store](api-server/modelMethods/authentication/capability.go).
-Legacy entry points delegate capability queries to that same store.
 [`SupportsScope`](api-server/app/authorization/scope.go) rejects unsupported ownership
 semantics. Middleware approval does not establish ownership of a particular record;
 enforce access on collections, individual/nested records, mutations and referenced parents.
@@ -495,15 +493,16 @@ The appearance service owns publication, defaults, and restoration through
 the appearance revision store. The authentication service owns Google account
 selection and continuation, registration age-group checks, and login,
 registration, and password-reset email workflows. Simple resource handlers
-can call dedicated stores directly. The handler audit found no inline SQL or
-direct calls to the legacy authentication adapter.
+can call dedicated stores directly. The `dbAuthTemplate` package has been retired.
+Authentication service and store tests cover token hashing, purpose and expiry,
+concurrent consumption, cancellation, password preservation, and session revocation.
 
 **Remaining limitations / follow-up candidates, not claims of completed work:**
 
 | Priority | Area | Guidance |
 |---|---|---|
 | Medium | Partial concurrency coverage | Catalogs and other resources still have unversioned edits. Extend deliberately where concurrent full edits pose a material risk; update callers and tests together |
-| Medium | Legacy persistence/adapters | Compatibility and generic helpers remain. Check actual production callers before removing them |
+| Medium | Legacy CRUD helpers | Some handlers still use HTTP request helpers in `dbStandardTemplate`. Check runtime and test callers before removing generic CRUD and compatibility code |
 | Medium | Contract and validation coverage | Some legacy resources still reuse models or handwritten contracts. Extend explicit DTOs and resource-specific validation as features change; the generator is not complete domain validation |
 | Medium | UI duplication and accessibility | Continue shared components, unique control IDs and lifecycle ownership. Manual screen-reader, device and broader visual audits remain necessary |
 | Operational | Environment and provider acceptance | Recheck actual migrations, roles, monitoring installation and required integrations. Automated provider fakes do not establish real Gmail/Google/Stripe readiness |

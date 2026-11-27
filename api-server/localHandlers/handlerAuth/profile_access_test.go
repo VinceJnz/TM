@@ -4,14 +4,12 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/internal/testdb"
 	"api-server/v2/localHandlers/handlerMyProfile"
-	"api-server/v2/modelMethods/dbAuthTemplate"
 	"api-server/v2/models"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -36,10 +34,7 @@ INSERT INTO st_group_resource VALUES (1, 1, 1, 1);
 `)
 	conf := &appCore.Config{Db: db, SessionIDKey: "profile-test"}
 	auth := New(conf)
-	cookie, err := dbAuthTemplate.CreateSessionToken("test", db, 1, "localhost", time.Now().Add(time.Hour))
-	if err != nil {
-		t.Fatal(err)
-	}
+	cookie := issueTestSession(t, auth)
 	if _, err := db.Exec(`UPDATE st_token SET valid_from = NOW() - INTERVAL '1 minute', valid_to = NOW() + INTERVAL '1 hour'`); err != nil {
 		t.Fatal(err)
 	}
