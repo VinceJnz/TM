@@ -4,6 +4,7 @@ import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
+	"context"
 	"net/http"
 	"strings"
 	"syscall/js"
@@ -36,7 +37,8 @@ type listener struct {
 }
 
 type Editor struct {
-	app                                                                                *appCore.AppCore
+	client                                                                             *httpProcessor.Client
+	cancelLoad                                                                         context.CancelFunc
 	doc, root, form, controls, feedback, preview, previewName, previewLogo             js.Value
 	name, primary, background, surface, text, font, logo, icon, removeLogo, removeIcon js.Value
 	listeners                                                                          []listener
@@ -45,7 +47,7 @@ type Editor struct {
 }
 
 func New(doc js.Value, app *appCore.AppCore) *Editor {
-	e := &Editor{app: app, doc: doc}
+	e := &Editor{client: app.HttpClient, doc: doc}
 	e.root = e.element(js.Undefined(), "div", "")
 	return e
 }
@@ -55,8 +57,13 @@ func (e *Editor) Display()         { e.root.Set("hidden", false) }
 func (e *Editor) Hide()            { e.root.Set("hidden", true); e.ResetView() }
 func (e *Editor) ResetView() {
 	e.generation++
+	if e.cancelLoad != nil {
+		e.cancelLoad()
+		e.cancelLoad = nil
+	}
 	if !e.previewLogo.IsUndefined() && !e.previewLogo.IsNull() {
 		revokePreview(e.previewLogo)
+		e.previewLogo = js.Undefined()
 	}
 	for _, l := range e.listeners {
 		l.node.Call("removeEventListener", l.event, l.callback)
@@ -109,11 +116,14 @@ func (e *Editor) message(err error, fallback string) {
 func (e *Editor) FetchItems() {
 	e.ResetView()
 	generation := e.generation
+	ctx, cancel := context.WithCancel(context.Background())
+	e.cancelLoad = cancel
 	e.feedback = e.element(e.root, "p", "Loading appearance…")
 	e.feedback.Set("role", "status")
 	go func() {
+		defer cancel()
 		var current settings
-		err := e.app.HttpClient.Request(http.MethodGet, ApiURL, &current, nil)
+		err := e.client.RequestContext(ctx, http.MethodGet, ApiURL, &current, nil)
 		if generation != e.generation {
 			return
 		}
@@ -285,7 +295,7 @@ func (e *Editor) publish(action string) {
 		}
 	}
 	var published settings
-	err := e.app.HttpClient.Request(http.MethodPut, ApiURL, &published, input)
+	err := e.client.Request(http.MethodPut, ApiURL, &published, input)
 	if generation != e.generation {
 		return
 	}

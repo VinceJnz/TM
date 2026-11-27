@@ -469,11 +469,11 @@ func (editor *ItemEditor) populateItemList() {
 		resourceGroupDiv := editor.document.Call("createElement", "div")
 		resourceGroupDiv.Set("id", debugTag+"resourceGroupDiv")
 		viewHelpers.SetStyles(resourceGroupDiv, map[string]string{
-			"border":        "1px solid #dbe4ef",
+			"border":        "1px solid var(--tm-border)",
 			"border-radius": "6px",
 			"padding":       "6px 8px",
 			"margin":        "4px 0",
-			"background":    "#fbfdff",
+			"background":    "var(--tm-surface)",
 			"font-size":     "0.9em",
 		})
 
@@ -481,7 +481,7 @@ func (editor *ItemEditor) populateItemList() {
 		headerDiv.Set("innerHTML", "<strong>"+safehtml.EscapeString(resourceName)+"</strong>")
 		viewHelpers.SetStyles(headerDiv, map[string]string{
 			"margin-bottom": "4px",
-			"color":         "#1d2f45",
+			"color":         "var(--tm-text)",
 		})
 		resourceGroupDiv.Call("appendChild", headerDiv)
 
@@ -504,7 +504,7 @@ func (editor *ItemEditor) populateItemList() {
 				"justify-content": "space-between",
 				"gap":             "8px",
 				"padding":         "4px 0",
-				"border-top":      "1px solid #e8eef5",
+				"border-top":      "1px solid var(--tm-border)",
 			})
 
 			detailDiv := editor.document.Call("createElement", "div")

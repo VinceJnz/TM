@@ -496,13 +496,13 @@ func (p *Process) showStatus(statusDiv js.Value, message string, messageType str
 
 	if messageType == "error" {
 		viewHelpers.SetStyles(statusDiv, map[string]string{
-			"backgroundColor": "#ffebee",
-			"color":           "#c62828",
+			"backgroundColor": "var(--tm-error-bg)",
+			"color":           "var(--tm-error-text)",
 		})
 	} else if messageType == "success" {
 		viewHelpers.SetStyles(statusDiv, map[string]string{
-			"backgroundColor": "#e8f5e9",
-			"color":           "#2e7d32",
+			"backgroundColor": "var(--tm-success-bg)",
+			"color":           "var(--tm-success-text)",
 		})
 	}
 }

@@ -409,11 +409,11 @@ func (editor *ItemEditor) populateItemList() {
 		groupDiv := editor.document.Call("createElement", "div")
 		groupDiv.Set("id", debugTag+"groupDiv_"+strconv.Itoa(record.ID))
 		viewHelpers.SetStyles(groupDiv, map[string]string{
-			"border":          "1px solid #dbe4ef",
+			"border":          "1px solid var(--tm-border)",
 			"border-radius":   "6px",
 			"padding":         "8px",
 			"margin":          "4px 0",
-			"background":      "#fbfdff",
+			"background":      "var(--tm-surface)",
 			"font-size":       "0.9em",
 			"display":         "flex",
 			"align-items":     "center",
@@ -425,7 +425,7 @@ func (editor *ItemEditor) populateItemList() {
 		groupNameDiv.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Group)+"</strong>")
 		viewHelpers.SetStyles(groupNameDiv, map[string]string{
 			"flex-grow": "1",
-			"color":     "#1d2f45",
+			"color":     "var(--tm-text)",
 		})
 		groupDiv.Call("appendChild", groupNameDiv)
 
@@ -476,9 +476,9 @@ func (editor *ItemEditor) populateItemList() {
 		viewHelpers.SetStyles(editContainer, map[string]string{
 			"display":                    "none",
 			"padding":                    "8px",
-			"background":                 "#f8fafb",
+			"background":                 "var(--tm-surface-muted)",
 			"margin":                     "-4px 0 4px 0",
-			"border":                     "1px solid #dbe4ef",
+			"border":                     "1px solid var(--tm-border)",
 			"border-top":                 "none",
 			"border-bottom-left-radius":  "6px",
 			"border-bottom-right-radius": "6px",

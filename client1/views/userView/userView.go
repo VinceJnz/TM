@@ -355,7 +355,7 @@ func (editor *ItemEditor) populateEditForm() {
 			"margin-top":    "16px",
 			"margin-bottom": "8px",
 			"font-size":     "1.1em",
-			"color":         "#1d2f45",
+			"color":         "var(--tm-text)",
 		})
 		form.Call("appendChild", groupHeader)
 
@@ -581,7 +581,7 @@ func (editor *ItemEditor) populateItemList() {
 		userName.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Name)+"</strong> ("+safehtml.EscapeString(record.Email)+")")
 		viewHelpers.SetStyles(userName, map[string]string{
 			"font-size": "0.98em",
-			"color":     "#1d2f45",
+			"color":     "var(--tm-text)",
 			"flex-grow": "1",
 		})
 		userName.Call("prepend", toggleIndicator)
@@ -622,7 +622,7 @@ func (editor *ItemEditor) populateItemList() {
 		childContainer.Get("style").Call("setProperty", "display", "none")
 		childContainer.Get("style").Call("setProperty", "margin-top", "8px")
 		viewHelpers.SetStyles(childContainer, map[string]string{
-			"border-top":  "1px solid #e0e8f0",
+			"border-top":  "1px solid var(--tm-border)",
 			"padding-top": "8px",
 		})
 		domEvents.Listen(childContainer, "click", func(this js.Value, args []js.Value) interface{} {
@@ -723,10 +723,10 @@ func (editor *ItemEditor) renderInlineEditForm(container js.Value, record TableD
 	// Create form wrapper
 	formWrapper := editor.document.Call("createElement", "div")
 	viewHelpers.SetStyles(formWrapper, map[string]string{
-		"background":    "#f8fafb",
+		"background":    "var(--tm-surface-muted)",
 		"padding":       "12px",
 		"border-radius": "4px",
-		"border":        "1px solid #e0e8f0",
+		"border":        "1px solid var(--tm-border)",
 	})
 
 	// Each form owns its record and field references, even when another row is edited.

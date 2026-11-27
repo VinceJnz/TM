@@ -331,39 +331,15 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Payment Successful</title>
-	<style>
-		body {
-			font-family: Arial, sans-serif;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			height: 100vh;
-			margin: 0;
-			background-color: #f5f5f5;
-		}
-		.container {
-			text-align: center;
-			padding: 40px;
-			background: white;
-			border-radius: 8px;
-			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-		}
-		.success-icon {
-			color: #4caf50;
-			font-size: 48px;
-			margin-bottom: 20px;
-		}
-		h1 {
-			color: #333;
-			margin-bottom: 10px;
-		}
-		p {
-			color: #666;
-			margin-bottom: 20px;
-		}
-	</style>
+	<link rel="stylesheet" href="/tm-base-theme.css">
+	<link rel="stylesheet" href="/tm-components.css">
+	<link rel="stylesheet" href="/site-theme.css">
+	<link rel="icon" href="/favicon.ico">
+	<script src="/site-brand.js"></script>
+	<script src="/site-branding.js" defer></script>
 </head>
-<body>
+<body class="tm-checkout-result" data-page-title="Payment Successful">
+<header class="navbar"><a href="/" class="tm-public-brand">Trip Manager</a></header>
 	<script>
 		(function () {
 			var payload = { type: "tm-payment-status", status: "complete", bookingId: %d };
@@ -379,12 +355,12 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 			setTimeout(function () { window.close(); }, 300);
 		})();
 	</script>
-	<div class="container">
-		<div class="success-icon">&#10003;</div>
+	<main class="tm-member-card tm-card">
+		<div class="tm-checkout-success" aria-hidden="true">&#10003;</div>
 		<h1>Payment Completed Successfully</h1>
 		<p>Your booking has been confirmed.</p>
 		<p><a href="/#/mybookings">Return to My Bookings</a></p>
-	</div>
+	</main>
 </body>
 </html>`, bookingID)
 	w.Header().Set("Content-Type", "text/html")
@@ -526,39 +502,15 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Payment Cancelled</title>
-	<style>
-		body {
-			font-family: Arial, sans-serif;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			height: 100vh;
-			margin: 0;
-			background-color: #f5f5f5;
-		}
-		.container {
-			text-align: center;
-			padding: 40px;
-			background: white;
-			border-radius: 8px;
-			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-		}
-		.cancel-icon {
-			color: #ff9800;
-			font-size: 48px;
-			margin-bottom: 20px;
-		}
-		h1 {
-			color: #333;
-			margin-bottom: 10px;
-		}
-		p {
-			color: #666;
-			margin-bottom: 20px;
-		}
-	</style>
+	<link rel="stylesheet" href="/tm-base-theme.css">
+	<link rel="stylesheet" href="/tm-components.css">
+	<link rel="stylesheet" href="/site-theme.css">
+	<link rel="icon" href="/favicon.ico">
+	<script src="/site-brand.js"></script>
+	<script src="/site-branding.js" defer></script>
 </head>
-<body>
+<body class="tm-checkout-result" data-page-title="Payment Cancelled">
+<header class="navbar"><a href="/" class="tm-public-brand">Trip Manager</a></header>
 	<script>
 		(function () {
 			var payload = { type: "tm-payment-status", status: "cancelled", bookingId: %d };
@@ -574,12 +526,12 @@ func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 			setTimeout(function () { window.close(); }, 300);
 		})();
 	</script>
-	<div class="container">
-		<div class="cancel-icon">&#10005;</div>
+	<main class="tm-member-card tm-card">
+		<div class="tm-checkout-cancel" aria-hidden="true">&#10005;</div>
 		<h1>Payment Cancelled</h1>
 		<p>Your payment was not completed.</p>
 		<p><a href="/#/mybookings">Return to My Bookings</a></p>
-	</div>
+	</main>
 </body>
 </html>`, bookingID)
 	w.Header().Set("Content-Type", "text/html")

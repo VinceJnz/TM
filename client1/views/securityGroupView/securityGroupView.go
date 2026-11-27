@@ -419,7 +419,7 @@ func (editor *ItemEditor) populateItemList() {
 		groupName.Set("innerHTML", "<strong>"+safehtml.EscapeString(record.Name)+"</strong>")
 		viewHelpers.SetStyles(groupName, map[string]string{
 			"font-size": "0.98em",
-			"color":     "#1d2f45",
+			"color":     "var(--tm-text)",
 			"flex-grow": "1",
 		})
 		groupName.Call("prepend", toggleIndicator)
@@ -475,7 +475,7 @@ func (editor *ItemEditor) populateItemList() {
 		resourcesContainer.Get("style").Call("setProperty", "display", "none")
 		resourcesContainer.Get("style").Call("setProperty", "margin-top", "8px")
 		viewHelpers.SetStyles(resourcesContainer, map[string]string{
-			"border-top":  "1px solid #e0e8f0",
+			"border-top":  "1px solid var(--tm-border)",
 			"padding-top": "8px",
 		})
 		domEvents.Listen(resourcesContainer, "click", func(this js.Value, args []js.Value) interface{} {

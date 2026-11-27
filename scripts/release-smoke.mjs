@@ -703,8 +703,82 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
     return header.left>=0 && header.right<=window.innerWidth &&
       close.width<window.innerWidth/2 && document.documentElement.scrollWidth<=window.innerWidth+1;
   })()`,'mobile system administration layout overflows or stretches the close button');
+
+  const appearancePath = `${prefix}/siteAppearance`;
+  assert.equal((await request(appearancePath)).status, 401, 'anonymous appearance access');
+  const initialAppearance = await request(appearancePath, 'GET', undefined, adminCookie);
+  assert.equal(initialAppearance.status, 200, 'SysAdmin appearance access');
+  const initialVersion = JSON.parse(initialAppearance.body).version;
+  const rejected = {version:initialVersion, action:'publish', theme:{primary:'#ffff00'}};
+  assert.equal((await request(appearancePath, 'PUT', rejected, limitedCookie)).status, 403, 'member appearance write');
+  assert.equal((await request(appearancePath, 'PUT', rejected, adminCookie)).status, 400, 'low-contrast theme accepted');
+
+  await send('Runtime.evaluate',{expression:"location.hash='/siteappearance'"});
+  const appearanceForm = "document.querySelector('form:has(.tm-appearance-fields)')";
+  await waitUI(`!!(${appearanceForm})?.getClientRects().length`,'Appearance editor did not open');
+  await waitUI("document.documentElement.scrollWidth <= innerWidth + 1",'Appearance editor overflows on mobile');
+  await send('Runtime.evaluate',{expression:`(async () => {
+    const form = ${appearanceForm};
+    form.querySelector('input[type=text]').value='Smoke Club';
+    form.querySelector('input[type=color]').value='#166534';
+    form.querySelector('select').value='serif';
+    const canvas=document.createElement('canvas');
+    canvas.width=16; canvas.height=16;
+    canvas.getContext('2d').fillRect(0,0,16,16);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve));
+    for (const input of form.querySelectorAll('input[type=file]')) {
+      const transfer=new DataTransfer();
+      transfer.items.add(new File([blob],'smoke.png',{type:'image/png'}));
+      input.files=transfer.files;
+    }
+    form.dispatchEvent(new Event('input',{bubbles:true}));
+  })()`,awaitPromise:true});
+  await waitUI("document.querySelector('.tm-appearance-preview').textContent.includes('Smoke Club') && getComputedStyle(document.querySelector('.tm-appearance-preview .btn-primary')).backgroundColor==='rgb(22, 101, 52)'",'draft preview did not apply the appearance');
+  assert(!(await request('/site-theme.css')).body.includes('#166534'),'draft preview changed the published stylesheet');
+  await send('Runtime.evaluate',{expression:`(${appearanceForm}).requestSubmit()`});
+  await waitUI("document.querySelector('#appBrand')?.textContent==='Smoke Club' && document.querySelector('#appBrand img')?.naturalWidth===16",'publishing did not reload the app with the new name and logo');
+  const themeApplied = "getComputedStyle(document.documentElement).getPropertyValue('--tm-primary').trim()==='#166534'";
+  const stale = await request(appearancePath,'PUT',{version:initialVersion,action:'defaults'},adminCookie);
+  assert.equal(stale.status,409,'appearance update accepted a stale version');
+  assert.equal(JSON.parse(stale.body).error.code,'stale_record');
+  assert.equal((await request('/site-icon')).headers['content-type'],'image/png','custom favicon was not served');
+
+  for (const [width,mobile] of [[390,true],[1280,false]]) {
+    await send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile});
+    for (const path of ['/home.html','/about.html','/contact.html']) {
+      await send('Page.navigate',{url:origin+path});
+      await waitUI(`${themeApplied} && innerWidth===${width} && document.querySelector('.tm-public-brand')?.textContent==='Smoke Club' && document.querySelector('.tm-public-brand img')?.naturalWidth===16 && document.documentElement.scrollWidth<=innerWidth+1`,'published appearance missing from '+path);
+    }
+  }
+  for (const outcome of ['success','cancel']) {
+    await send('Page.navigate',{url:origin+`${prefix}/bookings/checkout/${outcome}/1`});
+    await waitUI(`${themeApplied} && document.querySelector('.tm-checkout-result .tm-public-brand')?.textContent==='Smoke Club'`,'checkout '+outcome+' did not inherit published appearance');
+  }
+  for (const route of ['/', '/about','/contact','/trips','/mybookings','/myprofile','/tripsreport','/payments','/securitygroup','/siteappearance']) {
+    await send('Page.navigate',{url:origin+'/#'+route});
+    await waitUI(`${themeApplied} && document.querySelector('#appBrand')?.textContent==='Smoke Club' && location.hash===${JSON.stringify('#'+route)}`,'app route did not inherit published appearance '+route);
+  }
+  await send('Network.deleteCookies',{name:'session',url:origin});
+  await send('Page.navigate',{url:origin+'/?smoke=appearance-anonymous#/login-register'});
+  await waitUI(`${themeApplied} && document.querySelector('#loginForm.tm-member-form')?.getClientRects().length>0`,'anonymous sign-in did not inherit published appearance');
+  await waitUI(`(() => {
+    if (document.querySelector('#resetEmail')?.getClientRects().length) return ${themeApplied};
+    document.querySelector('#forgotPassword')?.click();
+    return false;
+  })()`,'password recovery did not inherit published appearance');
+  await send('Network.setCookie',{name:'session',value:adminCookie.slice('session='.length),url:origin,secure:true,httpOnly:true,sameSite:'Lax'});
+  await send('Page.navigate',{url:origin+'/?smoke=appearance-restore#/siteappearance'});
+  await waitUI(`!!(${appearanceForm})?.getClientRects().length`,'Appearance editor did not reopen after publishing');
+  await send('Runtime.evaluate',{expression:`Array.from((${appearanceForm}).querySelectorAll('button')).find(b=>b.textContent==='Restore previous').click()`});
+  await waitUI("!!document.querySelector('dialog[open]')",'restore previous did not ask for confirmation');
+  await send('Runtime.evaluate',{expression:"document.querySelector('#tm-dialog-confirm').click()"});
+  await waitUI("document.querySelector('#appBrand')?.textContent==='Trip Manager' && !document.querySelector('#appBrand img')",'restore did not restore the original name and logo');
+  assert.equal((await request('/site-icon')).headers['content-type'],'image/x-icon','restoring did not restore the favicon');
+  await send('Network.deleteCookies',{name:'session',url:origin});
+  await send('Page.navigate',{url:origin+'/?smoke=appearance-restored#/login-register'});
+  await waitUI("document.querySelector('#loginForm.tm-member-form')?.getClientRects().length>0",'sign-in did not render after restoring appearance');
   assert.equal(exceptions.length,0,`browser exceptions: ${exceptions.join(', ')}`);
-  console.log('Real-browser WASM, account forms, modal focus, keyboard and mobile checks passed');
+  console.log('Real-browser WASM, account forms, appearance publication and restore, keyboard and mobile checks passed');
 } finally {
   socket?.close();
   try {
