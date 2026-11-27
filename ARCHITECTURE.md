@@ -232,6 +232,11 @@ grant other users' booking mutations, broader account reads or finance administr
 
 ## 5. WASM frontend and UI conventions
 
+The WASM shell announces operation results through a visually hidden ARIA live
+region. Item editing and loading states stay in their owning views. The browser
+smoke checks verify that the shell has no message history box and that profile
+and booking updates reach the live region.
+
 Administrator and System Administrator screens share administration styles in
 `tm-components.css`. The main view owns Close page and returns to the preceding
 application route, falling back to Home. Visible edited forms require confirmation

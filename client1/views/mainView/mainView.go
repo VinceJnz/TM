@@ -76,16 +76,16 @@ type sectionElement struct {
 }
 
 type viewElements struct {
-	sidemenu     js.Value
-	topmenu      js.Value
-	navbar       js.Value
-	appBrand     js.Value
-	mainContent  js.Value
-	statusOutput js.Value
-	pageTitle    js.Value
-	closeAdmin   js.Value
-	userDisplay  js.Value
-	myProfileBtn js.Value
+	sidemenu        js.Value
+	topmenu         js.Value
+	navbar          js.Value
+	appBrand        js.Value
+	mainContent     js.Value
+	statusAnnouncer js.Value
+	pageTitle       js.Value
+	closeAdmin      js.Value
+	userDisplay     js.Value
+	myProfileBtn    js.Value
 }
 
 type children struct {
@@ -150,7 +150,6 @@ type View struct {
 
 	events              *eventProcessor.EventProcessor
 	CurrentRecord       TableData
-	ItemState           viewHelpers.ItemStateView //viewHelpers.ItemState
 	activeMenuTitle     string
 	adminReturnHash     string
 	activeHash          string
@@ -185,7 +184,6 @@ func New(appCore *appCore.AppCore) *View {
 	}
 
 	v.events = eventProcessor.New()
-	v.events.AddEventHandler(eventProcessor.EventTypeUpdateStatus, v.updateStatus)
 	v.events.AddEventHandler(eventProcessor.EventTypeDisplayMessage, v.displayMessage)
 	v.events.AddEventHandler(eventProcessor.EventTypeResetMenu, v.resetMenuEvent)
 	v.events.AddEventHandler(eventProcessor.EventTypeUpdateMenu, v.updateMenu)
@@ -351,12 +349,12 @@ func (v *View) Setup() {
 
 	log.Printf("%v %v", debugTag+"Setup()", "Menu items added")
 
-	// append statusOutput to the mainContent
-	v.elements.statusOutput = v.document.Call("createElement", "div")
-	v.elements.statusOutput.Set("id", "statusOutput")
-	v.elements.statusOutput.Set("className", "statusOutput")
-	v.elements.mainContent.Call("appendChild", v.elements.statusOutput)
-	v.ItemState = viewHelpers.NewItemStateView(v.document, v.elements.statusOutput)
+	v.elements.statusAnnouncer = v.document.Call("createElement", "div")
+	v.elements.statusAnnouncer.Set("id", "statusAnnouncer")
+	v.elements.statusAnnouncer.Set("className", "tm-visually-hidden")
+	v.elements.statusAnnouncer.Call("setAttribute", "role", "status")
+	v.elements.statusAnnouncer.Call("setAttribute", "aria-atomic", "true")
+	v.elements.mainContent.Call("appendChild", v.elements.statusAnnouncer)
 
 	// Replace the existing body with the new body
 	v.document.Get("documentElement").Call("replaceChild", newBody, v.document.Get("body"))

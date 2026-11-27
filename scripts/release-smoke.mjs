@@ -136,14 +136,7 @@ try {
     await delay(100);
   }
   if(!rendered){const diagnostic=await send('Runtime.evaluate',{expression:"JSON.stringify({text:document.body.textContent.slice(0,1400),user:document.querySelector('#userDisplay')?.textContent,base:window.TM_CONFIG?.apiBase})",returnByValue:true});assert.fail('WASM did not render the authenticated UI: '+diagnostic.result?.value+' exceptions='+exceptions.join(' | ')+' console='+browserConsole.slice(-12).join(' | '));}
-  await waitUI("document.querySelector('#statusOutputToggle[aria-expanded=false][aria-controls=statusOutputMessages]') !== null",'messages control did not start collapsed');
-  await waitUI("document.querySelector('#statusOutput > [role=status][aria-atomic=true]')?.getClientRects().length === 1",'messages live region is unavailable when history is collapsed');
-  await send('Runtime.evaluate',{expression:"document.querySelector('#statusOutputToggle').focus()"});
-  for (const expanded of ['true','false']) {
-    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13});
-    await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
-    await waitUI(`document.activeElement.getAttribute('aria-expanded')==='${expanded}' && (getComputedStyle(document.querySelector('#statusOutputMessages')).display!=='none')===${expanded}`,'messages keyboard disclosure state did not match visibility');
-  }
+  await waitUI("document.querySelector('#statusOutput') === null && document.querySelector('#statusAnnouncer[role=status][aria-atomic=true]')?.getClientRects().length === 1",'messages box remains or the status live region is unavailable');
   await waitUI("Array.from(document.querySelectorAll('#sideMenu a')).some(a=>a.textContent==='Trip List'&&getComputedStyle(a).display!=='none')",'standard member Trip List menu item is hidden');
   const menuClose=await send('Runtime.evaluate',{expression:"document.querySelector('#menuIcon').click();const close=document.querySelector('#sideMenuClose');const valid=close?.textContent===String.fromCharCode(0x00d7)&&close.getAttribute('aria-label')==='Close menu'&&document.querySelector('#sideMenu').style.width==='250px';const route=location.hash;close.click();valid&&document.querySelector('#sideMenu').style.width==='0px'&&location.hash===route",returnByValue:true});
   assert.equal(menuClose.result?.value,true,'side menu close symbol or action is incorrect');
@@ -155,7 +148,7 @@ try {
   await waitUI("(() => { const fields=document.querySelector('#myProfileEditForm .tm-booking-fields'); return innerWidth===390 && fields.getBoundingClientRect().right<=391 && getComputedStyle(fields).gridTemplateColumns.trim().split(/\\s+/).length===1; })()",'profile fields did not fit the mobile viewport');
   await send('Emulation.clearDeviceMetricsOverride');
   await send('Runtime.evaluate',{expression:"document.querySelector('#profileAddress').value='Synthetic profile address';document.querySelector('#myProfileEditForm').requestSubmit()"});
-  await waitUI("document.querySelector('#statusOutput > [role=status]')?.textContent==='Profile updated successfully'",'profile form could not save');
+  await waitUI("document.querySelector('#statusAnnouncer[role=status]')?.textContent==='Profile updated successfully'",'profile form could not save');
   const profile = await request(`${prefix}/myProfile`, 'GET', undefined, cookie);
   assert.equal(profile.status,200);
   assert.equal(JSON.parse(profile.body).user_address,'Synthetic profile address');
@@ -305,7 +298,7 @@ try {
   await waitUI(`(${memberBooking})?.querySelector('details')?.open`,'confirmed booking details did not open');
   await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('.tm-booking-actions button').click()`});
   await waitUI(`(${memberBooking})?.querySelector('details[open] .tm-booking-participant')?.getClientRects().length>0`,'confirmed booking did not reveal its participants');
-  await waitUI("document.querySelector('#statusOutput > [role=status]')?.textContent==='Booking confirmed.'",'booking result was not announced');
+  await waitUI("document.querySelector('#statusAnnouncer[role=status]')?.textContent==='Booking confirmed.'",'booking result was not announced');
   assert(requests.some(url=>url.endsWith('/bookings/checkout/confirm/1')), 'zero-total confirmation request missing');
   assert(!requests.some(url=>url.includes('/bookings/checkout/create/')), 'zero-total booking opened Stripe checkout');
   const tripBooking = "document.querySelector('#trip-details-1 [id=\"bookingView.itemEditDiv\"]')";

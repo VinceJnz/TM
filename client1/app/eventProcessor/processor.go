@@ -8,7 +8,6 @@ import (
 const debugTag = "eventProcessor."
 
 const (
-	EventTypeUpdateStatus   = "updateStatus"
 	EventTypeDisplayMessage = "displayMessage"
 	EventTypeResetMenu      = "resetMenu"
 	EventTypeUpdateMenu     = "updateMenu"

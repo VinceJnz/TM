@@ -299,49 +299,6 @@ fieldset {
 	transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-#statusOutput {
-	position: fixed;
-	right: 12px;
-	bottom: 12px;
-	max-width: min(640px, calc(100vw - 24px));
-	max-height: 35vh;
-	overflow: auto;
-	background: var(--tm-overlay-surface);
-	border: 1px solid var(--tm-border);
-	border-radius: 8px;
-	padding: 8px;
-	box-shadow: var(--tm-shadow);
-	z-index: 30;
-	font-size: 13px;
-}
-
-#statusOutputHeader {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 8px;
-	font-weight: 600;
-	gap: 8px;
-}
-
-#statusOutputToggle {
-	padding: 4px 8px;
-	border: 1px solid var(--tm-border);
-	border-radius: 6px;
-	background: var(--tm-surface);
-	color: var(--tm-text);
-	cursor: pointer;
-	font-size: 12px;
-}
-
-#statusOutputMessages > div {
-	padding: 6px 8px;
-	border-radius: 6px;
-	background: var(--tm-surface-muted);
-	margin-bottom: 6px;
-	word-break: break-word;
-}
-
 @media (max-width: 920px) {
 	.main {
 		margin-left: 0 !important;
@@ -398,12 +355,5 @@ fieldset {
 		display: grid !important;
 		grid-template-columns: 1fr;
 		gap: 8px;
-	}
-
-	#statusOutput {
-		left: 10px;
-		right: 10px;
-		max-width: none;
-		font-size: 12px;
 	}
 }

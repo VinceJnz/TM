@@ -355,7 +355,7 @@ func (editor *ItemEditor) FetchItems() {
 //}
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
-	viewHelpers.SetItemState(editor.events, &editor.ItemState, newState, debugTag)
+	editor.ItemState = newState
 }
 
 func (editor *ItemEditor) authProcess(this js.Value, args []js.Value) any {

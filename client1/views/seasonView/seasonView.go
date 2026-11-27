@@ -414,5 +414,5 @@ func (editor *ItemEditor) populateItemList() {
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
 	viewHelpers.Pending(editor.Div, int(newState) == 1 || int(newState) == 4 || int(newState) == 5)
-	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
+	editor.ItemState = newState
 }

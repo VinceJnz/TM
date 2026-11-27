@@ -3,16 +3,11 @@ package mainView
 import (
 	"client1/v2/app/appCore"
 	"client1/v2/app/eventProcessor"
-	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
 )
 
 const ApiURL = "/auth"
-
-func (editor *View) setMenuFetchState(state viewHelpers.ItemState) {
-	editor.ItemState.UpdateStatus(state, debugTag)
-}
 
 func (editor *View) requestMenuData(path string, target any, success func(error), fail func(error)) {
 	go func() {
@@ -36,7 +31,6 @@ func (editor *View) getMenuUser() {
 		editor.appCore.SetUser(menuUser) // Save the menuUser to the appCore
 		editor.setTopAuthAction(menuUser.UserID > 0)
 		editor.elements.userDisplay.Set("textContent", editor.appCore.User.Name)
-		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		if menuUser.UserID > 0 {
 			editor.getMenuList()
 			return
@@ -55,13 +49,11 @@ func (editor *View) getMenuUser() {
 		editor.appCore.SetCapabilities(nil)
 		editor.setTopAuthAction(false)
 		editor.resetMenu()
-		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		editor.applyRouteFromLocation()
 		//Don't display message to user
 	}
 
 	log.Printf("%v %v client = %+v httpClient = %+v", debugTag+"getMenuUser()", "Fetching menu user from server.", editor.client, editor.client.HTTPClient)
-	editor.setMenuFetchState(viewHelpers.ItemStateFetching)
 	editor.requestMenuData("/menuUser/", &menuUser, success, fail)
 }
 
@@ -84,7 +76,6 @@ func (editor *View) getMenuList() {
 			})
 		}
 		editor.appCore.SetCapabilities(capabilities)
-		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		editor.menuComplete()
 		editor.authResolved = true
 		editor.applyRouteFromLocation()
@@ -97,11 +88,9 @@ func (editor *View) getMenuList() {
 		editor.appCore.SetCapabilities(nil)
 		editor.resetMenu()
 		editor.authResolved = true
-		editor.setMenuFetchState(viewHelpers.ItemStateNone)
 		editor.applyRouteFromLocation()
 	}
 
-	editor.setMenuFetchState(viewHelpers.ItemStateFetching)
 	editor.requestMenuData("/menuList/", &menuList, success, fail)
 }
 

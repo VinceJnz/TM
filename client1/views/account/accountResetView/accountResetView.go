@@ -422,5 +422,5 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState ItemState) {
-	viewHelpers.SetItemStateFromLocal(editor.events, &editor.ItemState, newState, debugTag)
+	editor.ItemState = newState
 }

@@ -130,7 +130,6 @@ func (editor *ItemEditor) FetchItems() {
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
 	viewHelpers.Pending(editor.Div, newState == viewHelpers.ItemStateSaving || newState == viewHelpers.ItemStateFetching)
-	editor.events.ProcessEvent(eventProcessor.Event{Type: eventProcessor.EventTypeUpdateStatus, DebugTag: debugTag, Data: newState})
 }
 
 func (editor *ItemEditor) onCompletionMsg(msg string) {

@@ -844,7 +844,7 @@ func (editor *ItemEditor) populateItemList() {
 }
 
 func (editor *ItemEditor) updateStateDisplay(newState viewHelpers.ItemState) {
-	viewHelpers.SetItemState(editor.events, &editor.ItemState, newState, debugTag)
+	editor.ItemState = newState
 }
 
 func (editor *ItemEditor) bookingOwnerDisplay(record TableData) string {

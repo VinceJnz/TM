@@ -2,7 +2,6 @@ package mainView
 
 import (
 	"client1/v2/app/eventProcessor"
-	"client1/v2/views/utils/viewHelpers"
 	"log"
 	"net/http"
 	"strings"
@@ -70,16 +69,6 @@ func (v *View) showMenuSectionCollapsed(section sectionElement) {
 
 // Event handlers
 
-// updateState is an event handler the updates the page status on the main page.
-func (editor *View) updateStatus(event eventProcessor.Event) {
-	state, ok := event.Data.(viewHelpers.ItemState)
-	if !ok {
-		editor.logInvalidEventData("updateStatus()1", event)
-		return
-	}
-	editor.ItemState.UpdateStatus(state, event.DebugTag)
-}
-
 // displayMessage is an event handler the displays a message on the main page.
 func (v *View) displayMessage(event eventProcessor.Event) {
 	message, ok := event.Data.(string)
@@ -87,7 +76,7 @@ func (v *View) displayMessage(event eventProcessor.Event) {
 		v.logInvalidEventData("displayMessage()1", event)
 		return
 	}
-	v.ItemState.DisplayMessage(message)
+	v.elements.statusAnnouncer.Set("textContent", message)
 }
 
 // logoutComplete is an event handler the updates the logout status in the Navbar on the main page.
