@@ -481,6 +481,23 @@ identity retrieval in the gateway. HTTP handlers set cookies and redirects.
 Authentication rate limiting keeps request policy in middleware and records
 attempts atomically through the PostgreSQL authentication store.
 
+The Stripe webhook handler verifies the signed event and passes the checkout
+session to the checkout service. The service checks payment eligibility,
+attaches the session when recovery is needed, and finalizes through the
+transactional ledger. Redelivery can safely retry finalization.
+
+The Gmail credentials service serializes reconnect, refresh, and credential
+replacement. It owns session-bound renewal state and saves a usable token
+before activating the new gateway. The Gmail gateway makes provider exchanges.
+The handler enforces the credential grant through the authentication store.
+
+The appearance service owns publication, defaults, and restoration through
+the appearance revision store. The authentication service owns Google account
+selection and continuation, registration age-group checks, and login,
+registration, and password-reset email workflows. Simple resource handlers
+can call dedicated stores directly. The handler audit found no inline SQL or
+direct calls to the legacy authentication adapter.
+
 **Remaining limitations / follow-up candidates, not claims of completed work:**
 
 | Priority | Area | Guidance |

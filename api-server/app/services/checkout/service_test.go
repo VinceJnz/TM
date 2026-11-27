@@ -169,3 +169,26 @@ func TestCheckReportsOnlyOwnedCheckout(t *testing.T) {
 		t.Fatalf("mismatched provider session returned %v", err)
 	}
 }
+
+func TestWebhookRecoversUnattachedCheckoutAndSerializesReplay(t *testing.T) {
+	db := recoveryDB(t)
+	provider := &fakeProvider{db: db, createErr: true}
+	service := New(db, provider)
+	ctx := context.Background()
+	if _, err := service.Start(ctx, 11, 1, "member@example.test", "https://app.test"); err == nil {
+		t.Fatal("expected lost provider response")
+	}
+	session := provider.sessions[0]
+	session.State, session.Paid = "complete", true
+	paidAt := time.Now()
+	for _, expectedReplay := range []bool{false, true} {
+		replay, err := service.FinalizeWebhook(ctx, "synthetic-event", session, paidAt)
+		if err != nil || replay != expectedReplay {
+			t.Fatalf("replay=%v, want %v (err=%v)", replay, expectedReplay, err)
+		}
+	}
+	var count int
+	if err := db.Get(&count, "SELECT count(*) FROM at_payments"); err != nil || count != 1 {
+		t.Fatalf("payments=%d, err=%v", count, err)
+	}
+}

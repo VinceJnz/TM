@@ -2,6 +2,7 @@ package handlerBooking
 
 import (
 	"api-server/v2/app/services/checkout"
+	"api-server/v2/app/services/notifications"
 	"api-server/v2/localHandlers/helpers"
 	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
@@ -249,8 +250,8 @@ func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.appConf.TestMode {
 		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
-		if email := h.appConf.EmailService(); email != nil && appSession != nil && appSession.Email != "" {
-			if _, err := email.SendMail(appSession.Email, "Test Mode - Payment Successful", "Test mode enabled - payment successful for user email:"+appSession.Email); err != nil {
+		if appSession != nil {
+			if err := notifications.SendTestPaymentSuccess(h.appConf.EmailService(), appSession.Email); err != nil {
 				log.Printf("%v failed to send test-mode payment success email: %v", debugTag+"CheckoutSuccess()", err)
 			}
 		}
@@ -389,26 +390,24 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid || checkoutSession.Status != stripe.CheckoutSessionStatusComplete || checkoutSession.Mode != stripe.CheckoutSessionModePayment {
-		http.Error(w, "checkout is not paid", http.StatusBadRequest)
-		return
-	}
-	if key := checkoutSession.Metadata["tm_attempt"]; key != "" {
-		if string(checkoutSession.Currency) != "nzd" {
-			http.Error(w, "invalid currency", 400)
-			return
-		}
-		if err := paymentLedger.Attach(r.Context(), h.appConf.Db, key, checkoutSession.ID, "", checkoutSession.AmountTotal); err != nil {
-			http.Error(w, "checkout recovery failed", 500)
-			return
-		}
-	}
 	var paidAt time.Time
 	if event.Created > 0 {
 		paidAt = time.Unix(event.Created, 0)
 	}
-	replay, err := paymentLedger.Finalize(r.Context(), h.appConf.Db, event.ID, checkoutSession.ID, checkoutSession.AmountTotal, string(checkoutSession.Currency), paidAt)
-	if err != nil {
+	replay, err := checkout.New(h.appConf.Db, h.appConf.PaymentSvc).FinalizeWebhook(r.Context(), event.ID, checkout.Session{
+		ID: checkoutSession.ID, AttemptID: checkoutSession.Metadata["tm_attempt"],
+		State: string(checkoutSession.Status), Currency: string(checkoutSession.Currency),
+		Mode: string(checkoutSession.Mode), Amount: checkoutSession.AmountTotal,
+		Paid: checkoutSession.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid,
+	}, paidAt)
+	switch {
+	case errors.Is(err, checkout.ErrUnpaidWebhook), errors.Is(err, checkout.ErrWebhookCurrency):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	case errors.Is(err, checkout.ErrWebhookRecovery):
+		http.Error(w, "checkout recovery failed", http.StatusInternalServerError)
+		return
+	case err != nil:
 		logWebhookEvent("finalization_failed", map[string]interface{}{"event_id": event.ID, "checkout_session_id": checkoutSession.ID})
 		http.Error(w, "payment finalization failed; retry required", http.StatusInternalServerError)
 		return

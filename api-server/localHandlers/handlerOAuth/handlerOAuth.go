@@ -33,13 +33,6 @@ type Handler struct {
 	userInfoURL string
 }
 
-type oauthPendingRegistration struct {
-	Email      string `json:"email"`
-	Name       string `json:"name"`
-	Provider   string `json:"provider"`
-	ProviderID string `json:"provider_id"`
-}
-
 func New(appConf *appCore.Config) *Handler {
 	return &Handler{appConf: appConf, userInfoURL: "https://www.googleapis.com/oauth2/v3/userinfo"}
 }
@@ -121,50 +114,37 @@ func (h *Handler) callbackHandler(w http.ResponseWriter, r *http.Request) {
 		handlerHelpers.WriteForbidden(w, "verified provider identity required")
 		return
 	}
-	incoming := models.User{Name: identity.Name}
-	incoming.Email.SetValid(identity.Email)
-	incoming.Provider.SetValid("google")
-	incoming.ProviderID.SetValid(identity.Sub)
-	existing, found, err := h.authentication().Store.Identity(r.Context(), incoming.Provider.String, incoming.ProviderID.String, incoming.Email.String)
-	if err != nil {
+	host := h.appConf.Settings.Host
+	result, err := h.authentication().SignInWithGoogle(r.Context(), host, identity.Sub, identity.Email, identity.Name, identity.Verified)
+	switch {
+	case errors.Is(err, authService.ErrInactive):
+		handlerHelpers.WriteForbidden(w, "account is not active")
+		return
+	case errors.Is(err, authService.ErrOAuthLink):
+		handlerHelpers.WriteInternalServerError(w, "failed to link account")
+		return
+	case errors.Is(err, authService.ErrOAuthSession):
+		handlerHelpers.WriteInternalServerError(w, "failed to create session")
+		return
+	case errors.Is(err, authService.ErrOAuthContinuation):
+		handlerHelpers.WriteInternalServerError(w, "failed to prepare registration")
+		return
+	case err != nil:
 		handlerHelpers.WriteInternalServerError(w, "failed to load account")
 		return
 	}
-	if found && existing.UserActive() {
-		// Linking is only allowed after the provider has verified this email.
-		userID, err := h.authentication().LinkIdentity(r.Context(), existing.ID, "google", identity.Sub, identity.Email, identity.Verified)
-		if err != nil {
-			handlerHelpers.WriteInternalServerError(w, "failed to link account")
-			return
-		}
-		if err := handlerHelpers.CreateAndSetSessionCookie(r, debugTag, w, h.appConf.Db, userID, h.appConf.Settings.Host, time.Time{}); err != nil {
-			handlerHelpers.WriteInternalServerError(w, "failed to create session")
-			return
-		}
-		flag := "?oauth-login=true"
-		if existing.Username == "" {
-			flag = "?oauth-register=true"
-		}
-		http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect+flag, http.StatusFound)
-		return
+	if result.Session != "" {
+		handlerHelpers.SetSessionCookie(w, r, host, result.Session, time.Time{})
+	} else {
+		http.SetCookie(w, flowCookie(host, "oauth-registration", result.Continuation, result.ContinuationExpiry))
 	}
-	if found && existing.AccountStatusID.Int64 != int64(models.AccountNew) && existing.AccountStatusID.Int64 != int64(models.AccountVerified) {
-		handlerHelpers.WriteForbidden(w, "account is not active")
-		return
+	flag := "?oauth-login=true"
+	if result.NeedsRegistration {
+		flag = "?oauth-register=true"
 	}
-	pending, _ := json.Marshal(oauthPendingRegistration{Email: identity.Email, Name: identity.Name, Provider: "google", ProviderID: identity.Sub})
-	userID := 0
-	if found {
-		userID = existing.ID
-	}
-	continuation, err := h.issueFlowCookie(r, userID, "oauth-registration", string(pending))
-	if err != nil {
-		handlerHelpers.WriteInternalServerError(w, "failed to prepare registration")
-		return
-	}
-	http.SetCookie(w, continuation)
-	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect+"?oauth-register=true", http.StatusFound)
+	http.Redirect(w, r, h.appConf.OAuthSvc.ClientRedirect+flag, http.StatusFound)
 }
+
 func (h *Handler) meHandler(w http.ResponseWriter, r *http.Request) {
 	// Prefer an established DB session. If present, return the user info.
 	sc, err := r.Cookie("session")
@@ -391,16 +371,12 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	user.BirthDate = zero.NewTime(parsed, true)
 	user.UserAgeGroupID.SetValid(req.UserAgeGroupID)
 
-	ageGroupName, err := handlerHelpers.GetAgeGroupByIDContext(r.Context(), h.appConf.Db, req.UserAgeGroupID)
-	if err != nil {
-		log.Printf("%v CompleteRegistration - invalid age group %d: %v", debugTag, req.UserAgeGroupID, err)
-		http.Error(w, "invalid age group", http.StatusBadRequest)
-		return
-	}
-	isValidAge, err := handlerHelpers.ValidateAgeGroupForBirthDate(parsed, req.UserAgeGroupID, ageGroupName)
-	if err != nil || !isValidAge {
-		log.Printf("%v CompleteRegistration - age validation failed: %v", debugTag, err)
-		http.Error(w, "birthdate does not match the selected age group", http.StatusBadRequest)
+	if err := h.authentication().ValidateAgeGroup(r.Context(), parsed, req.UserAgeGroupID); err != nil {
+		if errors.Is(err, authService.ErrAgeGroupMismatch) {
+			http.Error(w, authService.ErrAgeGroupMismatch.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, authService.ErrAgeGroupUnavailable.Error(), http.StatusBadRequest)
+		}
 		return
 	}
 	if req.AccountHidden != nil {
@@ -441,18 +417,18 @@ func (h *Handler) findOAuthStateToken(r *http.Request) (models.Token, error) {
 	return h.authentication().Store.OAuthRegistration(r.Context(), c.Value)
 }
 
-func decodeOAuthPendingRegistration(raw string) (oauthPendingRegistration, error) {
+func decodeOAuthPendingRegistration(raw string) (authService.OAuthPendingRegistration, error) {
 	if strings.TrimSpace(raw) == "" {
-		return oauthPendingRegistration{}, http.ErrNoCookie
+		return authService.OAuthPendingRegistration{}, http.ErrNoCookie
 	}
 
-	var pending oauthPendingRegistration
+	var pending authService.OAuthPendingRegistration
 	if err := json.Unmarshal([]byte(raw), &pending); err != nil {
-		return oauthPendingRegistration{}, err
+		return authService.OAuthPendingRegistration{}, err
 	}
 
 	if strings.TrimSpace(pending.Email) == "" || strings.TrimSpace(pending.ProviderID) == "" {
-		return oauthPendingRegistration{}, http.ErrNoCookie
+		return authService.OAuthPendingRegistration{}, http.ErrNoCookie
 	}
 
 	return pending, nil
@@ -479,5 +455,9 @@ func (h *Handler) issueFlowCookie(r *http.Request, userID int, name, data string
 	if err != nil {
 		return nil, err
 	}
-	return &http.Cookie{Name: name, Value: raw, Path: "/", Domain: host, Expires: expires, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}, nil
+	return flowCookie(host, name, raw, expires), nil
+}
+
+func flowCookie(host, name, raw string, expires time.Time) *http.Cookie {
+	return &http.Cookie{Name: name, Value: raw, Path: "/", Domain: host, Expires: expires, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}
 }

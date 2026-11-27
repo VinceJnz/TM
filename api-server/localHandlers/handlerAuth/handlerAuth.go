@@ -9,11 +9,9 @@ import (
 	"api-server/v2/models"
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -106,27 +104,10 @@ func (h *Handler) RequestLoginToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create one-time email token valid for 1 hour
-	token, err := h.authentication().Issue(r.Context(), user.ID, h.appConf.Settings.Host, "_temp_email_token", time.Now().Add(time.Hour), "")
-	if err != nil {
-		log.Printf("%vRequestLoginToken failed to create email token: %v", debugTag, err)
+	if err := h.authentication().SendLegacyLoginToken(r.Context(), h.appConf.EmailService(), h.appConf.Settings.Host, user); err != nil {
+		log.Print("failed to create legacy login token")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
-	}
-
-	// Compose email
-	subject := "Your one-time login token"
-	body := fmt.Sprintf("Hi %s,\n\nUse this one-time token to log in: %s\n\nThis token expires in 1 hour.", user.Name, token)
-
-	// Send email using configured EmailSvc
-	if email := h.appConf.EmailService(); email != nil {
-		if success, err := email.SendMail(user.Email.String, subject, body); err != nil {
-			log.Printf("%vRequestLoginToken failed to send login token email: %v", debugTag, err)
-		} else {
-			log.Printf("%vRequestLoginToken email sent successfully: %v", debugTag, success)
-		}
-	} else {
-		log.Printf("%vRequestLoginToken EmailSvc not configured; token not sent", debugTag)
 	}
 
 	w.WriteHeader(http.StatusAccepted)
@@ -179,28 +160,23 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "email service unavailable", 503)
 		return
 	}
-	// Fetch the age group to validate it exists and get its name
-	ageGroupName, err := handlerHelpers.GetAgeGroupByIDContext(r.Context(), h.appConf.Db, payload.UserAgeGroupID.Int64)
-	if err != nil {
-		log.Printf("%vRegister failed to fetch age group %d: %v", debugTag, payload.UserAgeGroupID.Int64, err)
-		http.Error(w, "invalid age group", http.StatusBadRequest)
+	if err := h.authentication().ValidateAgeGroup(r.Context(), payload.BirthDate.Time, payload.UserAgeGroupID.Int64); err != nil {
+		if errors.Is(err, authService.ErrAgeGroupMismatch) {
+			http.Error(w, authService.ErrAgeGroupMismatch.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, authService.ErrAgeGroupUnavailable.Error(), http.StatusBadRequest)
+		}
 		return
 	}
 
-	// Validate that the birthdate matches the selected age group
-	isValid, errValidate := handlerHelpers.ValidateAgeGroupForBirthDate(payload.BirthDate.Time, payload.UserAgeGroupID.Int64, ageGroupName)
-	if errValidate != nil || !isValid {
-		log.Printf("%vRegister age validation failed: %v", debugTag, errValidate)
-		http.Error(w, "birthdate does not match the selected age group", http.StatusBadRequest)
-		return
-	}
-
-	auth := h.authentication()
-	token, err := auth.StageRegistration(r.Context(), h.appConf.Settings.Host, payload)
+	err := h.authentication().SendRegistration(r.Context(), h.appConf.EmailService(), h.appConf.Settings.Host, payload)
 	payload.Password = registrationRequest{}.Password
 	switch {
 	case errors.Is(err, authService.ErrUsernameTaken):
 		handlerHelpers.WriteError(w, http.StatusConflict, "username_taken", "That username is already taken.")
+		return
+	case errors.Is(err, authService.ErrRegistrationDelivery):
+		http.Error(w, "failed to send verification email", http.StatusInternalServerError)
 		return
 	case errors.Is(err, authService.ErrEmailTaken):
 		http.Error(w, "an account with this email address already exists", http.StatusConflict)
@@ -209,25 +185,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%vRegister failed to stage pending registration", debugTag)
 		http.Error(w, "failed to process registration", http.StatusInternalServerError)
 		return
-	}
-
-	// Send verification email
-	subject := "Verify your email to complete registration"
-	body := fmt.Sprintf("Hi %s,\n\nVerify your email using this code: %s\n\nThis code expires in 24 hours.\n\nIf you didn't register, you can ignore this email.", payload.Username, token)
-
-	if email := h.appConf.EmailService(); email != nil {
-		if success, err := email.SendMail(payload.Email.String, subject, body); err != nil {
-			log.Printf("%vRegister failed to send registration verification email: %v", debugTag, err)
-			if err := auth.DiscardRegistration(r.Context(), token); err != nil {
-				log.Printf("%vRegister failed to discard pending registration", debugTag)
-			}
-			http.Error(w, "failed to send verification email", http.StatusInternalServerError)
-			return
-		} else {
-			log.Printf("%vRegister registration verification email sent: %v", debugTag, success)
-		}
-	} else {
-		log.Printf("%vRegister EmailSvc not configured; verification email not sent", debugTag)
 	}
 
 	handlerHelpers.WriteAcceptedJSON(w, map[string]string{
@@ -315,22 +272,7 @@ func (h *Handler) LoginSendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create OTP token valid for 15 minutes and send email
-	subject := "Your one-time password (OTP)"
-	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(r.Context(),
-		debugTag+"LoginSendOTP:",
-		h.appConf.Db,
-		h.appConf.EmailService(),
-		user.ID,
-		h.appConf.Settings.Host,
-		"login-otp",
-		time.Now().Add(15*time.Minute),
-		user.Email.String,
-		subject,
-		func(token string) string {
-			return fmt.Sprintf("Hi %s,\n\nYour one-time password is: %s\n\nThis code expires in 15 minutes. Enter this code to log in.\n\nIf you didn't request this, please ignore this email.", user.Name, token)
-		},
-		true,
-	)
+	emailSent, err := h.authentication().SendOTP(r.Context(), h.appConf.EmailService(), h.appConf.Settings.Host, "login-otp", user, true)
 	if err != nil {
 		log.Printf("%vLoginSendOTP failed to create OTP token: %v", debugTag, err)
 		handlerHelpers.WriteInternalServerError(w, "failed to send OTP email")
@@ -461,22 +403,7 @@ func (h *Handler) LoginWithPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Password is valid; now create and send OTP token
-	subject := "Your one-time password (OTP)"
-	_, emailSent, err := handlerHelpers.CreateNamedTokenAndSendEmail(r.Context(),
-		debugTag+"LoginWithPassword:",
-		h.appConf.Db,
-		h.appConf.EmailService(),
-		user.ID,
-		h.appConf.Settings.Host,
-		"password-login-otp",
-		time.Now().Add(15*time.Minute),
-		user.Email.String,
-		subject,
-		func(token string) string {
-			return fmt.Sprintf("Hi %s,\n\nYour one-time password is: %s\n\nThis code expires in 15 minutes. Enter this code to log in.\n\nIf you didn't request this, please ignore this email.", user.Name, token)
-		},
-		!h.appConf.Settings.DevMode,
-	)
+	emailSent, err := h.authentication().SendOTP(r.Context(), h.appConf.EmailService(), h.appConf.Settings.Host, "password-login-otp", user, !h.appConf.Settings.DevMode)
 	if err != nil {
 		log.Printf("%vLoginWithPassword failed to send OTP email: %v", debugTag, err)
 		if h.appConf.Settings.DevMode {

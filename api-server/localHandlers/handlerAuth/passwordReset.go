@@ -2,17 +2,13 @@ package handlerAuth
 
 import (
 	handlerHelpers "api-server/v2/localHandlers/helpers"
-	"context"
 	"database/sql"
 	"encoding/base64"
 	"errors"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 )
-
-var passwordResetWorkers = make(chan struct{}, 8)
 
 func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var request struct {
@@ -36,39 +32,10 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Keep account lookup and email delivery out of the response timing.
-	select {
-	case passwordResetWorkers <- struct{}{}:
-	default:
+	if !h.authentication().QueuePasswordReset(r.Context(), mailer, email) {
 		handlerHelpers.WriteError(w, http.StatusServiceUnavailable, "auth_unavailable", "Password reset email is busy. Try again shortly.")
 		return
 	}
-	go func(ctx context.Context) {
-		defer func() { <-passwordResetWorkers }()
-		ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-		defer cancel()
-		recipient, code, err := h.authentication().CreatePasswordReset(ctx, email)
-		if err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				log.Print("password reset code creation failed")
-			}
-			return
-		}
-		const subject = "Reset your Trip Manager password"
-		message := "Enter this code in the Forgot password form. It expires in 15 minutes.\n\n" + code +
-			"\n\nIf you did not request a reset, you can ignore this message."
-		var sent bool
-		if contextual, ok := mailer.(interface {
-			SendMailContext(context.Context, string, string, string) (bool, error)
-		}); ok {
-			sent, err = contextual.SendMailContext(ctx, recipient, subject, message)
-		} else {
-			sent, err = mailer.SendMail(recipient, subject, message)
-		}
-		if err != nil || !sent {
-			log.Print("password reset email delivery failed")
-		}
-	}(context.WithoutCancel(r.Context()))
 	handlerHelpers.WriteAcceptedJSON(w, map[string]string{
 		"message": "If this address belongs to an eligible account, a reset code will be sent.",
 	})

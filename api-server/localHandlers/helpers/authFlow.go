@@ -4,7 +4,6 @@ import (
 	authService "api-server/v2/app/services/authentication"
 	authStore "api-server/v2/modelMethods/authentication"
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -16,10 +15,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 )
-
-type MailSender interface {
-	SendMail(to string, title string, message string) (bool, error)
-}
 
 func CreateAndSetSessionCookie(r *http.Request, debugStr string, w http.ResponseWriter, db *sqlx.DB, userID int, host string, expiration time.Time) error {
 	auth := authService.Service{Store: authStore.Store{DB: db}}
@@ -52,55 +47,6 @@ func SetSessionCookie(w http.ResponseWriter, r *http.Request, legacyDomain, toke
 		cookie.Expires = time.Unix(1, 0)
 	}
 	http.SetCookie(w, &cookie)
-}
-
-func CreateNamedTokenAndSendEmail(
-	ctx context.Context,
-	debugStr string,
-	db *sqlx.DB,
-	emailSvc MailSender,
-	userID int,
-	host string,
-	tokenName string,
-	expiration time.Time,
-	recipient string,
-	subject string,
-	buildBody func(token string) string,
-	deleteOnSendFailure bool,
-) (string, bool, error) {
-	auth := authService.Service{Store: authStore.Store{DB: db}}
-	tokenValue, err := auth.Issue(ctx, userID, host, tokenName, expiration, "")
-	if err != nil {
-		return "", false, err
-	}
-
-	body := ""
-	if buildBody != nil {
-		body = buildBody(tokenValue)
-	}
-
-	if emailSvc == nil {
-		return tokenValue, false, nil
-	}
-
-	var sendErr error
-	if contextual, ok := emailSvc.(interface {
-		SendMailContext(context.Context, string, string, string) (bool, error)
-	}); ok {
-		_, sendErr = contextual.SendMailContext(ctx, recipient, subject, body)
-	} else {
-		_, sendErr = emailSvc.SendMail(recipient, subject, body)
-	}
-	if err := sendErr; err != nil {
-		if deleteOnSendFailure {
-			if discardErr := auth.DiscardProof(ctx, userID, tokenName, tokenValue); discardErr != nil {
-				log.Printf("%s failed to discard undelivered authentication proof", debugStr)
-			}
-		}
-		return tokenValue, false, err
-	}
-
-	return tokenValue, true, nil
 }
 
 func WriteAcceptedText(w http.ResponseWriter, msg string) {
