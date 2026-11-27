@@ -27,6 +27,30 @@ To run the server
 `docker compose --env-file api-server/.env --profile prod up --build -d`
 
 
+
+
+codex instructions
+
+```text
+Using the AGENTS and ARCHITECTURE documentation
+
+Analyse this application and explain its architecture, including:
+- Go API and routing
+- PostgreSQL database access
+- Authentication and role-based permissions
+- WASM frontend, and UI improvments
+- Docker configuration
+
+Identify architectural weaknesses and recommend improvements and make a prioritised list.
+
+Do not modify any files yet.
+
+When I tell you to make the changes do the following, for each improvment: 
+
+Make the changes, test, update the AGENT and ARCHITECTURE documentation, commit, push, then deploy.
+```
+
+
 ## Docker build
 
 Docker files can only refer to local files that are in the same folder or sub-folders of the docker file.
