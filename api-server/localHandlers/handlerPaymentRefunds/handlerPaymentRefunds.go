@@ -4,7 +4,6 @@ import (
 	"api-server/v2/app/appCore"
 	"api-server/v2/app/services/finance"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
 	"api-server/v2/modelMethods/refunds"
 	"api-server/v2/models"
@@ -42,7 +41,7 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	id := dbStandardTemplate.GetID(w, r)
+	id := helpers.RouteID(w, r)
 	if id <= 0 {
 		return
 	}
@@ -53,7 +52,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if !helpers.RequireFinancialAccess(w, r, h.appConf.SessionIDKey) {
 		return
 	}
-	id := dbStandardTemplate.GetID(w, r)
+	id := helpers.RouteID(w, r)
 	if id <= 0 {
 		return
 	}
@@ -122,7 +121,7 @@ func (h *Handler) write(w http.ResponseWriter, r *http.Request, operation string
 	}
 	id := 0
 	if operation != "create" {
-		id = dbStandardTemplate.GetID(w, r)
+		id = helpers.RouteID(w, r)
 		if id <= 0 {
 			return
 		}

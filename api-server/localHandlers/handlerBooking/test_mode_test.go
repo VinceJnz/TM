@@ -4,9 +4,12 @@ import (
 	"api-server/v2/app/appCore"
 	"bytes"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/webhook"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -24,5 +27,15 @@ func TestTestModeRejectsSignedLiveEventsAndSessions(t *testing.T) {
 		if w.Code != 400 {
 			t.Fatal("live mode reached ledger", w.Code)
 		}
+	}
+}
+
+func TestCheckoutSuccessInTestModeServesPageWithoutSession(t *testing.T) {
+	app := appCore.New(true)
+	r := mux.SetURLVars(httptest.NewRequest(http.MethodGet, "/bookings/checkout/success/1", nil), map[string]string{"id": "1"})
+	w := httptest.NewRecorder()
+	New(app).CheckoutSuccess(w, r)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "Payment Completed Successfully") {
+		t.Fatalf("checkout success page returned status %d: %s", w.Code, w.Body.String())
 	}
 }

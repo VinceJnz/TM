@@ -2,8 +2,8 @@ package handlerAuth
 
 import (
 	authService "api-server/v2/app/services/authentication"
+	"api-server/v2/localHandlers/helpers"
 	authStore "api-server/v2/modelMethods/authentication"
-	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 	"log"
 	"net/http"
@@ -44,7 +44,7 @@ func (h *Handler) MenuUserGet(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) MenuListGet(w http.ResponseWriter, r *http.Request) {
-	session := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	session := helpers.SessionFromContext(r, h.appConf.SessionIDKey)
 	if session == nil || session.UserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return

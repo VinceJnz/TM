@@ -45,6 +45,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 - Do not expand HTTP-aware generic SQL helpers into a second business-logic layer. Refactor incrementally within the touched feature.
 - Pass request context into database operations and external calls. Keep internal diagnostics out of client-facing errors.
+- Use shared HTTP helpers for route IDs and request sessions. Use `RequiredSession` for the standard protected response and `SessionFromContext` when a session is optional or an endpoint has an established error response.
 - For new or revised endpoints, use the shared JSON/error helpers where compatible with the existing contract. Validate IDs, body size, input values, and referenced records before mutation.
 - Use server-side rules for booking prices, payment state, ownership, and administrative fields. Do not trust values merely because the UI prevents editing them.
 

@@ -52,7 +52,7 @@ durable database state.
 | [`api-server/app/appCore/`](api-server/app/appCore/) | Settings, dependency initialization, DB pool, integration availability and worker lifecycle |
 | [`api-server/localHandlers/`](api-server/localHandlers/) | Routing, authentication/capability middleware, request decoding and response mapping |
 | [`api-server/app/services/`](api-server/app/services/) | Account, authentication, booking, trip, pricing, security, notification, checkout and finance workflows |
-| [`api-server/modelMethods/`](api-server/modelMethods/) | SQL-only resource stores, query/pagination helpers and transactional ledger commands; also contains legacy adapters |
+| [`api-server/modelMethods/`](api-server/modelMethods/) | SQL-only resource stores, query/pagination helpers and transactional ledger commands |
 | [`api-server/models/`](api-server/models/) | Domain/database models, write DTOs, validation rules and exact money types |
 | [`api-server/app/gateways/`](api-server/app/gateways/) | External provider adapters |
 | [`api-server/migrations/`](api-server/migrations/) | Authoritative embedded SQL migrations, checksums and runtime grant policy |
@@ -497,12 +497,17 @@ can call dedicated stores directly. The `dbAuthTemplate` package has been retire
 Authentication service and store tests cover token hashing, purpose and expiry,
 concurrent consumption, cancellation, password preservation, and session revocation.
 
+Route IDs and request sessions use the shared HTTP helpers. Protected checkout
+handlers use the standard unauthorized response when a required session is
+missing. The checkout success page can render without a session, including in
+test mode. The unused generic CRUD and pagination code in
+`dbStandardTemplate` has been removed.
+
 **Remaining limitations / follow-up candidates, not claims of completed work:**
 
 | Priority | Area | Guidance |
 |---|---|---|
 | Medium | Partial concurrency coverage | Catalogs and other resources still have unversioned edits. Extend deliberately where concurrent full edits pose a material risk; update callers and tests together |
-| Medium | Legacy CRUD helpers | Some handlers still use HTTP request helpers in `dbStandardTemplate`. Check runtime and test callers before removing generic CRUD and compatibility code |
 | Medium | Contract and validation coverage | Some legacy resources still reuse models or handwritten contracts. Extend explicit DTOs and resource-specific validation as features change; the generator is not complete domain validation |
 | Medium | UI duplication and accessibility | Continue shared components, unique control IDs and lifecycle ownership. Manual screen-reader, device and broader visual audits remain necessary |
 | Operational | Environment and provider acceptance | Recheck actual migrations, roles, monitoring installation and required integrations. Automated provider fakes do not establish real Gmail/Google/Stripe readiness |

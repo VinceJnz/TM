@@ -6,9 +6,15 @@ import (
 	"net/http"
 )
 
+// SessionFromContext returns the session supplied by authentication middleware.
+func SessionFromContext(r *http.Request, key appCore.ContextKey) *models.Session {
+	session, _ := r.Context().Value(key).(*models.Session)
+	return session
+}
+
 func RequiredSession(w http.ResponseWriter, r *http.Request, key appCore.ContextKey) *models.Session {
-	session, ok := r.Context().Value(key).(*models.Session)
-	if !ok || session == nil || session.UserID <= 0 {
+	session := SessionFromContext(r, key)
+	if session == nil || session.UserID <= 0 {
 		WriteError(w, 401, "unauthorized", "Authentication required")
 		return nil
 	}

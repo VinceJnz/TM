@@ -7,7 +7,6 @@ import (
 
 	"api-server/v2/app/appCore"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/models"
 
 	"github.com/gorilla/mux"
@@ -53,7 +52,7 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // Get: retrieves and returns a single record identified by id
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	id := dbStandardTemplate.GetID(w, r)
+	id := helpers.RouteID(w, r)
 	if id <= 0 {
 		return
 	}

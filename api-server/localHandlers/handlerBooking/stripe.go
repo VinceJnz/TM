@@ -4,7 +4,6 @@ import (
 	"api-server/v2/app/services/checkout"
 	"api-server/v2/app/services/notifications"
 	"api-server/v2/localHandlers/helpers"
-	"api-server/v2/modelMethods/dbStandardTemplate"
 	"api-server/v2/modelMethods/paymentLedger"
 	"database/sql"
 	"encoding/json"
@@ -143,11 +142,11 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "payment service unavailable", 503)
 		return
 	}
-	user := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	user := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
 	if user == nil {
 		return
 	}
-	id := dbStandardTemplate.GetID(w, r)
+	id := helpers.RouteID(w, r)
 	if id <= 0 {
 		return
 	}
@@ -182,11 +181,11 @@ func (h *Handler) CheckoutCreate(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJSON(w, 200, CheckoutCreateResponse{CheckoutURL: result.URL, SessionID: result.ID, Status: "created"})
 }
 func (h *Handler) CheckoutReconcile(w http.ResponseWriter, r *http.Request) {
-	user := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	user := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
 	if user == nil {
 		return
 	}
-	id := dbStandardTemplate.GetID(w, r)
+	id := helpers.RouteID(w, r)
 	if id <= 0 {
 		return
 	}
@@ -206,13 +205,12 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Payment service unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id := dbStandardTemplate.GetID(w, r)
+	id := helpers.RouteID(w, r)
 	if id <= 0 {
 		return
 	}
-	user := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+	user := helpers.RequiredSession(w, r, h.appConf.SessionIDKey)
 	if user == nil {
-		http.Error(w, "booking not found", http.StatusNotFound)
 		return
 	}
 	result, err := checkout.New(h.appConf.Db, h.appConf.PaymentSvc).Check(r.Context(), id, user.UserID)
@@ -244,12 +242,12 @@ func (h *Handler) CheckoutCheck(w http.ResponseWriter, r *http.Request) {
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
 func (h *Handler) CheckoutSuccess(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v handling checkout success", debugTag+"CheckoutSuccess()")
-	bookingID := dbStandardTemplate.GetID(w, r)
+	bookingID := helpers.RouteID(w, r)
 	if bookingID <= 0 {
 		return
 	}
 	if h.appConf.TestMode {
-		appSession := dbStandardTemplate.GetSession(w, r, h.appConf.SessionIDKey)
+		appSession := helpers.SessionFromContext(r, h.appConf.SessionIDKey)
 		if appSession != nil {
 			if err := notifications.SendTestPaymentSuccess(h.appConf.EmailService(), appSession.Email); err != nil {
 				log.Printf("%v failed to send test-mode payment success email: %v", debugTag+"CheckoutSuccess()", err)
@@ -423,7 +421,7 @@ func (h *Handler) CheckoutWebhook(w http.ResponseWriter, r *http.Request) {
 // Note: The browser is not logged in so we can't guarantee the information supplied by the browser
 func (h *Handler) CheckoutCancel(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v handling checkout cancel", debugTag+"CheckoutCancel()")
-	bookingID := dbStandardTemplate.GetID(w, r)
+	bookingID := helpers.RouteID(w, r)
 	if bookingID <= 0 {
 		return
 	}
