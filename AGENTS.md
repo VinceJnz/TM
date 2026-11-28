@@ -51,6 +51,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## Authentication and authorization
 
+- Review fresh-install Admin and SysAdmin grant defaults against `docs/admin-sysadmin-grants.csv`. Verify exported resources, methods, and scopes against supported routes before seeding them.
+
 - Current authentication uses email OTP, bcrypt password plus email OTP, and Google OAuth, converging on database-backed session cookies. README references to SRP or planned WebAuthn are not proof of active implementation.
 - Permissions are grants for a resource, HTTP method, and access scope through user groups. `any` and `own` scopes have different record-access semantics.
 - Middleware capability approval does not establish record ownership. Enforce scope for collection reads, single-record reads, nested routes, writes, and referenced parent records.

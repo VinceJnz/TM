@@ -107,7 +107,6 @@ func (v *View) buildRootMenuItems() []menuItemSpec {
 
 func (v *View) buildAdminMenuItems() []menuItemSpec {
 	return []menuItemSpec{
-		{title: "Booking Status", apiURL: bookingStatusView.ApiURL, element: bookingStatusView.New(v.document, v.events, v.appCore)},
 		{title: "Booking Vouchers", apiURL: bookingVoucherView.ApiURL, element: bookingVoucherView.New(v.document, v.events, v.appCore)},
 		{title: "Payments", apiURL: paymentsView.ApiURL, element: paymentsView.New(v.document, v.events, v.appCore)},
 		{title: "Refunds", apiURL: refundsView.ApiURL, element: refundsView.New(v.document, v.events, v.appCore)},
@@ -122,6 +121,7 @@ func (v *View) buildSysadminMenuItems() []menuItemSpec {
 		{title: "Access Level", apiURL: accessLevelView.ApiURL, element: accessLevelView.New(v.document, v.events, v.appCore)},
 		{title: "Appearance", apiURL: appearanceView.ApiURL, element: appearanceView.New(v.document, v.appCore)},
 		{title: "Access Scope", apiURL: accessScopeView.ApiURL, element: accessScopeView.New(v.document, v.events, v.appCore)},
+		{title: "Booking Status", apiURL: bookingStatusView.ApiURL, element: bookingStatusView.New(v.document, v.events, v.appCore)},
 		{title: "Gateway Credentials", apiURL: gmailCertView.ApiURL, element: gmailCertView.New(v.document, v.events, v.appCore)},
 		{title: "Resource", apiURL: resourceView.ApiURL, element: resourceView.New(v.document, v.events, v.appCore)},
 		{title: "Season", apiURL: seasonView.ApiURL, element: seasonView.New(v.document, v.events, v.appCore)},

@@ -67,6 +67,8 @@ migration mechanism.
 
 ## 2. Go API and routing
 
+The [Admin and SysAdmin grant export](docs/admin-sysadmin-grants.csv) captures the local configuration on 28 November 2026 for fresh-install review. The export contains 22 Admin grants and 155 SysAdmin grants. Booking Status appears under System Administrator and the captured Admin grants omit that resource.
+
 `buildRouter` in `main.go` separates three boundaries:
 
 1. **Public routes:** authentication entry points, selected registration lookups,
