@@ -73,6 +73,8 @@ Migration 0039 protects against security administration lockout. Once an active 
 
 The [Admin and SysAdmin grant export](docs/admin-sysadmin-grants.csv) captures the local configuration on 28 November 2026 for fresh-install review. The export contains 22 Admin grants and 155 SysAdmin grants. Booking Status appears under System Administrator and the captured Admin grants omit that resource.
 
+The fresh-install grant script seeds 22 Admin and 108 SysAdmin grants by stable group key. It filters legacy methods and route aliases from the snapshot, removes the baseline member Booking Status grant, and requires an installation with no registered accounts.
+
 The trip editor reads difficulty, status, type, and cost-group choices from `GET /trips/edit-lookups` under the `trips` read capability. The response exposes choice IDs and labels. Each configuration catalog retains its own management capability.
 
 The user editor loads account and membership status choices from dedicated `users` read routes. The status catalogs continue to have independent management grants.
