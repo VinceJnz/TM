@@ -624,21 +624,19 @@ func (editor *ItemEditor) populateItemList() {
 		// Create and add child views and buttons to Item
 		booking := bookingView.New(editor.document, editor.events, editor.appCore, bookingView.ParentData{ID: record.ID, Name: record.Name, FromDate: record.FromDate, ToDate: record.ToDate})
 
-		// Create a toggle child list button
-		bookingButton := editor.document.Call("createElement", "button")
-		bookingButton.Set("innerHTML", "Bookings")
-		bookingButton.Set("className", "btn btn-secondary")
-		domEvents.Listen(bookingButton, "click", func(this js.Value, args []js.Value) any {
-			booking.FetchItems()
-			booking.Toggle()
-			return nil
+		panel := editor.document.Call("createElement", "div")
+		if record.Description != "" {
+			viewHelpers.AdminRecordFields(panel, viewHelpers.RecordField{Label: "Description", Value: record.Description})
+		}
+		panel.Call("appendChild", booking.Div)
+		viewHelpers.LayoutDisclosureRecord(itemDiv, panel, debugTag+"details-"+strconv.Itoa(record.ID), func(open bool) {
+			if open {
+				booking.Display()
+				booking.FetchItems()
+			} else {
+				booking.Hide()
+			}
 		})
-
-		// Append child buttons to item
-		itemDiv.Call("appendChild", bookingButton)
-		itemDiv.Call("appendChild", booking.Div)
-
-		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.ListDiv, &editor.Page,

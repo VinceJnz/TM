@@ -477,8 +477,9 @@ func (editor *ItemEditor) populateItemList() {
 		if record.ExpiryDate != nil {
 			expiryText = "Expires: " + record.ExpiryDate.Format(viewHelpers.Layout)
 		}
-		viewHelpers.AdminRecordFields(itemDiv,
-			viewHelpers.RecordField{Label: "Code", Value: record.Code},
+		itemDiv.Set("textContent", record.Code)
+		panel := editor.document.Call("createElement", "div")
+		viewHelpers.AdminRecordFields(panel,
 			viewHelpers.RecordField{Label: "Pricing", Value: pricingText},
 			viewHelpers.RecordField{Label: "Expiry", Value: expiryText},
 			viewHelpers.RecordField{Label: "Status", Value: activeText},
@@ -513,7 +514,7 @@ func (editor *ItemEditor) populateItemList() {
 		})
 		itemDiv.Call("appendChild", deleteButton)
 
-		viewHelpers.LayoutAdminRecord(itemDiv)
+		viewHelpers.LayoutDisclosureRecord(itemDiv, panel, debugTag+"details-"+strconv.Itoa(record.ID), nil)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.ListDiv,

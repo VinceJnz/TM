@@ -70,7 +70,6 @@ type ItemEditor struct {
 	events         *eventProcessor.EventProcessor
 	CurrentRecord  TableData
 	ItemState      ItemState
-	ReadOnlyMode   bool
 	Records        []TableData
 	UiComponents   UI
 	Div            js.Value
@@ -216,27 +215,13 @@ func (editor *ItemEditor) setActiveRowHighlight(row js.Value) {
 	editor.ActiveRow = row
 }
 
-func (editor *ItemEditor) openRecord(record TableData, readOnly bool, host js.Value) {
+func (editor *ItemEditor) openRecord(record TableData, host js.Value) {
 	editor.resetEditForm()
 	editor.CurrentRecord = record
-	editor.ReadOnlyMode = readOnly
 	editor.FormHost = host
 	editor.setActiveRowHighlight(host.Get("parentElement"))
 	editor.updateStateDisplay(ItemStateEditing)
 	editor.loadPaymentOptions()
-}
-
-func (editor *ItemEditor) toggleReadOnlyRecord(record TableData, host js.Value, row js.Value) {
-	if !editor.ActiveRow.IsUndefined() && !editor.ActiveRow.IsNull() && editor.ActiveRow.Equal(row) &&
-		editor.ReadOnlyMode && editor.CurrentRecord.ID == record.ID {
-		editor.resetEditForm()
-		return
-	}
-	editor.openRecord(record, true, host)
-}
-
-func (editor *ItemEditor) setFieldReadOnly(field js.Value) {
-	field.Set("disabled", true)
 }
 
 func (editor *ItemEditor) loadPaymentOptions() {
@@ -346,14 +331,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	localObjs.ExternalRef, editor.UiComponents.ExternalRef = viewHelpers.StringEdit(editor.CurrentRecord.ExternalRef, editor.document, "External Ref", "text", "itemExternalRef")
 
-	if editor.ReadOnlyMode {
-		editor.setFieldReadOnly(editor.UiComponents.PaymentID)
-		editor.setFieldReadOnly(editor.UiComponents.RefundDate)
-		editor.setFieldReadOnly(editor.UiComponents.Amount)
-		editor.setFieldReadOnly(editor.UiComponents.Reason)
-		editor.setFieldReadOnly(editor.UiComponents.ExternalRef)
-	}
-
 	form.Call("appendChild", localObjs.PaymentID)
 	form.Call("appendChild", localObjs.RefundDate)
 	form.Call("appendChild", localObjs.Amount)
@@ -361,20 +338,10 @@ func (editor *ItemEditor) populateEditForm() {
 	form.Call("appendChild", localObjs.ExternalRef)
 
 	submitBtn := viewHelpers.SubmitButton(editor.document, "Submit", "submitEditBtn")
-	cancelLabel := "Cancel"
-	if editor.ReadOnlyMode {
-		cancelLabel = "Close"
-	}
-	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, cancelLabel, "cancelEditBtn")
+	cancelBtn := viewHelpers.Button(editor.cancelItemEdit, editor.document, "Cancel", "cancelEditBtn")
 	viewHelpers.StyleButtonPrimary(submitBtn)
 	viewHelpers.StyleButtonSecondary(cancelBtn)
-	var buttonRow js.Value
-	if editor.ReadOnlyMode {
-		buttonRow = viewHelpers.FormButtonRow(editor.document, cancelBtn)
-	} else {
-		buttonRow = viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn)
-	}
-	form.Call("appendChild", buttonRow)
+	form.Call("appendChild", viewHelpers.FormButtonRow(editor.document, submitBtn, cancelBtn))
 
 	host.Call("appendChild", form)
 	host.Get("style").Set("display", "block")
@@ -389,17 +356,11 @@ func (editor *ItemEditor) resetEditForm() {
 	editor.FormHost = editor.EditDiv
 	editor.EditDiv.Set("innerHTML", "")
 	editor.CurrentRecord = TableData{}
-	editor.ReadOnlyMode = false
 	editor.UiComponents = UI{}
 	editor.updateStateDisplay(ItemStateNone)
 }
 
 func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
-	if editor.ReadOnlyMode {
-
-		return nil
-	}
-
 	if len(p) > 0 {
 		event := p[0]
 		event.Call("preventDefault")
@@ -599,37 +560,26 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		viewHelpers.AdminRecordFields(itemDiv,
+		itemDiv.Set("textContent", "Refund #"+strconv.Itoa(record.ID)+" · "+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" · "+record.RefundDate.Format(viewHelpers.Layout))
+		panel := editor.document.Call("createElement", "div")
+		viewHelpers.AdminRecordFields(panel,
 			viewHelpers.RecordField{Label: "Payment", Value: strconv.Itoa(record.PaymentID)},
 			viewHelpers.RecordField{Label: "Amount", Value: strconv.FormatFloat(record.Amount, 'f', 2, 64)},
 			viewHelpers.RecordField{Label: "Refund date", Value: record.RefundDate.Format(viewHelpers.Layout)},
 			viewHelpers.RecordField{Label: "Reason", Value: record.Reason},
+			viewHelpers.RecordField{Label: "External reference", Value: record.ExternalRef},
 		)
 
 		inlineFormHost := editor.document.Call("createElement", "div")
 		inlineFormHost.Set("className", "inline-record-form")
 		inlineFormHost.Get("style").Call("setProperty", "margin-top", "8px")
-		domEvents.Listen(itemDiv, "click", func(this js.Value, args []js.Value) any {
-			editor.openRecord(record, true, inlineFormHost)
-			return nil
-		})
-
-		viewButton := editor.document.Call("createElement", "button")
-		viewButton.Set("innerHTML", "View")
-		viewButton.Set("className", "btn btn-secondary")
-		domEvents.Listen(viewButton, "click", func(this js.Value, args []js.Value) any {
-			args[0].Call("stopPropagation")
-			editor.toggleReadOnlyRecord(record, inlineFormHost, itemDiv)
-			return nil
-		})
-
 		editButton := editor.document.Call("createElement", "button")
 		editButton.Set("innerHTML", "Edit")
 		editButton.Set("className", "btn btn-secondary")
 		viewHelpers.Action(editButton, "PUT")
 		domEvents.Listen(editButton, "click", func(this js.Value, args []js.Value) any {
 			args[0].Call("stopPropagation")
-			editor.openRecord(record, false, inlineFormHost)
+			editor.openRecord(record, inlineFormHost)
 			return nil
 		})
 
@@ -643,11 +593,10 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		})
 
-		itemDiv.Call("appendChild", viewButton)
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
 		itemDiv.Call("appendChild", inlineFormHost)
-		viewHelpers.LayoutAdminRecord(itemDiv)
+		viewHelpers.LayoutDisclosureRecord(itemDiv, panel, debugTag+"details-"+strconv.Itoa(record.ID), nil)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.

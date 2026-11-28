@@ -301,7 +301,7 @@ try {
   await waitUI(`(${memberBooking})?.querySelector('.tm-booking-status')?.textContent==='Confirmed'`,'zero-total booking was not confirmed');
   await waitUI(`(${memberBooking})?.querySelector('.tm-booking-cost')?.textContent.includes('NZ$0.00')`,'confirmed booking did not show its final total');
   await waitUI(`Array.from((${memberBooking})?.querySelectorAll('button')||[]).map(button=>button.textContent).join(',')==='View People'`,'confirmed booking still offered draft actions');
-  await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('summary').click()`});
+  await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('summary .tm-booking-title').click()`});
   await waitUI(`(${memberBooking})?.querySelector('details')?.open`,'confirmed booking details did not open');
   await send('Runtime.evaluate',{expression:`(${memberBooking}).querySelector('.tm-booking-actions button').click()`});
   await waitUI(`(${memberBooking})?.querySelector('details[open] .tm-booking-participant')?.getClientRects().length>0`,'confirmed booking did not reveal its participants');
@@ -678,6 +678,37 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   const grantForm = "Array.from(document.querySelectorAll('#mainContent form')).find(f=>f.getClientRects().length>0&&f.querySelector('#itemResource'))";
   await waitUI(`(${grantForm})?.querySelectorAll('select').length===3 && !(${grantForm}).querySelector('#itemGroup')`,'grant form did not inherit the expanded group');
   await send('Runtime.evaluate',{expression:`Array.from((${grantForm}).querySelectorAll('button')).find(b=>b.textContent==='Cancel').click()`});
+  const disclosureCases = [
+    ["payments","payments","Payment date"],
+    ["refunds","refunds","External reference"],
+    ["groupbooking","groupBooking","Owner ID"],
+    ["bookingvouchers","bookingVoucher","Pricing"],
+    ["tripcostgroups","tripCostGroup","Cost category"],
+    ["securityaccesslevel","accessLevel","Description"],
+    ["securityaccessscope","accessScope","Description"],
+    ["bookingstatus","bookingStatus","Last updated"],
+    ["securityresource","resource","Description"],
+    ["seasons","season","Last updated"],
+    ["tripdifficulty","tripDifficulty","Description"],
+    ["tripstatus","tripStatus","Last updated"],
+    ["triptype","tripType","Last updated"],
+    ["useragegroups","userAgeGroup","Last updated"],
+    ["usermemberstatus","userMemberStatus","Last updated"]
+  ];
+  for (const [route, view, detail] of disclosureCases) {
+    const controlPrefix = JSON.stringify(view+'View.details-');
+    const rowDisclosure = `Array.from(document.querySelectorAll('#mainContent .tm-admin-record-header > .tm-disclosure')).find(b=>b.getClientRects().length>0 && b.getAttribute('aria-controls')?.startsWith(${controlPrefix}))`;
+    await send('Runtime.evaluate',{expression:`location.hash='/${route}'`});
+    await waitUI(`!!(${rowDisclosure}) && location.hash==='#/${route}' && (${rowDisclosure}).getAttribute('aria-expanded')==='false'`,'row disclosure missing for '+route);
+    const panel = `document.getElementById((${rowDisclosure}).getAttribute('aria-controls'))`;
+    await waitUI(`(${panel}).hidden && (${rowDisclosure}).querySelector('.tm-disclosure-indicator').getAttribute('aria-hidden')==='true'`,'row did not start collapsed for '+route);
+    if (detail === 'Description' || detail === 'Last updated') await waitUI(`(${panel}).hidden && ['PUT','DELETE'].every(method=>Array.from((${rowDisclosure}).parentElement.querySelectorAll('button[data-tm-action]')).some(button=>button.dataset.tmAction===method && button.getClientRects().length>0))`,'catalog actions were not visible on a collapsed row for '+route);
+    await send('Runtime.evaluate',{expression:`(${rowDisclosure}).querySelector('.tm-disclosure-indicator').click()`});
+    await waitUI(`(${rowDisclosure}).getAttribute('aria-expanded')==='true' && !(${panel}).hidden && (${panel}).textContent.includes(${JSON.stringify(detail)})`,'row did not reveal details for '+route);
+
+    await send('Runtime.evaluate',{expression:`(${rowDisclosure}).click()`});
+    await waitUI(`(${rowDisclosure}).getAttribute('aria-expanded')==='false' && (${panel}).hidden`,'row did not collapse for '+route);
+  }
   const tripCard = "Array.from(document.querySelectorAll('.tm-admin-record')).find(row=>row.getClientRects().length&&row.textContent.includes('Synthetic trip'))";
   await send('Runtime.evaluate',{expression:"location.hash='/trips'"});
   await waitUI(`!!(${tripCard})?.querySelector('button[data-tm-action=PUT]:not([hidden]):not(:disabled)')`,'admin trip edit action did not render');
@@ -690,6 +721,13 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   })()`,'trip editor or focus was not placed under its record');
   await send('Runtime.evaluate',{expression:`(${tripCard}).querySelector('#cancelEditBtn').click()`});
   await waitUI(`!(${tripCard})?.querySelector('form') && document.activeElement===(${tripCard})?.querySelector('button[data-tm-action=PUT]')`,'trip Cancel did not close the editor and restore row focus');
+  const tripDisclosure = `(${tripCard}).querySelector('.tm-admin-record-header > .tm-disclosure')`;
+  const tripDetails = `document.getElementById((${tripDisclosure}).getAttribute('aria-controls'))`;
+  await waitUI(`(${tripDetails}).hidden`,'trip started expanded');
+  await send('Runtime.evaluate',{expression:`(${tripDisclosure}).click()`});
+  await waitUI(`(${tripDisclosure}).getAttribute('aria-expanded')==='true' && (${tripDetails}).textContent.includes('Member booking')`,'trip row did not load its bookings');
+  await send('Runtime.evaluate',{expression:`(${tripDisclosure}).click()`});
+  await waitUI(`(${tripDetails}).hidden`,'trip bookings did not collapse');
   await send('Runtime.evaluate',{expression:"window.__previousGroup=document.querySelector('[id=\"securityGroupView.groupCard\"] .tm-disclosure');location.hash='/securitygroup'"});
   await waitUI(`!!(${disclosure}) && (${disclosure})!==window.__previousGroup`,'security groups did not reopen');
   const groupEdit = `(${disclosure}).closest('.tm-admin-record-header').querySelector('button[data-tm-action=PUT]')`;

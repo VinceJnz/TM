@@ -31,6 +31,10 @@ UPDATE at_bookings SET voucher_code='SMOKE-FREE' WHERE id=1;
 INSERT INTO at_bookings(id,owner_id,trip_id,notes,from_date,to_date,booking_status_id)
 SELECT n,1,1,'Synthetic page item','2026-01-01','2026-01-02',1 FROM generate_series(3,107)n;
 SELECT setval(pg_get_serial_sequence('at_bookings','id'),107,true);
+INSERT INTO at_payments(booking_id,payment_date,amount,payment_method) VALUES(106,CURRENT_DATE,10,'Cash');
+INSERT INTO at_refunds(payment_id,refund_date,amount,reason,external_ref)
+SELECT id,CURRENT_DATE,1,'Synthetic refund','SMOKE REF' FROM at_payments WHERE booking_id=106;
+INSERT INTO at_group_bookings(group_name,owner_id) VALUES('Synthetic group',1);
 INSERT INTO st_token(user_id,name,host,token,token_valid,valid_from,valid_to)
 VALUES(1,'login-otp','tm-smoke','sha256:'||encode(sha256(convert_to('synthetic-release-otp','UTF8')),'hex'),true,NOW()-INTERVAL '1 minute',NOW()+INTERVAL '15 minutes'),
       (2,'login-otp','tm-smoke','sha256:'||encode(sha256(convert_to('synthetic-booking-otp','UTF8')),'hex'),true,NOW()-INTERVAL '1 minute',NOW()+INTERVAL '15 minutes'),

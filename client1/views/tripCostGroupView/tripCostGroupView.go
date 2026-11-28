@@ -411,22 +411,18 @@ func (editor *ItemEditor) populateItemList() {
 			return nil
 		})
 
-		// Create a toggle modify-booking-list button
-		costItemButton := editor.document.Call("createElement", "button")
-		costItemButton.Set("innerHTML", "Trip costs")
-		costItemButton.Set("className", "btn btn-secondary")
-		domEvents.Listen(costItemButton, "click", func(this js.Value, args []js.Value) interface{} {
-			tripCostItem.FetchItems()
-			tripCostItem.Toggle()
-			return nil
-		})
-
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
-		itemDiv.Call("appendChild", costItemButton)
-		itemDiv.Call("appendChild", tripCostItem.Div)
-
-		viewHelpers.LayoutAdminRecord(itemDiv)
+		panel := editor.document.Call("createElement", "div")
+		panel.Call("appendChild", tripCostItem.Div)
+		viewHelpers.LayoutDisclosureRecord(itemDiv, panel, debugTag+"details-"+strconv.Itoa(record.ID), func(open bool) {
+			if open {
+				tripCostItem.Display()
+				tripCostItem.FetchItems()
+			} else {
+				tripCostItem.Hide()
+			}
+		})
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.ListDiv,

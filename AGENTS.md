@@ -101,7 +101,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Load the published appearance stylesheet in all browser entry points. Keep the built-in appearance usable if the published settings are unavailable.
 - Use shared theme variables for visual states in public pages and WASM views. Keep status labels and keyboard focus visible when changing colors.
 
-- Put the expansion triangle and item name inside the same disclosure button. Keep the triangle decorative for assistive technology and update the button's expanded state.
+- Make top-level record summaries expandable. Put the triangle and summary in the same keyboard-focusable disclosure and synchronize its expanded state with the controlled panel. Keep the triangle decorative. Use the shared administration disclosure or the booking card's native summary.
+- Open read-only details or lazy child lists through the row disclosure. Keep Edit, Delete, and workflow actions visible and independent of the disclosure. Preserve capability checks and inline edit placement.
 
 - Show existing-record editors directly under the selected administration row. Keep Add at the top of the list, keep lookup failures and retries with the selected row, and return focus to its action on Cancel. Shared editors must confirm before replacing unsaved edits.
 

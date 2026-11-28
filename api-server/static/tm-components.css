@@ -133,6 +133,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .tm-admin form:not(.tm-dialog form) > .form-button-row { margin-top: 0; }
 .tm-admin-record-header { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
 .tm-admin-record-summary { flex: 1 1 16rem; min-width: 0; }
+.tm-record-details { margin-block-start: .65rem; }
+.tm-disclosure[aria-expanded="true"] .tm-record-triangle,
+.tm-booking-details[open] > summary .tm-record-triangle { transform: rotate(90deg); }
 .tm-admin-record-header .tm-disclosure { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
 .tm-admin-record-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-inline-start: auto; }
 .tm-admin-inline-edit { flex: 0 0 100%; min-width: 0; margin-block-start: .75rem; }
@@ -181,8 +184,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .tm-booking-context { font-weight: 600; color: var(--tm-text-subtle); }
 .tm-booking-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
-.tm-booking-details { margin-top: .7rem; border-top: 1px solid var(--tm-border); padding-top: .5rem; }
-.tm-booking-details > summary { cursor: pointer; color: var(--tm-primary-hover); font-weight: 600; padding: .4rem 0; }
+.tm-booking-details > summary { display: flex; align-items: baseline; width: 100%; list-style: none; }
+.tm-booking-details > summary::-webkit-details-marker { display: none; }
+.tm-booking-details > summary > .tm-booking-summary { flex: 1; min-width: 0; }
+.tm-booking-details .tm-booking-title { font-weight: 700; }
 .tm-booking-details > summary:focus-visible { outline: 3px solid var(--tm-primary); outline-offset: 2px; }
 .tm-booking-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .tm-booking-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }

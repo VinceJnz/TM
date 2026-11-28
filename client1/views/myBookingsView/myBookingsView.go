@@ -652,15 +652,15 @@ func (editor *ItemEditor) renderBookingSummary(root js.Value, record TableData) 
 		element.Set("textContent", value)
 		root.Call("appendChild", element)
 	}
-	add("h2", "tm-booking-title", record.TripName)
+	add("span", "tm-booking-title", record.TripName)
 	add("span", "tm-booking-status", record.BookingStatus)
 	dates := record.FromDate.Format("2 Jan 2006") + " – " + record.ToDate.Format("2 Jan 2006")
-	add("p", "tm-trip-meta", dates+" · Participants: "+strconv.Itoa(record.Participants))
+	add("span", "tm-trip-meta", dates+" · Participants: "+strconv.Itoa(record.Participants))
 	costLabel, cost := "Estimated cost", record.BookingCost
 	if record.BookingStatus == "Confirmed" || !record.BookingPrice.IsZero() {
 		costLabel, cost = "Booking total", record.BookingPrice
 	}
-	add("p", "tm-booking-cost", costLabel+" · NZ$"+cost.StringFixedBank(2))
+	add("span", "tm-booking-cost", costLabel+" · NZ$"+cost.StringFixedBank(2))
 }
 
 func (editor *ItemEditor) refreshBookingRow(bookingID int) {
@@ -739,16 +739,17 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Set("id", "my-booking-"+strconv.Itoa(bookingID))
 		itemDiv.Set("className", "tm-card tm-booking-card")
 
-		summaryDiv := editor.document.Call("createElement", "div")
+		summaryDiv := editor.document.Call("createElement", "span")
 		summaryDiv.Set("className", "tm-booking-summary")
 		editor.renderBookingSummary(summaryDiv, record)
 		editor.RowSummaryDiv[record.ID] = summaryDiv
-		itemDiv.Call("appendChild", summaryDiv)
 		details := editor.document.Call("createElement", "details")
 		details.Set("className", "tm-booking-details")
 		disclosure := editor.document.Call("createElement", "summary")
-		disclosure.Set("textContent", "View booking")
+		disclosure.Set("className", "tm-disclosure")
+		disclosure.Call("append", viewHelpers.DisclosureTriangle(editor.document), summaryDiv)
 		details.Call("appendChild", disclosure)
+		itemDiv.Call("appendChild", details)
 		metadata := editor.document.Call("createElement", "p")
 		metadata.Set("className", "tm-trip-meta tm-booking-notes")
 		metadata.Set("textContent", "Booked by "+editor.bookingOwnerDisplay(record))
@@ -831,7 +832,6 @@ func (editor *ItemEditor) populateItemList() {
 			details.Call("appendChild", reviewPanel)
 		}
 		details.Call("appendChild", bookingPeople.Div)
-		itemDiv.Call("appendChild", details)
 
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
