@@ -55,7 +55,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Preserve an active account with any-scope security group, membership, and grant management capabilities after security administration has been bootstrapped. Keep the check transactional across account, membership, and grant changes.
 
 - Review fresh-install Admin and SysAdmin grant defaults against `docs/admin-sysadmin-grants.csv`. Verify exported resources, methods, and scopes against supported routes before seeding them.
-- Use `scripts/seed-install-grants.sql` for the documented fresh-install administrative grant step before registering accounts.
+- Fresh installations use `tm-migrate -fresh-baseline` for the schema and administrative defaults. Use `scripts/seed-install-grants.sql` when recreating the reference database from the historical migration chain.
 
 - Current authentication uses email OTP, bcrypt password plus email OTP, and Google OAuth, converging on database-backed session cookies. README references to SRP or planned WebAuthn are not proof of active implementation.
 - Permissions are grants for a resource, HTTP method, and access scope through user groups. `any` and `own` scopes have different record-access semantics.

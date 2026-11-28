@@ -532,6 +532,8 @@ service/ledger boundary is the pattern to preserve, not unfinished generic CRUD 
 
 The [fresh install procedure](docs/fresh-install.md) describes schema setup, runtime-role verification, and first SysAdmin bootstrap. Bootstrap uses an already verified account and the built-in group key.
 
+The consolidated fresh-install snapshot covers migrations 0001 through 0039 and the initial grant policy. `tm-migrate -fresh-baseline` requires an empty schema and records the covered migration checksums in one transaction. Existing databases keep their recorded history and apply pending migrations through the standard command.
+
 Relevant commands from the repository root:
 
 ```powershell

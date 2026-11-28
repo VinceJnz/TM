@@ -26,3 +26,4 @@ data/
 **/*.wasm
 **/apiserver
 !api-server/migrations/*.sql
+!api-server/migrations/fresh/baseline.sql

@@ -17,10 +17,14 @@ func main() {
 	check := flag.Bool("check-existing", false, "read-only baseline compatibility report; no migrations or grants")
 	checkRuntime := flag.Bool("check-runtime", false, "check the deployed schema and runtime privileges without making changes")
 	adopt := flag.Bool("adopt-existing", false, "record the baseline for an audited compatible existing schema; never recreate its tables")
+	fresh := flag.Bool("fresh-baseline", false, "install the consolidated baseline in an empty schema")
 	role := flag.String("grant-role", "", "explicitly grant runtime access to an existing non-administrative API role")
 	flag.Parse()
-	if *checkRuntime && (*check || *adopt || *role != "") {
+	if *checkRuntime && (*check || *adopt || *fresh || *role != "") {
 		log.Fatal("check-runtime cannot be combined with migration or grant options")
+	}
+	if *fresh && (*check || *adopt) {
+		log.Fatal("fresh-baseline cannot be combined with existing-schema options")
 	}
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
 		log.Fatal("invalid optional .env file")
@@ -55,7 +59,12 @@ func main() {
 		}
 		return
 	}
-	if err := migrations.Apply(ctx, db, *adopt); err != nil {
+	if *fresh {
+		err = migrations.ApplyFresh(ctx, db)
+	} else {
+		err = migrations.Apply(ctx, db, *adopt)
+	}
+	if err != nil {
 		log.Fatal(err)
 	}
 	if *role != "" {
