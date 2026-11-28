@@ -21,7 +21,7 @@ import (
 var files embed.FS
 
 const compatibilityBaseline = "0033_schema_compatibility.sql"
-const Latest = "0037_site_appearance.sql"
+const Latest = "0038_builtin_group_keys.sql"
 
 // Future migrations may record the earliest API schema they preserve. An
 // omitted declaration requires a coordinated cutover. Each declaration must

@@ -51,6 +51,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## Authentication and authorization
 
+- Identify built-in groups by the protected `st_group.system_key` when code needs their identity. Keep authorization based on grants and allow display-name edits.
+
 - Review fresh-install Admin and SysAdmin grant defaults against `docs/admin-sysadmin-grants.csv`. Verify exported resources, methods, and scopes against supported routes before seeding them.
 
 - Current authentication uses email OTP, bcrypt password plus email OTP, and Google OAuth, converging on database-backed session cookies. README references to SRP or planned WebAuthn are not proof of active implementation.

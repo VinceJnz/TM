@@ -97,7 +97,9 @@ func (h *Handler) save(w http.ResponseWriter, r *http.Request, update bool) {
 	helpers.WriteJSON(w, 200, models.GroupDTO(result))
 }
 func (h *Handler) failure(w http.ResponseWriter, err error) {
-	if errors.Is(err, store.ErrReferencedGroup) {
+	if errors.Is(err, store.ErrBuiltInGroup) {
+		helpers.WriteError(w, 409, "built_in_group", "Built-in security groups cannot be deleted")
+	} else if errors.Is(err, store.ErrReferencedGroup) {
 		helpers.WriteError(w, 409, "group_in_use", "Remove or reassign group memberships and grants before deleting the group")
 	} else if errors.Is(err, service.ErrValidation) {
 		helpers.WriteError(w, 422, "invalid_security_change", "A group name is required; name and description must be at most 45 characters")

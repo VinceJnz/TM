@@ -5,8 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/lib/pq"
 	"strings"
+
+	"api-server/v2/models"
+
+	"github.com/lib/pq"
 )
 
 // ExpandReviews resolves recipients at delivery time. Missing administrators
@@ -21,8 +24,9 @@ func (s Store) ExpandReviews(ctx context.Context, groups []string, limit int) er
 			names = append(names, name)
 		}
 	}
-	if len(names) == 0 {
-		names = []string{"Admin", "SysAdmin"}
+	useSystemKeys := len(names) == 0
+	if useSystemKeys {
+		names = []string{"admin", "sysadmin"}
 	}
 	for i := 0; i < limit; i++ {
 		tx, err := s.DB.BeginTxx(ctx, nil)
@@ -40,7 +44,10 @@ func (s Store) ExpandReviews(ctx context.Context, groups []string, limit int) er
 			return err
 		}
 		var recipients []string
-		err = tx.SelectContext(ctx, &recipients, `SELECT DISTINCT lower(trim(u.email)) FROM st_users u JOIN st_user_group m ON m.user_id=u.id JOIN st_group g ON g.id=m.group_id WHERE g.name=ANY($1) AND u.user_account_status_id=2 AND trim(u.email)<>''`, pq.Array(names))
+		err = tx.SelectContext(ctx, &recipients, `SELECT DISTINCT lower(trim(u.email))
+			FROM st_users u JOIN st_user_group m ON m.user_id=u.id JOIN st_group g ON g.id=m.group_id
+			WHERE CASE WHEN $2 THEN g.system_key ELSE g.name::text END = ANY($1)
+			AND u.user_account_status_id=$3 AND trim(u.email)<>''`, pq.Array(names), useSystemKeys, models.AccountActive)
 		if err != nil {
 			tx.Rollback()
 			return err

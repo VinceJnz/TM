@@ -13,7 +13,7 @@ const (
 		WHERE stu.ID=$1
 			AND stu.user_account_status_id=$2
 		ORDER BY
-			CASE LOWER(stg.name::text)
+			CASE stg.system_key
 				WHEN 'sysadmin' THEN 4
 				WHEN 'admin' THEN 3
 				WHEN 'trustedusers' THEN 2

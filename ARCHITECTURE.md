@@ -67,6 +67,8 @@ migration mechanism.
 
 ## 2. Go API and routing
 
+Migration 0038 assigns stable keys to built-in security groups by their existing names. The menu display order and default account-review recipients use those keys. PostgreSQL protects keys and keyed groups, while memberships and capability grants continue to reference the group's numeric ID.
+
 The [Admin and SysAdmin grant export](docs/admin-sysadmin-grants.csv) captures the local configuration on 28 November 2026 for fresh-install review. The export contains 22 Admin grants and 155 SysAdmin grants. Booking Status appears under System Administrator and the captured Admin grants omit that resource.
 
 `buildRouter` in `main.go` separates three boundaries:

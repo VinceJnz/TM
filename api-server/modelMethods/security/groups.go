@@ -12,6 +12,7 @@ import (
 const groupRead = `SELECT id,version,COALESCE(name,'') AS name,COALESCE(description,'') AS description FROM st_group`
 
 var ErrReferencedGroup = errors.New("group still has memberships or grants")
+var ErrBuiltInGroup = errors.New("built-in group cannot be deleted")
 
 func (s Store) Groups(ctx context.Context, p resourcequery.Page) ([]models.Group, resourcequery.PageInfo, error) {
 	return resourcequery.SelectPage[models.Group](ctx, s.DB, p, groupRead)
@@ -38,9 +39,12 @@ func (s Store) SaveGroup(ctx context.Context, tx *sqlx.Tx, id int, v models.Grou
 func (s Store) DeleteGroup(ctx context.Context, tx *sqlx.Tx, id int) error {
 	// FOR UPDATE conflicts with the key-share lock taken by FK inserts. It
 	// closes the gap between checking dependencies and the legacy CASCADE delete.
-	var locked int
-	if err := tx.GetContext(ctx, &locked, "SELECT id FROM st_group WHERE id=$1 FOR UPDATE", id); err != nil {
+	var builtIn bool
+	if err := tx.GetContext(ctx, &builtIn, "SELECT system_key IS NOT NULL FROM st_group WHERE id=$1 FOR UPDATE", id); err != nil {
 		return err
+	}
+	if builtIn {
+		return ErrBuiltInGroup
 	}
 	var referenced bool
 	if err := tx.GetContext(ctx, &referenced, `SELECT EXISTS(SELECT 1 FROM st_user_group WHERE group_id=$1) OR EXISTS(SELECT 1 FROM st_group_resource WHERE group_id=$1)`, id); err != nil {
