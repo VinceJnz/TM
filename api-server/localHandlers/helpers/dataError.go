@@ -33,6 +33,8 @@ func WriteDataError(w http.ResponseWriter, err error) {
 		code, kind, message = 422, "invalid_input", "Invalid financial input"
 	case errors.Is(err, paymentLedger.ErrCapacity), errors.Is(err, paymentLedger.ErrConcurrentChange), errors.Is(err, paymentLedger.ErrLedgerConflict):
 		code, kind, message = 409, "conflict", "Operation conflicts with booking capacity, concurrent changes or the ledger balance"
+	case errors.As(err, &databaseError) && databaseError.Constraint == "effective_security_admin_required":
+		code, kind, message = 409, "security_admin_required", "At least one active account must retain security administration permissions."
 	case errors.As(err, &databaseError) && (databaseError.Code == "23503" || databaseError.Code == "23514" || databaseError.Code == "23505"):
 		code, kind, message = 409, "conflict", "Operation conflicts with existing data"
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
