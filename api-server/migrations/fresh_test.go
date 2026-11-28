@@ -49,4 +49,17 @@ func TestFreshBaseline(t *testing.T) {
 	if admin != 22 || sysadmin != 108 {
 		t.Fatalf("unexpected administrative grant counts: Admin %d, SysAdmin %d", admin, sysadmin)
 	}
+	for _, db := range []catalogReader{chain, fresh} {
+		var keys []string
+		if err := db.SelectContext(ctx, &keys, `
+			SELECT DISTINCT g.system_key FROM st_group_resource gr
+			JOIN st_group g ON g.id=gr.group_id JOIN et_resource r ON r.id=gr.resource_id
+			WHERE lower(r.name)='bookingstatus' ORDER BY g.system_key
+		`); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(keys, []string{"sysadmin"}) {
+			t.Fatalf("unexpected Booking Status grant groups: %v", keys)
+		}
+	}
 }

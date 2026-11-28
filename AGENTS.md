@@ -52,6 +52,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 ## Authentication and authorization
 
 - Identify built-in groups by the protected `st_group.system_key` when code needs their identity. Keep authorization based on grants and allow display-name edits.
+- Keep Booking Status catalog access in the system administration policy. Member bookings obtain their status from the booking response.
 - Preserve an active account with any-scope security group, membership, and grant management capabilities after security administration has been bootstrapped. Keep the check transactional across account, membership, and grant changes.
 
 - Review fresh-install Admin and SysAdmin grant defaults against `docs/admin-sysadmin-grants.csv`. Verify exported resources, methods, and scopes against supported routes before seeding them.

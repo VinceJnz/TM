@@ -75,6 +75,8 @@ The [Admin and SysAdmin grant export](docs/admin-sysadmin-grants.csv) captures t
 
 The fresh-install grant script seeds 22 Admin and 108 SysAdmin grants by stable group key. It filters legacy methods and route aliases from the snapshot, removes the baseline member Booking Status grant, and requires an installation with no registered accounts.
 
+Migration 0040 removes the built-in Admin and User groups' legacy Booking Status catalog grants on existing databases. Booking responses still include each booking's status, and the SysAdmin management grants remain in force.
+
 The trip editor reads difficulty, status, type, and cost-group choices from `GET /trips/edit-lookups` under the `trips` read capability. The response exposes choice IDs and labels. Each configuration catalog retains its own management capability.
 
 The user editor loads account and membership status choices from dedicated `users` read routes. The status catalogs continue to have independent management grants.

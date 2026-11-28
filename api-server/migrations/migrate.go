@@ -21,7 +21,7 @@ import (
 var files embed.FS
 
 const compatibilityBaseline = "0033_schema_compatibility.sql"
-const Latest = "0039_security_admin_lockout.sql"
+const Latest = "0040_booking_status_management_grants.sql"
 
 // Future migrations may record the earliest API schema they preserve. An
 // omitted declaration requires a coordinated cutover. Each declaration must
