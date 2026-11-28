@@ -112,6 +112,7 @@ func TestNestedAndAliasCapabilities(t *testing.T) {
 	router := buildRouter(app)
 	for _, tc := range []struct{ method, path, resource string }{
 		{"GET", "/trips/10/bookings", "bookings"},
+		{"GET", "/trips/edit-lookups", "trips"},
 		{"GET", "/myBookings/trips", "myBookings"},
 		{"POST", "/bookings/checkout/confirm/10", "bookings"},
 		{"POST", "/users/10/approval-email", "users"},

@@ -71,6 +71,8 @@ Migration 0038 assigns stable keys to built-in security groups by their existing
 
 The [Admin and SysAdmin grant export](docs/admin-sysadmin-grants.csv) captures the local configuration on 28 November 2026 for fresh-install review. The export contains 22 Admin grants and 155 SysAdmin grants. Booking Status appears under System Administrator and the captured Admin grants omit that resource.
 
+The trip editor reads difficulty, status, type, and cost-group choices from `GET /trips/edit-lookups` under the `trips` read capability. The response exposes choice IDs and labels. Each configuration catalog retains its own management capability.
+
 `buildRouter` in `main.go` separates three boundaries:
 
 1. **Public routes:** authentication entry points, selected registration lookups,

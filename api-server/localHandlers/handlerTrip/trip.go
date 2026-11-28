@@ -22,9 +22,21 @@ type Handler struct {
 func New(app *appCore.Config) *Handler { return &Handler{appConf: app, store: store.Store{DB: app.Db}} }
 func (h *Handler) RegisterRoutes(r *mux.Router, base string) {
 	helpers.AddRouteGroup(r, base, h, "trips")
+	helpers.CapabilityRoute(r, base+"/edit-lookups", "trips", h.editLookups).Methods(http.MethodGet)
 	helpers.CapabilityRoute(r, base+"Report", "tripsReport", h.GetParticipantStatus).Methods("GET")
 	helpers.CapabilityRoute(r, base+"/{id:[0-9]+}/questionnaire", "trips", h.getQuestionnaire).Methods("GET")
 	helpers.CapabilityRoute(r, base+"/{id:[0-9]+}/questionnaire", "trips", h.publishQuestionnaire).Methods("PUT")
+}
+func (h *Handler) editLookups(w http.ResponseWriter, r *http.Request) {
+	if helpers.RequiredSession(w, r, h.appConf.SessionIDKey) == nil {
+		return
+	}
+	lookups, err := h.store.EditLookups(r.Context())
+	if err != nil {
+		helpers.WriteDataError(w, err)
+		return
+	}
+	helpers.WriteJSON(w, http.StatusOK, lookups)
 }
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	page, ok := helpers.ReadResourcePage(w, r)

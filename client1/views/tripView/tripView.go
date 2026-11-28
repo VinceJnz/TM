@@ -200,10 +200,10 @@ func (editor *ItemEditor) openEdit(record TableData, state viewHelpers.ItemState
 			viewHelpers.RenderRetry(editor.EditDiv, func() { editor.openEdit(record, state) })
 			return
 		}
-		editor.Children.Difficulty.Records = lookups.difficulties
-		editor.Children.TripStatus.Records = lookups.statuses
-		editor.Children.TripType.Records = lookups.types
-		editor.Children.TripCostGroup.Records = lookups.costGroups
+		editor.Children.Difficulty.Records = lookups.Difficulties
+		editor.Children.TripStatus.Records = lookups.Statuses
+		editor.Children.TripType.Records = lookups.Types
+		editor.Children.TripCostGroup.Records = lookups.CostGroups
 		editor.CurrentRecord = record
 		editor.updateStateDisplay(state)
 		editor.populateEditForm()
@@ -211,28 +211,16 @@ func (editor *ItemEditor) openEdit(record TableData, state viewHelpers.ItemState
 }
 
 type editLookups struct {
-	difficulties []tripDifficultyView.TableData
-	statuses     []tripStatusView.TableData
-	types        []tripTypeView.TableData
-	costGroups   []tripCostGroupView.TableData
+	Difficulties []tripDifficultyView.TableData `json:"difficulties"`
+	Statuses     []tripStatusView.TableData     `json:"statuses"`
+	Types        []tripTypeView.TableData       `json:"types"`
+	CostGroups   []tripCostGroupView.TableData  `json:"cost_groups"`
 }
 
 func (editor *ItemEditor) loadEditLookups(ctx context.Context) (editLookups, error) {
 	var lookups editLookups
-	for _, request := range []struct {
-		path    string
-		records any
-	}{
-		{tripDifficultyView.ApiURL, &lookups.difficulties},
-		{tripStatusView.ApiURL, &lookups.statuses},
-		{tripTypeView.ApiURL, &lookups.types},
-		{tripCostGroupView.ApiURL, &lookups.costGroups},
-	} {
-		if err := editor.client.RequestContext(ctx, http.MethodGet, request.path, request.records, nil); err != nil {
-			return lookups, err
-		}
-	}
-	return lookups, nil
+	err := editor.client.RequestContext(ctx, http.MethodGet, ApiURL+"/edit-lookups", &lookups, nil)
+	return lookups, err
 }
 
 // NewDropdown creates a dropdown list for selecting a value from a list of items
