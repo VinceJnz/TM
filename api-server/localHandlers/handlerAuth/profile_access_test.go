@@ -16,7 +16,7 @@ import (
 
 func TestOwnProfileAccessRequiresGroupGrants(t *testing.T) {
 	db := testdb.Open(t, testdb.Auth+`
-ALTER TABLE st_users ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 1;CREATE TABLE st_group(id integer, name text);
+ALTER TABLE st_users ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 1;CREATE TABLE st_group(id integer, name text, system_key text);
 CREATE TABLE et_user_age_groups(id integer,age_group text);
 CREATE TABLE st_user_group(user_id integer, group_id integer);
 CREATE TABLE et_resource(id integer, name text);
@@ -26,7 +26,7 @@ ALTER TABLE st_users ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 1;
 INSERT INTO st_users(id, name, username, email, user_account_status_id) VALUES
 	(1, 'Member', 'member', 'member@example.test', 2),
 	(2, 'Other', 'other', 'other@example.test', 2);
-INSERT INTO st_group VALUES (1, 'Members');
+INSERT INTO st_group(id, name) VALUES (1, 'Members');
 INSERT INTO et_resource VALUES (1, 'myProfile');
 INSERT INTO et_access_level VALUES (1, 'GET'), (2, 'PUT');
 INSERT INTO et_access_scope VALUES (1, 'own');

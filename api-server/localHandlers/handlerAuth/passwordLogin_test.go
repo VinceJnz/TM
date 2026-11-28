@@ -18,7 +18,7 @@ import (
 
 func TestPasswordSignInSendsCodeAndCreatesSession(t *testing.T) {
 	db := testdb.Open(t, testdb.Auth+`
-		CREATE TABLE st_group (id integer PRIMARY KEY, name text);
+		CREATE TABLE st_group (id integer PRIMARY KEY, name text, system_key text);
 		CREATE TABLE st_user_group (user_id integer, group_id integer);
 	`)
 	const password = "synthetic-sign-in-password"
