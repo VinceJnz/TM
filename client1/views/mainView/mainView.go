@@ -22,7 +22,6 @@ import (
 	"client1/v2/views/resourceView"
 	"client1/v2/views/seasonView"
 	"client1/v2/views/securityGroupView"
-	"client1/v2/views/securityUserGroupView"
 	"client1/v2/views/tripCostGroupView"
 	"client1/v2/views/tripDifficultyView"
 	"client1/v2/views/tripParticipantStatusReport"
@@ -131,7 +130,6 @@ func (v *View) buildSysadminMenuItems() []menuItemSpec {
 		{title: "Trip Status", apiURL: tripStatusView.ApiURL, element: tripStatusView.New(v.document, v.events, v.appCore)},
 		{title: "Trip Type", apiURL: tripTypeView.ApiURL, element: tripTypeView.New(v.document, v.events, v.appCore)},
 		{title: "User Age Group", apiURL: userAgeGroupView.ApiURL, element: userAgeGroupView.New(v.document, v.events, v.appCore)},
-		{title: "User Group", apiURL: securityUserGroupView.ApiURL, element: securityUserGroupView.New(v.document, v.events, v.appCore)},
 		{title: "User Member Status", apiURL: userMemberStatusView.ApiURL, element: userMemberStatusView.New(v.document, v.events, v.appCore)},
 	}
 }

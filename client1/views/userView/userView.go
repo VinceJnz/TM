@@ -15,9 +15,7 @@ import (
 	"log"
 
 	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
 	"syscall/js"
 	"time"
 )
@@ -196,113 +194,6 @@ func (editor *ItemEditor) NewItemData(this js.Value, p []js.Value) interface{} {
 
 	editor.populateEditForm()
 	return nil
-}
-func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, lookupResource ...string) (object, inputObj js.Value) {
-	resource := ApiURL
-	if len(lookupResource) > 0 {
-		resource = lookupResource[0]
-	}
-	// Create a div for displaying Dropdown
-	fieldset := editor.document.Call("createElement", "fieldset")
-	fieldset.Set("className", "input-group")
-
-	StateDropDown := editor.document.Call("createElement", "select")
-	StateDropDown.Set("id", htmlID)
-
-	viewHelpers.SelectRecord(StateDropDown, value, true)
-
-	// Create a label element
-	label := viewHelpers.Label(editor.document, labelText, htmlID)
-	fieldset.Call("appendChild", label)
-
-	fieldset.Call("appendChild", StateDropDown)
-	search := editor.document.Call("createElement", "input")
-	search.Set("type", "search")
-	search.Set("placeholder", "Search people (at least 2 characters)")
-	search.Call("setAttribute", "aria-label", "Search "+labelText)
-	button := editor.document.Call("createElement", "button")
-	button.Set("type", "button")
-	button.Set("textContent", "Search")
-	status := editor.document.Call("createElement", "span")
-	status.Call("setAttribute", "role", "status")
-	fieldset.Call("appendChild", search)
-	fieldset.Call("appendChild", button)
-	fieldset.Call("appendChild", status)
-	var generation int
-	load := func(path string) {
-		generation++
-		requestGeneration := generation
-		go func() {
-			var options []struct {
-				ID       int    `json:"id"`
-				Name     string `json:"name"`
-				Username string `json:"username"`
-			}
-			editor.client.NewRequest("GET", path, &options, nil, func(error) {
-				if generation != requestGeneration {
-					return
-				}
-				if selected, err := strconv.Atoi(StateDropDown.Get("value").String()); err == nil {
-					value = selected
-				}
-				StateDropDown.Set("innerHTML", "")
-				for _, item := range options {
-					option := editor.document.Call("createElement", "option")
-					option.Set("value", item.ID)
-					name := item.Name
-					if item.Username != "" {
-						name += " (" + item.Username + ")"
-					}
-					option.Set("textContent", name)
-					StateDropDown.Call("appendChild", option)
-				}
-				viewHelpers.SelectRecord(StateDropDown, value, true)
-				status.Set("textContent", strconv.Itoa(len(options))+" matches (maximum 25)")
-			}, func(error) {
-				if generation == requestGeneration {
-					status.Set("textContent", "Search failed; retry")
-				}
-			})
-		}()
-	}
-	domEvents.Listen(button, "click", func(js.Value, []js.Value) any {
-		query := strings.TrimSpace(search.Get("value").String())
-		if len(query) < 2 {
-			status.Set("textContent", "Enter at least 2 characters")
-			return nil
-		}
-		load(resource + "/lookup?q=" + url.QueryEscape(query))
-		return nil
-	})
-	status.Set("textContent", "Loading people…")
-	go func() {
-		var people []TableData
-		err := editor.client.Request(http.MethodGet, resource, &people, nil)
-		if generation != 0 || !StateDropDown.Get("isConnected").Bool() {
-			return
-		}
-		if err != nil {
-			if value > 0 {
-				load(resource + "/lookup?id=" + strconv.Itoa(value))
-				return
-			}
-			status.Set("textContent", "People could not be loaded. Use Search to find a user.")
-			return
-		}
-		StateDropDown.Set("innerHTML", "")
-		for _, person := range viewHelpers.AlphabeticalChoices(people, func(person TableData) string {
-			return person.Name + " (" + person.Email + ")"
-		}) {
-			option := editor.document.Call("createElement", "option")
-			option.Set("value", person.ID)
-			option.Set("textContent", person.Name+" ("+person.Email+")")
-			StateDropDown.Call("appendChild", option)
-		}
-		viewHelpers.SelectRecord(StateDropDown, value, true)
-		status.Set("textContent", "")
-	}()
-
-	return fieldset, StateDropDown
 }
 
 // onCompletionMsg handles sending an event to display a message (e.g. error message or success message)

@@ -575,6 +575,15 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await waitUI("!!document.querySelector('dialog[open]')",'second close did not require confirmation');
   await send('Runtime.evaluate',{expression:"document.querySelector('dialog[open] button[type=submit]').click()"});
   await waitUI("location.hash==='#/' && document.querySelector('#closeAdminPage').hidden",'closing Payments did not return to Home');
+  await send('Runtime.evaluate',{expression:"location.hash='/payments?bookingId=107'"});
+  await waitUI(`!!(${addPayment}) && document.querySelector('#mainContent').textContent.includes('No payment records found for booking 107.')`,'booking-specific payment creation did not load');
+  await send('Runtime.evaluate',{expression:`(${addPayment}).click()`});
+  await waitUI("Array.from(document.querySelectorAll('input#itemBookingID')).some(e=>e.getClientRects().length>0&&e.readOnly&&e.value==='107')",'booking-specific payment allowed changing the booking');
+  await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('input#itemBookingID')).find(e=>e.getClientRects().length>0).form.querySelector('button[type=button]').click()"});
+  await send('Runtime.evaluate',{expression:"location.hash='/refunds?paymentId=1&action=new'"});
+  await waitUI("Array.from(document.querySelectorAll('input#itemPaymentID')).some(e=>e.getClientRects().length>0&&e.readOnly&&e.value==='1')",'payment-specific refund allowed changing the payment');
+  await send('Runtime.evaluate',{expression:"Array.from(document.querySelectorAll('input#itemPaymentID')).find(e=>e.getClientRects().length>0).form.querySelector('button[type=button]').click()"});
+  await waitUI("!Array.from(document.querySelectorAll('a,button')).some(e=>e.textContent.trim()==='User Group')",'standalone User Group still appeared in navigation');
   await send('Runtime.evaluate',{expression:"location.hash='/users'"});
   const deleteButton="Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Delete'&&b.getClientRects().length>0)";
   await waitUI(`!!(${deleteButton})`,'account actions did not render');
@@ -663,6 +672,12 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',nativeVirtualKeyCode:13,windowsVirtualKeyCode:13});
   await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
   await waitUI("document.activeElement.getAttribute('aria-expanded')==='true'",'keyboard disclosure failed');
+  const grantAdd = "Array.from(document.querySelectorAll('#mainContent button')).find(b=>b.textContent==='Add New Resource'&&b.getClientRects().length>0&&!b.disabled)";
+  await waitUI(`!!(${grantAdd})`,'expanded group did not offer grant creation');
+  await send('Runtime.evaluate',{expression:`(${grantAdd}).click()`});
+  const grantForm = "Array.from(document.querySelectorAll('#mainContent form')).find(f=>f.getClientRects().length>0&&f.querySelector('#itemResource'))";
+  await waitUI(`(${grantForm})?.querySelectorAll('select').length===3 && !(${grantForm}).querySelector('#itemGroup')`,'grant form did not inherit the expanded group');
+  await send('Runtime.evaluate',{expression:`Array.from((${grantForm}).querySelectorAll('button')).find(b=>b.textContent==='Cancel').click()`});
   const tripCard = "Array.from(document.querySelectorAll('.tm-admin-record')).find(row=>row.getClientRects().length&&row.textContent.includes('Synthetic trip'))";
   await send('Runtime.evaluate',{expression:"location.hash='/trips'"});
   await waitUI(`!!(${tripCard})?.querySelector('button[data-tm-action=PUT]:not([hidden]):not(:disabled)')`,'admin trip edit action did not render');

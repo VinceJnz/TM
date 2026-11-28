@@ -55,7 +55,6 @@ type ParentData struct {
 }
 
 type children struct {
-	TripCostItem *tripCostView.ItemEditor
 }
 
 type ItemEditor struct {
@@ -116,7 +115,6 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 	}
 
 	editor.RecordState = RecordStateReloadRequired
-	editor.Children.TripCostItem = tripCostView.New(editor.document, events, editor.appCore)
 
 	return editor
 }
@@ -320,7 +318,6 @@ func (editor *ItemEditor) FetchItems() {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
-		editor.Children.TripCostItem.FetchItems()
 
 		ticket := editor.load.Start()
 		editor.updateStateDisplay(ItemStateFetching)

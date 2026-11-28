@@ -350,9 +350,8 @@ func (editor *ItemEditor) FetchItems() {
 			var records []TableData
 			pending := editor.Page.Snapshot()
 
-			err := editor.client.PageRequestContext(ticket.Context, &pending,
-
-				http.MethodGet, ApiURL, &records, nil)
+			path := ApiURL + "?trip_cost_group_id=" + strconv.Itoa(editor.ParentData.ID)
+			err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, path, &records, nil)
 			if !ticket.Finish(err) {
 				return
 			}

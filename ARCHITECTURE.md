@@ -79,6 +79,20 @@ Migration 0040 removes the built-in Admin and User groups' legacy Booking Status
 
 The trip editor reads difficulty, status, type, and cost-group choices from `GET /trips/edit-lookups` under the `trips` read capability. The response exposes choice IDs and labels. Each configuration catalog retains its own management capability.
 
+Group membership administration lives under each account in Users. The browser
+uses the existing versioned `/securityUserGroup` API and its `user_id` filter,
+with group choices from `/securityGroup`. The fresh SysAdmin grants include
+these reads and the Users read. Adopted installations should check equivalent
+any-scope read access for custom membership administrators before rollout.
+
+Inside Security Group, grant forms inherit the expanded group's ID and preserve
+the existing `/securityGroupResource` contract. The finance views likewise bind
+contextual forms to their payment or booking ID. Switching context reloads the
+list at the first page and cancels the previous request. Standalone finance forms
+provide a selector. Trip Cost Group lists use
+`GET /tripCosts?trip_cost_group_id=<id>` to restrict the store query before
+pagination. The unfiltered collection remains available to authorized callers.
+
 The user editor loads account and membership status choices from dedicated `users` read routes. The status catalogs continue to have independent management grants.
 
 WASM renders catalog, security and registration choices in case-insensitive label order after loading their lookup results. The booking trip picker sorts by name and departure date while keeping its original record indices for selection and nearest-trip defaults. PostgreSQL orders the user and booking participant searches by name, username and ID before applying the 25-result cap. Display ordering leaves the management lists and their pagination contracts intact.

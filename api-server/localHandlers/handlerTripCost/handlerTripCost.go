@@ -40,7 +40,11 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	items, info, err := h.store.Costs(r.Context(), p)
+	groupID, valid := helpers.OptionalQueryID(w, r, "trip_cost_group_id")
+	if !valid {
+		return
+	}
+	items, info, err := h.store.Costs(r.Context(), p, groupID)
 	if err != nil {
 		helpers.WriteDataError(w, err)
 		return

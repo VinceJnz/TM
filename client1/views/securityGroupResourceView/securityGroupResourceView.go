@@ -48,17 +48,9 @@ const (
 
 const ApiURL = "/securityGroupResource"
 
-const groupApiURL = "/securityGroup"
-
-type GroupRecord struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-}
-
 type TableData = api.GroupResourceDTO
 
 type UI struct {
-	GroupID       js.Value
 	ResourceID    js.Value
 	AccessLevelID js.Value
 	AccessScopeID js.Value
@@ -91,8 +83,8 @@ type ItemEditor struct {
 	ViewState     ViewState
 	RecordState   RecordState
 	Children      children
-	GroupRecords  []GroupRecord
-	Page          httpProcessor.Page
+
+	Page httpProcessor.Page
 }
 
 // NewItemEditor creates a new ItemEditor instance
@@ -227,22 +219,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	groupFieldset := editor.document.Call("createElement", "fieldset")
-	groupFieldset.Set("className", "input-group")
-	groupFieldset.Call("appendChild", viewHelpers.Label(editor.document, "Group", "itemGroup"))
-	groupSelect := editor.document.Call("createElement", "select")
-	groupSelect.Set("id", "itemGroup")
-	for _, g := range viewHelpers.AlphabeticalChoices(editor.GroupRecords, func(group GroupRecord) string { return group.Name }) {
-		opt := editor.document.Call("createElement", "option")
-		opt.Set("value", g.ID)
-		opt.Set("text", g.Name)
-		groupSelect.Call("appendChild", opt)
-	}
-	viewHelpers.SelectRecord(groupSelect, editor.CurrentRecord.GroupID, true)
-	groupFieldset.Call("appendChild", groupSelect)
-	groupFieldset.Call("appendChild", viewHelpers.Span(editor.document, "itemGroup-error"))
-	editor.UiComponents.GroupID = groupSelect
-
 	localObjs.ResourceID, editor.UiComponents.ResourceID = editor.Children.Resource.NewDropdown(editor.CurrentRecord.ResourceID, "Resource", "itemResource")
 	//editor.UiComponents.ResourceID.Call("setAttribute", "required", "true")
 
@@ -252,7 +228,6 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.AccessScopeID, editor.UiComponents.AccessScopeID = editor.Children.AccessScope.NewDropdown(editor.CurrentRecord.AccessScopeID, "Access Scope", "itemAccessScope")
 	//editor.UiComponents.AccessScopeID.Call("setAttribute", "required", "true")
 
-	form.Call("appendChild", groupFieldset)
 	form.Call("appendChild", localObjs.ResourceID)
 	form.Call("appendChild", localObjs.AccessLevelID)
 	form.Call("appendChild", localObjs.AccessScopeID)
@@ -299,11 +274,7 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) interface{
 
 	var err error
 
-	editor.CurrentRecord.GroupID, err = strconv.Atoi(editor.UiComponents.GroupID.Get("value").String())
-	if err != nil {
-		log.Println("Error parsing group_id:", err)
-		return nil
-	}
+	editor.CurrentRecord.GroupID = editor.ParentID
 
 	editor.CurrentRecord.ResourceID, err = strconv.Atoi(editor.UiComponents.ResourceID.Get("value").String())
 	if err != nil {
@@ -395,10 +366,6 @@ func (editor *ItemEditor) FetchItems() {
 	go func() {
 		var records []TableData
 		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, path, &records, nil)
-		var groupRecs []GroupRecord
-		if err == nil {
-			err = editor.client.RequestContext(ticket.Context, http.MethodGet, groupApiURL, &groupRecs, nil)
-		}
 		if !ticket.Finish(err) {
 			return
 		}
@@ -409,7 +376,6 @@ func (editor *ItemEditor) FetchItems() {
 			return
 		}
 		editor.Page = pending
-		editor.GroupRecords = groupRecs
 		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)

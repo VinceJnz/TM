@@ -51,10 +51,26 @@ func TestPricingValidationReferencesAndDeletion(t *testing.T) {
 	if err = s.Store.DeleteGroup(ctx, group.ID); err == nil {
 		t.Fatal("referenced group deleted")
 	}
-	rows, _, err := s.Store.Costs(ctx, resourcequery.Page{Limit: 1})
+	rows, _, err := s.Store.Costs(ctx, resourcequery.Page{Limit: 1}, 0)
 	if err != nil || len(rows) != 1 {
 		t.Fatal(rows, err)
 	}
+	otherGroup, err := s.SaveGroup(ctx, 0, models.TripCostGroupWrite{Description: "Other group"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input.TripCostGroupID, input.SeasonID = otherGroup.ID, 1
+	otherCost, err := s.SaveCost(ctx, 0, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for groupID, costID := range map[int]int{group.ID: cost.ID, otherGroup.ID: otherCost.ID} {
+		rows, info, err := s.Store.Costs(ctx, resourcequery.Page{Limit: 1}, groupID)
+		if err != nil || len(rows) != 1 || rows[0].ID != costID || info.NextOffset != -1 {
+			t.Fatalf("group %d: rows=%+v page=%+v err=%v", groupID, rows, info, err)
+		}
+	}
+
 	if err = s.Store.DeleteCost(ctx, cost.ID); err != nil {
 		t.Fatal(err)
 	}

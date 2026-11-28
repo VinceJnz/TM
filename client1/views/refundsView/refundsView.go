@@ -62,6 +62,7 @@ type paymentOption struct {
 
 type ItemEditor struct {
 	editLoad httpProcessor.LoadScope
+	listLoad httpProcessor.LoadScope
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -112,6 +113,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.listLoad.Cancel()
 	editor.editLoad.Cancel()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
@@ -134,7 +136,10 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
-	editor.editLoad.Cancel()
+	editor.listLoad.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+	editor.ActionHandled = false
+	editor.resetEditForm()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -235,6 +240,10 @@ func (editor *ItemEditor) setFieldReadOnly(field js.Value) {
 }
 
 func (editor *ItemEditor) loadPaymentOptions() {
+	if editor.ContextPayID > 0 {
+		editor.populateEditForm()
+		return
+	}
 	ticket := editor.editLoad.Start()
 	host := editor.FormHost
 	host.Set("textContent", "Loading payments…")
@@ -309,7 +318,12 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	localObjs.PaymentID, editor.UiComponents.PaymentID = editor.newPaymentDropdown(editor.CurrentRecord.PaymentID, "Payment ID", "itemPaymentID")
+	if editor.ContextPayID > 0 {
+		localObjs.PaymentID, editor.UiComponents.PaymentID = viewHelpers.StringEdit(strconv.Itoa(editor.ContextPayID), editor.document, "Payment ID", "text", "itemPaymentID")
+		editor.UiComponents.PaymentID.Set("readOnly", true)
+	} else {
+		localObjs.PaymentID, editor.UiComponents.PaymentID = editor.newPaymentDropdown(editor.CurrentRecord.PaymentID, "Payment ID", "itemPaymentID")
+	}
 
 	refundDateText := ""
 	if !editor.CurrentRecord.RefundDate.IsZero() {
@@ -392,10 +406,14 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		event.Call("stopPropagation")
 	}
 
-	paymentID, err := strconv.Atoi(strings.TrimSpace(editor.UiComponents.PaymentID.Get("value").String()))
-	if err != nil || paymentID < 1 {
-		editor.onCompletionMsg("Payment selection is required")
-		return nil
+	paymentID := editor.ContextPayID
+	if paymentID == 0 {
+		var err error
+		paymentID, err = strconv.Atoi(strings.TrimSpace(editor.UiComponents.PaymentID.Get("value").String()))
+		if err != nil || paymentID < 1 {
+			editor.onCompletionMsg("Payment selection is required")
+			return nil
+		}
 	}
 
 	refundDate, err := time.Parse(viewHelpers.Layout, editor.UiComponents.RefundDate.Get("value").String())
@@ -478,54 +496,45 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.RecordState = RecordStateCurrent
-		editor.parseHashContext()
-		editor.ActionHandled = false
-		go func() {
-			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
-			fetchFailed := false
-			editor.LastFetchError = ""
-			if editor.ContextPayID > 0 {
-				editor.client.PageRequest(&editor.Page,
-
-					http.MethodGet, ApiURL+"/payment/"+strconv.Itoa(editor.ContextPayID), &records, nil,
-					func(err error) {},
-					func(err error) {
-						fetchFailed = true
-						editor.LastFetchError = err.Error()
-						editor.onCompletionMsg("Failed to load refund records: " + err.Error())
-					})
-			} else {
-				editor.client.PageRequest(&editor.Page,
-
-					http.MethodGet, ApiURL, &records, nil,
-					func(err error) {},
-					func(err error) {
-						fetchFailed = true
-						editor.LastFetchError = err.Error()
-						editor.onCompletionMsg("Failed to load refund records: " + err.Error())
-					})
-			}
-			if fetchFailed {
-				editor.Records = nil
-				editor.populateItemList()
-				editor.updateStateDisplay(ItemStateNone)
-				return
-			}
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-			if editor.ContextAction == "new" && !editor.ActionHandled {
-				editor.ActionHandled = true
-				editor.FormHost = editor.EditDiv
-				editor.updateStateDisplay(ItemStateAdding)
-				editor.CurrentRecord = TableData{PaymentID: editor.ContextPayID, RefundDate: time.Now()}
-				editor.loadPaymentOptions()
-			}
-		}()
+	if editor.ViewState != ViewStateBlock || editor.RecordState != RecordStateReloadRequired {
+		return
 	}
+	previousID := editor.ContextPayID
+	editor.parseHashContext()
+	if previousID != editor.ContextPayID {
+		editor.Page = httpProcessor.Page{}
+		editor.Records = nil
+		editor.ListDiv.Set("innerHTML", "")
+	}
+	editor.RecordState = RecordStateCurrent
+	path := ApiURL
+	if editor.ContextPayID > 0 {
+		path += "/payment/" + strconv.Itoa(editor.ContextPayID)
+	}
+	ticket := editor.listLoad.Start()
+	pending := editor.Page.Snapshot()
+	editor.LastFetchError = ""
+	editor.updateStateDisplay(ItemStateFetching)
+	go func() {
+		var records []TableData
+		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, path, &records, nil)
+		if !ticket.Finish(err) {
+			return
+		}
+		if err != nil {
+			editor.LastFetchError = err.Error()
+			editor.onCompletionMsg("Failed to load refund records: " + err.Error())
+		} else {
+			editor.Page = pending
+		}
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+		if err == nil && editor.ContextAction == "new" && !editor.ActionHandled {
+			editor.ActionHandled = true
+			editor.NewItemData(js.Undefined(), nil)
+		}
+	}()
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {

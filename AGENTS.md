@@ -116,6 +116,10 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Use `httpProcessor.FindAPIError` for typed API errors in WASM. The pinned TinyGo toolchain lacks the interface reflection needed by `errors.As`.
 - Use the existing view, event, and HTTP abstractions before adding alternatives. Keep validation that protects data integrity on the server as well as in the UI.
 - Release `js.Func` callbacks and remove event listeners when their owning view is destroyed. Handle fetch failures, response-body failures, and cancellation without leaving blocked waits.
+- Manage group memberships under the selected row in Users. Keep the membership API and version checks. Check custom membership administrators have any-scope GET on Users and Security Group before rolling out the removal of the standalone menu.
+- Use the expanded group as the grant's group in Security Group. In payment- and booking-specific finance views, display the related record as read-only and use that ID when saving. Keep selectors in the standalone finance workflows.
+- Filter nested Trip Cost lists by the selected group in the store before applying pagination.
+
 - Keep inline membership edits bound to their own record version and select element. Give each form unique control IDs and focus the select when opening it.
 - Do not introduce additional localhost assumptions. Prefer same-origin or configurable API addressing when working on deployment configuration.
 - Keep `main.wasm` paired with the `wasm_exec.js` supplied by the compiler that built it. Never hand-edit generated artifacts.

@@ -56,6 +56,7 @@ type UI struct {
 
 type ItemEditor struct {
 	editLoad httpProcessor.LoadScope
+	listLoad httpProcessor.LoadScope
 	appCore  *appCore.AppCore
 	client   *httpProcessor.Client
 	document js.Value
@@ -104,6 +105,7 @@ func New(document js.Value, events *eventProcessor.EventProcessor, appCore *appC
 }
 
 func (editor *ItemEditor) ResetView() {
+	editor.listLoad.Cancel()
 	editor.editLoad.Cancel()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.RecordState = RecordStateReloadRequired
@@ -126,7 +128,9 @@ func (editor *ItemEditor) Toggle() {
 }
 
 func (editor *ItemEditor) Hide() {
-	editor.editLoad.Cancel()
+	editor.listLoad.Cancel()
+	editor.RecordState = RecordStateReloadRequired
+	editor.resetEditForm()
 	viewHelpers.CancelDialogs(editor.Div)
 	editor.Div.Get("style").Call("setProperty", "display", "none")
 	editor.ViewState = ViewStateNone
@@ -307,7 +311,12 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.BookingDropdown(editor.document, editor.BookingOptions, editor.CurrentRecord.BookingID, "Booking ID", "itemBookingID")
+	if editor.ContextBookID > 0 {
+		localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.StringEdit(strconv.Itoa(editor.ContextBookID), editor.document, "Booking ID", "text", "itemBookingID")
+		editor.UiComponents.BookingID.Set("readOnly", true)
+	} else {
+		localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.BookingDropdown(editor.document, editor.BookingOptions, editor.CurrentRecord.BookingID, "Booking ID", "itemBookingID")
+	}
 
 	paymentDateText := ""
 	if !editor.CurrentRecord.PaymentDate.IsZero() {
@@ -404,10 +413,14 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		event.Call("stopPropagation")
 	}
 
-	bookingID, err := strconv.Atoi(strings.TrimSpace(editor.UiComponents.BookingID.Get("value").String()))
-	if err != nil || bookingID < 1 {
-		editor.onCompletionMsg("Booking selection is required")
-		return nil
+	bookingID := editor.ContextBookID
+	if bookingID == 0 {
+		var err error
+		bookingID, err = strconv.Atoi(strings.TrimSpace(editor.UiComponents.BookingID.Get("value").String()))
+		if err != nil || bookingID < 1 {
+			editor.onCompletionMsg("Booking selection is required")
+			return nil
+		}
 	}
 
 	paymentDate, err := time.Parse(viewHelpers.Layout, editor.UiComponents.PaymentDate.Get("value").String())
@@ -489,46 +502,41 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
-	if editor.RecordState == RecordStateReloadRequired {
-		editor.RecordState = RecordStateCurrent
-		editor.parseHashContext()
-		go func() {
-			var records []TableData
-			editor.updateStateDisplay(ItemStateFetching)
-			fetchFailed := false
-			editor.LastFetchError = ""
-			if editor.ContextBookID > 0 {
-				editor.client.PageRequest(&editor.Page,
-
-					http.MethodGet, ApiURL+"/booking/"+strconv.Itoa(editor.ContextBookID), &records, nil,
-					func(err error) {},
-					func(err error) {
-						fetchFailed = true
-						editor.LastFetchError = err.Error()
-						editor.onCompletionMsg("Failed to load payment records: " + err.Error())
-					})
-			} else {
-				editor.client.PageRequest(&editor.Page,
-
-					http.MethodGet, ApiURL, &records, nil,
-					func(err error) {},
-					func(err error) {
-						fetchFailed = true
-						editor.LastFetchError = err.Error()
-						editor.onCompletionMsg("Failed to load payment records: " + err.Error())
-					})
-			}
-			if fetchFailed {
-				editor.Records = nil
-				editor.populateItemList()
-				editor.updateStateDisplay(ItemStateNone)
-				return
-			}
-			editor.Records = records
-			editor.populateItemList()
-			editor.updateStateDisplay(ItemStateNone)
-		}()
+	if editor.ViewState != ViewStateBlock || editor.RecordState != RecordStateReloadRequired {
+		return
 	}
+	previousID := editor.ContextBookID
+	editor.parseHashContext()
+	if previousID != editor.ContextBookID {
+		editor.Page = httpProcessor.Page{}
+		editor.Records = nil
+		editor.ListDiv.Set("innerHTML", "")
+	}
+	editor.RecordState = RecordStateCurrent
+	path := ApiURL
+	if editor.ContextBookID > 0 {
+		path += "/booking/" + strconv.Itoa(editor.ContextBookID)
+	}
+	ticket := editor.listLoad.Start()
+	pending := editor.Page.Snapshot()
+	editor.LastFetchError = ""
+	editor.updateStateDisplay(ItemStateFetching)
+	go func() {
+		var records []TableData
+		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, path, &records, nil)
+		if !ticket.Finish(err) {
+			return
+		}
+		if err != nil {
+			editor.LastFetchError = err.Error()
+			editor.onCompletionMsg("Failed to load payment records: " + err.Error())
+		} else {
+			editor.Page = pending
+		}
+		editor.Records = records
+		editor.populateItemList()
+		editor.updateStateDisplay(ItemStateNone)
+	}()
 }
 
 func (editor *ItemEditor) deleteItem(itemID int) {

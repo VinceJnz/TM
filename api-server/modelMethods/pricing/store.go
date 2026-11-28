@@ -15,8 +15,12 @@ type Store struct{ DB *sqlx.DB }
 const costColumns = "version,id,trip_cost_group_id,description,member_status_id,user_age_group_id,season_id,amount,created,modified"
 const groupColumns = "version,id,description,created,modified"
 
-func (s Store) Costs(ctx context.Context, p resourcequery.Page) ([]models.TripCost, resourcequery.PageInfo, error) {
-	return resourcequery.SelectPage[models.TripCost](ctx, s.DB, p, `SELECT c.version,c.id,c.trip_cost_group_id,c.description,c.member_status_id,m.status AS member_status,c.user_age_group_id,a.age_group AS user_age_group,c.season_id,s.season,c.amount,c.created,c.modified FROM at_trip_costs c LEFT JOIN et_member_status m ON m.id=c.member_status_id JOIN et_user_age_groups a ON a.id=c.user_age_group_id JOIN et_seasons s ON s.id=c.season_id`)
+func (s Store) Costs(ctx context.Context, p resourcequery.Page, groupID int) ([]models.TripCost, resourcequery.PageInfo, error) {
+	query := `SELECT c.version,c.id,c.trip_cost_group_id,c.description,c.member_status_id,m.status AS member_status,c.user_age_group_id,a.age_group AS user_age_group,c.season_id,s.season,c.amount,c.created,c.modified FROM at_trip_costs c LEFT JOIN et_member_status m ON m.id=c.member_status_id JOIN et_user_age_groups a ON a.id=c.user_age_group_id JOIN et_seasons s ON s.id=c.season_id`
+	if groupID > 0 {
+		return resourcequery.SelectPage[models.TripCost](ctx, s.DB, p, query+" WHERE c.trip_cost_group_id=$1", groupID)
+	}
+	return resourcequery.SelectPage[models.TripCost](ctx, s.DB, p, query)
 }
 func (s Store) Groups(ctx context.Context, p resourcequery.Page) ([]models.TripCostGroup, resourcequery.PageInfo, error) {
 	return resourcequery.SelectPage[models.TripCostGroup](ctx, s.DB, p, "SELECT "+groupColumns+" FROM at_trip_cost_groups")
