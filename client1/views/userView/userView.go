@@ -209,12 +209,6 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, looku
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
-	for _, item := range editor.Records {
-		optionElement := editor.document.Call("createElement", "option")
-		optionElement.Set("value", item.ID)
-		optionElement.Set("text", item.Name+" ("+item.Email+")")
-		StateDropDown.Call("appendChild", optionElement)
-	}
 	viewHelpers.SelectRecord(StateDropDown, value, true)
 
 	// Create a label element
@@ -280,9 +274,33 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string, looku
 		load(resource + "/lookup?q=" + url.QueryEscape(query))
 		return nil
 	})
-	if value > 0 {
-		load(resource + "/lookup?id=" + strconv.Itoa(value))
-	}
+	status.Set("textContent", "Loading people…")
+	go func() {
+		var people []TableData
+		err := editor.client.Request(http.MethodGet, resource, &people, nil)
+		if generation != 0 || !StateDropDown.Get("isConnected").Bool() {
+			return
+		}
+		if err != nil {
+			if value > 0 {
+				load(resource + "/lookup?id=" + strconv.Itoa(value))
+				return
+			}
+			status.Set("textContent", "People could not be loaded. Use Search to find a user.")
+			return
+		}
+		StateDropDown.Set("innerHTML", "")
+		for _, person := range viewHelpers.AlphabeticalChoices(people, func(person TableData) string {
+			return person.Name + " (" + person.Email + ")"
+		}) {
+			option := editor.document.Call("createElement", "option")
+			option.Set("value", person.ID)
+			option.Set("textContent", person.Name+" ("+person.Email+")")
+			StateDropDown.Call("appendChild", option)
+		}
+		viewHelpers.SelectRecord(StateDropDown, value, true)
+		status.Set("textContent", "")
+	}()
 
 	return fieldset, StateDropDown
 }

@@ -154,7 +154,7 @@ func (e *Editor) render() {
 	e.surface = e.field(grid, "Panel background", "input", "color", t.Surface)
 	e.text = e.field(grid, "Text color", "input", "color", t.Text)
 	e.font = e.field(grid, "Font", "select", "", "")
-	for _, option := range [][2]string{{"system", "System"}, {"serif", "Serif"}, {"sans", "Sans serif"}} {
+	for _, option := range [][2]string{{"system", "System"}, {"sans", "Sans serif"}, {"serif", "Serif"}} {
 		el := e.element(e.font, "option", option[1])
 		el.Set("value", option[0])
 	}

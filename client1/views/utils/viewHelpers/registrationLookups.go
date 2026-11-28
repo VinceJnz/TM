@@ -26,10 +26,11 @@ func LoadRegistrationAgeGroups(document, selectElement js.Value, client *httpPro
 		selectElement.Set("disabled", true)
 		status.Set("textContent", "Loading age groups…")
 		go func() {
-			var groups []struct {
+			type ageGroup struct {
 				ID   int    `json:"id"`
 				Name string `json:"age_group"`
 			}
+			var groups []ageGroup
 			err := client.RequestContext(ticket.Context, "GET", "/userAgeGroups", &groups, nil)
 			if !ticket.Finish(err) || !parent.Get("isConnected").Bool() {
 				return
@@ -39,7 +40,7 @@ func LoadRegistrationAgeGroups(document, selectElement js.Value, client *httpPro
 				retry.Set("hidden", false)
 				return
 			}
-			for _, group := range groups {
+			for _, group := range AlphabeticalChoices(groups, func(group ageGroup) string { return group.Name }) {
 				option := document.Call("createElement", "option")
 				option.Set("value", group.ID)
 				option.Set("textContent", group.Name)

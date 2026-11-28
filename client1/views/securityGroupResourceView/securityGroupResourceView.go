@@ -232,7 +232,7 @@ func (editor *ItemEditor) populateEditForm() {
 	groupFieldset.Call("appendChild", viewHelpers.Label(editor.document, "Group", "itemGroup"))
 	groupSelect := editor.document.Call("createElement", "select")
 	groupSelect.Set("id", "itemGroup")
-	for _, g := range editor.GroupRecords {
+	for _, g := range viewHelpers.AlphabeticalChoices(editor.GroupRecords, func(group GroupRecord) string { return group.Name }) {
 		opt := editor.document.Call("createElement", "option")
 		opt.Set("value", g.ID)
 		opt.Set("text", g.Name)

@@ -179,7 +179,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
-	for _, item := range editor.Records {
+	for _, item := range viewHelpers.AlphabeticalChoices(editor.Records, func(item TableData) string { return item.Type }) {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
 		optionElement.Set("text", item.Type)

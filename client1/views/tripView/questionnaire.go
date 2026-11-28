@@ -62,13 +62,14 @@ func (e *ItemEditor) renderQuestionnaire(trip TableData, path string, questionna
 		kind := field("Answer format", "select", "")
 		kind.Set("name", "kind")
 		for _, format := range []struct{ value, label string }{
-			{"text", "Text"}, {"yes_no", "Yes or no"}, {"single_choice", "Single choice"}, {"multiple_choice", "Multiple choices"},
+			{"multiple_choice", "Multiple choices"}, {"single_choice", "Single choice"}, {"text", "Text"}, {"yes_no", "Yes or no"},
 		} {
 			option := e.document.Call("createElement", "option")
 			option.Set("value", format.value)
 			option.Set("textContent", format.label)
 			kind.Call("appendChild", option)
 		}
+		kind.Set("value", "text")
 		if question.Type != "" {
 			kind.Set("value", question.Type)
 		}

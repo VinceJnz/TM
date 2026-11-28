@@ -190,7 +190,7 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	stateDropDown.Set("id", htmlID)
 
 	// Create the elements to put in the select element
-	for _, item := range editor.GroupRecords {
+	for _, item := range viewHelpers.AlphabeticalChoices(editor.GroupRecords, func(group GroupRecord) string { return group.Name }) {
 		optionElement := editor.document.Call("createElement", "option")
 		optionElement.Set("value", item.ID)
 		optionElement.Set("text", item.Name)

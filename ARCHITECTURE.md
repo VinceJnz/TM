@@ -81,6 +81,8 @@ The trip editor reads difficulty, status, type, and cost-group choices from `GET
 
 The user editor loads account and membership status choices from dedicated `users` read routes. The status catalogs continue to have independent management grants.
 
+WASM renders catalog, security and registration choices in case-insensitive label order after loading their lookup results. The booking trip picker sorts by name and departure date while keeping its original record indices for selection and nearest-trip defaults. PostgreSQL orders the user and booking participant searches by name, username and ID before applying the 25-result cap. Display ordering leaves the management lists and their pagination contracts intact.
+
 `buildRouter` in `main.go` separates three boundaries:
 
 1. **Public routes:** authentication entry points, selected registration lookups,

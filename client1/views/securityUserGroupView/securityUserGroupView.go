@@ -329,14 +329,18 @@ func (editor *ItemEditor) FetchItems() {
 		return
 	}
 	editor.RecordState = RecordStateCurrent
-	editor.Children.User.FetchItems()
-	editor.Children.Group.FetchItems()
 	ticket := editor.load.Start()
 	pending := editor.Page.Snapshot()
 	editor.updateStateDisplay(ItemStateFetching)
 	go func() {
 		var records []TableData
 		err := editor.client.PageRequestContext(ticket.Context, &pending, http.MethodGet, ApiURL, &records, nil)
+		var groups []securityGroupView.TableData
+		if err == nil {
+			if groupErr := editor.client.RequestContext(ticket.Context, http.MethodGet, securityGroupView.ApiURL, &groups, nil); groupErr != nil {
+				groups = nil
+			}
+		}
 
 		if !ticket.Finish(err) {
 			return
@@ -349,6 +353,7 @@ func (editor *ItemEditor) FetchItems() {
 		}
 		editor.Page = pending
 
+		editor.Children.Group.Records = groups
 		editor.Records = records
 		editor.populateItemList()
 		editor.updateStateDisplay(ItemStateNone)

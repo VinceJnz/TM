@@ -70,6 +70,9 @@ const lookupPeople = JSON.parse(lookup.body);
 const memberCode = lookupPeople[0]?.member_code;
 assert(typeof memberCode === 'string' && memberCode.length > 0, 'booking lookup did not return the member code');
 assert.deepEqual(lookupPeople, [{id: 2, name: 'Other Member', username: '', member_code: memberCode, membership: 'member'}]);
+const sortedPeople = await request(`${prefix}/bookings/1/bookingPeople/lookup?q=Member`, 'GET', undefined, cookie);
+assert.equal(sortedPeople.status, 200);
+assert.deepEqual(JSON.parse(sortedPeople.body).map(person => person.id), [2, 1], 'participant search was not ordered by name');
 const otherLookup = await request(`${prefix}/bookings/2/bookingPeople/lookup?q=Other%20Member`, 'GET', undefined, cookie);
 assert.equal(otherLookup.status, 200);
 assert.deepEqual(JSON.parse(otherLookup.body), [], 'another member booking opened a participant lookup');
@@ -321,6 +324,9 @@ try {
   await clickBooking('Add person');
   const personInput = `(${tripBooking}).querySelector('#itemPerson')`;
   await waitUI(`!!${personInput}`,'participant questionnaire did not load');
+  await waitUI(`Array.from(${personInput}.form.querySelector('.tm-participant-group select').options)
+    .map(option => option.textContent).join('|') === 'Select membership|Affiliated member|Non-member|TTC member'`,
+    'membership options were out of order');
   await waitUI(`(${tripBooking}).querySelector('.tm-booking-context')?.textContent.includes('Synthetic trip')`,'trip context was lost in the people step');
   await waitUI(`(${tripBooking}).textContent.includes('What equipment do you need?')`,'published question did not appear on participant form');
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});

@@ -2,7 +2,6 @@ package oAuthRegistrationView
 
 import (
 	"client1/v2/app/appCore"
-	"client1/v2/app/domEvents"
 	"client1/v2/app/eventProcessor"
 	"client1/v2/app/httpProcessor"
 	"client1/v2/views/utils/viewHelpers"
@@ -551,39 +550,26 @@ func (editor *ItemEditor) populateAgeGroupsDropdown(selectElement js.Value, sele
 		return
 	}
 
-	pfetch := js.Global().Call("fetch", editor.client.Endpoint("/userAgeGroups"), map[string]any{
-		"method":      "GET",
-		"credentials": "include",
-	})
-	domEvents.Then(pfetch, func(this js.Value, args []js.Value) any {
-		resp := args[0]
-		if !resp.Get("ok").Bool() {
-			log.Printf("%vpopulateAgeGroupsDropdown: HTTP error", debugTag)
-			return nil
+	go func() {
+		type ageGroup struct {
+			ID   int    `json:"id"`
+			Name string `json:"age_group"`
 		}
-
-		jsonP := resp.Call("json")
-		domEvents.Then(jsonP, func(this js.Value, args []js.Value) any {
-			data := args[0]
-			length := data.Get("length").Int()
-			for i := 0; i < length; i++ {
-				item := data.Index(i)
-				id := item.Get("id").Int()
-				name := item.Get("age_group").String()
-
-				opt := editor.document.Call("createElement", "option")
-				opt.Set("value", id)
-				opt.Set("textContent", name)
-				if selectedValue > 0 && int64(id) == selectedValue {
-					opt.Set("selected", true)
-				}
-				selectElement.Call("appendChild", opt)
+		var groups []ageGroup
+		if err := editor.client.Request(http.MethodGet, "/userAgeGroups", &groups, nil); err != nil {
+			log.Printf("%vpopulateAgeGroupsDropdown: age group lookup failed", debugTag)
+			return
+		}
+		for _, group := range viewHelpers.AlphabeticalChoices(groups, func(group ageGroup) string { return group.Name }) {
+			opt := editor.document.Call("createElement", "option")
+			opt.Set("value", group.ID)
+			opt.Set("textContent", group.Name)
+			if selectedValue > 0 && int64(group.ID) == selectedValue {
+				opt.Set("selected", true)
 			}
-			return nil
-		})
-
-		return nil
-	})
+			selectElement.Call("appendChild", opt)
+		}
+	}()
 }
 
 func (editor *ItemEditor) renderOAuthCompletionDialog(name string) {

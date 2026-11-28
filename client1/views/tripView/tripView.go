@@ -15,7 +15,9 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 	"syscall/js"
 	"time"
 )
@@ -237,10 +239,21 @@ func (editor *ItemEditor) NewDropdown(value int, labelText, htmlID string) (obje
 	StateDropDown := editor.document.Call("createElement", "select")
 	StateDropDown.Set("id", htmlID)
 
-	for index, item := range editor.Records {
+	indices := make([]int, len(editor.Records))
+	for index := range indices {
+		indices[index] = index
+	}
+	slices.SortStableFunc(indices, func(a, b int) int {
+		left, right := editor.Records[a], editor.Records[b]
+		if order := strings.Compare(strings.ToLower(left.Name), strings.ToLower(right.Name)); order != 0 {
+			return order
+		}
+		return left.FromDate.Compare(right.FromDate)
+	})
+	for _, index := range indices {
+		item := editor.Records[index]
 		optionElement := editor.document.Call("createElement", "option")
-		//optionElement.Set("value", item.ID)
-		optionElement.Set("value", index) // The index is used as it allows the current record to be updated when the dropdown is changed. This allows the app to use the current record to update UI values.
+		optionElement.Set("value", index) // The selection still indexes the original record slice.
 		optionElement.Set("text", item.Name+" (From:"+item.FromDate.Format(viewHelpers.Layout)+" - To:"+item.ToDate.Format(viewHelpers.Layout)+")")
 		if value == item.ID {
 			optionElement.Set("selected", true)

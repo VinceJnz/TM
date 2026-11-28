@@ -28,7 +28,7 @@ func (s Store) BookingPeopleLookup(ctx context.Context, query string, id, bookin
 			SELECT 1 FROM at_booking_people p WHERE p.booking_id=$4 AND p.person_id=u.id)))
 		AND (($2>0 AND u.id=$2) OR ($2=0 AND length($1)>=2 AND strpos(lower(name),lower($1))>0))
 		AND EXISTS(SELECT 1 FROM at_bookings WHERE id=$4 AND (owner_id=$3 OR lower($5)='any'))
-		ORDER BY u.id LIMIT 25`, query, id, viewer, bookingID, scope)
+		ORDER BY lower(u.name), lower(u.username), u.id LIMIT 25`, query, id, viewer, bookingID, scope)
 	return items, err
 }
 
