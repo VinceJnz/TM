@@ -402,9 +402,8 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
 
-		panel := editor.document.Call("createElement", "div")
-		viewHelpers.AdminRecordFields(panel, viewHelpers.RecordField{Label: "Owner ID", Value: strconv.Itoa(record.OwnerID)})
-		viewHelpers.LayoutDisclosureRecord(itemDiv, panel, debugTag+"details-"+strconv.Itoa(record.ID), nil)
+		viewHelpers.AdminRecordFields(itemDiv, viewHelpers.RecordField{Label: "Owner ID", Value: strconv.Itoa(record.OwnerID)})
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(

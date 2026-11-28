@@ -2,7 +2,6 @@ package viewHelpers
 
 import (
 	"client1/v2/app/domEvents"
-	"strconv"
 	"syscall/js"
 )
 
@@ -57,9 +56,7 @@ func LayoutDisclosureRecord(record, panel js.Value, id string, onToggle func(boo
 		open := panel.Get("hidden").Bool()
 		panel.Set("hidden", !open)
 		button.Call("setAttribute", "aria-expanded", open)
-		if onToggle != nil {
-			onToggle(open)
-		}
+		onToggle(open)
 		return nil
 	})
 }
@@ -70,12 +67,6 @@ func DisclosureTriangle(document js.Value) js.Value {
 	triangle.Set("textContent", "▶")
 	triangle.Call("setAttribute", "aria-hidden", "true")
 	return triangle
-}
-
-func LayoutCatalogRecord(record js.Value, prefix string, id int, fields ...RecordField) {
-	panel := record.Get("ownerDocument").Call("createElement", "div")
-	AdminRecordFields(panel, fields...)
-	LayoutDisclosureRecord(record, panel, prefix+"details-"+strconv.Itoa(id), nil)
 }
 
 func AdminRecordFields(root js.Value, fields ...RecordField) {

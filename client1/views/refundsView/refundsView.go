@@ -221,7 +221,7 @@ func (editor *ItemEditor) openRecord(record TableData, host js.Value) {
 	editor.FormHost = host
 	editor.setActiveRowHighlight(host.Get("parentElement"))
 	editor.updateStateDisplay(ItemStateEditing)
-	editor.loadPaymentOptions()
+	editor.populateEditForm()
 }
 
 func (editor *ItemEditor) loadPaymentOptions() {
@@ -303,11 +303,14 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	if editor.ContextPayID > 0 {
-		localObjs.PaymentID, editor.UiComponents.PaymentID = viewHelpers.StringEdit(strconv.Itoa(editor.ContextPayID), editor.document, "Payment ID", "text", "itemPaymentID")
-		editor.UiComponents.PaymentID.Set("readOnly", true)
-	} else {
-		localObjs.PaymentID, editor.UiComponents.PaymentID = editor.newPaymentDropdown(editor.CurrentRecord.PaymentID, "Payment ID", "itemPaymentID")
+	if method == "POST" {
+		if editor.ContextPayID > 0 {
+			localObjs.PaymentID, editor.UiComponents.PaymentID = viewHelpers.StringEdit(strconv.Itoa(editor.ContextPayID), editor.document, "Payment ID", "text", "itemPaymentID")
+			editor.UiComponents.PaymentID.Set("readOnly", true)
+		} else {
+			localObjs.PaymentID, editor.UiComponents.PaymentID = editor.newPaymentDropdown(editor.CurrentRecord.PaymentID, "Payment ID", "itemPaymentID")
+		}
+		form.Call("appendChild", localObjs.PaymentID)
 	}
 
 	refundDateText := ""
@@ -331,7 +334,6 @@ func (editor *ItemEditor) populateEditForm() {
 
 	localObjs.ExternalRef, editor.UiComponents.ExternalRef = viewHelpers.StringEdit(editor.CurrentRecord.ExternalRef, editor.document, "External Ref", "text", "itemExternalRef")
 
-	form.Call("appendChild", localObjs.PaymentID)
 	form.Call("appendChild", localObjs.RefundDate)
 	form.Call("appendChild", localObjs.Amount)
 	form.Call("appendChild", localObjs.Reason)
@@ -367,8 +369,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		event.Call("stopPropagation")
 	}
 
-	paymentID := editor.ContextPayID
-	if paymentID == 0 {
+	paymentID := editor.CurrentRecord.PaymentID
+	if editor.ItemState == ItemStateAdding && editor.ContextPayID == 0 {
 		var err error
 		paymentID, err = strconv.Atoi(strings.TrimSpace(editor.UiComponents.PaymentID.Get("value").String()))
 		if err != nil || paymentID < 1 {
@@ -560,9 +562,8 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("textContent", "Refund #"+strconv.Itoa(record.ID)+" · "+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" · "+record.RefundDate.Format(viewHelpers.Layout))
-		panel := editor.document.Call("createElement", "div")
-		viewHelpers.AdminRecordFields(panel,
+		itemDiv.Set("textContent", "Refund #"+strconv.Itoa(record.ID))
+		viewHelpers.AdminRecordFields(itemDiv,
 			viewHelpers.RecordField{Label: "Payment", Value: strconv.Itoa(record.PaymentID)},
 			viewHelpers.RecordField{Label: "Amount", Value: strconv.FormatFloat(record.Amount, 'f', 2, 64)},
 			viewHelpers.RecordField{Label: "Refund date", Value: record.RefundDate.Format(viewHelpers.Layout)},
@@ -596,7 +597,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
 		itemDiv.Call("appendChild", inlineFormHost)
-		viewHelpers.LayoutDisclosureRecord(itemDiv, panel, debugTag+"details-"+strconv.Itoa(record.ID), nil)
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.

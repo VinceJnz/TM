@@ -678,37 +678,42 @@ const legacyLogout=await request(`${prefix}/auth/logout/`,'GET',undefined,cookie
   const grantForm = "Array.from(document.querySelectorAll('#mainContent form')).find(f=>f.getClientRects().length>0&&f.querySelector('#itemResource'))";
   await waitUI(`(${grantForm})?.querySelectorAll('select').length===3 && !(${grantForm}).querySelector('#itemGroup')`,'grant form did not inherit the expanded group');
   await send('Runtime.evaluate',{expression:`Array.from((${grantForm}).querySelectorAll('button')).find(b=>b.textContent==='Cancel').click()`});
-  const disclosureCases = [
+  const flatRecordCases = [
     ["payments","payments","Payment date"],
     ["refunds","refunds","External reference"],
     ["groupbooking","groupBooking","Owner ID"],
     ["bookingvouchers","bookingVoucher","Pricing"],
-    ["tripcostgroups","tripCostGroup","Cost category"],
-    ["securityaccesslevel","accessLevel","Description"],
-    ["securityaccessscope","accessScope","Description"],
-    ["bookingstatus","bookingStatus","Last updated"],
-    ["securityresource","resource","Description"],
-    ["seasons","season","Last updated"],
-    ["tripdifficulty","tripDifficulty","Description"],
-    ["tripstatus","tripStatus","Last updated"],
-    ["triptype","tripType","Last updated"],
-    ["useragegroups","userAgeGroup","Last updated"],
-    ["usermemberstatus","userMemberStatus","Last updated"]
+    ["securityaccesslevel","accessLevel"],
+    ["securityaccessscope","accessScope"],
+    ["bookingstatus","bookingStatus"],
+    ["securityresource","resource"],
+    ["seasons","season"],
+    ["tripdifficulty","tripDifficulty"],
+    ["tripstatus","tripStatus"],
+    ["triptype","tripType"],
+    ["useragegroups","userAgeGroup"],
+    ["usermemberstatus","userMemberStatus"]
   ];
-  for (const [route, view, detail] of disclosureCases) {
-    const controlPrefix = JSON.stringify(view+'View.details-');
-    const rowDisclosure = `Array.from(document.querySelectorAll('#mainContent .tm-admin-record-header > .tm-disclosure')).find(b=>b.getClientRects().length>0 && b.getAttribute('aria-controls')?.startsWith(${controlPrefix}))`;
+  for (const [route, view, detail] of flatRecordCases) {
+    const row = `Array.from(document.getElementById(${JSON.stringify(view+'View.Div')})?.querySelectorAll('.tm-admin-record') || []).find(row=>row.getClientRects().length>0)`;
     await send('Runtime.evaluate',{expression:`location.hash='/${route}'`});
-    await waitUI(`!!(${rowDisclosure}) && location.hash==='#/${route}' && (${rowDisclosure}).getAttribute('aria-expanded')==='false'`,'row disclosure missing for '+route);
-    const panel = `document.getElementById((${rowDisclosure}).getAttribute('aria-controls'))`;
-    await waitUI(`(${panel}).hidden && (${rowDisclosure}).querySelector('.tm-disclosure-indicator').getAttribute('aria-hidden')==='true'`,'row did not start collapsed for '+route);
-    if (detail === 'Description' || detail === 'Last updated') await waitUI(`(${panel}).hidden && ['PUT','DELETE'].every(method=>Array.from((${rowDisclosure}).parentElement.querySelectorAll('button[data-tm-action]')).some(button=>button.dataset.tmAction===method && button.getClientRects().length>0))`,'catalog actions were not visible on a collapsed row for '+route);
-    await send('Runtime.evaluate',{expression:`(${rowDisclosure}).querySelector('.tm-disclosure-indicator').click()`});
-    await waitUI(`(${rowDisclosure}).getAttribute('aria-expanded')==='true' && !(${panel}).hidden && (${panel}).textContent.includes(${JSON.stringify(detail)})`,'row did not reveal details for '+route);
-
-    await send('Runtime.evaluate',{expression:`(${rowDisclosure}).click()`});
-    await waitUI(`(${rowDisclosure}).getAttribute('aria-expanded')==='false' && (${panel}).hidden`,'row did not collapse for '+route);
+    await waitUI(`!!(${row}) && !(${row}).querySelector('.tm-disclosure, .tm-disclosure-indicator') && ['PUT','DELETE'].every(method=>Array.from((${row}).querySelectorAll('button[data-tm-action]')).some(button=>button.dataset.tmAction===method && button.getClientRects().length>0))`,'flat row or its actions were missing for '+route);
+    if (detail) await waitUI(`(${row}).querySelector('.tm-admin-record-summary').textContent.includes(${JSON.stringify(detail)})`,'row details were missing for '+route);
+    if (route === 'payments' || route === 'refunds') {
+      await send('Runtime.evaluate',{expression:`(${row}).querySelector('button[data-tm-action=PUT]').click()`});
+      const edit = `(${row}).querySelector('.inline-record-form form')`;
+      await waitUI(`!!(${edit}) && !(${edit}).querySelector('#itemBookingID, #itemPaymentID')`,'finance edit exposed its parent selector for '+route);
+      await send('Runtime.evaluate',{expression:`(${edit}).querySelector('#cancelEditBtn').click()`});
+    }
   }
+  await send('Runtime.evaluate',{expression:"location.hash='/tripcostgroups'"});
+  const costDisclosure = "Array.from(document.querySelectorAll('#mainContent .tm-disclosure')).find(b=>b.getClientRects().length>0 && b.getAttribute('aria-controls')?.startsWith('tripCostGroupView.details-'))";
+  await waitUI(`(${costDisclosure})?.getAttribute('aria-expanded')==='false'`,'trip cost group disclosure was missing');
+  const costPanel = `document.getElementById((${costDisclosure}).getAttribute('aria-controls'))`;
+  await send('Runtime.evaluate',{expression:`(${costDisclosure}).querySelector('.tm-disclosure-indicator').click()`});
+  await waitUI(`(${costDisclosure}).getAttribute('aria-expanded')==='true' && (${costPanel}).textContent.includes('Cost category')`,'trip cost group did not reveal related prices');
+  await send('Runtime.evaluate',{expression:`(${costDisclosure}).click()`});
+  await waitUI(`(${costPanel}).hidden`,'trip cost group did not collapse');
   const tripCard = "Array.from(document.querySelectorAll('.tm-admin-record')).find(row=>row.getClientRects().length&&row.textContent.includes('Synthetic trip'))";
   await send('Runtime.evaluate',{expression:"location.hash='/trips'"});
   await waitUI(`!!(${tripCard})?.querySelector('button[data-tm-action=PUT]:not([hidden]):not(:disabled)')`,'admin trip edit action did not render');

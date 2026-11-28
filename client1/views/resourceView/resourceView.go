@@ -383,9 +383,7 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv = viewHelpers.ItemList(editor.document, debugTag, record.Name, editFn, deleteFn)
 		itemDiv.Call("removeAttribute", "style")
-		viewHelpers.LayoutCatalogRecord(itemDiv, debugTag, record.ID,
-			viewHelpers.RecordField{Label: "Description", Value: record.Description},
-		)
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 }

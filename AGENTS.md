@@ -84,6 +84,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Use parameterized SQL. Allowlist any dynamic identifiers or sort expressions; never interpolate user input into SQL.
 - Prefer explicit selected columns over `SELECT *` in new queries. Add bounded pagination to potentially large collections when within scope.
 - Use transactions for logically indivisible changes, including payment/refund records and derived booking payment status. Check commit errors and roll back failed transactions.
+- Preserve a payment's booking and a refund's payment on edit. Show relationship selectors during creation and enforce the saved association in the ledger.
 - Make payment callbacks retry-safe and idempotent. Validate webhook signatures and provider payment details before finalizing a booking.
 - Use integer minor units or a consistent decimal representation for money. Make currency units explicit at gateway boundaries; avoid floating-point conversions.
 - Add a clearly named migration for schema changes. Do not edit historical dumps as the migration mechanism or assume checked-in SQL matches a deployed database.
@@ -101,8 +102,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 - Load the published appearance stylesheet in all browser entry points. Keep the built-in appearance usable if the published settings are unavailable.
 - Use shared theme variables for visual states in public pages and WASM views. Keep status labels and keyboard focus visible when changing colors.
 
-- Make top-level record summaries expandable. Put the triangle and summary in the same keyboard-focusable disclosure and synchronize its expanded state with the controlled panel. Keep the triangle decorative. Use the shared administration disclosure or the booking card's native summary.
-- Open read-only details or lazy child lists through the row disclosure. Keep Edit, Delete, and workflow actions visible and independent of the disclosure. Preserve capability checks and inline edit placement.
+- Make top-level record summaries expandable when opening the row reveals related records. Put the triangle and summary in the same keyboard-focusable disclosure and synchronize its expanded state with the controlled panel. Keep the triangle decorative. Use the shared administration disclosure or the booking card's native summary.
+- Use plain rows for system catalogs and other lists that show only the record itself. Load related lists through the disclosure. Keep Edit, Delete, and workflow actions visible and independent of the disclosure. Preserve capability checks and inline edit placement.
 
 - Show existing-record editors directly under the selected administration row. Keep Add at the top of the list, keep lookup failures and retries with the selected row, and return focus to its action on Cancel. Shared editors must confirm before replacing unsaved edits.
 

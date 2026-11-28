@@ -58,12 +58,12 @@ func LockBookings(ctx context.Context, tx *sqlx.Tx, ids ...int) error {
 	}
 	return nil
 }
-func LockPayment(ctx context.Context, tx *sqlx.Tx, id int, additional ...int) (int, error) {
+func LockPayment(ctx context.Context, tx *sqlx.Tx, id int) (int, error) {
 	var booking int
 	if err := tx.GetContext(ctx, &booking, "SELECT booking_id FROM at_payments WHERE id=$1", id); err != nil {
 		return 0, err
 	}
-	if err := LockBookings(ctx, tx, append(additional, booking)...); err != nil {
+	if err := LockBookings(ctx, tx, booking); err != nil {
 		return 0, err
 	}
 	var current int
@@ -75,44 +75,21 @@ func LockPayment(ctx context.Context, tx *sqlx.Tx, id int, additional ...int) (i
 	}
 	return booking, nil
 }
-func LockRefund(ctx context.Context, tx *sqlx.Tx, id, newPayment int) (int, error) {
-	var oldPayment int
-	if err := tx.GetContext(ctx, &oldPayment, "SELECT payment_id FROM at_refunds WHERE id=$1", id); err != nil {
-		return 0, err
+func LockRefund(ctx context.Context, tx *sqlx.Tx, id int) (int, int, error) {
+	var payment int
+	if err := tx.GetContext(ctx, &payment, "SELECT payment_id FROM at_refunds WHERE id=$1", id); err != nil {
+		return 0, 0, err
 	}
-	payments := []int{oldPayment}
-	if newPayment > 0 && newPayment != oldPayment {
-		payments = append(payments, newPayment)
-	}
-	sort.Ints(payments)
-	mapping := map[int]int{}
-	bookings := []int{}
-	for _, payment := range payments {
-		var booking int
-		if err := tx.GetContext(ctx, &booking, "SELECT booking_id FROM at_payments WHERE id=$1", payment); err != nil {
-			return 0, err
-		}
-		mapping[payment] = booking
-		bookings = append(bookings, booking)
-	}
-	if err := LockBookings(ctx, tx, bookings...); err != nil {
-		return 0, err
-	}
-	for _, payment := range payments {
-		var current int
-		if err := tx.GetContext(ctx, &current, "SELECT booking_id FROM at_payments WHERE id=$1 FOR UPDATE", payment); err != nil {
-			return 0, err
-		}
-		if current != mapping[payment] {
-			return 0, ErrConcurrentChange
-		}
+	booking, err := LockPayment(ctx, tx, payment)
+	if err != nil {
+		return 0, 0, err
 	}
 	var current int
 	if err := tx.GetContext(ctx, &current, "SELECT payment_id FROM at_refunds WHERE id=$1 FOR UPDATE", id); err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	if current != oldPayment {
-		return 0, ErrConcurrentChange
+	if current != payment {
+		return 0, 0, ErrConcurrentChange
 	}
-	return mapping[oldPayment], nil
+	return booking, payment, nil
 }

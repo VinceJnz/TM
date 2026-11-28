@@ -58,14 +58,13 @@ func WritePayment(ctx context.Context, db *sqlx.DB, operation string, id int, in
 	if operation == "create" {
 		err = LockBookings(ctx, tx, input.BookingID)
 	} else {
-		extra := []int{}
-		if operation == "update" {
-			extra = append(extra, input.BookingID)
-		}
-		old, err = LockPayment(ctx, tx, id, extra...)
+		old, err = LockPayment(ctx, tx, id)
 	}
 	if err != nil {
 		return 0, err
+	}
+	if operation == "update" && old != input.BookingID {
+		return 0, ErrLedgerConflict
 	}
 	if operation != "delete" {
 		var confirmedFree bool
@@ -90,7 +89,7 @@ func WritePayment(ctx context.Context, db *sqlx.DB, operation string, id int, in
 	case "create":
 		err = tx.QueryRowContext(ctx, `INSERT INTO at_payments(booking_id,payment_date,amount,payment_method) VALUES($1,$2,$3,$4) RETURNING id`, input.BookingID, input.PaymentDate, input.Amount, input.PaymentMethod).Scan(&id)
 	case "update":
-		err = changed(tx.ExecContext(ctx, `UPDATE at_payments SET booking_id=$2,payment_date=$3,amount=$4,payment_method=$5 WHERE id=$1`, id, input.BookingID, input.PaymentDate, input.Amount, input.PaymentMethod))
+		err = changed(tx.ExecContext(ctx, `UPDATE at_payments SET payment_date=$2,amount=$3,payment_method=$4 WHERE id=$1`, id, input.PaymentDate, input.Amount, input.PaymentMethod))
 	case "delete":
 		err = changed(tx.ExecContext(ctx, `DELETE FROM at_payments WHERE id=$1`, id))
 	default:
@@ -100,7 +99,7 @@ func WritePayment(ctx context.Context, db *sqlx.DB, operation string, id int, in
 		return 0, err
 	}
 	if operation != "delete" {
-		if input.Amount.IsPositive() && (operation == "create" || old != input.BookingID || !wasPositive) {
+		if input.Amount.IsPositive() && (operation == "create" || !wasPositive) {
 			if err := redeemManualPayment(ctx, tx, input.BookingID, id); err != nil {
 				return 0, err
 			}
@@ -109,7 +108,7 @@ func WritePayment(ctx context.Context, db *sqlx.DB, operation string, id int, in
 			return 0, err
 		}
 	}
-	if old > 0 && (operation == "delete" || old != input.BookingID) {
+	if operation == "delete" {
 		if err = Sync(ctx, tx, old); err != nil {
 			return 0, err
 		}
@@ -127,24 +126,18 @@ func WriteRefund(ctx context.Context, db *sqlx.DB, operation string, id int, inp
 		return 0, err
 	}
 	defer tx.Rollback()
-	var old, newBooking int
+	var booking int
 	if operation == "create" {
-		newBooking, err = LockPayment(ctx, tx, input.PaymentID)
+		booking, err = LockPayment(ctx, tx, input.PaymentID)
 	} else {
-		target := input.PaymentID
-		if operation == "delete" {
-			target = 0
+		var payment int
+		booking, payment, err = LockRefund(ctx, tx, id)
+		if err == nil && operation == "update" && payment != input.PaymentID {
+			return 0, ErrLedgerConflict
 		}
-		old, err = LockRefund(ctx, tx, id, target)
 	}
 	if err != nil {
 		return 0, err
-	}
-	if operation != "delete" {
-		newBooking, err = GetBookingIDByPaymentIDTx(ctx, tx, input.PaymentID)
-		if err != nil {
-			return 0, err
-		}
 	}
 	var providerBacked bool
 	if operation == "create" {
@@ -170,7 +163,7 @@ func WriteRefund(ctx context.Context, db *sqlx.DB, operation string, id int, inp
 	case "create":
 		err = tx.QueryRowContext(ctx, `INSERT INTO at_refunds(payment_id,refund_date,amount,reason,external_ref) VALUES($1,$2,$3,$4,$5) RETURNING id`, input.PaymentID, input.RefundDate, input.Amount, input.Reason, input.ExternalRef).Scan(&id)
 	case "update":
-		err = changed(tx.ExecContext(ctx, `UPDATE at_refunds SET payment_id=$2,refund_date=$3,amount=$4,reason=$5,external_ref=$6 WHERE id=$1`, id, input.PaymentID, input.RefundDate, input.Amount, input.Reason, input.ExternalRef))
+		err = changed(tx.ExecContext(ctx, `UPDATE at_refunds SET refund_date=$2,amount=$3,reason=$4,external_ref=$5 WHERE id=$1`, id, input.RefundDate, input.Amount, input.Reason, input.ExternalRef))
 	case "delete":
 		err = changed(tx.ExecContext(ctx, `DELETE FROM at_refunds WHERE id=$1`, id))
 	default:
@@ -179,15 +172,8 @@ func WriteRefund(ctx context.Context, db *sqlx.DB, operation string, id int, inp
 	if err != nil {
 		return 0, err
 	}
-	if operation != "delete" {
-		if err = Sync(ctx, tx, newBooking); err != nil {
-			return 0, err
-		}
-	}
-	if old > 0 && (operation == "delete" || old != newBooking) {
-		if err = Sync(ctx, tx, old); err != nil {
-			return 0, err
-		}
+	if err = Sync(ctx, tx, booking); err != nil {
+		return 0, err
 	}
 	return id, tx.Commit()
 }

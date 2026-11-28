@@ -411,9 +411,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", editButton)
 		itemDiv.Call("appendChild", deleteButton)
 
-		viewHelpers.LayoutCatalogRecord(itemDiv, debugTag, record.ID,
-			viewHelpers.RecordField{Label: "Description", Value: record.Description},
-		)
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 }

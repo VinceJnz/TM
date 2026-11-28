@@ -282,14 +282,15 @@ The shared `RowEditor` moves a view's single edit container beneath the selected
 record and returns it to its original location for Add. Moving the container
 keeps validation, capability checks, stale-record recovery, and lookup retries
 with the active edit. Browser coverage checks inline placement and focus.
-Top-level record lists use the row summary and triangle as one disclosure.
-Security groups, users, and the member Trip List already used this pattern.
-The shared administration layout controls an inline panel and leaves distinct
-actions independently clickable. Trips and Trip Cost Group load their child
-lists when opened and cancel the child load when collapsed. Finance details use
-the list record while Edit still loads the choices needed by the form. Catalog
-panels show record details while Edit and Delete stay in the row header.
-My Bookings uses the native summary so its workflow controls stay separate.
+Top-level rows use a triangle and clickable summary when expansion reveals
+related records. Security Group opens resource grants, Users opens memberships,
+and the member Trip List opens its trip roster. Trips and Trip Cost Group load
+bookings and costs when opened and cancel the child load when collapsed.
+My Bookings groups participant access with the booking details. System catalogs
+use plain rows with separate Edit and Delete actions. Finance, Group Booking,
+and Booking Vouchers show their own record details directly in the list.
+Finance edits retain the original booking or payment association, and the
+ledger rejects reassignment in the same transaction.
 
 Administrative record selectors restore IDs after populating their options. A missing required choice leaves the form invalid, an unset optional choice displays **Not set**, and an unavailable saved choice requires operator action before submission. Zero remains a valid ID for account and member statuses. The user lookup reapplies selection after search results replace its options. Payment and refund forms load their choices asynchronously before rendering and cancel obsolete loads. They preserve known booking or payment references, including current references outside the lookup results. My Bookings retains its deliberate new-draft trip preselection and restores the trip for existing drafts.
 

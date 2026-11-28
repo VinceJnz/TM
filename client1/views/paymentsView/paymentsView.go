@@ -213,7 +213,7 @@ func (editor *ItemEditor) openRecord(record TableData, host js.Value) {
 	editor.FormHost = host
 	editor.setActiveRowHighlight(host.Get("parentElement"))
 	editor.updateStateDisplay(ItemStateEditing)
-	editor.loadBookingOptions()
+	editor.populateEditForm()
 }
 
 func (editor *ItemEditor) loadBookingOptions() {
@@ -296,11 +296,14 @@ func (editor *ItemEditor) populateEditForm() {
 
 	var localObjs UI
 
-	if editor.ContextBookID > 0 {
-		localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.StringEdit(strconv.Itoa(editor.ContextBookID), editor.document, "Booking ID", "text", "itemBookingID")
-		editor.UiComponents.BookingID.Set("readOnly", true)
-	} else {
-		localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.BookingDropdown(editor.document, editor.BookingOptions, editor.CurrentRecord.BookingID, "Booking ID", "itemBookingID")
+	if method == "POST" {
+		if editor.ContextBookID > 0 {
+			localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.StringEdit(strconv.Itoa(editor.ContextBookID), editor.document, "Booking ID", "text", "itemBookingID")
+			editor.UiComponents.BookingID.Set("readOnly", true)
+		} else {
+			localObjs.BookingID, editor.UiComponents.BookingID = viewHelpers.BookingDropdown(editor.document, editor.BookingOptions, editor.CurrentRecord.BookingID, "Booking ID", "itemBookingID")
+		}
+		form.Call("appendChild", localObjs.BookingID)
 	}
 
 	paymentDateText := ""
@@ -329,17 +332,18 @@ func (editor *ItemEditor) populateEditForm() {
 	localObjs.PaymentMethod, editor.UiComponents.PaymentMethod = viewHelpers.StringEdit(editor.CurrentRecord.PaymentMethod, editor.document, "Payment Method", "text", "itemPaymentMethod")
 	editor.UiComponents.PaymentMethod.Call("setAttribute", "required", "true")
 
-	domEvents.Listen(editor.UiComponents.BookingID, "change", func(this js.Value, args []js.Value) any {
+	if method == "POST" {
+		domEvents.Listen(editor.UiComponents.BookingID, "change", func(this js.Value, args []js.Value) any {
+			editor.autoFillAmountFromBookingSelection()
+			return nil
+		})
+		domEvents.Listen(editor.UiComponents.Amount, "input", func(this js.Value, args []js.Value) any {
+			editor.UiComponents.AmountHint.Get("style").Call("setProperty", "display", "none")
+			return nil
+		})
 		editor.autoFillAmountFromBookingSelection()
-		return nil
-	})
-	domEvents.Listen(editor.UiComponents.Amount, "input", func(this js.Value, args []js.Value) any {
-		editor.UiComponents.AmountHint.Get("style").Call("setProperty", "display", "none")
-		return nil
-	})
-	editor.autoFillAmountFromBookingSelection()
+	}
 
-	form.Call("appendChild", localObjs.BookingID)
 	form.Call("appendChild", localObjs.PaymentDate)
 	form.Call("appendChild", localObjs.Amount)
 	form.Call("appendChild", localObjs.PaymentMethod)
@@ -374,8 +378,8 @@ func (editor *ItemEditor) SubmitItemEdit(this js.Value, p []js.Value) any {
 		event.Call("stopPropagation")
 	}
 
-	bookingID := editor.ContextBookID
-	if bookingID == 0 {
+	bookingID := editor.CurrentRecord.BookingID
+	if editor.ItemState == ItemStateAdding && editor.ContextBookID == 0 {
 		var err error
 		bookingID, err = strconv.Atoi(strings.TrimSpace(editor.UiComponents.BookingID.Get("value").String()))
 		if err != nil || bookingID < 1 {
@@ -556,9 +560,8 @@ func (editor *ItemEditor) populateItemList() {
 
 		itemDiv := editor.document.Call("createElement", "div")
 		itemDiv.Set("id", debugTag+"itemDiv")
-		itemDiv.Set("textContent", "Payment #"+strconv.Itoa(record.ID)+" · "+strconv.FormatFloat(record.Amount, 'f', 2, 64)+" · "+record.PaymentDate.Format(viewHelpers.Layout))
-		panel := editor.document.Call("createElement", "div")
-		viewHelpers.AdminRecordFields(panel,
+		itemDiv.Set("textContent", "Payment #"+strconv.Itoa(record.ID))
+		viewHelpers.AdminRecordFields(itemDiv,
 			viewHelpers.RecordField{Label: "Booking", Value: strconv.Itoa(record.BookingID)},
 			viewHelpers.RecordField{Label: "Amount", Value: strconv.FormatFloat(record.Amount, 'f', 2, 64)},
 			viewHelpers.RecordField{Label: "Payment date", Value: record.PaymentDate.Format(viewHelpers.Layout)},
@@ -613,7 +616,7 @@ func (editor *ItemEditor) populateItemList() {
 		itemDiv.Call("appendChild", openRefundsBtn)
 		itemDiv.Call("appendChild", addRefundBtn)
 		itemDiv.Call("appendChild", inlineFormHost)
-		viewHelpers.LayoutDisclosureRecord(itemDiv, panel, debugTag+"details-"+strconv.Itoa(record.ID), nil)
+		viewHelpers.LayoutAdminRecord(itemDiv)
 		editor.ListDiv.Call("appendChild", itemDiv)
 	}
 	viewHelpers.PageControls(editor.
