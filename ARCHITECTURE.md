@@ -75,6 +75,8 @@ The [Admin and SysAdmin grant export](docs/admin-sysadmin-grants.csv) captures t
 
 The trip editor reads difficulty, status, type, and cost-group choices from `GET /trips/edit-lookups` under the `trips` read capability. The response exposes choice IDs and labels. Each configuration catalog retains its own management capability.
 
+The user editor loads account and membership status choices from dedicated `users` read routes. The status catalogs continue to have independent management grants.
+
 `buildRouter` in `main.go` separates three boundaries:
 
 1. **Public routes:** authentication entry points, selected registration lookups,

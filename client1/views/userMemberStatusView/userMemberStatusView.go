@@ -313,6 +313,10 @@ func (editor *ItemEditor) AddItem(item TableData) {
 }
 
 func (editor *ItemEditor) FetchItems() {
+	editor.FetchChoices(ApiURL)
+}
+
+func (editor *ItemEditor) FetchChoices(path string) {
 	if editor.RecordState == RecordStateReloadRequired {
 		editor.RecordState = RecordStateCurrent
 		// Fetch child data
@@ -321,14 +325,14 @@ func (editor *ItemEditor) FetchItems() {
 		go func() {
 			var records []TableData
 
-			err := editor.client.RequestContext(ticket.Context, http.MethodGet, ApiURL, &records, nil)
+			err := editor.client.RequestContext(ticket.Context, http.MethodGet, path, &records, nil)
 			if !ticket.Finish(err) {
 				return
 			}
 			if err != nil {
 				editor.RecordState = RecordStateReloadRequired
 				editor.updateStateDisplay(ItemStateNone)
-				viewHelpers.RenderRetry(editor.ListDiv, editor.FetchItems)
+				viewHelpers.RenderRetry(editor.ListDiv, func() { editor.FetchChoices(path) })
 				return
 			}
 

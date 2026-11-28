@@ -500,8 +500,8 @@ func (editor *ItemEditor) FetchItems() {
 	}
 	editor.RecordState = RecordStateCurrent
 	editor.Children.userAgeGroup.FetchItems()
-	editor.Children.userMemberStatus.FetchItems()
-	editor.Children.userAccountStatus.FetchItems()
+	editor.Children.userMemberStatus.FetchChoices(ApiURL + "/member-status-choices")
+	editor.Children.userAccountStatus.FetchChoices(ApiURL + "/account-status-choices")
 	ticket := editor.load.Start()
 	pending := editor.Page.Snapshot()
 	editor.updateStateDisplay(ItemStateFetching)

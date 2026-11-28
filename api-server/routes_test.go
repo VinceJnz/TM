@@ -116,6 +116,8 @@ func TestNestedAndAliasCapabilities(t *testing.T) {
 		{"GET", "/myBookings/trips", "myBookings"},
 		{"POST", "/bookings/checkout/confirm/10", "bookings"},
 		{"POST", "/users/10/approval-email", "users"},
+		{"GET", "/users/member-status-choices", "users"},
+		{"GET", "/users/account-status-choices", "users"},
 		{"PUT", "/securityAccessType/10", "securityAccessScope"},
 	} {
 		req := httptest.NewRequest(tc.method, app.Settings.APIprefix+tc.path, nil)

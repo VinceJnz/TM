@@ -160,13 +160,17 @@ func buildRouter(app *appCore.Config) *mux.Router {
 	users := handlerUser.New(app)
 	users.RegisterRoutes(protected, "/users")
 	users.RegisterBookingPeopleLookup(protected)
-	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups")         // UserAgeGroup routes
-	handlerUserPayments.New(app).RegisterRoutes(protected, "/payments")               // Payments routes
-	handlerPaymentRefunds.New(app).RegisterRoutes(protected, "/refunds")              // Refunds routes
-	handlerMemberStatus.New(app).RegisterRoutes(protected, "/userMemberStatus")       // UserMemberStatus routes
-	handlerUserAccountStatus.New(app).RegisterRoutes(protected, "/userAccountStatus") // UserAccountStatus routes
-	handlerGroupBooking.New(app).RegisterRoutes(protected, "/groupBooking")           // GroupBookings routes
-	handlerBookingStatus.New(app).RegisterRoutes(protected, "/bookingStatus")         // BookingStatus routes
+	handlerUserAgeGroups.New(app).RegisterRoutes(protected, "/userAgeGroups") // UserAgeGroup routes
+	handlerUserPayments.New(app).RegisterRoutes(protected, "/payments")       // Payments routes
+	handlerPaymentRefunds.New(app).RegisterRoutes(protected, "/refunds")      // Refunds routes
+	memberStatus := handlerMemberStatus.New(app)
+	memberStatus.RegisterRoutes(protected, "/userMemberStatus")
+	helpers.CapabilityRoute(protected, "/users/member-status-choices", "users", memberStatus.GetAll).Methods("GET")
+	accountStatus := handlerUserAccountStatus.New(app)
+	accountStatus.RegisterRoutes(protected, "/userAccountStatus")
+	helpers.CapabilityRoute(protected, "/users/account-status-choices", "users", accountStatus.GetAll).Methods("GET")
+	handlerGroupBooking.New(app).RegisterRoutes(protected, "/groupBooking")   // GroupBookings routes
+	handlerBookingStatus.New(app).RegisterRoutes(protected, "/bookingStatus") // BookingStatus routes
 	handlerBookingVoucher.New(app).RegisterRoutesAdmin(protected, "/bookingVouchers")
 	handlerTripType.New(app).RegisterRoutes(protected, "/tripType")             // TripType routes
 	handlerTripStatus.New(app).RegisterRoutes(protected, "/tripStatus")         // TripStatus routes
