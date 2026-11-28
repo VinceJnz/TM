@@ -129,6 +129,8 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before architectural work. It records th
 
 ## Docker and configuration
 
+- For a fresh database, follow `docs/fresh-install.md` to apply migrations, verify runtime access, and bootstrap a named, verified SysAdmin account.
+
 - Read the module files and Dockerfiles for current toolchain versions; do not upgrade dependencies or base images incidentally.
 - `CLIENT_BUILDER` selects `go-builder` or `tinygo-builder`. `CLIENT_IMAGE` can override the default source-built client with a prebuilt artifact consumed by the API image. For published builds, use an immutable client digest and verify that the artifact labels match the requested compiler and source revision.
 - Runtime database settings are `DATA_SOURCE` or the supported `DB_*` fallback. Compose uses DB_* settings unless TM_API_DATA_SOURCE is supplied. Set TM_DB_SSLMODE for Compose DB_* connections. Require certificate and hostname verification for remote PostgreSQL. Forwarding headers require TRUSTED_PROXY_CIDRS.

@@ -524,6 +524,8 @@ service/ledger boundary is the pattern to preserve, not unfinished generic CRUD 
 
 ## 9. Verification and deployment handoff
 
+The [fresh install procedure](docs/fresh-install.md) describes schema setup, runtime-role verification, and first SysAdmin bootstrap. Bootstrap uses an already verified account and the built-in group key.
+
 Relevant commands from the repository root:
 
 ```powershell
